@@ -17,6 +17,9 @@ import {
   Clock,
 } from "lucide-react";
 
+// Force dynamic rendering - don't try to prerender at build time
+export const dynamic = "force-dynamic";
+
 interface LeadPageProps {
   params: Promise<{ id: string }>;
 }

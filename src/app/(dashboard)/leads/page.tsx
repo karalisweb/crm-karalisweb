@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { PIPELINE_STAGES, AUDIT_STATUSES, getScoreCategory } from "@/types";
 import { ExternalLink, Phone, Globe } from "lucide-react";
 
+// Force dynamic rendering - don't try to prerender at build time
+export const dynamic = "force-dynamic";
+
 interface LeadsPageProps {
   searchParams: Promise<{
     stage?: string;

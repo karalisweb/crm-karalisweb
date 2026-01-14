@@ -6,6 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, TrendingUp, Phone, Calendar } from "lucide-react";
 import Link from "next/link";
 
+// Force dynamic rendering - don't try to prerender at build time
+export const dynamic = "force-dynamic";
+
 async function DashboardStats() {
   const [totalLeads, hotLeads, toCallLeads, recentSearches] = await Promise.all([
     db.lead.count(),
