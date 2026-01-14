@@ -1,0 +1,197 @@
+// Schema Prisma per Sales Support App
+// CRM per agenzia di web marketing
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// LEAD - Dati da Google Maps + Audit + CRM
+// ==========================================
+model Lead {
+  id        String   @id @default(uuid())
+
+  // Dati da Google Maps (Apify)
+  name              String
+  address           String?
+  phone             String?
+  website           String?
+  category          String?
+  googleRating      Decimal?  @map("google_rating") @db.Decimal(2, 1)
+  googleReviewsCount Int?     @map("google_reviews_count")
+  googleMapsUrl     String?   @map("google_maps_url")
+  placeId           String?   @unique @map("place_id")
+
+  // Risultato Audit
+  auditStatus       AuditStatus @default(PENDING) @map("audit_status")
+  auditCompletedAt  DateTime?   @map("audit_completed_at")
+  opportunityScore  Int?        @map("opportunity_score")
+
+  // Audit details (JSON per flessibilita)
+  auditData         Json?       @map("audit_data")
+
+  // Talking points generati
+  talkingPoints     String[]    @map("talking_points")
+
+  // CRM Pipeline
+  pipelineStage     PipelineStage @default(NEW) @map("pipeline_stage")
+  lostReason        String?       @map("lost_reason")
+
+  // Activity tracking
+  lastContactedAt   DateTime?   @map("last_contacted_at")
+  nextFollowupAt    DateTime?   @map("next_followup_at")
+  assignedTo        String?     @map("assigned_to")
+
+  // Metadata
+  source            String      @default("google_maps")
+  notes             String?
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  // Relazioni
+  searchId          String?     @map("search_id")
+  search            Search?     @relation(fields: [searchId], references: [id])
+  activities        Activity[]
+  tasks             Task[]
+
+  @@index([opportunityScore(sort: Desc)], name: "idx_leads_score")
+  @@index([pipelineStage], name: "idx_leads_stage")
+  @@index([auditStatus], name: "idx_leads_audit_status")
+  @@map("leads")
+}
+
+// ==========================================
+// ACTIVITY - Storico attivita sul lead
+// ==========================================
+model Activity {
+  id        String   @id @default(uuid())
+
+  type      ActivityType
+  outcome   CallOutcome?
+  notes     String?
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relazione
+  leadId    String   @map("lead_id")
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId], name: "idx_activities_lead")
+  @@map("activities")
+}
+
+// ==========================================
+// SEARCH - Ricerche salvate
+// ==========================================
+model Search {
+  id              String       @id @default(uuid())
+
+  query           String       // es. "Ristoranti"
+  location        String       // es. "Milano centro"
+  apifyRunId      String?      @map("apify_run_id")
+  status          SearchStatus @default(PENDING)
+  leadsFound      Int          @default(0) @map("leads_found")
+  leadsWithWebsite Int         @default(0) @map("leads_with_website")
+  errorMessage    String?      @map("error_message")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  completedAt     DateTime?    @map("completed_at")
+
+  // Relazione
+  leads           Lead[]
+
+  @@map("searches")
+}
+
+// ==========================================
+// TASK - Reminder e follow-up
+// ==========================================
+model Task {
+  id          String    @id @default(uuid())
+
+  title       String
+  description String?
+  dueAt       DateTime? @map("due_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relazione
+  leadId      String    @map("lead_id")
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([dueAt], name: "idx_tasks_due")
+  @@map("tasks")
+}
+
+// ==========================================
+// USER - Per autenticazione
+// ==========================================
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String    // Hash bcrypt
+  name          String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum AuditStatus {
+  PENDING     // In attesa
+  RUNNING     // In analisi
+  COMPLETED   // Completato
+  FAILED      // Errore
+  NO_WEBSITE  // Nessun sito web
+  TIMEOUT     // Timeout
+}
+
+enum PipelineStage {
+  NEW           // Nuovo
+  TO_CALL       // Da chiamare
+  CALLED        // Chiamato
+  INTERESTED    // Interessato
+  AUDIT_SENT    // Audit inviato
+  MEETING       // Call/Meeting fissato
+  PROPOSAL      // Preventivo inviato
+  WON           // Chiuso vinto
+  LOST          // Chiuso perso
+}
+
+enum ActivityType {
+  CALL          // Chiamata
+  NOTE          // Nota
+  EMAIL_SENT    // Email inviata
+  MEETING       // Meeting
+  PROPOSAL_SENT // Preventivo inviato
+  STAGE_CHANGE  // Cambio stato
+}
+
+enum CallOutcome {
+  ANSWERED        // Risposto
+  NO_ANSWER       // Non risponde
+  BUSY            // Occupato
+  NOT_INTERESTED  // Non interessato
+  CALLBACK        // Richiamare
+  INTERESTED      // Interessato
+}
+
+enum SearchStatus {
+  PENDING     // In attesa
+  RUNNING     // In esecuzione
+  COMPLETED   // Completata
+  FAILED      // Fallita
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}

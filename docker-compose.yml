@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: sales-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-sales_app}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Sales App
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sales-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-sales_app}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      APIFY_TOKEN: ${APIFY_TOKEN}
+      APIFY_WEBHOOK_SECRET: ${APIFY_WEBHOOK_SECRET}
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

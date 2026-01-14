@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sales Support CRM
 
-## Getting Started
+CRM per il supporto commerciale di un'agenzia di web marketing. Consente di cercare lead su Google Maps, analizzare i loro siti web automaticamente, e gestire il ciclo di vendita.
 
-First, run the development server:
+## Funzionalita
+
+- **Scouting automatizzato**: Cerca attivita su Google Maps tramite Apify
+- **Audit automatico**: Analizza siti web per trovare problemi (SEO, performance, tracking, compliance)
+- **Opportunity Score**: Punteggio 0-100 basato sui problemi rilevati
+- **Talking Points**: Frasi "gancio" generate automaticamente per la chiamata commerciale
+- **Pipeline Kanban**: Gestione visuale del ciclo di vendita con drag & drop
+
+## Requisiti
+
+- Node.js 20+
+- PostgreSQL 16+
+- Account Apify (per ricerche Google Maps)
+- Account Inngest (per audit in background)
+
+## Setup Sviluppo
+
+### 1. Installa dipendenze
+
+```bash
+npm install
+```
+
+### 2. Configura ambiente
+
+Copia `.env` e configura le variabili:
+
+```bash
+# Database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/sales_app"
+
+# NextAuth (genera secret con: openssl rand -base64 32)
+NEXTAUTH_SECRET="your-secret-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Apify (ottieni da console.apify.com)
+APIFY_TOKEN="your-token"
+
+# Inngest (ottieni da app.inngest.com)
+INNGEST_EVENT_KEY="your-key"
+INNGEST_SIGNING_KEY="your-signing-key"
+```
+
+### 3. Setup Database
+
+```bash
+# Crea database
+createdb sales_app
+
+# Esegui migrazione
+npm run db:push
+
+# Popola dati iniziali
+npm run db:seed
+```
+
+### 4. Avvia in sviluppo
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 5. Avvia Inngest Dev Server (in altro terminale)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx inngest-cli@latest dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Apri http://localhost:3000
 
-## Learn More
+**Credenziali default:**
+- Email: admin@agenzia.it
+- Password: admin123
 
-To learn more about Next.js, take a look at the following resources:
+## Docker Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Build e avvio
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker-compose up -d
+```
 
-## Deploy on Vercel
+### Migrazione database in produzione
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+docker-compose exec app npx prisma migrate deploy
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Struttura Progetto
+
+```
+sales-app/
+├── prisma/
+│   └── schema.prisma          # Schema database
+├── src/
+│   ├── app/                   # Next.js App Router
+│   │   ├── (auth)/            # Pagine auth (login)
+│   │   ├── (dashboard)/       # Pagine protette
+│   │   └── api/               # API routes
+│   ├── components/            # Componenti React
+│   ├── lib/
+│   │   ├── audit/             # Moduli audit
+│   │   ├── apify.ts           # Integrazione Apify
+│   │   ├── auth.ts            # NextAuth config
+│   │   └── db.ts              # Prisma client
+│   ├── inngest/               # Background jobs
+│   └── types/                 # TypeScript types
+├── Dockerfile
+└── docker-compose.yml
+```
+
+## Costi Operativi Stimati
+
+| Servizio | Piano | Costo |
+|----------|-------|-------|
+| Apify | Free tier | $5/mese inclusi |
+| Inngest | Free tier | 25k eventi/mese gratis |
+| **Totale** | | **~$5/mese** |
+
+## Comandi Utili
+
+```bash
+# Sviluppo
+npm run dev
+
+# Database
+npm run db:push      # Applica schema
+npm run db:seed      # Popola dati test
+npm run db:studio    # GUI database
+
+# Produzione
+npm run build
+npm start
+
+# Docker
+docker-compose up -d
+docker-compose logs -f app
+```
