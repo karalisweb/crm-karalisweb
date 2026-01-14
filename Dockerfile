@@ -33,17 +33,25 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Crea utente non-root
+# Install OpenSSL for Prisma
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Crea utente non-root con home directory
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN adduser --system --uid 1001 --home /home/nextjs nextjs
 
 # Copia files necessari
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 
+# Copia Prisma CLI per migrazioni
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+
 # Set permissions per prerender cache
 RUN mkdir .next
-RUN chown nextjs:nodejs .next
+RUN chown -R nextjs:nodejs .next /home/nextjs
 
 # Copia build output con permessi corretti
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
