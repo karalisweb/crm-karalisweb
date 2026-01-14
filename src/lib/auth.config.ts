@@ -2,6 +2,8 @@ import type { NextAuthConfig } from "next-auth";
 
 export const authConfig: NextAuthConfig = {
   providers: [],
+  // Trust the host in production (behind reverse proxy or direct IP access)
+  trustHost: true,
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
