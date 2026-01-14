@@ -19,11 +19,7 @@ export async function GET() {
     }
 
     // Testa la connessione chiamando l'API Apify
-    const response = await fetch("https://api.apify.com/v2/user/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await fetch(`https://api.apify.com/v2/users/me?token=${token}`);
 
     if (response.ok) {
       const data = await response.json();
