@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
@@ -19,6 +17,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # Migrations runner (uses builder stage with full node_modules)
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: sales-migrate
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-sales_app}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: npx prisma migrate deploy
+    profiles:
+      - migrate
 
   # Sales App
   app:
