@@ -12,8 +12,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-sales_app}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Port not exposed to host to avoid conflicts with native postgres
+    # Container communication happens on internal Docker network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
