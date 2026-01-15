@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   Search,
@@ -17,8 +18,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-// Suggerimenti rapidi per la ricerca
-const quickCategories = [
+// Fallback quando il DB è vuoto
+const defaultCategories = [
   { label: "Ristoranti", icon: "🍽️" },
   { label: "Hotel", icon: "🏨" },
   { label: "Dentisti", icon: "🦷" },
@@ -29,16 +30,23 @@ const quickCategories = [
   { label: "Commercialisti", icon: "📊" },
 ];
 
-const quickLocations = [
+const defaultLocations = [
   "Milano",
   "Roma",
   "Napoli",
   "Torino",
-  "Firenze",
-  "Bologna",
-  "Venezia",
-  "Genova",
 ];
+
+interface Category {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+interface Location {
+  id: string;
+  name: string;
+}
 
 export default function SearchPage() {
   const router = useRouter();
@@ -46,6 +54,39 @@ export default function SearchPage() {
   const [location, setLocation] = useState("");
   const [limit, setLimit] = useState("50");
   const [loading, setLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
+
+  // Configurazioni da DB
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  async function fetchConfig() {
+    try {
+      const res = await fetch("/api/settings/search-config");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories || []);
+        setLocations(data.locations || []);
+      }
+    } catch (error) {
+      console.error("Error fetching search config:", error);
+    } finally {
+      setConfigLoading(false);
+    }
+  }
+
+  // Usa configurazioni da DB o fallback
+  const displayCategories = categories.length > 0
+    ? categories.map(c => ({ label: c.label, icon: c.icon }))
+    : defaultCategories;
+
+  const displayLocations = locations.length > 0
+    ? locations.map(l => l.name)
+    : defaultLocations;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,19 +151,27 @@ export default function SearchPage() {
         <p className="text-sm font-medium text-muted-foreground">
           Categorie popolari
         </p>
-        <div className="flex gap-2 flex-wrap">
-          {quickCategories.map((cat) => (
-            <Badge
-              key={cat.label}
-              variant={query === cat.label ? "default" : "outline"}
-              className="cursor-pointer px-3 py-1.5 text-sm hover:bg-primary/20 transition-colors"
-              onClick={() => handleQuickCategory(cat.label)}
-            >
-              <span className="mr-1.5">{cat.icon}</span>
-              {cat.label}
-            </Badge>
-          ))}
-        </div>
+        {configLoading ? (
+          <div className="flex gap-2 flex-wrap">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-8 w-24" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex gap-2 flex-wrap">
+            {displayCategories.map((cat) => (
+              <Badge
+                key={cat.label}
+                variant={query === cat.label ? "default" : "outline"}
+                className="cursor-pointer px-3 py-1.5 text-sm hover:bg-primary/20 transition-colors"
+                onClick={() => handleQuickCategory(cat.label)}
+              >
+                <span className="mr-1.5">{cat.icon}</span>
+                {cat.label}
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Search Form - Mobile first card */}
@@ -161,16 +210,24 @@ export default function SearchPage() {
               />
               {/* Quick location chips */}
               <div className="flex gap-2 flex-wrap pt-1">
-                {quickLocations.slice(0, 4).map((loc) => (
-                  <Badge
-                    key={loc}
-                    variant={location === loc ? "default" : "secondary"}
-                    className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
-                    onClick={() => handleQuickLocation(loc)}
-                  >
-                    {loc}
-                  </Badge>
-                ))}
+                {configLoading ? (
+                  <>
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="h-6 w-16" />
+                    ))}
+                  </>
+                ) : (
+                  displayLocations.slice(0, 6).map((loc) => (
+                    <Badge
+                      key={loc}
+                      variant={location === loc ? "default" : "secondary"}
+                      className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
+                      onClick={() => handleQuickLocation(loc)}
+                    >
+                      {loc}
+                    </Badge>
+                  ))
+                )}
               </div>
             </div>
 

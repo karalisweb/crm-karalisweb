@@ -24,7 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search } from "lucide-react";
+import { SearchConfigTab } from "@/components/settings/search-config-tab";
 
 interface User {
   id: string;
@@ -181,6 +182,10 @@ export default function SettingsPage() {
           <TabsTrigger value="api" className="gap-2">
             <Key className="h-4 w-4" />
             API & Token
+          </TabsTrigger>
+          <TabsTrigger value="search" className="gap-2">
+            <Search className="h-4 w-4" />
+            Ricerca
           </TabsTrigger>
           <TabsTrigger value="general" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -431,6 +436,11 @@ export default function SettingsPage() {
               Salva Configurazione API
             </Button>
           </div>
+        </TabsContent>
+
+        {/* TAB RICERCA */}
+        <TabsContent value="search" className="space-y-4">
+          <SearchConfigTab />
         </TabsContent>
 
         {/* TAB GENERALE */}
