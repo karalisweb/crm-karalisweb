@@ -28,12 +28,13 @@ export function Sidebar() {
     <div className="hidden md:flex h-screen w-64 flex-col bg-card border-r border-border">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6 border-b border-border">
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-lg">K</span>
+        <div className="w-10 h-10 rounded-lg bg-[#0f1419] flex items-center justify-center border border-border">
+          <span className="text-primary font-bold text-lg">K</span>
+          <span className="text-primary text-xs">sc</span>
         </div>
         <div>
-          <h1 className="text-lg font-bold">Karalisweb</h1>
-          <p className="text-xs text-muted-foreground">CRM Sales</p>
+          <h1 className="text-lg font-bold">Sales CRM</h1>
+          <p className="text-xs text-muted-foreground">by Karalisweb v. 2.0</p>
         </div>
       </div>
 

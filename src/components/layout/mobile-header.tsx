@@ -34,8 +34,9 @@ export function MobileHeader() {
       <div className="flex items-center justify-between h-14 px-4">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">K</span>
+          <div className="w-8 h-8 rounded bg-[#0f1419] flex items-center justify-center border border-border">
+            <span className="text-primary font-bold text-base">K</span>
+            <span className="text-primary text-[10px]">sc</span>
           </div>
           <span className="font-semibold text-sm">{getPageTitle()}</span>
         </div>

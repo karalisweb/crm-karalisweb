@@ -9,8 +9,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Sales Support CRM",
-  description: "CRM per il supporto commerciale",
+  title: "Sales CRM by Karalisweb",
+  description: "CRM per il supporto commerciale - Karalisweb v. 2.0",
+  applicationName: "Sales CRM by Karalisweb",
+  authors: [{ name: "Karalisweb" }],
+  generator: "Next.js",
+  keywords: ["CRM", "Sales", "Lead Management", "Karalisweb"],
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

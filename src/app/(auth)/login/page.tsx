@@ -41,15 +41,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Sales Support
-          </CardTitle>
-          <CardDescription className="text-center">
-            Accedi al CRM per gestire i tuoi lead
-          </CardDescription>
+        <CardHeader className="space-y-4">
+          {/* Logo */}
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-xl bg-[#0f1419] flex items-center justify-center border border-border">
+              <span className="text-primary font-bold text-3xl">K</span>
+              <span className="text-primary text-lg mt-1">sc</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">
+              Sales CRM
+            </CardTitle>
+            <CardDescription className="text-center">
+              by Karalisweb v. 2.0
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
