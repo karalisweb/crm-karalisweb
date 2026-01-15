@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import {
   Users,
   TrendingUp,
@@ -138,11 +137,12 @@ async function DashboardStats() {
         <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Lead prioritari</h2>
-            <Link href="/leads">
-              <Button variant="ghost" size="sm" className="text-primary">
-                Vedi tutti
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+            <Link
+              href="/leads"
+              className="text-sm text-primary hover:underline flex items-center"
+            >
+              Vedi tutti
+              <ChevronRight className="h-4 w-4 ml-1" />
             </Link>
           </div>
 

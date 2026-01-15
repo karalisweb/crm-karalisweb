@@ -4,19 +4,10 @@ import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { PIPELINE_STAGES, AUDIT_STATUSES, getScoreCategory } from "@/types";
-import {
-  Phone,
-  Globe,
-  MapPin,
-  Star,
-  ChevronRight,
-  Flame,
-  Search,
-  Filter,
-} from "lucide-react";
+import { PIPELINE_STAGES } from "@/types";
+import { Search, Plus } from "lucide-react";
+import { LeadCard } from "@/components/leads/lead-card";
 
 export const dynamic = "force-dynamic";
 
@@ -26,121 +17,6 @@ interface LeadsPageProps {
     audit?: string;
     page?: string;
   }>;
-}
-
-// Lead Card Component - Mobile optimized
-function LeadCard({ lead }: { lead: {
-  id: string;
-  name: string;
-  address: string | null;
-  phone: string | null;
-  website: string | null;
-  category: string | null;
-  googleRating: number | null;
-  googleReviewsCount: number | null;
-  opportunityScore: number | null;
-  pipelineStage: string;
-  auditStatus: string;
-}}) {
-  const scoreInfo = getScoreCategory(lead.opportunityScore);
-  const stageInfo = PIPELINE_STAGES[lead.pipelineStage as keyof typeof PIPELINE_STAGES];
-  const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
-
-  return (
-    <Link href={`/leads/${lead.id}`}>
-      <Card className="card-hover">
-        <CardContent className="p-4">
-          {/* Header with name and score */}
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm truncate">{lead.name}</h3>
-                {isHot && <Flame className="h-4 w-4 text-red-500 flex-shrink-0" />}
-              </div>
-              {lead.category && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {lead.category}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 ml-2">
-              <Badge
-                variant={
-                  lead.opportunityScore && lead.opportunityScore >= 80
-                    ? "destructive"
-                    : lead.opportunityScore && lead.opportunityScore >= 60
-                    ? "default"
-                    : "secondary"
-                }
-                className="text-xs font-bold"
-              >
-                {lead.opportunityScore || "-"}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Info row */}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-            {lead.googleRating && (
-              <div className="flex items-center gap-1">
-                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                <span>{Number(lead.googleRating).toFixed(1)}</span>
-                {lead.googleReviewsCount && (
-                  <span className="text-muted-foreground/60">
-                    ({lead.googleReviewsCount})
-                  </span>
-                )}
-              </div>
-            )}
-            {lead.address && (
-              <div className="flex items-center gap-1 truncate">
-                <MapPin className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{lead.address.split(",")[0]}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Stage badge and quick actions */}
-          <div className="flex items-center justify-between">
-            <Badge variant="outline" className="text-xs">
-              {stageInfo?.label || lead.pipelineStage}
-            </Badge>
-
-            {/* Quick action buttons */}
-            <div className="flex items-center gap-1">
-              {lead.phone && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  asChild
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <a href={`tel:${lead.phone}`}>
-                    <Phone className="h-4 w-4 text-green-500" />
-                  </a>
-                </Button>
-              )}
-              {lead.website && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  asChild
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <a href={lead.website} target="_blank" rel="noopener noreferrer">
-                    <Globe className="h-4 w-4 text-blue-500" />
-                  </a>
-                </Button>
-              )}
-              <ChevronRight className="h-4 w-4 text-muted-foreground ml-1" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
 }
 
 async function LeadsList({
@@ -195,11 +71,12 @@ async function LeadsList({
         <p className="text-sm text-muted-foreground mb-4">
           Inizia una nuova ricerca per trovare potenziali clienti
         </p>
-        <Link href="/search">
-          <Button>
-            <Search className="h-4 w-4 mr-2" />
-            Nuova Ricerca
-          </Button>
+        <Link
+          href="/search"
+          className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <Search className="h-4 w-4 mr-2" />
+          Nuova Ricerca
         </Link>
       </div>
     );
@@ -239,10 +116,9 @@ async function LeadsList({
                   ...(params.stage && { stage: params.stage }),
                   page: String(page - 1),
                 }).toString()}`}
+                className="inline-flex items-center justify-center px-3 py-1.5 text-sm rounded-md border border-input hover:bg-accent"
               >
-                <Button variant="outline" size="sm">
-                  Precedente
-                </Button>
+                Precedente
               </Link>
             )}
             {page < totalPages && (
@@ -251,10 +127,9 @@ async function LeadsList({
                   ...(params.stage && { stage: params.stage }),
                   page: String(page + 1),
                 }).toString()}`}
+                className="inline-flex items-center justify-center px-3 py-1.5 text-sm rounded-md border border-input hover:bg-accent"
               >
-                <Button variant="outline" size="sm">
-                  Successiva
-                </Button>
+                Successiva
               </Link>
             )}
           </div>
@@ -294,14 +169,12 @@ export default function LeadsPage(props: LeadsPageProps) {
             Gestisci i tuoi potenziali clienti
           </p>
         </div>
-        <Link href="/search">
-          <Button size="sm" className="md:hidden">
-            <Search className="h-4 w-4" />
-          </Button>
-          <Button className="hidden md:flex">
-            <Search className="h-4 w-4 mr-2" />
-            Nuova Ricerca
-          </Button>
+        <Link
+          href="/search"
+          className="inline-flex items-center justify-center h-9 px-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
+        >
+          <Plus className="h-4 w-4 md:mr-2" />
+          <span className="hidden md:inline">Nuova Ricerca</span>
         </Link>
       </div>
 
