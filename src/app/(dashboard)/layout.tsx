@@ -19,9 +19,9 @@ export default function DashboardLayout({
         <MobileHeader />
 
         {/* Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide">
           {/* Mobile: full width with padding, Desktop: container */}
-          <div className="px-4 py-4 pb-20 md:container md:mx-auto md:p-6 md:pb-6">
+          <div className="px-4 py-4 pb-24 md:container md:mx-auto md:p-6 md:pb-6 max-w-full">
             {children}
           </div>
         </main>
