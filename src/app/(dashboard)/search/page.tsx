@@ -105,17 +105,17 @@ export default function SearchPage() {
         </p>
       </div>
 
-      {/* Quick Categories - Horizontal scroll on mobile */}
-      <div className="space-y-2 overflow-hidden">
+      {/* Quick Categories - Wrap on mobile instead of scroll */}
+      <div className="space-y-2">
         <p className="text-sm font-medium text-muted-foreground">
           Categorie popolari
         </p>
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide md:flex-wrap">
+        <div className="flex gap-2 flex-wrap">
           {quickCategories.map((cat) => (
             <Badge
               key={cat.label}
               variant={query === cat.label ? "default" : "outline"}
-              className="cursor-pointer whitespace-nowrap px-3 py-1.5 text-sm hover:bg-primary/20 transition-colors flex-shrink-0"
+              className="cursor-pointer px-3 py-1.5 text-sm hover:bg-primary/20 transition-colors"
               onClick={() => handleQuickCategory(cat.label)}
             >
               <span className="mr-1.5">{cat.icon}</span>

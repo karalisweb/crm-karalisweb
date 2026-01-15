@@ -52,7 +52,7 @@ const stageOrder = [
   "LOST",
 ];
 
-// Mobile stage selector - shows only 3 stages at a time
+// Mobile stage selector - wraps on multiple lines
 const MobileStageSelector = ({
   currentIndex,
   onSelect,
@@ -63,58 +63,35 @@ const MobileStageSelector = ({
   columns: ColumnData;
 }) => {
   return (
-    <div className="flex items-center justify-between gap-2 mb-4 md:hidden">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onSelect(Math.max(0, currentIndex - 1))}
-        disabled={currentIndex === 0}
-        className="flex-shrink-0"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </Button>
+    <div className="mb-4 md:hidden">
+      <div className="flex gap-2 flex-wrap">
+        {stageOrder.map((stageKey, index) => {
+          const stage =
+            PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
+          const leads = columns[stageKey] || [];
+          const isActive = index === currentIndex;
 
-      <ScrollArea className="flex-1">
-        <div className="flex gap-2 px-2">
-          {stageOrder.map((stageKey, index) => {
-            const stage =
-              PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
-            const leads = columns[stageKey] || [];
-            const isActive = index === currentIndex;
-
-            return (
-              <button
-                key={stageKey}
-                onClick={() => onSelect(index)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground"
-                }`}
+          return (
+            <button
+              key={stageKey}
+              onClick={() => onSelect(index)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              {stage.label}
+              <Badge
+                variant={isActive ? "secondary" : "outline"}
+                className="text-[10px] px-1.5 py-0"
               >
-                {stage.label}
-                <Badge
-                  variant={isActive ? "secondary" : "outline"}
-                  className="text-[10px] px-1.5 py-0"
-                >
-                  {leads.length}
-                </Badge>
-              </button>
-            );
-          })}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onSelect(Math.min(stageOrder.length - 1, currentIndex + 1))}
-        disabled={currentIndex === stageOrder.length - 1}
-        className="flex-shrink-0"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </Button>
+                {leads.length}
+              </Badge>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };
