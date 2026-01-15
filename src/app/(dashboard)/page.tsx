@@ -1,109 +1,241 @@
 import { Suspense } from "react";
 import { db } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, TrendingUp, Phone, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Users,
+  TrendingUp,
+  Phone,
+  Search,
+  ChevronRight,
+  Flame,
+  Clock,
+} from "lucide-react";
 import Link from "next/link";
 
-// Force dynamic rendering - don't try to prerender at build time
 export const dynamic = "force-dynamic";
 
 async function DashboardStats() {
-  const [totalLeads, hotLeads, toCallLeads, recentSearches] = await Promise.all([
-    db.lead.count(),
-    db.lead.count({ where: { opportunityScore: { gte: 80 } } }),
-    db.lead.count({ where: { pipelineStage: "TO_CALL" } }),
-    db.search.findMany({
-      take: 5,
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+  const [totalLeads, hotLeads, toCallLeads, recentSearches, topLeads] =
+    await Promise.all([
+      db.lead.count(),
+      db.lead.count({ where: { opportunityScore: { gte: 80 } } }),
+      db.lead.count({ where: { pipelineStage: "TO_CALL" } }),
+      db.search.findMany({
+        take: 3,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.lead.findMany({
+        where: { opportunityScore: { not: null } },
+        orderBy: { opportunityScore: "desc" },
+        take: 5,
+      }),
+    ]);
 
   return (
     <>
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lead Totali</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalLeads}</div>
+      {/* Quick Stats - Mobile optimized grid */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <Card className="card-hover">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalLeads}</p>
+                <p className="text-xs text-muted-foreground">Lead totali</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lead Hot</CardTitle>
-            <TrendingUp className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{hotLeads}</div>
-            <p className="text-xs text-muted-foreground">Score 80+</p>
+        <Card className="card-hover">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-red-500/10">
+                <Flame className="h-5 w-5 text-red-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-red-500">{hotLeads}</p>
+                <p className="text-xs text-muted-foreground">Lead hot</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Da Chiamare</CardTitle>
-            <Phone className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-500">{toCallLeads}</div>
+        <Card className="card-hover">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-blue-500/10">
+                <Phone className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-blue-500">{toCallLeads}</p>
+                <p className="text-xs text-muted-foreground">Da chiamare</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ricerche</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{recentSearches.length}</div>
-            <p className="text-xs text-muted-foreground">Ultime 5</p>
+        <Card className="card-hover">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-green-500/10">
+                <TrendingUp className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-500">
+                  {recentSearches.length}
+                </p>
+                <p className="text-xs text-muted-foreground">Ricerche</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Quick Actions - Mobile first */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold mb-3">Azioni rapide</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/search">
+            <Card className="card-hover cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-primary">
+                  <Search className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Nuova Ricerca</p>
+                  <p className="text-xs text-muted-foreground">Google Maps</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/leads?stage=TO_CALL">
+            <Card className="card-hover cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-blue-500">
+                  <Phone className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Da chiamare</p>
+                  <p className="text-xs text-muted-foreground">
+                    {toCallLeads} lead
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </div>
+
+      {/* Top Leads - Mobile optimized list */}
+      {topLeads.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Lead prioritari</h2>
+            <Link href="/leads">
+              <Button variant="ghost" size="sm" className="text-primary">
+                Vedi tutti
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="space-y-2">
+            {topLeads.map((lead) => (
+              <Link key={lead.id} href={`/leads/${lead.id}`}>
+                <Card className="card-hover">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm truncate">
+                            {lead.name}
+                          </p>
+                          {lead.opportunityScore && lead.opportunityScore >= 80 && (
+                            <Flame className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {lead.category || lead.address || "Nessuna categoria"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <Badge
+                          variant={
+                            lead.opportunityScore && lead.opportunityScore >= 80
+                              ? "destructive"
+                              : lead.opportunityScore && lead.opportunityScore >= 60
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {lead.opportunityScore || "-"}
+                        </Badge>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recent Searches */}
       {recentSearches.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Ricerche Recenti</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentSearches.map((search) => (
-                <div
-                  key={search.id}
-                  className="flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {search.query} - {search.location}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {search.leadsFound} lead trovati
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      search.status === "COMPLETED"
-                        ? "default"
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Ricerche recenti</h2>
+          </div>
+
+          <div className="space-y-2">
+            {recentSearches.map((search) => (
+              <Card key={search.id} className="card-hover">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-secondary">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {search.query} - {search.location}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {search.leadsFound} lead trovati
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={
+                        search.status === "COMPLETED"
+                          ? "default"
+                          : search.status === "FAILED"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                      className="text-xs"
+                    >
+                      {search.status === "COMPLETED"
+                        ? "OK"
                         : search.status === "FAILED"
-                        ? "destructive"
-                        : "secondary"
-                    }
-                  >
-                    {search.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                        ? "Errore"
+                        : "..."}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
     </>
   );
@@ -112,17 +244,31 @@ async function DashboardStats() {
 function DashboardSkeleton() {
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
-            <CardHeader className="space-y-0 pb-2">
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16" />
+            <CardContent className="p-4">
+              <Skeleton className="h-12 w-full" />
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="mt-6">
+        <Skeleton className="h-6 w-32 mb-3" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <Skeleton className="h-6 w-32 mb-3" />
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
       </div>
     </>
   );
@@ -130,15 +276,21 @@ function DashboardSkeleton() {
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-2">
+      {/* Welcome message - only on mobile */}
+      <div className="md:hidden mb-4">
+        <h1 className="text-xl font-bold">Buongiorno!</h1>
+        <p className="text-sm text-muted-foreground">
+          Ecco il riepilogo di oggi
+        </p>
+      </div>
+
+      {/* Desktop title */}
+      <div className="hidden md:block mb-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Link
-          href="/search"
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Nuova Ricerca
-        </Link>
+        <p className="text-muted-foreground">
+          Panoramica del tuo CRM
+        </p>
       </div>
 
       <Suspense fallback={<DashboardSkeleton />}>

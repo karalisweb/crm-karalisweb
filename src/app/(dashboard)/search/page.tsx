@@ -5,9 +5,40 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Loader2 } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  MapPin,
+  Building2,
+  Sparkles,
+  ChevronRight,
+} from "lucide-react";
+
+// Suggerimenti rapidi per la ricerca
+const quickCategories = [
+  { label: "Ristoranti", icon: "🍽️" },
+  { label: "Hotel", icon: "🏨" },
+  { label: "Dentisti", icon: "🦷" },
+  { label: "Palestre", icon: "💪" },
+  { label: "Parrucchieri", icon: "✂️" },
+  { label: "Estetisti", icon: "💅" },
+  { label: "Avvocati", icon: "⚖️" },
+  { label: "Commercialisti", icon: "📊" },
+];
+
+const quickLocations = [
+  "Milano",
+  "Roma",
+  "Napoli",
+  "Torino",
+  "Firenze",
+  "Bologna",
+  "Venezia",
+  "Genova",
+];
 
 export default function SearchPage() {
   const router = useRouter();
@@ -20,7 +51,7 @@ export default function SearchPage() {
     e.preventDefault();
 
     if (!query.trim() || !location.trim()) {
-      toast.error("Inserisci categoria e localita");
+      toast.error("Inserisci categoria e località");
       return;
     }
 
@@ -43,7 +74,7 @@ export default function SearchPage() {
       }
 
       const data = await response.json();
-      toast.success(`Ricerca avviata! ID: ${data.searchId}`);
+      toast.success(`Ricerca avviata! Trovati ${data.leadsFound || 0} lead`);
 
       // Redirect alla pagina dei risultati
       router.push(`/leads?searchId=${data.searchId}`);
@@ -56,77 +87,142 @@ export default function SearchPage() {
     }
   };
 
+  const handleQuickCategory = (category: string) => {
+    setQuery(category);
+  };
+
+  const handleQuickLocation = (loc: string) => {
+    setLocation(loc);
+  };
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
+      {/* Header - Mobile optimized */}
       <div>
-        <h1 className="text-3xl font-bold">Nuova Ricerca</h1>
-        <p className="text-muted-foreground">
-          Cerca attivita su Google Maps per trovare nuovi lead
+        <h1 className="text-xl md:text-3xl font-bold">Nuova Ricerca</h1>
+        <p className="text-sm text-muted-foreground">
+          Trova nuovi lead su Google Maps
         </p>
       </div>
 
+      {/* Quick Categories - Horizontal scroll on mobile */}
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-muted-foreground">
+          Categorie popolari
+        </p>
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
+          {quickCategories.map((cat) => (
+            <Badge
+              key={cat.label}
+              variant={query === cat.label ? "default" : "outline"}
+              className="cursor-pointer whitespace-nowrap px-3 py-1.5 text-sm hover:bg-primary/20 transition-colors flex-shrink-0"
+              onClick={() => handleQuickCategory(cat.label)}
+            >
+              <span className="mr-1.5">{cat.icon}</span>
+              {cat.label}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      {/* Search Form - Mobile first card */}
       <Card>
-        <CardHeader>
-          <CardTitle>Parametri Ricerca</CardTitle>
-          <CardDescription>
-            Inserisci la categoria di attivita e la zona geografica
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="p-4 md:p-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Categoria */}
             <div className="space-y-2">
-              <Label htmlFor="query">Categoria</Label>
+              <Label htmlFor="query" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                Categoria
+              </Label>
               <Input
                 id="query"
-                placeholder="es. Ristoranti, Hotel, Dentisti..."
+                placeholder="es. Ristoranti, Dentisti..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 disabled={loading}
+                className="h-12 text-base"
               />
-              <p className="text-sm text-muted-foreground">
-                Tipo di attivita da cercare
-              </p>
             </div>
 
+            {/* Località */}
             <div className="space-y-2">
-              <Label htmlFor="location">Localita</Label>
+              <Label htmlFor="location" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                Località
+              </Label>
               <Input
                 id="location"
-                placeholder="es. Milano centro, Roma EUR, Napoli..."
+                placeholder="es. Milano, Roma centro..."
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 disabled={loading}
+                className="h-12 text-base"
               />
-              <p className="text-sm text-muted-foreground">
-                Zona geografica della ricerca
-              </p>
+              {/* Quick location chips */}
+              <div className="flex gap-2 flex-wrap pt-1">
+                {quickLocations.slice(0, 4).map((loc) => (
+                  <Badge
+                    key={loc}
+                    variant={location === loc ? "default" : "secondary"}
+                    className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
+                    onClick={() => handleQuickLocation(loc)}
+                  >
+                    {loc}
+                  </Badge>
+                ))}
+              </div>
             </div>
 
+            {/* Limite risultati - Slider style */}
             <div className="space-y-2">
-              <Label htmlFor="limit">Numero massimo risultati</Label>
-              <Input
-                id="limit"
-                type="number"
-                min="10"
-                max="100"
-                value={limit}
-                onChange={(e) => setLimit(e.target.value)}
-                disabled={loading}
-              />
-              <p className="text-sm text-muted-foreground">
-                Consigliato: 50-100 per ottimizzare costi Apify
+              <Label htmlFor="limit" className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Numero lead
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="limit"
+                  type="number"
+                  min="10"
+                  max="100"
+                  value={limit}
+                  onChange={(e) => setLimit(e.target.value)}
+                  disabled={loading}
+                  className="h-12 text-base w-24 text-center"
+                />
+                <div className="flex gap-2">
+                  {["20", "50", "100"].map((val) => (
+                    <Badge
+                      key={val}
+                      variant={limit === val ? "default" : "secondary"}
+                      className="cursor-pointer hover:bg-primary/20 transition-colors"
+                      onClick={() => setLimit(val)}
+                    >
+                      {val}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Consigliato: 50 per bilanciare qualità e costi
               </p>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            {/* Submit button - Full width on mobile */}
+            <Button
+              type="submit"
+              className="w-full h-12 text-base font-semibold"
+              disabled={loading || !query.trim() || !location.trim()}
+            >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Ricerca in corso...
                 </>
               ) : (
                 <>
-                  <Search className="mr-2 h-4 w-4" />
+                  <Search className="mr-2 h-5 w-5" />
                   Avvia Ricerca
                 </>
               )}
@@ -135,28 +231,60 @@ export default function SearchPage() {
         </CardContent>
       </Card>
 
+      {/* Preview card */}
+      {query && location && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Cercherai</p>
+                <p className="font-semibold text-primary">
+                  {query} a {location}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fino a {limit} risultati
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Examples - Compact on mobile */}
       <Card>
-        <CardHeader>
-          <CardTitle>Esempi di Ricerca</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
-            <p>
-              <span className="font-medium">Ristoranti Milano centro</span> -
-              Trova ristoranti nella zona centrale di Milano
-            </p>
-            <p>
-              <span className="font-medium">Dentisti Roma EUR</span> -
-              Studi dentistici nel quartiere EUR
-            </p>
-            <p>
-              <span className="font-medium">Hotel Firenze</span> -
-              Strutture alberghiere a Firenze
-            </p>
-            <p>
-              <span className="font-medium">Palestre Torino</span> -
-              Centri fitness a Torino
-            </p>
+        <CardContent className="p-4">
+          <p className="text-sm font-medium mb-3">Esempi di ricerca</p>
+          <div className="space-y-2">
+            {[
+              { query: "Ristoranti", location: "Milano centro", desc: "Food & Beverage" },
+              { query: "Dentisti", location: "Roma EUR", desc: "Healthcare" },
+              { query: "Palestre", location: "Torino", desc: "Fitness" },
+            ].map((example, i) => (
+              <button
+                key={i}
+                type="button"
+                className="w-full text-left p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                onClick={() => {
+                  setQuery(example.query);
+                  setLocation(example.location);
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">
+                      {example.query} - {example.location}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {example.desc}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    Usa
+                  </Badge>
+                </div>
+              </button>
+            ))}
           </div>
         </CardContent>
       </Card>
