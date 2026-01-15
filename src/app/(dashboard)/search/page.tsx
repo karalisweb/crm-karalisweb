@@ -96,7 +96,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       {/* Header - Mobile optimized */}
       <div>
         <h1 className="text-xl md:text-3xl font-bold">Nuova Ricerca</h1>
@@ -106,11 +106,11 @@ export default function SearchPage() {
       </div>
 
       {/* Quick Categories - Horizontal scroll on mobile */}
-      <div className="space-y-2">
+      <div className="space-y-2 overflow-hidden">
         <p className="text-sm font-medium text-muted-foreground">
           Categorie popolari
         </p>
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide md:flex-wrap">
           {quickCategories.map((cat) => (
             <Badge
               key={cat.label}
