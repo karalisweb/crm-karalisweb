@@ -85,16 +85,6 @@ export async function runPageSpeedAnalysis(
   }
 
   // Costruisci URL API
-  const params = new URLSearchParams({
-    url: normalizedUrl,
-    strategy,
-    category: "performance",
-    category: "accessibility",
-    category: "best-practices",
-    category: "seo",
-  });
-
-  // Aggiungi tutte le categorie (URLSearchParams non supporta duplicati, usiamo append)
   const apiUrl = new URL(PAGESPEED_API_URL);
   apiUrl.searchParams.set("url", normalizedUrl);
   apiUrl.searchParams.set("strategy", strategy);
