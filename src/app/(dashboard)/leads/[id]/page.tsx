@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Clock,
 } from "lucide-react";
+import { AuditButton } from "@/components/leads/audit-button";
 
 // Force dynamic rendering - don't try to prerender at build time
 export const dynamic = "force-dynamic";
@@ -245,17 +246,29 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
                     <span>Performance</span>
                     <Badge
                       variant={
-                        auditData.website.performance >= 70
+                        auditData.website.performance >= 90
                           ? "default"
+                          : auditData.website.performance >= 50
+                          ? "secondary"
                           : "destructive"
                       }
                     >
-                      {auditData.website.performance}
+                      {auditData.website.performance}/100
                     </Badge>
                   </div>
                   <div className="flex justify-between">
                     <span>Tempo caricamento</span>
-                    <span>{auditData.website.loadTime.toFixed(1)}s</span>
+                    <Badge
+                      variant={
+                        auditData.website.loadTime <= 3
+                          ? "default"
+                          : auditData.website.loadTime <= 5
+                          ? "secondary"
+                          : "destructive"
+                      }
+                    >
+                      {auditData.website.loadTime.toFixed(1)}s
+                    </Badge>
                   </div>
                   <div className="flex justify-between">
                     <span>Mobile friendly</span>
@@ -269,6 +282,60 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
                       {auditData.website.https ? "Si" : "No"}
                     </Badge>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Core Web Vitals */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Core Web Vitals</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>LCP (Largest Contentful Paint)</span>
+                    <Badge
+                      variant={
+                        auditData.seo.coreWebVitals.lcp < 2500
+                          ? "default"
+                          : auditData.seo.coreWebVitals.lcp < 4000
+                          ? "secondary"
+                          : "destructive"
+                      }
+                    >
+                      {(auditData.seo.coreWebVitals.lcp / 1000).toFixed(1)}s
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>FID/TBT (Interattivita)</span>
+                    <Badge
+                      variant={
+                        auditData.seo.coreWebVitals.fid < 100
+                          ? "default"
+                          : auditData.seo.coreWebVitals.fid < 300
+                          ? "secondary"
+                          : "destructive"
+                      }
+                    >
+                      {auditData.seo.coreWebVitals.fid}ms
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>CLS (Stabilita Layout)</span>
+                    <Badge
+                      variant={
+                        auditData.seo.coreWebVitals.cls < 0.1
+                          ? "default"
+                          : auditData.seo.coreWebVitals.cls < 0.25
+                          ? "secondary"
+                          : "destructive"
+                      }
+                    >
+                      {auditData.seo.coreWebVitals.cls.toFixed(2)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Verde = buono, Giallo = da migliorare, Rosso = scarso
+                  </p>
                 </CardContent>
               </Card>
 
@@ -383,8 +450,8 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
                     ? "Nessun sito web da analizzare"
                     : "Audit non disponibile"}
                 </p>
-                {lead.website && lead.auditStatus === "PENDING" && (
-                  <Button className="mt-4">Avvia Audit</Button>
+                {lead.website && (lead.auditStatus === "PENDING" || lead.auditStatus === "FAILED" || lead.auditStatus === "RUNNING") && (
+                  <AuditButton leadId={lead.id} auditStatus={lead.auditStatus} />
                 )}
               </CardContent>
             </Card>
