@@ -7,17 +7,35 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "20");
     const stage = searchParams.get("stage");
-    const auditStatus = searchParams.get("auditStatus");
+    const stages = searchParams.get("stages"); // Supporta multipli stage separati da virgola
+    const auditStatus = searchParams.get("auditStatus") || searchParams.get("audit");
+    const website = searchParams.get("website");
     const search = searchParams.get("search");
 
     const where: Record<string, unknown> = {};
 
+    // Filtro per singolo stage
     if (stage) {
       where.pipelineStage = stage;
     }
 
+    // Filtro per multipli stage (stages=TO_CALL,CALLED,INTERESTED)
+    if (stages) {
+      const stageList = stages.split(",").filter(Boolean);
+      if (stageList.length > 0) {
+        where.pipelineStage = { in: stageList };
+      }
+    }
+
     if (auditStatus) {
       where.auditStatus = auditStatus;
+    }
+
+    // Filtro per presenza sito web
+    if (website === "yes") {
+      where.website = { not: null };
+    } else if (website === "no") {
+      where.website = null;
     }
 
     if (search) {
@@ -40,6 +58,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       leads,
+      total,
       pagination: {
         page,
         pageSize,

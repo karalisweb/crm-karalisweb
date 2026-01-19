@@ -7,18 +7,18 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
-  Users,
-  Kanban,
+  Phone,
   Search,
   Settings,
   LogOut,
+  FolderSearch,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Lead", href: "/leads", icon: Users },
-  { name: "Pipeline", href: "/pipeline", icon: Kanban },
+  { name: "Da Chiamare", href: "/leads", icon: Phone },
   { name: "Nuova Ricerca", href: "/search", icon: Search },
+  { name: "Ricerche", href: "/searches", icon: FolderSearch },
 ];
 
 export function Sidebar() {

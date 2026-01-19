@@ -5,17 +5,17 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Users,
-  Kanban,
+  Phone,
   Search,
   Settings,
+  FolderSearch,
 } from "lucide-react";
 
 const navigation = [
   { name: "Home", href: "/", icon: LayoutDashboard },
-  { name: "Lead", href: "/leads", icon: Users },
-  { name: "Pipeline", href: "/pipeline", icon: Kanban },
+  { name: "Chiamare", href: "/leads", icon: Phone },
   { name: "Cerca", href: "/search", icon: Search },
+  { name: "Ricerche", href: "/searches", icon: FolderSearch },
   { name: "Menu", href: "/settings", icon: Settings },
 ];
 

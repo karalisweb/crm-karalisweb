@@ -1,193 +1,661 @@
-import { Suspense } from "react";
+"use client";
+
+import { Suspense, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { db } from "@/lib/db";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "@hello-pangea/dnd";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { PIPELINE_STAGES, AUDIT_STATUSES } from "@/types";
-import { Search, Plus, Globe, Ban, CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
-import { LeadCard } from "@/components/leads/lead-card";
+import { Button } from "@/components/ui/button";
+import { PIPELINE_STAGES, getScoreCategory } from "@/types";
+import {
+  Phone,
+  Globe,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  GripVertical,
+  Search,
+  Plus,
+  List,
+  Kanban,
+  ChevronDown,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-export const dynamic = "force-dynamic";
-
-interface LeadsPageProps {
-  searchParams: Promise<{
-    stage?: string;
-    audit?: string;
-    website?: string;
-    page?: string;
-  }>;
+interface Lead {
+  id: string;
+  name: string;
+  address: string | null;
+  category: string | null;
+  phone: string | null;
+  website: string | null;
+  opportunityScore: number | null;
+  googleRating: number | null;
+  googleReviewsCount: number | null;
+  pipelineStage: string;
+  auditStatus: string;
 }
 
-async function LeadsList({
-  searchParams,
+interface ColumnData {
+  [key: string]: Lead[];
+}
+
+// Stages rilevanti per il commerciale (escludiamo NEW che sono solo importati)
+const ACTIVE_STAGES = [
+  "TO_CALL",
+  "CALLED",
+  "INTERESTED",
+  "AUDIT_SENT",
+  "MEETING",
+  "PROPOSAL",
+  "WON",
+  "LOST",
+];
+
+const stageOrder = [
+  "NEW",
+  "TO_CALL",
+  "CALLED",
+  "INTERESTED",
+  "AUDIT_SENT",
+  "MEETING",
+  "PROPOSAL",
+  "WON",
+  "LOST",
+];
+
+// Lead Card per la lista
+function LeadListCard({ lead }: { lead: Lead }) {
+  const scoreInfo = getScoreCategory(lead.opportunityScore);
+  const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
+  const stageInfo = PIPELINE_STAGES[lead.pipelineStage as keyof typeof PIPELINE_STAGES];
+
+  return (
+    <Link href={`/leads/${lead.id}`}>
+      <Card className="card-hover">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold truncate">{lead.name}</h3>
+                {isHot && <Flame className="h-4 w-4 text-red-500 flex-shrink-0" />}
+              </div>
+
+              {lead.category && (
+                <p className="text-sm text-muted-foreground truncate mb-2">
+                  {lead.category}
+                </p>
+              )}
+
+              <div className="flex items-center gap-3 text-sm">
+                {lead.googleRating && (
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    {Number(lead.googleRating).toFixed(1)}
+                    {lead.googleReviewsCount && (
+                      <span className="text-xs">({lead.googleReviewsCount})</span>
+                    )}
+                  </span>
+                )}
+                {lead.address && (
+                  <span className="text-muted-foreground truncate text-xs">
+                    {lead.address.split(",")[0]}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-2">
+              <Badge variant="outline" className="text-xs whitespace-nowrap">
+                {stageInfo?.label || lead.pipelineStage}
+              </Badge>
+
+              {lead.opportunityScore !== null && (
+                <Badge
+                  variant={
+                    scoreInfo.color === "red"
+                      ? "destructive"
+                      : scoreInfo.color === "green"
+                      ? "default"
+                      : "secondary"
+                  }
+                  className="text-xs"
+                >
+                  Score: {lead.opportunityScore}
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+            {lead.phone && (
+              <a
+                href={`tel:${lead.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-500 rounded-lg text-sm hover:bg-green-500/20 transition-colors"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                Chiama
+              </a>
+            )}
+            {lead.website && (
+              <a
+                href={lead.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-500 rounded-lg text-sm hover:bg-blue-500/20 transition-colors"
+              >
+                <Globe className="h-3.5 w-3.5" />
+                Sito
+              </a>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+// Mobile stage selector per Kanban
+const MobileStageSelector = ({
+  currentIndex,
+  onSelect,
+  columns,
+  visibleStages,
 }: {
-  searchParams: LeadsPageProps["searchParams"];
+  currentIndex: number;
+  onSelect: (index: number) => void;
+  columns: ColumnData;
+  visibleStages: string[];
+}) => {
+  return (
+    <div className="mb-4 md:hidden">
+      <div className="flex gap-2 flex-wrap">
+        {visibleStages.map((stageKey, index) => {
+          const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
+          const leads = columns[stageKey] || [];
+          const isActive = index === currentIndex;
+
+          return (
+            <button
+              key={stageKey}
+              onClick={() => onSelect(index)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              {stage.label}
+              <Badge
+                variant={isActive ? "secondary" : "outline"}
+                className="text-[10px] px-1.5 py-0"
+              >
+                {leads.length}
+              </Badge>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Mobile Lead Card per Kanban
+function MobileLeadCard({
+  lead,
+  onMoveLeft,
+  onMoveRight,
+  canMoveLeft,
+  canMoveRight,
+}: {
+  lead: Lead;
+  onMoveLeft: () => void;
+  onMoveRight: () => void;
+  canMoveLeft: boolean;
+  canMoveRight: boolean;
 }) {
-  const params = await searchParams;
-  const page = parseInt(params.page || "1");
-  const pageSize = 20;
+  const scoreInfo = getScoreCategory(lead.opportunityScore);
+  const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
 
-  const where: Record<string, unknown> = {};
-  if (params.stage) {
-    where.pipelineStage = params.stage;
-  }
-  if (params.audit) {
-    where.auditStatus = params.audit;
-  }
-  // Filtro per sito web
-  if (params.website === "yes") {
-    where.website = { not: null };
-  } else if (params.website === "no") {
-    where.website = null;
-  }
+  return (
+    <Card className="card-hover mb-3">
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2">
+          <div className="flex-shrink-0 pt-1 text-muted-foreground/50">
+            <GripVertical className="h-4 w-4" />
+          </div>
 
-  const [leads, total] = await Promise.all([
-    db.lead.findMany({
-      where,
-      orderBy: [{ opportunityScore: "desc" }, { createdAt: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        name: true,
-        address: true,
-        phone: true,
-        website: true,
-        category: true,
-        googleRating: true,
-        googleReviewsCount: true,
-        opportunityScore: true,
-        pipelineStage: true,
-        auditStatus: true,
-      },
-    }),
-    db.lead.count({ where }),
-  ]);
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <Link href={`/leads/${lead.id}`} className="flex-1 min-w-0">
+                <h4 className="font-medium text-sm truncate hover:underline">
+                  {lead.name}
+                </h4>
+              </Link>
+              <div className="flex items-center gap-1 ml-2">
+                {isHot && <Flame className="h-4 w-4 text-red-500" />}
+                {lead.opportunityScore !== null && (
+                  <Badge
+                    variant={
+                      scoreInfo.color === "red"
+                        ? "destructive"
+                        : scoreInfo.color === "green"
+                        ? "default"
+                        : "secondary"
+                    }
+                    className="text-xs"
+                  >
+                    {lead.opportunityScore}
+                  </Badge>
+                )}
+              </div>
+            </div>
 
-  const totalPages = Math.ceil(total / pageSize);
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              {lead.category && (
+                <span className="truncate">{lead.category}</span>
+              )}
+              {lead.googleRating && (
+                <span className="flex items-center gap-0.5">
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  {Number(lead.googleRating).toFixed(1)}
+                </span>
+              )}
+            </div>
 
-  if (leads.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="p-4 rounded-full bg-secondary mb-4">
-          <Search className="h-8 w-8 text-muted-foreground" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                {lead.phone && (
+                  <a
+                    href={`tel:${lead.phone}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-2 bg-green-500/10 rounded-lg touch-target"
+                  >
+                    <Phone className="h-4 w-4 text-green-500" />
+                  </a>
+                )}
+                {lead.website && (
+                  <a
+                    href={lead.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-2 bg-blue-500/10 rounded-lg touch-target"
+                  >
+                    <Globe className="h-4 w-4 text-blue-500" />
+                  </a>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 md:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onMoveLeft();
+                  }}
+                  disabled={!canMoveLeft}
+                  className="h-8 px-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onMoveRight();
+                  }}
+                  disabled={!canMoveRight}
+                  className="h-8 px-2"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-        <h3 className="font-semibold mb-1">Nessun lead trovato</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Inizia una nuova ricerca per trovare potenziali clienti
-        </p>
-        <Link
-          href="/search"
-          className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <Search className="h-4 w-4 mr-2" />
-          Nuova Ricerca
+      </CardContent>
+    </Card>
+  );
+}
+
+// Desktop Lead Card per Kanban
+function DesktopLeadCard({ lead }: { lead: Lead }) {
+  const scoreInfo = getScoreCategory(lead.opportunityScore);
+  const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
+
+  return (
+    <Card className="cursor-grab active:cursor-grabbing card-hover">
+      <CardContent className="p-3">
+        <Link href={`/leads/${lead.id}`} className="block">
+          <div className="flex items-center gap-1.5">
+            <h4 className="font-medium text-sm truncate hover:underline flex-1">
+              {lead.name}
+            </h4>
+            {isHot && <Flame className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
+          </div>
         </Link>
+
+        {lead.category && (
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            {lead.category}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-2">
+            {lead.opportunityScore !== null && (
+              <Badge
+                variant={
+                  scoreInfo.color === "red"
+                    ? "destructive"
+                    : scoreInfo.color === "green"
+                    ? "default"
+                    : "secondary"
+                }
+                className="text-xs"
+              >
+                {lead.opportunityScore}
+              </Badge>
+            )}
+
+            {lead.googleRating && (
+              <span className="flex items-center text-xs text-muted-foreground">
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-0.5" />
+                {Number(lead.googleRating).toFixed(1)}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1">
+            {lead.phone && (
+              <a
+                href={`tel:${lead.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1.5 hover:bg-accent rounded-lg"
+              >
+                <Phone className="h-3.5 w-3.5 text-green-500" />
+              </a>
+            )}
+            {lead.website && (
+              <a
+                href={lead.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="p-1.5 hover:bg-accent rounded-lg"
+              >
+                <Globe className="h-3.5 w-3.5 text-blue-500" />
+              </a>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LeadsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [columns, setColumns] = useState<ColumnData>({});
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [stageCounts, setStageCounts] = useState<Record<string, number>>({});
+
+  // View mode: "list" o "kanban"
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
+
+  // Kanban state
+  const [activeStageIndex, setActiveStageIndex] = useState(0);
+
+  // Filtri selezionati (per la pipeline)
+  const [selectedStages, setSelectedStages] = useState<string[]>(() => {
+    const stagesParam = searchParams.get("stages");
+    if (stagesParam) {
+      return stagesParam.split(",");
+    }
+    // Default: TO_CALL (Da Chiamare)
+    return ["TO_CALL"];
+  });
+
+  // Fetch leads
+  const fetchLeads = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Sempre filtra per audit completato e con sito web
+      const params = new URLSearchParams();
+      params.set("audit", "COMPLETED");
+      params.set("website", "yes");
+      params.set("pageSize", "500");
+
+      // Per la lista, filtra anche per stage selezionati
+      if (viewMode === "list" && selectedStages.length > 0) {
+        params.set("stages", selectedStages.join(","));
+      }
+
+      const response = await fetch(`/api/leads?${params.toString()}`);
+      const data = await response.json();
+
+      setLeads(data.leads || []);
+      setTotal(data.total || 0);
+
+      // Calcola conteggi per stage
+      const counts: Record<string, number> = {};
+      for (const stage of stageOrder) {
+        counts[stage] = 0;
+      }
+      for (const lead of data.leads || []) {
+        if (counts[lead.pipelineStage] !== undefined) {
+          counts[lead.pipelineStage]++;
+        }
+      }
+      setStageCounts(counts);
+
+      // Organizza per Kanban
+      const grouped: ColumnData = {};
+      for (const stage of stageOrder) {
+        grouped[stage] = [];
+      }
+      for (const lead of data.leads || []) {
+        if (grouped[lead.pipelineStage]) {
+          grouped[lead.pipelineStage].push(lead);
+        }
+      }
+      // Ordina per score dentro ogni colonna
+      for (const stage of stageOrder) {
+        grouped[stage].sort((a, b) => {
+          const scoreA = a.opportunityScore ?? 0;
+          const scoreB = b.opportunityScore ?? 0;
+          return scoreB - scoreA;
+        });
+      }
+      setColumns(grouped);
+    } catch (error) {
+      toast.error("Errore nel caricamento dei lead");
+    } finally {
+      setLoading(false);
+    }
+  }, [viewMode, selectedStages]);
+
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  // Aggiorna URL quando cambiano i filtri
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedStages.length > 0 && selectedStages.length < ACTIVE_STAGES.length) {
+      params.set("stages", selectedStages.join(","));
+    }
+    if (viewMode !== "list") {
+      params.set("view", viewMode);
+    }
+    const newUrl = params.toString() ? `/leads?${params.toString()}` : "/leads";
+    router.replace(newUrl, { scroll: false });
+  }, [selectedStages, viewMode, router]);
+
+  // Toggle uno stage
+  const toggleStage = (stage: string) => {
+    setSelectedStages((prev) => {
+      if (prev.includes(stage)) {
+        // Se rimane almeno uno, rimuovi
+        if (prev.length > 1) {
+          return prev.filter((s) => s !== stage);
+        }
+        return prev;
+      } else {
+        return [...prev, stage];
+      }
+    });
+  };
+
+  // Seleziona tutti o nessuno
+  const selectAllStages = () => {
+    setSelectedStages(ACTIVE_STAGES);
+  };
+
+  // Kanban: update lead stage
+  const updateLeadStage = async (leadId: string, newStage: string) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pipelineStage: newStage }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update");
+
+      const stageInfo = PIPELINE_STAGES[newStage as keyof typeof PIPELINE_STAGES];
+      toast.success(`Lead spostato in "${stageInfo.label}"`);
+      return true;
+    } catch {
+      toast.error("Errore nell'aggiornamento");
+      return false;
+    }
+  };
+
+  const moveLead = async (leadId: string, fromStage: string, toStage: string) => {
+    // Optimistic update
+    const newColumns = { ...columns };
+    const fromLeads = [...newColumns[fromStage]];
+    const toLeads = [...newColumns[toStage]];
+
+    const leadIndex = fromLeads.findIndex((l) => l.id === leadId);
+    if (leadIndex === -1) return;
+
+    const [lead] = fromLeads.splice(leadIndex, 1);
+    toLeads.unshift({ ...lead, pipelineStage: toStage });
+    toLeads.sort((a, b) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0));
+
+    newColumns[fromStage] = fromLeads;
+    newColumns[toStage] = toLeads;
+    setColumns(newColumns);
+
+    const success = await updateLeadStage(leadId, toStage);
+    if (!success) {
+      fetchLeads();
+    }
+  };
+
+  const handleDragEnd = async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    const newColumns = { ...columns };
+    const sourceColumn = [...newColumns[source.droppableId]];
+    const destColumn =
+      source.droppableId === destination.droppableId
+        ? sourceColumn
+        : [...newColumns[destination.droppableId]];
+
+    const [removed] = sourceColumn.splice(source.index, 1);
+    destColumn.splice(destination.index, 0, {
+      ...removed,
+      pipelineStage: destination.droppableId,
+    });
+
+    newColumns[source.droppableId] = sourceColumn;
+    newColumns[destination.droppableId] = destColumn;
+    setColumns(newColumns);
+
+    const success = await updateLeadStage(draggableId, destination.droppableId);
+    if (!success) {
+      fetchLeads();
+    }
+  };
+
+  // Filtra lead per la lista
+  const filteredLeads = viewMode === "list"
+    ? leads.filter((lead) => selectedStages.includes(lead.pipelineStage))
+    : leads;
+
+  // Stages visibili nel Kanban (solo quelli con lead + quelli selezionati)
+  const visibleKanbanStages = stageOrder.filter(
+    (stage) => (columns[stage]?.length || 0) > 0 || selectedStages.includes(stage)
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-9 w-32" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+        <div className="space-y-3">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  // Build filter description
-  const filterParts: string[] = [];
-  if (params.stage) {
-    filterParts.push(PIPELINE_STAGES[params.stage as keyof typeof PIPELINE_STAGES]?.label);
-  }
-  if (params.website === "yes") {
-    filterParts.push("Con sito web");
-  } else if (params.website === "no") {
-    filterParts.push("Senza sito web");
-  }
-  if (params.audit) {
-    filterParts.push(`Audit: ${AUDIT_STATUSES[params.audit as keyof typeof AUDIT_STATUSES]?.label}`);
-  }
-  const filterDesc = filterParts.length > 0 ? ` - ${filterParts.join(", ")}` : "";
+  const activeStage = visibleKanbanStages[activeStageIndex] || visibleKanbanStages[0];
+  const activeLeads = columns[activeStage] || [];
 
-  return (
-    <div className="space-y-4">
-      {/* Results count */}
-      <p className="text-sm text-muted-foreground">
-        {total} lead trovati{filterDesc}
-      </p>
-
-      {/* Lead cards */}
-      <div className="space-y-3">
-        {leads.map((lead) => (
-          <LeadCard
-            key={lead.id}
-            lead={{
-              ...lead,
-              googleRating: lead.googleRating ? Number(lead.googleRating) : null,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4">
-          <p className="text-sm text-muted-foreground">
-            Pagina {page} di {totalPages}
-          </p>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <Link
-                href={`/leads?${new URLSearchParams({
-                  ...(params.stage && { stage: params.stage }),
-                  page: String(page - 1),
-                }).toString()}`}
-                className="inline-flex items-center justify-center px-3 py-1.5 text-sm rounded-md border border-input hover:bg-accent"
-              >
-                Precedente
-              </Link>
-            )}
-            {page < totalPages && (
-              <Link
-                href={`/leads?${new URLSearchParams({
-                  ...(params.stage && { stage: params.stage }),
-                  page: String(page + 1),
-                }).toString()}`}
-                className="inline-flex items-center justify-center px-3 py-1.5 text-sm rounded-md border border-input hover:bg-accent"
-              >
-                Successiva
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function LeadsListSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[...Array(6)].map((_, i) => (
-        <Card key={i}>
-          <CardContent className="p-4">
-            <Skeleton className="h-5 w-3/4 mb-2" />
-            <Skeleton className="h-3 w-1/2 mb-3" />
-            <div className="flex justify-between">
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="h-8 w-24" />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-export default function LeadsPage(props: LeadsPageProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-3xl font-bold">Lead</h1>
-          <p className="text-sm text-muted-foreground hidden md:block">
-            Gestisci i tuoi potenziali clienti
+          <h1 className="text-xl md:text-3xl font-bold">Da Chiamare</h1>
+          <p className="text-sm text-muted-foreground">
+            {total} lead qualificati (sito + audit)
           </p>
         </div>
         <Link
@@ -199,101 +667,270 @@ export default function LeadsPage(props: LeadsPageProps) {
         </Link>
       </div>
 
-      {/* Filter chips - Pipeline stages */}
-      <ScrollArea className="w-full whitespace-nowrap">
-        <div className="flex gap-2 pb-2">
-          <Link href="/leads">
-            <Badge
-              variant="outline"
-              className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors px-3 py-1"
+      {/* Filtri e toggle vista */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Stage filter dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <span>
+                {selectedStages.length === ACTIVE_STAGES.length
+                  ? "Tutti gli stati"
+                  : selectedStages.length === 1
+                  ? PIPELINE_STAGES[selectedStages[0] as keyof typeof PIPELINE_STAGES]?.label
+                  : `${selectedStages.length} stati`}
+              </span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuCheckboxItem
+              checked={selectedStages.length === ACTIVE_STAGES.length}
+              onCheckedChange={selectAllStages}
             >
-              Tutti
-            </Badge>
-          </Link>
-          {Object.entries(PIPELINE_STAGES).map(([key, value]) => (
-            <Link key={key} href={`/leads?stage=${key}`}>
-              <Badge
-                variant="outline"
-                className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors px-3 py-1 whitespace-nowrap"
+              Tutti gli stati
+            </DropdownMenuCheckboxItem>
+            <div className="h-px bg-border my-1" />
+            {ACTIVE_STAGES.map((stageKey) => {
+              const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
+              const count = stageCounts[stageKey] || 0;
+              return (
+                <DropdownMenuCheckboxItem
+                  key={stageKey}
+                  checked={selectedStages.includes(stageKey)}
+                  onCheckedChange={() => toggleStage(stageKey)}
+                >
+                  <span className="flex-1">{stage.label}</span>
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {count}
+                  </Badge>
+                </DropdownMenuCheckboxItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Pulsanti toggle per stage principali (quick access) */}
+        <div className="hidden md:flex gap-2">
+          {["TO_CALL", "CALLED", "INTERESTED"].map((stageKey) => {
+            const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
+            const isActive = selectedStages.includes(stageKey);
+            const count = stageCounts[stageKey] || 0;
+            return (
+              <Button
+                key={stageKey}
+                variant={isActive ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleStage(stageKey)}
+                className="gap-1.5"
               >
-                {value.label}
-              </Badge>
-            </Link>
+                {stage.label}
+                <Badge
+                  variant={isActive ? "secondary" : "outline"}
+                  className="text-xs px-1.5"
+                >
+                  {count}
+                </Badge>
+              </Button>
+            );
+          })}
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Toggle vista */}
+        <div className="flex items-center rounded-lg border border-input p-1">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="gap-1.5 h-7 px-2"
+          >
+            <List className="h-4 w-4" />
+            <span className="hidden sm:inline">Lista</span>
+          </Button>
+          <Button
+            variant={viewMode === "kanban" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("kanban")}
+            className="gap-1.5 h-7 px-2"
+          >
+            <Kanban className="h-4 w-4" />
+            <span className="hidden sm:inline">Kanban</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Contenuto */}
+      {filteredLeads.length === 0 && viewMode === "list" ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="p-4 rounded-full bg-secondary mb-4">
+            <Search className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="font-semibold mb-1">Nessun lead trovato</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {selectedStages.length === 0
+              ? "Seleziona almeno uno stato dal filtro"
+              : "Nessun lead con audit completato in questi stati"}
+          </p>
+          <Link
+            href="/search"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Search className="h-4 w-4 mr-2" />
+            Nuova Ricerca
+          </Link>
+        </div>
+      ) : viewMode === "list" ? (
+        /* Vista Lista */
+        <div className="space-y-3">
+          {filteredLeads.map((lead) => (
+            <LeadListCard key={lead.id} lead={lead} />
           ))}
         </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      ) : (
+        /* Vista Kanban */
+        <>
+          {/* Mobile View - Single column with stage selector */}
+          <div className="md:hidden">
+            <MobileStageSelector
+              currentIndex={activeStageIndex}
+              onSelect={setActiveStageIndex}
+              columns={columns}
+              visibleStages={visibleKanbanStages}
+            />
 
-      {/* Filter chips - Website & Audit status */}
-      <ScrollArea className="w-full whitespace-nowrap">
-        <div className="flex gap-2 pb-2">
-          {/* Website filters */}
-          <Link href="/leads?website=yes">
-            <Badge
-              variant="outline"
-              className="cursor-pointer hover:bg-green-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
-            >
-              <Globe className="h-3 w-3" />
-              Con sito
-            </Badge>
-          </Link>
-          <Link href="/leads?website=no">
-            <Badge
-              variant="outline"
-              className="cursor-pointer hover:bg-orange-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
-            >
-              <Ban className="h-3 w-3" />
-              Senza sito
-            </Badge>
-          </Link>
+            <div className="space-y-2">
+              {activeLeads.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <p className="text-muted-foreground">Nessun lead in questa fase</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                activeLeads.map((lead) => {
+                  const currentIdx = visibleKanbanStages.indexOf(activeStage);
+                  return (
+                    <MobileLeadCard
+                      key={lead.id}
+                      lead={lead}
+                      onMoveLeft={() => {
+                        if (currentIdx > 0) {
+                          const prevStage = visibleKanbanStages[currentIdx - 1];
+                          moveLead(lead.id, activeStage, prevStage);
+                        }
+                      }}
+                      onMoveRight={() => {
+                        if (currentIdx < visibleKanbanStages.length - 1) {
+                          const nextStage = visibleKanbanStages[currentIdx + 1];
+                          moveLead(lead.id, activeStage, nextStage);
+                        }
+                      }}
+                      canMoveLeft={currentIdx > 0}
+                      canMoveRight={currentIdx < visibleKanbanStages.length - 1}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </div>
 
-          <span className="text-muted-foreground mx-1">|</span>
+          {/* Desktop View - Kanban board */}
+          <div className="hidden md:block">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                {stageOrder.map((stageKey) => {
+                  const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
+                  const stageLeads = columns[stageKey] || [];
 
-          {/* Audit status filters */}
-          <Link href="/leads?website=yes&audit=COMPLETED">
-            <Badge
-              variant="outline"
-              className="cursor-pointer hover:bg-green-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
-            >
-              <CheckCircle className="h-3 w-3" />
-              Audit OK
-            </Badge>
-          </Link>
-          <Link href="/leads?website=yes&audit=PENDING">
-            <Badge
-              variant="outline"
-              className="cursor-pointer hover:bg-gray-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
-            >
-              <Clock className="h-3 w-3" />
-              Da auditare
-            </Badge>
-          </Link>
-          <Link href="/leads?website=yes&audit=RUNNING">
-            <Badge
-              variant="outline"
-              className="cursor-pointer hover:bg-blue-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
-            >
-              <Loader2 className="h-3 w-3" />
-              In analisi
-            </Badge>
-          </Link>
-          <Link href="/leads?website=yes&audit=FAILED">
-            <Badge
-              variant="outline"
-              className="cursor-pointer hover:bg-red-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
-            >
-              <AlertCircle className="h-3 w-3" />
-              Audit fallito
-            </Badge>
-          </Link>
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+                  return (
+                    <div key={stageKey} className="flex-shrink-0 w-72">
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <h3 className="font-semibold text-sm">{stage.label}</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {stageLeads.length}
+                        </Badge>
+                      </div>
 
-      {/* Leads list */}
-      <Suspense fallback={<LeadsListSkeleton />}>
-        <LeadsList searchParams={props.searchParams} />
-      </Suspense>
+                      <Droppable droppableId={stageKey}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className={`min-h-[500px] p-2 rounded-xl transition-colors ${
+                              snapshot.isDraggingOver
+                                ? "bg-primary/10"
+                                : "bg-secondary/50"
+                            }`}
+                          >
+                            {stageLeads.map((lead, index) => (
+                              <Draggable
+                                key={lead.id}
+                                draggableId={lead.id}
+                                index={index}
+                              >
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`mb-2 ${
+                                      snapshot.isDragging ? "opacity-80 rotate-2" : ""
+                                    }`}
+                                  >
+                                    <DesktopLeadCard lead={lead} />
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+
+                            {stageLeads.length === 0 && (
+                              <p className="text-center text-muted-foreground py-8 text-sm">
+                                Nessun lead
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </Droppable>
+                    </div>
+                  );
+                })}
+              </div>
+            </DragDropContext>
+          </div>
+        </>
+      )}
     </div>
+  );
+}
+
+// Loading skeleton per Suspense
+function LeadsPageSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-9 w-32" />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+      <div className="space-y-3">
+        {[...Array(6)].map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function LeadsPage() {
+  return (
+    <Suspense fallback={<LeadsPageSkeleton />}>
+      <LeadsPageContent />
+    </Suspense>
   );
 }
