@@ -73,14 +73,17 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
   const techResult = detectTech(html);
 
   // Costruisci audit data
-  // Se PageSpeed e' disponibile, usa i dati reali, altrimenti defaults
+  // Se PageSpeed e' disponibile, usa i dati reali, altrimenti usa check HTML
+  // Per mobile: usa PageSpeed se disponibile, altrimenti il nostro check HTML
+  const isMobileFriendly = pageSpeedResult?.mobile ?? seoResult.mobileFriendly ?? false;
+
   const websiteAudit: WebsiteAudit = {
     performance: pageSpeedResult?.performance ?? 50,
     accessibility: pageSpeedResult?.accessibility ?? 50,
     bestPractices: pageSpeedResult?.bestPractices ?? 50,
     seoScore: pageSpeedResult?.seo ?? 50,
     loadTime: pageSpeedResult?.loadTime ?? 3.0,
-    mobile: pageSpeedResult?.mobile ?? true,
+    mobile: isMobileFriendly,
     https: url.startsWith("https://"),
     hasContactForm: trustResult.hasContactForm,
     hasWhatsApp: trustResult.hasWhatsApp,
@@ -148,7 +151,13 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
     issues.push(`Sito lento (performance ${websiteAudit.performance}/100)`);
   }
   if (!websiteAudit.mobile) {
-    issues.push("Non ottimizzato per mobile");
+    // Aggiungi dettagli sui problemi mobile se disponibili
+    const mobileIssues = seoResult.mobileIssues;
+    if (mobileIssues && mobileIssues.length > 0) {
+      issues.push(`Non ottimizzato per mobile: ${mobileIssues[0]}`);
+    } else {
+      issues.push("Non ottimizzato per mobile");
+    }
   }
   if (!websiteAudit.https) {
     issues.push("Manca HTTPS");
@@ -156,8 +165,15 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
   if (!seoAudit.hasMetaDescription) {
     issues.push("Manca meta description");
   }
+  // Meta title: verifica se è ottimizzato, non solo se esiste
   if (!seoAudit.hasMetaTitle) {
     issues.push("Manca meta title");
+  } else if (seoResult.metaTitleOptimized === false) {
+    // Title esiste ma non è ottimizzato
+    const titleIssues = seoResult.metaTitleIssues;
+    if (titleIssues && titleIssues.length > 0) {
+      issues.push(`Meta title non ottimizzato: ${titleIssues[0]}`);
+    }
   }
   if (!trackingResult.hasGA4 && !trackingResult.hasGoogleAnalytics) {
     issues.push("Nessun analytics installato");

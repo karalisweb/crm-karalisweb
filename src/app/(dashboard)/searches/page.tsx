@@ -80,54 +80,56 @@ async function SearchesList() {
         const StatusIcon = statusConfig.icon;
 
         return (
-          <Card key={search.id} className="card-hover">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold truncate">{search.query}</h3>
-                  </div>
+          <Link key={search.id} href={`/searches/${search.id}`}>
+            <Card className="card-hover cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold truncate">{search.query}</h3>
+                    </div>
 
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                    <MapPin className="h-3.5 w-3.5" />
-                    <span className="truncate">{search.location}</span>
-                  </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span className="truncate">{search.location}</span>
+                    </div>
 
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <Badge variant="outline" className={statusConfig.color}>
-                      <StatusIcon className={`h-3 w-3 mr-1 ${search.status === "RUNNING" ? "animate-spin" : ""}`} />
-                      {statusConfig.label}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <Badge variant="outline" className={statusConfig.color}>
+                        <StatusIcon className={`h-3 w-3 mr-1 ${search.status === "RUNNING" ? "animate-spin" : ""}`} />
+                        {statusConfig.label}
+                      </Badge>
 
-                    {search.leadsFound !== null && search.leadsFound > 0 && (
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Users className="h-3.5 w-3.5" />
-                        {search.leadsFound} trovati
+                      {search.leadsFound !== null && search.leadsFound > 0 && (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Users className="h-3.5 w-3.5" />
+                          {search.leadsFound} trovati
+                        </span>
+                      )}
+
+                      {search.leadsWithWebsite !== null && search.leadsWithWebsite > 0 && (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Globe className="h-3.5 w-3.5" />
+                          {search.leadsWithWebsite} con sito
+                        </span>
+                      )}
+
+                      <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                        <Calendar className="h-3 w-3" />
+                        {formatTimeAgo(new Date(search.createdAt))}
                       </span>
-                    )}
-
-                    {search.leadsWithWebsite !== null && search.leadsWithWebsite > 0 && (
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Globe className="h-3.5 w-3.5" />
-                        {search.leadsWithWebsite} con sito
-                      </span>
-                    )}
-
-                    <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                      <Calendar className="h-3 w-3" />
-                      {formatTimeAgo(new Date(search.createdAt))}
-                    </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {search.errorMessage && (
-                <div className="mt-3 p-2 bg-red-500/10 rounded-lg text-sm text-red-500">
-                  {search.errorMessage}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {search.errorMessage && (
+                  <div className="mt-3 p-2 bg-red-500/10 rounded-lg text-sm text-red-500">
+                    {search.errorMessage}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
         );
       })}
     </div>
