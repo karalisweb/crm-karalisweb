@@ -234,7 +234,7 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
 
         {/* Audit Tab */}
         <TabsContent value="audit">
-          {auditData ? (
+          {auditData && auditData.website && auditData.seo && auditData.tracking && auditData.trust ? (
             <div className="grid gap-4 md:grid-cols-2">
               {/* Website Performance */}
               <Card>
@@ -246,28 +246,28 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
                     <span>Performance</span>
                     <Badge
                       variant={
-                        auditData.website.performance >= 90
+                        (auditData.website.performance ?? 0) >= 90
                           ? "default"
-                          : auditData.website.performance >= 50
+                          : (auditData.website.performance ?? 0) >= 50
                           ? "secondary"
                           : "destructive"
                       }
                     >
-                      {auditData.website.performance}/100
+                      {auditData.website.performance ?? 0}/100
                     </Badge>
                   </div>
                   <div className="flex justify-between">
                     <span>Tempo caricamento</span>
                     <Badge
                       variant={
-                        auditData.website.loadTime <= 3
+                        (auditData.website.loadTime ?? 10) <= 3
                           ? "default"
-                          : auditData.website.loadTime <= 5
+                          : (auditData.website.loadTime ?? 10) <= 5
                           ? "secondary"
                           : "destructive"
                       }
                     >
-                      {auditData.website.loadTime.toFixed(1)}s
+                      {(auditData.website.loadTime ?? 0).toFixed(1)}s
                     </Badge>
                   </div>
                   <div className="flex justify-between">
@@ -286,58 +286,60 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
               </Card>
 
               {/* Core Web Vitals */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Core Web Vitals</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>LCP (Largest Contentful Paint)</span>
-                    <Badge
-                      variant={
-                        auditData.seo.coreWebVitals.lcp < 2500
-                          ? "default"
-                          : auditData.seo.coreWebVitals.lcp < 4000
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {(auditData.seo.coreWebVitals.lcp / 1000).toFixed(1)}s
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>FID/TBT (Interattivita)</span>
-                    <Badge
-                      variant={
-                        auditData.seo.coreWebVitals.fid < 100
-                          ? "default"
-                          : auditData.seo.coreWebVitals.fid < 300
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {auditData.seo.coreWebVitals.fid}ms
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>CLS (Stabilita Layout)</span>
-                    <Badge
-                      variant={
-                        auditData.seo.coreWebVitals.cls < 0.1
-                          ? "default"
-                          : auditData.seo.coreWebVitals.cls < 0.25
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {auditData.seo.coreWebVitals.cls.toFixed(2)}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Verde = buono, Giallo = da migliorare, Rosso = scarso
-                  </p>
-                </CardContent>
-              </Card>
+              {auditData.seo.coreWebVitals && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Core Web Vitals</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>LCP (Largest Contentful Paint)</span>
+                      <Badge
+                        variant={
+                          (auditData.seo.coreWebVitals.lcp ?? 5000) < 2500
+                            ? "default"
+                            : (auditData.seo.coreWebVitals.lcp ?? 5000) < 4000
+                            ? "secondary"
+                            : "destructive"
+                        }
+                      >
+                        {((auditData.seo.coreWebVitals.lcp ?? 0) / 1000).toFixed(1)}s
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>FID/TBT (Interattivita)</span>
+                      <Badge
+                        variant={
+                          (auditData.seo.coreWebVitals.fid ?? 500) < 100
+                            ? "default"
+                            : (auditData.seo.coreWebVitals.fid ?? 500) < 300
+                            ? "secondary"
+                            : "destructive"
+                        }
+                      >
+                        {auditData.seo.coreWebVitals.fid ?? 0}ms
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>CLS (Stabilita Layout)</span>
+                      <Badge
+                        variant={
+                          (auditData.seo.coreWebVitals.cls ?? 1) < 0.1
+                            ? "default"
+                            : (auditData.seo.coreWebVitals.cls ?? 1) < 0.25
+                            ? "secondary"
+                            : "destructive"
+                        }
+                      >
+                        {(auditData.seo.coreWebVitals.cls ?? 0).toFixed(2)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Verde = buono, Giallo = da migliorare, Rosso = scarso
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* SEO */}
               <Card>

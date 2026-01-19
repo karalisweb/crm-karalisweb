@@ -5,8 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { PIPELINE_STAGES } from "@/types";
-import { Search, Plus } from "lucide-react";
+import { PIPELINE_STAGES, AUDIT_STATUSES } from "@/types";
+import { Search, Plus, Globe, Ban, CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { LeadCard } from "@/components/leads/lead-card";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ interface LeadsPageProps {
   searchParams: Promise<{
     stage?: string;
     audit?: string;
+    website?: string;
     page?: string;
   }>;
 }
@@ -34,6 +35,12 @@ async function LeadsList({
   }
   if (params.audit) {
     where.auditStatus = params.audit;
+  }
+  // Filtro per sito web
+  if (params.website === "yes") {
+    where.website = { not: null };
+  } else if (params.website === "no") {
+    where.website = null;
   }
 
   const [leads, total] = await Promise.all([
@@ -82,12 +89,26 @@ async function LeadsList({
     );
   }
 
+  // Build filter description
+  const filterParts: string[] = [];
+  if (params.stage) {
+    filterParts.push(PIPELINE_STAGES[params.stage as keyof typeof PIPELINE_STAGES]?.label);
+  }
+  if (params.website === "yes") {
+    filterParts.push("Con sito web");
+  } else if (params.website === "no") {
+    filterParts.push("Senza sito web");
+  }
+  if (params.audit) {
+    filterParts.push(`Audit: ${AUDIT_STATUSES[params.audit as keyof typeof AUDIT_STATUSES]?.label}`);
+  }
+  const filterDesc = filterParts.length > 0 ? ` - ${filterParts.join(", ")}` : "";
+
   return (
     <div className="space-y-4">
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
-        {total} lead trovati
-        {params.stage && ` - ${PIPELINE_STAGES[params.stage as keyof typeof PIPELINE_STAGES]?.label}`}
+        {total} lead trovati{filterDesc}
       </p>
 
       {/* Lead cards */}
@@ -178,7 +199,7 @@ export default function LeadsPage(props: LeadsPageProps) {
         </Link>
       </div>
 
-      {/* Filter chips - Horizontal scroll on mobile */}
+      {/* Filter chips - Pipeline stages */}
       <ScrollArea className="w-full whitespace-nowrap">
         <div className="flex gap-2 pb-2">
           <Link href="/leads">
@@ -199,6 +220,72 @@ export default function LeadsPage(props: LeadsPageProps) {
               </Badge>
             </Link>
           ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+
+      {/* Filter chips - Website & Audit status */}
+      <ScrollArea className="w-full whitespace-nowrap">
+        <div className="flex gap-2 pb-2">
+          {/* Website filters */}
+          <Link href="/leads?website=yes">
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-green-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
+            >
+              <Globe className="h-3 w-3" />
+              Con sito
+            </Badge>
+          </Link>
+          <Link href="/leads?website=no">
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-orange-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
+            >
+              <Ban className="h-3 w-3" />
+              Senza sito
+            </Badge>
+          </Link>
+
+          <span className="text-muted-foreground mx-1">|</span>
+
+          {/* Audit status filters */}
+          <Link href="/leads?website=yes&audit=COMPLETED">
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-green-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
+            >
+              <CheckCircle className="h-3 w-3" />
+              Audit OK
+            </Badge>
+          </Link>
+          <Link href="/leads?website=yes&audit=PENDING">
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-gray-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
+            >
+              <Clock className="h-3 w-3" />
+              Da auditare
+            </Badge>
+          </Link>
+          <Link href="/leads?website=yes&audit=RUNNING">
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-blue-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
+            >
+              <Loader2 className="h-3 w-3" />
+              In analisi
+            </Badge>
+          </Link>
+          <Link href="/leads?website=yes&audit=FAILED">
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-red-600 hover:text-white transition-colors px-3 py-1 whitespace-nowrap flex items-center gap-1"
+            >
+              <AlertCircle className="h-3 w-3" />
+              Audit fallito
+            </Badge>
+          </Link>
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
