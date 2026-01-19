@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -26,6 +26,7 @@ import {
   Plus,
   List,
   Kanban,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -454,14 +455,22 @@ function LeadsPageContent() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [columns, setColumns] = useState<ColumnData>({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [total, setTotal] = useState(0);
   const [stageCounts, setStageCounts] = useState<Record<string, number>>({});
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
+  const KANBAN_PAGE_SIZE = 200; // Kanban carica più lead per avere tutte le colonne popolate
 
   // View mode: "list" o "kanban"
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
 
   // Kanban state
   const [activeStageIndex, setActiveStageIndex] = useState(0);
+
+  // Ref per infinite scroll
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Filtri selezionati (per la pipeline)
   const [selectedStages, setSelectedStages] = useState<string[]>(() => {
@@ -473,68 +482,141 @@ function LeadsPageContent() {
     return ["TO_CALL"];
   });
 
-  // Fetch leads
-  const fetchLeads = useCallback(async () => {
-    setLoading(true);
+  // Fetch leads con paginazione
+  const fetchLeads = useCallback(async (pageNum: number = 1, append: boolean = false) => {
+    if (pageNum === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
       // Sempre filtra per audit completato e con sito web
       const params = new URLSearchParams();
       params.set("audit", "COMPLETED");
       params.set("website", "yes");
-      params.set("pageSize", "500");
+      params.set("page", String(pageNum));
+      // Kanban carica più lead per popolare tutte le colonne
+      const currentPageSize = viewMode === "kanban" ? KANBAN_PAGE_SIZE : PAGE_SIZE;
+      params.set("pageSize", String(currentPageSize));
 
       // Per la lista, filtra anche per stage selezionati
       if (viewMode === "list" && selectedStages.length > 0) {
         params.set("stages", selectedStages.join(","));
       }
 
+      // Richiedi i conteggi per stage solo al primo caricamento
+      if (pageNum === 1) {
+        params.set("stageCounts", "true");
+      }
+
       const response = await fetch(`/api/leads?${params.toString()}`);
       const data = await response.json();
 
-      setLeads(data.leads || []);
-      setTotal(data.total || 0);
+      const newLeads = data.leads || [];
+      const totalCount = data.total || 0;
 
-      // Calcola conteggi per stage
-      const counts: Record<string, number> = {};
-      for (const stage of stageOrder) {
-        counts[stage] = 0;
+      if (append) {
+        setLeads(prev => [...prev, ...newLeads]);
+      } else {
+        setLeads(newLeads);
       }
-      for (const lead of data.leads || []) {
-        if (counts[lead.pipelineStage] !== undefined) {
-          counts[lead.pipelineStage]++;
+
+      setTotal(totalCount);
+      setHasMore(newLeads.length === currentPageSize && (pageNum * currentPageSize) < totalCount);
+
+      // Usa i conteggi dall'API se disponibili (solo al primo caricamento)
+      if (data.stageCounts) {
+        const counts: Record<string, number> = {};
+        for (const stage of stageOrder) {
+          counts[stage] = data.stageCounts[stage] || 0;
         }
+        setStageCounts(counts);
       }
-      setStageCounts(counts);
 
       // Organizza per Kanban
-      const grouped: ColumnData = {};
-      for (const stage of stageOrder) {
-        grouped[stage] = [];
-      }
-      for (const lead of data.leads || []) {
-        if (grouped[lead.pipelineStage]) {
-          grouped[lead.pipelineStage].push(lead);
-        }
-      }
-      // Ordina per score dentro ogni colonna
-      for (const stage of stageOrder) {
-        grouped[stage].sort((a, b) => {
-          const scoreA = a.opportunityScore ?? 0;
-          const scoreB = b.opportunityScore ?? 0;
-          return scoreB - scoreA;
+      if (append) {
+        setColumns(prev => {
+          const newColumns = { ...prev };
+          for (const lead of newLeads) {
+            if (newColumns[lead.pipelineStage]) {
+              newColumns[lead.pipelineStage] = [...newColumns[lead.pipelineStage], lead];
+              // Riordina per score
+              newColumns[lead.pipelineStage].sort((a, b) =>
+                (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0)
+              );
+            }
+          }
+          return newColumns;
         });
+      } else {
+        const grouped: ColumnData = {};
+        for (const stage of stageOrder) {
+          grouped[stage] = [];
+        }
+        for (const lead of newLeads) {
+          if (grouped[lead.pipelineStage]) {
+            grouped[lead.pipelineStage].push(lead);
+          }
+        }
+        // Ordina per score dentro ogni colonna
+        for (const stage of stageOrder) {
+          grouped[stage].sort((a, b) => {
+            const scoreA = a.opportunityScore ?? 0;
+            const scoreB = b.opportunityScore ?? 0;
+            return scoreB - scoreA;
+          });
+        }
+        setColumns(grouped);
       }
-      setColumns(grouped);
     } catch (error) {
       toast.error("Errore nel caricamento dei lead");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [viewMode, selectedStages]);
 
+  // Carica altri lead (infinite scroll)
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchLeads(nextPage, true);
+    }
+  }, [loadingMore, hasMore, page, fetchLeads]);
+
+  // Reset paginazione e ricarica quando cambiano filtri o vista
   useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+    setPage(1);
+    setHasMore(true);
+    fetchLeads(1, false);
+  }, [viewMode, selectedStages]);
+
+  // Intersection Observer per infinite scroll
+  useEffect(() => {
+    if (viewMode !== "list") return; // Solo per vista lista
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasMore, loadingMore, loading, loadMore, viewMode]);
 
   // Aggiorna URL quando cambiano i filtri
   useEffect(() => {
@@ -702,8 +784,8 @@ function LeadsPageContent() {
 
       {/* Filtri e toggle vista */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Tab rapidi per stage principali */}
-        {["TO_CALL", "CALLED", "INTERESTED"].map((stageKey) => {
+        {/* Tab per tutti gli stage (escluso NEW) */}
+        {ACTIVE_STAGES.map((stageKey) => {
           const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
           const isActive = selectedStages.includes(stageKey);
           const count = stageCounts[stageKey] || 0;
@@ -802,6 +884,21 @@ function LeadsPageContent() {
               />
             );
           })}
+
+          {/* Infinite scroll trigger e indicatore */}
+          <div ref={loadMoreRef} className="py-4">
+            {loadingMore && (
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm">Caricamento...</span>
+              </div>
+            )}
+            {!hasMore && filteredLeads.length > 0 && (
+              <p className="text-center text-sm text-muted-foreground">
+                Hai visualizzato tutti i {filteredLeads.length} lead
+              </p>
+            )}
+          </div>
         </div>
       ) : (
         /* Vista Kanban */

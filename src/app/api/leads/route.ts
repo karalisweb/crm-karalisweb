@@ -11,8 +11,35 @@ export async function GET(request: NextRequest) {
     const auditStatus = searchParams.get("auditStatus") || searchParams.get("audit");
     const website = searchParams.get("website");
     const search = searchParams.get("search");
+    const includeStageCounts = searchParams.get("stageCounts") === "true";
 
     const where: Record<string, unknown> = {};
+    // Filtri base senza stage (per i conteggi)
+    const baseWhere: Record<string, unknown> = {};
+
+    if (auditStatus) {
+      where.auditStatus = auditStatus;
+      baseWhere.auditStatus = auditStatus;
+    }
+
+    // Filtro per presenza sito web
+    if (website === "yes") {
+      where.website = { not: null };
+      baseWhere.website = { not: null };
+    } else if (website === "no") {
+      where.website = null;
+      baseWhere.website = null;
+    }
+
+    if (search) {
+      const searchCondition = [
+        { name: { contains: search, mode: "insensitive" } },
+        { address: { contains: search, mode: "insensitive" } },
+        { category: { contains: search, mode: "insensitive" } },
+      ];
+      where.OR = searchCondition;
+      baseWhere.OR = searchCondition;
+    }
 
     // Filtro per singolo stage
     if (stage) {
@@ -27,25 +54,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (auditStatus) {
-      where.auditStatus = auditStatus;
-    }
-
-    // Filtro per presenza sito web
-    if (website === "yes") {
-      where.website = { not: null };
-    } else if (website === "no") {
-      where.website = null;
-    }
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { address: { contains: search, mode: "insensitive" } },
-        { category: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
     const [leads, total] = await Promise.all([
       db.lead.findMany({
         where,
@@ -56,6 +64,22 @@ export async function GET(request: NextRequest) {
       db.lead.count({ where }),
     ]);
 
+    // Calcola conteggi per stage se richiesto
+    let stageCounts: Record<string, number> | undefined;
+    if (includeStageCounts) {
+      const stageCountsResult = await db.lead.groupBy({
+        by: ["pipelineStage"],
+        where: baseWhere,
+        _count: {
+          id: true,
+        },
+      });
+      stageCounts = {};
+      for (const item of stageCountsResult) {
+        stageCounts[item.pipelineStage] = item._count.id;
+      }
+    }
+
     return NextResponse.json({
       leads,
       total,
@@ -65,6 +89,7 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / pageSize),
       },
+      ...(stageCounts && { stageCounts }),
     });
   } catch (error) {
     console.error("Error fetching leads:", error);
