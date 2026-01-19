@@ -12,11 +12,13 @@ import {
   Settings,
   LogOut,
   FolderSearch,
+  PackageX,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Da Chiamare", href: "/leads", icon: Phone },
+  { name: "Parcheggiati", href: "/parcheggiati", icon: PackageX },
   { name: "Nuova Ricerca", href: "/search", icon: Search },
   { name: "Ricerche", href: "/searches", icon: FolderSearch },
 ];

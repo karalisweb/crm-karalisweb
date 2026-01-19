@@ -11,7 +11,7 @@ export const runAuditFunction = inngest.createFunction(
     id: "run-audit",
     name: "Run Website Audit",
     concurrency: {
-      limit: 5, // Max 5 audit contemporanei
+      limit: 10, // Max 10 audit contemporanei
     },
     retries: 2,
   },

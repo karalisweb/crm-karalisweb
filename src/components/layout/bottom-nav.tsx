@@ -8,14 +8,14 @@ import {
   Phone,
   Search,
   Settings,
-  FolderSearch,
+  PackageX,
 } from "lucide-react";
 
 const navigation = [
   { name: "Home", href: "/", icon: LayoutDashboard },
   { name: "Chiamare", href: "/leads", icon: Phone },
   { name: "Cerca", href: "/search", icon: Search },
-  { name: "Ricerche", href: "/searches", icon: FolderSearch },
+  { name: "Parcheggio", href: "/parcheggiati", icon: PackageX },
   { name: "Menu", href: "/settings", icon: Settings },
 ];
 
