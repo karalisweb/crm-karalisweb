@@ -50,7 +50,7 @@ export const runAuditFunction = inngest.createFunction(
       }
     });
 
-    // Step 3: Salva i risultati
+    // Step 3: Salva i risultati e sposta in TO_CALL
     await step.run("save-results", async () => {
       await db.lead.update({
         where: { id: leadId },
@@ -60,6 +60,8 @@ export const runAuditFunction = inngest.createFunction(
           opportunityScore: result.opportunityScore,
           auditData: result.auditData as unknown as Prisma.InputJsonValue,
           talkingPoints: result.talkingPoints,
+          // Quando l'audit è completato, il lead è pronto per essere chiamato
+          pipelineStage: "TO_CALL",
         },
       });
     });
