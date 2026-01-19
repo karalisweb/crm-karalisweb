@@ -690,9 +690,17 @@ function LeadsPageContent() {
       )
     );
 
+    // Optimistic update per conteggi stage
+    setStageCounts((prev) => ({
+      ...prev,
+      [fromStage]: Math.max(0, (prev[fromStage] || 0) - 1),
+      [toStage]: (prev[toStage] || 0) + 1,
+    }));
+
     const success = await updateLeadStage(leadId, toStage);
     if (!success) {
-      fetchLeads();
+      // Rollback: ricarica tutto
+      fetchLeads(1, false);
     }
   };
 
