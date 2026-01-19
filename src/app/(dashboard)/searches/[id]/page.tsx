@@ -335,7 +335,6 @@ function LeadCard({ lead, showNoWebsite }: LeadCardProps) {
               {lead.phone && (
                 <a
                   href={`tel:${lead.phone}`}
-                  onClick={(e) => e.stopPropagation()}
                   className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-500 rounded text-xs hover:bg-green-500/20 transition-colors"
                 >
                   <Phone className="h-3 w-3" />
@@ -347,7 +346,6 @@ function LeadCard({ lead, showNoWebsite }: LeadCardProps) {
                   href={lead.googleMapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
                   className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded text-xs hover:bg-blue-500/20 transition-colors"
                 >
                   <ExternalLink className="h-3 w-3" />
