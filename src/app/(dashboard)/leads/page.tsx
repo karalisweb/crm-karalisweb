@@ -26,15 +26,8 @@ import {
   Plus,
   List,
   Kanban,
-  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface Lead {
   id: string;
@@ -571,11 +564,6 @@ function LeadsPageContent() {
     });
   };
 
-  // Seleziona tutti o nessuno
-  const selectAllStages = () => {
-    setSelectedStages(ACTIVE_STAGES);
-  };
-
   // Kanban: update lead stage
   const updateLeadStage = async (leadId: string, newStage: string) => {
     try {
@@ -665,9 +653,9 @@ function LeadsPageContent() {
     ? leads.filter((lead) => selectedStages.includes(lead.pipelineStage))
     : leads;
 
-  // Stages visibili nel Kanban (solo quelli con lead + quelli selezionati)
+  // Stages visibili nel Kanban (escluso NEW, solo quelli con lead + quelli selezionati)
   const visibleKanbanStages = stageOrder.filter(
-    (stage) => (columns[stage]?.length || 0) > 0 || selectedStages.includes(stage)
+    (stage) => stage !== "NEW" && ((columns[stage]?.length || 0) > 0 || selectedStages.includes(stage))
   );
 
   if (loading) {
@@ -713,73 +701,30 @@ function LeadsPageContent() {
       </div>
 
       {/* Filtri e toggle vista */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Stage filter dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <span>
-                {selectedStages.length === ACTIVE_STAGES.length
-                  ? "Tutti gli stati"
-                  : selectedStages.length === 1
-                  ? PIPELINE_STAGES[selectedStages[0] as keyof typeof PIPELINE_STAGES]?.label
-                  : `${selectedStages.length} stati`}
-              </span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuCheckboxItem
-              checked={selectedStages.length === ACTIVE_STAGES.length}
-              onCheckedChange={selectAllStages}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Tab rapidi per stage principali */}
+        {["TO_CALL", "CALLED", "INTERESTED"].map((stageKey) => {
+          const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
+          const isActive = selectedStages.includes(stageKey);
+          const count = stageCounts[stageKey] || 0;
+          return (
+            <Button
+              key={stageKey}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              onClick={() => toggleStage(stageKey)}
+              className="gap-1.5"
             >
-              Tutti gli stati
-            </DropdownMenuCheckboxItem>
-            <div className="h-px bg-border my-1" />
-            {ACTIVE_STAGES.map((stageKey) => {
-              const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
-              const count = stageCounts[stageKey] || 0;
-              return (
-                <DropdownMenuCheckboxItem
-                  key={stageKey}
-                  checked={selectedStages.includes(stageKey)}
-                  onCheckedChange={() => toggleStage(stageKey)}
-                >
-                  <span className="flex-1">{stage.label}</span>
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    {count}
-                  </Badge>
-                </DropdownMenuCheckboxItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Pulsanti toggle per stage principali (quick access) */}
-        <div className="hidden md:flex gap-2">
-          {["TO_CALL", "CALLED", "INTERESTED"].map((stageKey) => {
-            const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
-            const isActive = selectedStages.includes(stageKey);
-            const count = stageCounts[stageKey] || 0;
-            return (
-              <Button
-                key={stageKey}
-                variant={isActive ? "default" : "outline"}
-                size="sm"
-                onClick={() => toggleStage(stageKey)}
-                className="gap-1.5"
+              {stage.label}
+              <Badge
+                variant={isActive ? "secondary" : "outline"}
+                className="text-xs px-1.5"
               >
-                {stage.label}
-                <Badge
-                  variant={isActive ? "secondary" : "outline"}
-                  className="text-xs px-1.5"
-                >
-                  {count}
-                </Badge>
-              </Button>
-            );
-          })}
-        </div>
+                {count}
+              </Badge>
+            </Button>
+          );
+        })}
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -909,7 +854,8 @@ function LeadsPageContent() {
           <div className="hidden md:block">
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                {stageOrder.map((stageKey) => {
+                {/* Escludiamo NEW dal Kanban - i lead vanno direttamente in TO_CALL dopo l'audit */}
+                {stageOrder.filter(s => s !== "NEW").map((stageKey) => {
                   const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
                   const stageLeads = columns[stageKey] || [];
 
