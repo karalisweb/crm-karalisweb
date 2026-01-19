@@ -8,16 +8,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   MapPin,
-  Star,
-  Phone,
-  Globe,
-  ExternalLink,
   CheckCircle,
   Clock,
   AlertCircle,
   Loader2,
   PackageX,
-  Users,
+  Phone,
+  ClipboardCheck,
+  ChevronRight,
+  Calendar,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -26,33 +25,15 @@ interface SearchDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-const AUDIT_STATUS_CONFIG = {
-  PENDING: {
-    label: "Da auditare",
-    icon: Clock,
-    color: "bg-gray-500/10 text-gray-500 border-gray-500/20"
-  },
-  RUNNING: {
-    label: "Audit in corso...",
-    icon: Loader2,
-    color: "bg-blue-500/10 text-blue-500 border-blue-500/20"
-  },
-  COMPLETED: {
-    label: "Audit completato",
-    icon: CheckCircle,
-    color: "bg-green-500/10 text-green-500 border-green-500/20"
-  },
-  FAILED: {
-    label: "Audit fallito",
-    icon: AlertCircle,
-    color: "bg-red-500/10 text-red-500 border-red-500/20"
-  },
-  NO_WEBSITE: {
-    label: "Senza sito",
-    icon: PackageX,
-    color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-  },
-};
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
 
 async function SearchDetailContent({ searchId }: { searchId: string }) {
   const search = await db.search.findUnique({
@@ -63,48 +44,18 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
     notFound();
   }
 
-  // Recupera tutti i lead associati a questa ricerca
-  const leads = await db.lead.findMany({
-    where: { searchId: searchId },
-    orderBy: [
-      { auditStatus: "asc" }, // COMPLETED prima
-      { opportunityScore: "desc" },
-      { googleRating: "desc" },
-    ],
-    select: {
-      id: true,
-      name: true,
-      address: true,
-      phone: true,
-      website: true,
-      category: true,
-      googleRating: true,
-      googleReviewsCount: true,
-      googleMapsUrl: true,
-      auditStatus: true,
-      opportunityScore: true,
-      pipelineStage: true,
-    },
-  });
+  // Conta i lead per stato audit
+  const [completedCount, runningCount, pendingCount, failedCount, noWebsiteCount] = await Promise.all([
+    db.lead.count({ where: { searchId, auditStatus: "COMPLETED" } }),
+    db.lead.count({ where: { searchId, auditStatus: "RUNNING" } }),
+    db.lead.count({ where: { searchId, auditStatus: "PENDING" } }),
+    db.lead.count({ where: { searchId, auditStatus: "FAILED" } }),
+    db.lead.count({ where: { searchId, auditStatus: "NO_WEBSITE" } }),
+  ]);
 
-  // Raggruppa per stato audit
-  const grouped = {
-    COMPLETED: leads.filter(l => l.auditStatus === "COMPLETED"),
-    RUNNING: leads.filter(l => l.auditStatus === "RUNNING"),
-    PENDING: leads.filter(l => l.auditStatus === "PENDING"),
-    FAILED: leads.filter(l => l.auditStatus === "FAILED"),
-    NO_WEBSITE: leads.filter(l => l.auditStatus === "NO_WEBSITE"),
-  };
-
-  const stats = {
-    total: leads.length,
-    withSite: leads.filter(l => l.website).length,
-    noSite: leads.filter(l => !l.website || l.auditStatus === "NO_WEBSITE").length,
-    audited: grouped.COMPLETED.length,
-    running: grouped.RUNNING.length,
-    pending: grouped.PENDING.length,
-    failed: grouped.FAILED.length,
-  };
+  const totalLeads = completedCount + runningCount + pendingCount + failedCount + noWebsiteCount;
+  const withSite = completedCount + runningCount + pendingCount + failedCount;
+  const auditInProgress = runningCount + pendingCount;
 
   return (
     <div className="space-y-6">
@@ -122,252 +73,178 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
             <MapPin className="h-4 w-4" />
             <span>{search.location}</span>
           </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+            <Calendar className="h-3 w-3" />
+            <span>{formatDate(new Date(search.createdAt))}</span>
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {/* Riepilogo stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <div className="text-xs text-muted-foreground">Totali</div>
+          <CardContent className="p-4 text-center">
+            <div className="text-3xl font-bold">{totalLeads}</div>
+            <div className="text-sm text-muted-foreground">Contatti trovati</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-green-500">{stats.audited}</div>
-            <div className="text-xs text-muted-foreground">Auditati</div>
+          <CardContent className="p-4 text-center">
+            <div className="text-3xl font-bold text-green-500">{completedCount}</div>
+            <div className="text-sm text-muted-foreground">Pronti da chiamare</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-blue-500">{stats.running}</div>
-            <div className="text-xs text-muted-foreground">In corso</div>
+          <CardContent className="p-4 text-center">
+            <div className="text-3xl font-bold text-blue-500">{auditInProgress}</div>
+            <div className="text-sm text-muted-foreground">In audit</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-gray-500">{stats.pending}</div>
-            <div className="text-xs text-muted-foreground">In attesa</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-yellow-500">{stats.noSite}</div>
-            <div className="text-xs text-muted-foreground">Senza sito</div>
+          <CardContent className="p-4 text-center">
+            <div className="text-3xl font-bold text-yellow-500">{noWebsiteCount}</div>
+            <div className="text-sm text-muted-foreground">Parcheggiati</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Lead completati (pronti da chiamare) */}
-      {grouped.COMPLETED.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-500" />
-            Pronti da chiamare ({grouped.COMPLETED.length})
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {grouped.COMPLETED.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Link alle pagine dedicate */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Vai a</h2>
 
-      {/* Audit in corso */}
-      {grouped.RUNNING.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-            Audit in corso ({grouped.RUNNING.length})
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {grouped.RUNNING.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
-            ))}
-          </div>
-        </div>
-      )}
+        {/* Da chiamare */}
+        {completedCount > 0 && (
+          <Link href="/leads">
+            <Card className="card-hover cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-green-500/10">
+                      <Phone className="h-5 w-5 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Da Chiamare</p>
+                      <p className="text-sm text-muted-foreground">
+                        {completedCount} lead con audit completato
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{completedCount}</Badge>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
 
-      {/* In attesa */}
-      {grouped.PENDING.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Clock className="h-5 w-5 text-gray-500" />
-            In attesa di audit ({grouped.PENDING.length})
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {grouped.PENDING.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
-            ))}
-          </div>
-        </div>
-      )}
+        {/* Audit in corso/attesa */}
+        {auditInProgress > 0 && (
+          <Link href="/audit">
+            <Card className="card-hover cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-500/10">
+                      <ClipboardCheck className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Audit</p>
+                      <p className="text-sm text-muted-foreground">
+                        {runningCount > 0 && `${runningCount} in corso`}
+                        {runningCount > 0 && pendingCount > 0 && ", "}
+                        {pendingCount > 0 && `${pendingCount} in attesa`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {runningCount > 0 && (
+                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        {runningCount}
+                      </Badge>
+                    )}
+                    {pendingCount > 0 && (
+                      <Badge variant="secondary">{pendingCount}</Badge>
+                    )}
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
 
-      {/* Falliti */}
-      {grouped.FAILED.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-500" />
-            Audit falliti ({grouped.FAILED.length})
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {grouped.FAILED.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
-            ))}
-          </div>
-        </div>
-      )}
+        {/* Parcheggiati (senza sito) */}
+        {noWebsiteCount > 0 && (
+          <Link href="/parcheggiati">
+            <Card className="card-hover cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-yellow-500/10">
+                      <PackageX className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Parcheggiati</p>
+                      <p className="text-sm text-muted-foreground">
+                        {noWebsiteCount} contatti senza sito web
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{noWebsiteCount}</Badge>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
 
-      {/* Senza sito */}
-      {grouped.NO_WEBSITE.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <PackageX className="h-5 w-5 text-yellow-500" />
-            Senza sito web ({grouped.NO_WEBSITE.length})
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Questi contatti non hanno un sito web - parcheggiati per altri servizi
-          </p>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {grouped.NO_WEBSITE.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} showNoWebsite />
-            ))}
-          </div>
-        </div>
-      )}
+        {/* Falliti */}
+        {failedCount > 0 && (
+          <Link href="/audit">
+            <Card className="card-hover cursor-pointer border-red-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-red-500/10">
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Audit falliti</p>
+                      <p className="text-sm text-muted-foreground">
+                        {failedCount} siti non raggiungibili
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive">{failedCount}</Badge>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+      </div>
 
-      {leads.length === 0 && (
+      {/* Empty state */}
+      {totalLeads === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="p-4 rounded-full bg-secondary mb-4">
-            <Users className="h-8 w-8 text-muted-foreground" />
+            <Clock className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="font-semibold mb-1">Nessun lead trovato</h3>
+          <h3 className="font-semibold mb-1">Ricerca in corso</h3>
           <p className="text-sm text-muted-foreground">
-            La ricerca non ha prodotto risultati
+            I contatti appariranno qui una volta trovati
           </p>
         </div>
       )}
     </div>
   );
-}
-
-// googleRating può essere Decimal da Prisma, usiamo unknown e convertiamo a Number
-interface LeadCardProps {
-  lead: {
-    id: string;
-    name: string;
-    address: string | null;
-    phone: string | null;
-    website: string | null;
-    category: string | null;
-    googleRating: unknown; // Decimal from Prisma, converted to number via Number()
-    googleReviewsCount: number | null;
-    googleMapsUrl: string | null;
-    auditStatus: string;
-    opportunityScore: number | null;
-    pipelineStage: string;
-  };
-  showNoWebsite?: boolean;
-}
-
-function LeadCard({ lead, showNoWebsite }: LeadCardProps) {
-  const statusConfig = AUDIT_STATUS_CONFIG[lead.auditStatus as keyof typeof AUDIT_STATUS_CONFIG]
-    || AUDIT_STATUS_CONFIG.PENDING;
-  const StatusIcon = statusConfig.icon;
-
-  const isClickable = lead.auditStatus === "COMPLETED";
-
-  const cardContent = (
-    <Card className={`transition-all ${isClickable ? "card-hover cursor-pointer" : "opacity-80"}`}>
-      <CardContent className="p-4">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-sm truncate flex-1">
-              {lead.name}
-            </h3>
-            {lead.opportunityScore && lead.auditStatus === "COMPLETED" && (
-              <Badge
-                variant="outline"
-                className={`text-xs ${
-                  lead.opportunityScore >= 70
-                    ? "border-green-500 text-green-500"
-                    : lead.opportunityScore >= 40
-                    ? "border-yellow-500 text-yellow-500"
-                    : "border-gray-500 text-gray-500"
-                }`}
-              >
-                Score: {lead.opportunityScore}
-              </Badge>
-            )}
-            {!lead.opportunityScore && lead.googleRating != null && (
-              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                {Number(lead.googleRating).toFixed(1)}
-              </Badge>
-            )}
-          </div>
-
-          {lead.category && (
-            <p className="text-xs text-muted-foreground truncate">
-              {lead.category}
-            </p>
-          )}
-
-          {lead.address && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <MapPin className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{lead.address.split(",")[0]}</span>
-            </p>
-          )}
-
-          {/* Stato audit */}
-          <div className="pt-2 border-t border-border">
-            <Badge variant="outline" className={`text-xs ${statusConfig.color}`}>
-              <StatusIcon className={`h-3 w-3 mr-1 ${lead.auditStatus === "RUNNING" ? "animate-spin" : ""}`} />
-              {statusConfig.label}
-            </Badge>
-          </div>
-
-          {/* Azioni per lead senza sito */}
-          {showNoWebsite && (
-            <div className="flex items-center gap-2 pt-2">
-              {lead.phone && (
-                <a
-                  href={`tel:${lead.phone}`}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-500 rounded text-xs hover:bg-green-500/20 transition-colors"
-                >
-                  <Phone className="h-3 w-3" />
-                  Chiama
-                </a>
-              )}
-              {lead.googleMapsUrl && (
-                <a
-                  href={lead.googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded text-xs hover:bg-blue-500/20 transition-colors"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Maps
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  if (isClickable) {
-    return (
-      <Link href={`/leads/${lead.id}`}>
-        {cardContent}
-      </Link>
-    );
-  }
-
-  return cardContent;
 }
 
 function SearchDetailSkeleton() {
@@ -380,29 +257,31 @@ function SearchDetailSkeleton() {
           <Skeleton className="h-5 w-32" />
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[...Array(5)].map((_, i) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[...Array(4)].map((_, i) => (
           <Card key={i}>
-            <CardContent className="p-3">
-              <Skeleton className="h-8 w-12 mx-auto mb-1" />
-              <Skeleton className="h-4 w-16 mx-auto" />
+            <CardContent className="p-4">
+              <Skeleton className="h-9 w-16 mx-auto mb-2" />
+              <Skeleton className="h-4 w-24 mx-auto" />
             </CardContent>
           </Card>
         ))}
       </div>
       <div className="space-y-3">
-        <Skeleton className="h-6 w-48" />
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-4">
-                <Skeleton className="h-5 w-3/4 mb-2" />
-                <Skeleton className="h-3 w-1/2 mb-2" />
-                <Skeleton className="h-3 w-2/3" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Skeleton className="h-6 w-32" />
+        {[...Array(3)].map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-32 mb-1" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

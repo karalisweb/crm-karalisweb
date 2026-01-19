@@ -4,18 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
   Phone,
   Search,
   Settings,
-  PackageX,
+  ClipboardCheck,
+  FolderSearch,
 } from "lucide-react";
 
 const navigation = [
-  { name: "Home", href: "/", icon: LayoutDashboard },
   { name: "Chiamare", href: "/leads", icon: Phone },
+  { name: "Audit", href: "/audit", icon: ClipboardCheck },
   { name: "Cerca", href: "/search", icon: Search },
-  { name: "Parcheggio", href: "/parcheggiati", icon: PackageX },
+  { name: "Ricerche", href: "/searches", icon: FolderSearch },
   { name: "Menu", href: "/settings", icon: Settings },
 ];
 

@@ -26,8 +26,12 @@ async function DashboardStats() {
         take: 3,
         orderBy: { createdAt: "desc" },
       }),
+      // Lead prioritari: solo quelli da chiamare (non già chiamati)
       db.lead.findMany({
-        where: { opportunityScore: { not: null } },
+        where: {
+          opportunityScore: { not: null },
+          pipelineStage: "TO_CALL", // Solo lead da chiamare, escludo quelli già chiamati
+        },
         orderBy: { opportunityScore: "desc" },
         take: 5,
       }),

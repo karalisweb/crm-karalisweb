@@ -13,14 +13,15 @@ import {
   LogOut,
   FolderSearch,
   PackageX,
+  ClipboardCheck,
 } from "lucide-react";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Da Chiamare", href: "/leads", icon: Phone },
-  { name: "Parcheggiati", href: "/parcheggiati", icon: PackageX },
+  { name: "Audit", href: "/audit", icon: ClipboardCheck },
   { name: "Nuova Ricerca", href: "/search", icon: Search },
   { name: "Ricerche", href: "/searches", icon: FolderSearch },
+  { name: "Parcheggiati", href: "/parcheggiati", icon: PackageX },
 ];
 
 export function Sidebar() {
@@ -67,6 +68,18 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-border p-3 space-y-1">
+        <Link
+          href="/"
+          className={cn(
+            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+            pathname === "/"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          <LayoutDashboard className="h-5 w-5" />
+          Dashboard
+        </Link>
         <Link
           href="/settings"
           className={cn(

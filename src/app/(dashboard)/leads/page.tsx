@@ -79,70 +79,84 @@ const stageOrder = [
 ];
 
 // Lead Card per la lista
-function LeadListCard({ lead }: { lead: Lead }) {
+function LeadListCard({
+  lead,
+  onMoveLeft,
+  onMoveRight,
+  canMoveLeft,
+  canMoveRight,
+}: {
+  lead: Lead;
+  onMoveLeft: () => void;
+  onMoveRight: () => void;
+  canMoveLeft: boolean;
+  canMoveRight: boolean;
+}) {
   const scoreInfo = getScoreCategory(lead.opportunityScore);
   const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
   const stageInfo = PIPELINE_STAGES[lead.pipelineStage as keyof typeof PIPELINE_STAGES];
 
   return (
-    <Link href={`/leads/${lead.id}`}>
-      <Card className="card-hover">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
+    <Card className="card-hover">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <Link href={`/leads/${lead.id}`}>
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold truncate">{lead.name}</h3>
+                <h3 className="font-semibold truncate hover:underline">{lead.name}</h3>
                 {isHot && <Flame className="h-4 w-4 text-red-500 flex-shrink-0" />}
               </div>
+            </Link>
 
-              {lead.category && (
-                <p className="text-sm text-muted-foreground truncate mb-2">
-                  {lead.category}
-                </p>
+            {lead.category && (
+              <p className="text-sm text-muted-foreground truncate mb-2">
+                {lead.category}
+              </p>
+            )}
+
+            <div className="flex items-center gap-3 text-sm">
+              {lead.googleRating && (
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                  {Number(lead.googleRating).toFixed(1)}
+                  {lead.googleReviewsCount && (
+                    <span className="text-xs">({lead.googleReviewsCount})</span>
+                  )}
+                </span>
               )}
-
-              <div className="flex items-center gap-3 text-sm">
-                {lead.googleRating && (
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                    {Number(lead.googleRating).toFixed(1)}
-                    {lead.googleReviewsCount && (
-                      <span className="text-xs">({lead.googleReviewsCount})</span>
-                    )}
-                  </span>
-                )}
-                {lead.address && (
-                  <span className="text-muted-foreground truncate text-xs">
-                    {lead.address.split(",")[0]}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end gap-2">
-              <Badge variant="outline" className="text-xs whitespace-nowrap">
-                {stageInfo?.label || lead.pipelineStage}
-              </Badge>
-
-              {lead.opportunityScore !== null && (
-                <Badge
-                  variant={
-                    scoreInfo.color === "red"
-                      ? "destructive"
-                      : scoreInfo.color === "green"
-                      ? "default"
-                      : "secondary"
-                  }
-                  className="text-xs"
-                >
-                  Score: {lead.opportunityScore}
-                </Badge>
+              {lead.address && (
+                <span className="text-muted-foreground truncate text-xs">
+                  {lead.address.split(",")[0]}
+                </span>
               )}
             </div>
           </div>
 
-          {/* Quick actions */}
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant="outline" className="text-xs whitespace-nowrap">
+              {stageInfo?.label || lead.pipelineStage}
+            </Badge>
+
+            {lead.opportunityScore !== null && (
+              <Badge
+                variant={
+                  scoreInfo.color === "red"
+                    ? "destructive"
+                    : scoreInfo.color === "green"
+                    ? "default"
+                    : "secondary"
+                }
+                className="text-xs"
+              >
+                Score: {lead.opportunityScore}
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Quick actions */}
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+          <div className="flex items-center gap-2">
             {lead.phone && (
               <a
                 href={`tel:${lead.phone}`}
@@ -166,9 +180,33 @@ function LeadListCard({ lead }: { lead: Lead }) {
               </a>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+
+          {/* Stage change buttons */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onMoveLeft}
+              disabled={!canMoveLeft}
+              className="h-8 px-2"
+              title={canMoveLeft ? `Sposta indietro` : undefined}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onMoveRight}
+              disabled={!canMoveRight}
+              className="h-8 px-2"
+              title={canMoveRight ? `Sposta avanti` : undefined}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -559,21 +597,28 @@ function LeadsPageContent() {
   };
 
   const moveLead = async (leadId: string, fromStage: string, toStage: string) => {
-    // Optimistic update
+    // Optimistic update per Kanban columns
     const newColumns = { ...columns };
-    const fromLeads = [...newColumns[fromStage]];
-    const toLeads = [...newColumns[toStage]];
+    const fromLeads = [...(newColumns[fromStage] || [])];
+    const toLeads = [...(newColumns[toStage] || [])];
 
     const leadIndex = fromLeads.findIndex((l) => l.id === leadId);
-    if (leadIndex === -1) return;
+    if (leadIndex !== -1) {
+      const [lead] = fromLeads.splice(leadIndex, 1);
+      toLeads.unshift({ ...lead, pipelineStage: toStage });
+      toLeads.sort((a, b) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0));
 
-    const [lead] = fromLeads.splice(leadIndex, 1);
-    toLeads.unshift({ ...lead, pipelineStage: toStage });
-    toLeads.sort((a, b) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0));
+      newColumns[fromStage] = fromLeads;
+      newColumns[toStage] = toLeads;
+      setColumns(newColumns);
+    }
 
-    newColumns[fromStage] = fromLeads;
-    newColumns[toStage] = toLeads;
-    setColumns(newColumns);
+    // Optimistic update per lista leads
+    setLeads((prevLeads) =>
+      prevLeads.map((lead) =>
+        lead.id === leadId ? { ...lead, pipelineStage: toStage } : lead
+      )
+    );
 
     const success = await updateLeadStage(leadId, toStage);
     if (!success) {
@@ -785,9 +830,33 @@ function LeadsPageContent() {
       ) : viewMode === "list" ? (
         /* Vista Lista */
         <div className="space-y-3">
-          {filteredLeads.map((lead) => (
-            <LeadListCard key={lead.id} lead={lead} />
-          ))}
+          {filteredLeads.map((lead) => {
+            const currentStageIdx = stageOrder.indexOf(lead.pipelineStage);
+            const prevStage = currentStageIdx > 0 ? stageOrder[currentStageIdx - 1] : null;
+            const nextStage = currentStageIdx < stageOrder.length - 1 ? stageOrder[currentStageIdx + 1] : null;
+            // Permettiamo di tornare indietro solo fino a TO_CALL (non a NEW)
+            const canMoveLeft = currentStageIdx > 1; // > 1 perché NEW è index 0, TO_CALL è index 1
+            const canMoveRight = nextStage !== null;
+
+            return (
+              <LeadListCard
+                key={lead.id}
+                lead={lead}
+                onMoveLeft={() => {
+                  if (prevStage && canMoveLeft) {
+                    moveLead(lead.id, lead.pipelineStage, prevStage);
+                  }
+                }}
+                onMoveRight={() => {
+                  if (nextStage) {
+                    moveLead(lead.id, lead.pipelineStage, nextStage);
+                  }
+                }}
+                canMoveLeft={canMoveLeft}
+                canMoveRight={canMoveRight}
+              />
+            );
+          })}
         </div>
       ) : (
         /* Vista Kanban */
