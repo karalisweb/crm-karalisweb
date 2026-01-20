@@ -37,9 +37,52 @@ model Lead {
   // Talking points generati
   talkingPoints     String[]    @map("talking_points")
 
+  // ==========================================
+  // SEGNALI COMMERCIALI (Sistema 5 chiamate/giorno)
+  // ==========================================
+  // Tag commerciale obbligatorio (1 solo per lead)
+  commercialTag     CommercialTag?  @map("commercial_tag")
+  commercialTagReason String?       @map("commercial_tag_reason")
+
+  // I 5 segnali commerciali (JSON)
+  commercialSignals Json?           @map("commercial_signals")
+  /*
+    {
+      "adsEvidence": "strong" | "medium" | "weak" | "none",
+      "adsEvidenceReason": "...",
+      "trackingPresent": true | false,
+      "consentModeV2": "yes" | "no" | "uncertain",
+      "ctaClear": true | false,
+      "offerFocused": true | false,
+      "analyzedAt": "ISO date",
+      "errors": ["..."] // opzionale
+    }
+  */
+
+  // Priorita commerciale (1=alta, 4=skip)
+  commercialPriority Int?           @map("commercial_priority")
+
+  // Flag per dashboard "Chiamabili oggi"
+  isCallable        Boolean         @default(false) @map("is_callable")
+
   // CRM Pipeline
   pipelineStage     PipelineStage @default(NEW) @map("pipeline_stage")
   lostReason        String?       @map("lost_reason")
+
+  // ==========================================
+  // CRM MINIMALE per logging chiamate rapido
+  // ==========================================
+  // Ultimo esito chiamata
+  lastCallOutcome   CallOutcome?  @map("last_call_outcome")
+  lastCallNotes     String?       @map("last_call_notes")
+
+  // Obiezione principale (per tracking pattern)
+  mainObjection     Objection?    @map("main_objection")
+  objectionNotes    String?       @map("objection_notes")
+
+  // Next step (pianificazione follow-up)
+  nextStepType      NextStepType? @map("next_step_type")
+  nextStepNotes     String?       @map("next_step_notes")
 
   // Activity tracking
   lastContactedAt   DateTime?   @map("last_contacted_at")
@@ -61,6 +104,10 @@ model Lead {
   @@index([opportunityScore(sort: Desc)], name: "idx_leads_score")
   @@index([pipelineStage], name: "idx_leads_stage")
   @@index([auditStatus], name: "idx_leads_audit_status")
+  // Indici per sistema commerciale
+  @@index([commercialTag], name: "idx_leads_commercial_tag")
+  @@index([commercialPriority], name: "idx_leads_commercial_priority")
+  @@index([isCallable], name: "idx_leads_callable")
   @@map("leads")
 }
 
@@ -189,6 +236,36 @@ enum SearchStatus {
   RUNNING     // In esecuzione
   COMPLETED   // Completata
   FAILED      // Fallita
+}
+
+enum CommercialTag {
+  ADS_ATTIVE_CONTROLLO_ASSENTE    // Spendono ma non misurano - PRIORITA 1
+  TRAFFICO_SENZA_DIREZIONE        // Traffico ma niente CTA - PRIORITA 2
+  STRUTTURA_OK_NON_PRIORITIZZATA  // Funziona ma non ottimizzato - PRIORITA 3
+  NON_TARGET                      // Non spendono in ads - SKIP
+}
+
+// Obiezioni comuni durante le chiamate
+enum Objection {
+  BUDGET              // "Non abbiamo budget"
+  TIMING              // "Non e' il momento giusto"
+  ALREADY_HAVE        // "Abbiamo gia qualcuno che ci segue"
+  NOT_INTERESTED      // "Non ci interessa"
+  NEED_TO_THINK       // "Devo pensarci"
+  DECISION_MAKER      // "Devo parlare con..."
+  BAD_EXPERIENCE      // "Abbiamo avuto brutte esperienze"
+  NO_NEED             // "Non ne abbiamo bisogno"
+  OTHER               // Altro (specificare in notes)
+}
+
+// Tipi di next step
+enum NextStepType {
+  CALLBACK            // Richiamare
+  SEND_INFO           // Inviare materiale
+  MEETING             // Fissare meeting
+  PROPOSAL            // Inviare preventivo
+  WAIT                // Aspettare (loro richiameranno)
+  CLOSE               // Chiudere (vinto o perso)
 }
 
 enum UserRole {

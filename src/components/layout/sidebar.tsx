@@ -14,10 +14,13 @@ import {
   FolderSearch,
   PackageX,
   ClipboardCheck,
+  Target,
+  Users,
 } from "lucide-react";
 
 const navigation = [
-  { name: "Da Chiamare", href: "/leads", icon: Phone },
+  { name: "Oggi (5 call)", href: "/oggi", icon: Target },
+  { name: "Tutti i Lead", href: "/leads", icon: Users },
   { name: "Audit", href: "/audit", icon: ClipboardCheck },
   { name: "Nuova Ricerca", href: "/search", icon: Search },
   { name: "Ricerche", href: "/searches", icon: FolderSearch },

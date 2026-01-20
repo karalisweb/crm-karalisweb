@@ -212,3 +212,6 @@ export function getScoreCategory(score: number | null): {
   }
   return { label: "Bassa priorita", emoji: "snowflake", color: "blue" };
 }
+
+// Re-export commercial types
+export * from "./commercial";

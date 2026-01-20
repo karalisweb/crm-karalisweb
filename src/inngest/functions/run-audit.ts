@@ -1,7 +1,8 @@
 import { inngest } from "../client";
 import { db } from "@/lib/db";
 import { runFullAudit } from "@/lib/audit";
-import { Prisma } from "@prisma/client";
+import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
+import { Prisma, CommercialTag } from "@prisma/client";
 
 /**
  * Funzione Inngest per eseguire l'audit di un singolo lead
@@ -17,7 +18,7 @@ export const runAuditFunction = inngest.createFunction(
   },
   { event: "audit/run" },
   async ({ event, step }) => {
-    const { leadId, website, googleRating, googleReviewsCount } = event.data;
+    const { leadId, website, googleRating, googleReviewsCount, brandName } = event.data;
 
     // Step 1: Marca il lead come "running"
     await step.run("mark-running", async () => {
@@ -27,7 +28,7 @@ export const runAuditFunction = inngest.createFunction(
       });
     });
 
-    // Step 2: Esegui l'audit
+    // Step 2: Esegui l'audit tecnico (se debug mode attivo, altrimenti minimale)
     const result = await step.run("run-audit", async () => {
       try {
         return await runFullAudit({
@@ -50,18 +51,90 @@ export const runAuditFunction = inngest.createFunction(
       }
     });
 
-    // Step 3: Salva i risultati e sposta in TO_CALL
+    // Step 3: Rileva segnali commerciali (i 5 segnali essenziali)
+    const commercialResult = await step.run("detect-commercial-signals", async () => {
+      try {
+        // Fetch HTML per analisi commerciale
+        let url = website;
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+          url = "https://" + url;
+        }
+
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(15000),
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.status}`);
+        }
+
+        const html = await response.text();
+        const domain = new URL(url).hostname;
+
+        // Rileva i 5 segnali commerciali
+        const signals = await detectCommercialSignals({
+          html,
+          domain,
+          brandName: brandName || domain.split(".")[0],
+          skipSerp: false, // Esegui anche check SERP
+        });
+
+        // Assegna tag commerciale
+        const tagResult = assignCommercialTag({ signals });
+
+        return {
+          signals,
+          tagResult,
+        };
+      } catch (error) {
+        console.error("[COMMERCIAL] Errore rilevamento segnali:", error);
+        // Fallback: NON_TARGET se non riusciamo ad analizzare
+        return {
+          signals: {
+            adsEvidence: "none" as const,
+            adsEvidenceReason: `Errore analisi: ${error instanceof Error ? error.message : "unknown"}`,
+            trackingPresent: false,
+            consentModeV2: "uncertain" as const,
+            ctaClear: false,
+            offerFocused: false,
+            analyzedAt: new Date().toISOString(),
+            errors: [error instanceof Error ? error.message : "unknown"],
+          },
+          tagResult: {
+            tag: "NON_TARGET" as const,
+            tagReason: `Analisi fallita: ${error instanceof Error ? error.message : "unknown"}`,
+            isCallable: false,
+            priority: 4 as const,
+          },
+        };
+      }
+    });
+
+    // Step 4: Salva tutti i risultati
     await step.run("save-results", async () => {
       await db.lead.update({
         where: { id: leadId },
         data: {
+          // Audit tecnico (mantenuto per debug/compatibilita)
           auditStatus: "COMPLETED",
           auditCompletedAt: new Date(),
           opportunityScore: result.opportunityScore,
           auditData: result.auditData as unknown as Prisma.InputJsonValue,
           talkingPoints: result.talkingPoints,
-          // Quando l'audit è completato, il lead è pronto per essere chiamato
-          pipelineStage: "TO_CALL",
+
+          // NUOVI: Segnali commerciali
+          commercialTag: commercialResult.tagResult.tag as CommercialTag,
+          commercialTagReason: commercialResult.tagResult.tagReason,
+          commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
+          commercialPriority: commercialResult.tagResult.priority,
+          isCallable: commercialResult.tagResult.isCallable,
+
+          // Pipeline: TO_CALL solo se callable
+          pipelineStage: commercialResult.tagResult.isCallable ? "TO_CALL" : "NEW",
         },
       });
     });
@@ -70,6 +143,8 @@ export const runAuditFunction = inngest.createFunction(
       leadId,
       score: result.opportunityScore,
       issues: result.issues.length,
+      commercialTag: commercialResult.tagResult.tag,
+      isCallable: commercialResult.tagResult.isCallable,
     };
   }
 );
@@ -96,6 +171,7 @@ export const runAuditBatchFunction = inngest.createFunction(
         },
         select: {
           id: true,
+          name: true,
           website: true,
           googleRating: true,
           googleReviewsCount: true,
@@ -112,6 +188,7 @@ export const runAuditBatchFunction = inngest.createFunction(
           website: lead.website!,
           googleRating: lead.googleRating ? Number(lead.googleRating) : null,
           googleReviewsCount: lead.googleReviewsCount,
+          brandName: lead.name, // Passa il nome per la ricerca SERP
         },
       }));
 

@@ -9,11 +9,12 @@ import {
   Settings,
   ClipboardCheck,
   FolderSearch,
+  Target,
 } from "lucide-react";
 
 const navigation = [
-  { name: "Chiamare", href: "/leads", icon: Phone },
-  { name: "Audit", href: "/audit", icon: ClipboardCheck },
+  { name: "Oggi", href: "/oggi", icon: Target },
+  { name: "Lead", href: "/leads", icon: Phone },
   { name: "Cerca", href: "/search", icon: Search },
   { name: "Ricerche", href: "/searches", icon: FolderSearch },
   { name: "Menu", href: "/settings", icon: Settings },
