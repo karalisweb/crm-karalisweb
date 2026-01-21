@@ -1,12 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Search,
-  MapPin,
   Star,
   Phone,
   ExternalLink,
@@ -15,30 +12,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
-interface ParcheggiatiPageProps {
-  searchParams: Promise<{
-    page?: string;
-  }>;
-}
-
-async function ParcheggiatiList({
-  searchParams,
-}: {
-  searchParams: ParcheggiatiPageProps["searchParams"];
-}) {
-  const params = await searchParams;
-  const page = parseInt(params.page || "1");
-  const pageSize = 30;
-
-  // Lead senza sito web (auditStatus = NO_WEBSITE)
+async function ParcheggiatiList() {
+  // Carica tutti i parcheggiati (di solito sono pochi)
   const [leads, total] = await Promise.all([
     db.lead.findMany({
       where: {
         auditStatus: "NO_WEBSITE",
       },
       orderBy: [{ googleRating: "desc" }, { createdAt: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
       select: {
         id: true,
         name: true,
@@ -48,7 +29,8 @@ async function ParcheggiatiList({
         googleRating: true,
         googleReviewsCount: true,
         googleMapsUrl: true,
-        createdAt: true,
+        website: true,
+        auditData: true,
       },
     }),
     db.lead.count({
@@ -57,8 +39,6 @@ async function ParcheggiatiList({
       },
     }),
   ]);
-
-  const totalPages = Math.ceil(total / pageSize);
 
   if (leads.length === 0) {
     return (
@@ -81,98 +61,167 @@ async function ParcheggiatiList({
     );
   }
 
+  // Raggruppa per motivo
+  const noWebsite = leads.filter(l => !l.website);
+  const socialLinks = leads.filter(l => l.website);
+
   return (
-    <div className="space-y-4">
-      {/* Results count */}
+    <div className="space-y-6">
+      {/* Conteggio totale */}
       <p className="text-sm text-muted-foreground">
-        {total} contatti senza sito web
+        {total} contatti parcheggiati
       </p>
 
-      {/* Lead cards */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {leads.map((lead) => (
-          <Card key={lead.id} className="card-hover">
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-sm truncate flex-1">
-                    {lead.name}
-                  </h3>
+      {/* Tabella - versione desktop */}
+      <div className="hidden md:block rounded-lg border border-border overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="text-left px-4 py-3 font-medium">Nome</th>
+              <th className="text-left px-4 py-3 font-medium">Categoria</th>
+              <th className="text-left px-4 py-3 font-medium">Motivo</th>
+              <th className="text-center px-4 py-3 font-medium">Rating</th>
+              <th className="text-right px-4 py-3 font-medium">Azioni</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {leads.map((lead) => {
+              const isSocial = !!lead.website;
+              const reason = isSocial ? "Link social" : "Nessun sito";
+
+              return (
+                <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="font-medium truncate max-w-[200px]">{lead.name}</div>
+                    {lead.address && (
+                      <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {lead.address.split(",")[0]}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground truncate max-w-[150px]">
+                    {lead.category || "-"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${
+                      isSocial
+                        ? "bg-blue-500/10 text-blue-500"
+                        : "bg-gray-500/10 text-gray-500"
+                    }`}>
+                      {reason}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {lead.googleRating ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                        {Number(lead.googleRating).toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      {lead.phone && (
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className="p-1.5 hover:bg-green-500/10 rounded text-green-500"
+                          title="Chiama"
+                        >
+                          <Phone className="h-4 w-4" />
+                        </a>
+                      )}
+                      {lead.googleMapsUrl && (
+                        <a
+                          href={lead.googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 hover:bg-blue-500/10 rounded text-blue-500"
+                          title="Apri su Maps"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Lista mobile - più compatta */}
+      <div className="md:hidden space-y-1">
+        {leads.map((lead) => {
+          const isSocial = !!lead.website;
+
+          return (
+            <div
+              key={lead.id}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors border-b border-border last:border-0"
+            >
+              {/* Info principale */}
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm truncate">{lead.name}</div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {lead.category && <span className="truncate">{lead.category}</span>}
                   {lead.googleRating && (
-                    <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                    <span className="flex items-center gap-0.5">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                       {Number(lead.googleRating).toFixed(1)}
-                    </Badge>
-                  )}
-                </div>
-
-                {lead.category && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    {lead.category}
-                  </p>
-                )}
-
-                {lead.address && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3 flex-shrink-0" />
-                    <span className="truncate">{lead.address.split(",")[0]}</span>
-                  </p>
-                )}
-
-                <div className="flex items-center gap-2 pt-2 border-t border-border">
-                  {lead.phone && (
-                    <a
-                      href={`tel:${lead.phone}`}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-500 rounded text-xs hover:bg-green-500/20 transition-colors"
-                    >
-                      <Phone className="h-3 w-3" />
-                      Chiama
-                    </a>
-                  )}
-                  {lead.googleMapsUrl && (
-                    <a
-                      href={lead.googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 rounded text-xs hover:bg-blue-500/20 transition-colors"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      Maps
-                    </a>
+                    </span>
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+
+              {/* Tag motivo */}
+              <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] ${
+                isSocial
+                  ? "bg-blue-500/10 text-blue-500"
+                  : "bg-gray-500/10 text-gray-500"
+              }`}>
+                {isSocial ? "Social" : "No sito"}
+              </span>
+
+              {/* Azioni */}
+              <div className="flex items-center gap-1 shrink-0">
+                {lead.phone && (
+                  <a
+                    href={`tel:${lead.phone}`}
+                    className="p-2 bg-green-500/10 rounded-lg"
+                  >
+                    <Phone className="h-4 w-4 text-green-500" />
+                  </a>
+                )}
+                {lead.googleMapsUrl && (
+                  <a
+                    href={lead.googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 bg-blue-500/10 rounded-lg"
+                  >
+                    <ExternalLink className="h-4 w-4 text-blue-500" />
+                  </a>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4">
-          <p className="text-sm text-muted-foreground">
-            Pagina {page} di {totalPages}
-          </p>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <Link
-                href={`/parcheggiati?page=${page - 1}`}
-                className="inline-flex items-center justify-center px-3 py-1.5 text-sm rounded-md border border-input hover:bg-accent"
-              >
-                Precedente
-              </Link>
-            )}
-            {page < totalPages && (
-              <Link
-                href={`/parcheggiati?page=${page + 1}`}
-                className="inline-flex items-center justify-center px-3 py-1.5 text-sm rounded-md border border-input hover:bg-accent"
-              >
-                Successiva
-              </Link>
-            )}
-          </div>
+      {/* Legenda */}
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground pt-2 border-t border-border">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-gray-500"></span>
+          Nessun sito: {noWebsite.length}
         </div>
-      )}
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+          Link social: {socialLinks.length}
+        </div>
+      </div>
     </div>
   );
 }
@@ -181,43 +230,34 @@ function ParcheggiatiListSkeleton() {
   return (
     <div className="space-y-4">
       <Skeleton className="h-5 w-48" />
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(9)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-4">
-              <Skeleton className="h-5 w-3/4 mb-2" />
-              <Skeleton className="h-3 w-1/2 mb-2" />
-              <Skeleton className="h-3 w-2/3" />
-            </CardContent>
-          </Card>
+      <div className="rounded-lg border border-border overflow-hidden">
+        <div className="bg-muted/50 px-4 py-3">
+          <Skeleton className="h-4 w-full" />
+        </div>
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="px-4 py-3 border-t border-border">
+            <Skeleton className="h-4 w-full" />
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-export default function ParcheggiatiPage(props: ParcheggiatiPageProps) {
+export default function ParcheggiatiPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-3xl font-bold">Parcheggiati</h1>
-          <p className="text-sm text-muted-foreground hidden md:block">
-            Contatti senza sito web - non chiamabili per servizi digitali
-          </p>
-        </div>
-      </div>
-
-      {/* Info banner */}
-      <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-        Questi contatti non hanno un sito web, quindi non sono candidati per servizi di web design, SEO o digital marketing.
-        Puoi comunque contattarli per altri servizi.
+      <div>
+        <h1 className="text-xl md:text-2xl font-bold">Parcheggiati</h1>
+        <p className="text-sm text-muted-foreground">
+          Contatti non target per servizi digitali
+        </p>
       </div>
 
       {/* Lista */}
       <Suspense fallback={<ParcheggiatiListSkeleton />}>
-        <ParcheggiatiList searchParams={props.searchParams} />
+        <ParcheggiatiList />
       </Suspense>
     </div>
   );
