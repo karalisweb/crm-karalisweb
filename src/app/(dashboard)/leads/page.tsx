@@ -48,8 +48,11 @@ interface ColumnData {
   [key: string]: Lead[];
 }
 
-// Stages rilevanti per il commerciale (escludiamo NEW che sono solo importati)
+// Stages rilevanti per il commerciale
+// NEW = audit completato ma tag NON_TARGET (non prioritari)
+// TO_CALL = audit completato con tag prioritario (da chiamare)
 const ACTIVE_STAGES = [
+  "NEW",
   "TO_CALL",
   "CALLED",
   "INTERESTED",

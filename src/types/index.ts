@@ -161,7 +161,7 @@ export interface GoogleMapsResult {
 // ==========================================
 
 export const PIPELINE_STAGES = {
-  NEW: { label: "Nuovo", icon: "inbox", color: "gray" },
+  NEW: { label: "Non prioritari", icon: "inbox", color: "gray" },
   TO_CALL: { label: "Da chiamare", icon: "phone", color: "blue" },
   CALLED: { label: "Chiamato", icon: "phone-outgoing", color: "indigo" },
   INTERESTED: { label: "Interessato", icon: "target", color: "green" },
