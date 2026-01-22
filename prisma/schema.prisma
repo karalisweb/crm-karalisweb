@@ -182,10 +182,57 @@ model User {
   password      String    // Hash bcrypt
   name          String?
   role          UserRole  @default(USER)
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
+  // Relazioni
+  otpCodes      OtpCode[]
+  passwordResets PasswordReset[]
+
   @@map("users")
+}
+
+// ==========================================
+// OTP CODE - Codici per autenticazione 2FA
+// ==========================================
+model OtpCode {
+  id        String   @id @default(uuid())
+  code      String   // Codice OTP a 6 cifre (hashed)
+  email     String   // Email destinatario
+  type      OtpType  @default(TWO_FACTOR) // Tipo di OTP
+  expiresAt DateTime @map("expires_at") // Scadenza (10 minuti)
+  used      Boolean  @default(false) // Se già utilizzato
+  attempts  Int      @default(0) // Tentativi di verifica
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relazione con utente
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email, type], name: "idx_otp_email_type")
+  @@index([expiresAt], name: "idx_otp_expires")
+  @@map("otp_codes")
+}
+
+// ==========================================
+// PASSWORD RESET - Token per recupero password
+// ==========================================
+model PasswordReset {
+  id        String   @id @default(uuid())
+  token     String   @unique // Token univoco (hashed)
+  email     String   // Email utente
+  expiresAt DateTime @map("expires_at") // Scadenza (1 ora)
+  used      Boolean  @default(false) // Se già utilizzato
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relazione con utente
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email], name: "idx_password_reset_email")
+  @@index([expiresAt], name: "idx_password_reset_expires")
+  @@map("password_resets")
 }
 
 // ==========================================
@@ -271,6 +318,11 @@ enum NextStepType {
 enum UserRole {
   ADMIN
   USER
+}
+
+enum OtpType {
+  TWO_FACTOR      // 2FA al login
+  PASSWORD_RESET  // Reset password
 }
 
 // ==========================================

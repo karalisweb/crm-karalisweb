@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   Target,
   Users,
+  UserCog,
 } from "lucide-react";
 
 const navigation = [
@@ -83,6 +84,18 @@ export function Sidebar() {
         >
           <LayoutDashboard className="h-5 w-5" />
           Dashboard
+        </Link>
+        <Link
+          href="/profile"
+          className={cn(
+            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+            pathname === "/profile"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          <UserCog className="h-5 w-5" />
+          Profilo
         </Link>
         <Link
           href="/settings"
