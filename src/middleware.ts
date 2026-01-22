@@ -6,10 +6,14 @@ const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
-  const isLoginPage = req.nextUrl.pathname === "/login";
-  const isApiRoute = req.nextUrl.pathname.startsWith("/api");
-  const isAuthRoute = req.nextUrl.pathname.startsWith("/api/auth");
-  const isInngestRoute = req.nextUrl.pathname.startsWith("/api/inngest");
+  const pathname = req.nextUrl.pathname;
+  const isApiRoute = pathname.startsWith("/api");
+  const isAuthRoute = pathname.startsWith("/api/auth");
+  const isInngestRoute = pathname.startsWith("/api/inngest");
+
+  // Pagine pubbliche di autenticazione
+  const publicAuthPages = ["/login", "/forgot-password", "/reset-password"];
+  const isPublicAuthPage = publicAuthPages.includes(pathname);
 
   // Allow auth routes
   if (isAuthRoute) {
@@ -22,18 +26,18 @@ export default auth((req) => {
   }
 
   // In development, allow test routes without auth
-  const isDevTestRoute = req.nextUrl.pathname.startsWith("/api/test");
+  const isDevTestRoute = pathname.startsWith("/api/test");
   if (process.env.NODE_ENV === "development" && isDevTestRoute) {
     return NextResponse.next();
   }
 
-  // Redirect logged-in users away from login page
-  if (isLoginPage && isLoggedIn) {
+  // Redirect logged-in users away from public auth pages
+  if (isPublicAuthPage && isLoggedIn) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Allow login page
-  if (isLoginPage) {
+  // Allow public auth pages
+  if (isPublicAuthPage) {
     return NextResponse.next();
   }
 

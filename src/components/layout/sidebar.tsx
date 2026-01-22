@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,9 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string })?.role;
+  const isAdmin = userRole === "ADMIN";
 
   return (
     <div className="hidden md:flex h-screen w-64 flex-col bg-card border-r border-border">
@@ -97,18 +100,20 @@ export function Sidebar() {
           <UserCog className="h-5 w-5" />
           Profilo
         </Link>
-        <Link
-          href="/settings"
-          className={cn(
-            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-            pathname === "/settings"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-          )}
-        >
-          <Settings className="h-5 w-5" />
-          Impostazioni
-        </Link>
+        {isAdmin && (
+          <Link
+            href="/settings"
+            className={cn(
+              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+              pathname === "/settings"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            )}
+          >
+            <Settings className="h-5 w-5" />
+            Impostazioni
+          </Link>
+        )}
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 px-3 text-muted-foreground hover:bg-secondary hover:text-foreground rounded-xl"

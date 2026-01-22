@@ -265,7 +265,7 @@ export default function ProfilePage() {
               <h2 className="text-xl font-semibold">{profile?.name || "Nome non impostato"}</h2>
               <p className="text-muted-foreground">{profile?.email}</p>
               <Badge className="mt-1 bg-primary/20 text-primary border-primary/30">
-                {profile?.role === "ADMIN" ? "Amministratore" : "Utente"}
+                {profile?.role === "ADMIN" ? "Amministratore" : "Commerciale"}
               </Badge>
             </div>
           </div>

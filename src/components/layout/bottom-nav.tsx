@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   Phone,
@@ -10,18 +11,25 @@ import {
   ClipboardCheck,
   FolderSearch,
   Target,
+  UserCog,
 } from "lucide-react";
-
-const navigation = [
-  { name: "Oggi", href: "/oggi", icon: Target },
-  { name: "Lead", href: "/leads", icon: Phone },
-  { name: "Cerca", href: "/search", icon: Search },
-  { name: "Ricerche", href: "/searches", icon: FolderSearch },
-  { name: "Menu", href: "/settings", icon: Settings },
-];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string })?.role;
+  const isAdmin = userRole === "ADMIN";
+
+  const navigation = [
+    { name: "Oggi", href: "/oggi", icon: Target },
+    { name: "Lead", href: "/leads", icon: Phone },
+    { name: "Cerca", href: "/search", icon: Search },
+    { name: "Ricerche", href: "/searches", icon: FolderSearch },
+    // Se admin mostra Settings, altrimenti mostra Profilo
+    isAdmin
+      ? { name: "Menu", href: "/settings", icon: Settings }
+      : { name: "Profilo", href: "/profile", icon: UserCog },
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border pb-safe md:hidden">

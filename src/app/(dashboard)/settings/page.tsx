@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
 
 interface User {
@@ -43,6 +45,8 @@ interface ApiConfig {
 }
 
 export default function SettingsPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
@@ -55,10 +59,19 @@ export default function SettingsPage() {
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "USER" });
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const userRole = (session?.user as { role?: string })?.role;
+  const isAdmin = userRole === "ADMIN";
+
   useEffect(() => {
-    fetchUsers();
-    fetchApiConfig();
-  }, []);
+    if (status === "authenticated" && !isAdmin) {
+      router.push("/profile");
+      return;
+    }
+    if (status === "authenticated" && isAdmin) {
+      fetchUsers();
+      fetchApiConfig();
+    }
+  }, [status, isAdmin, router]);
 
   async function fetchUsers() {
     try {
@@ -166,6 +179,27 @@ export default function SettingsPage() {
     return token.substring(0, 4) + "••••••••" + token.substring(token.length - 4);
   }
 
+  // Loading state
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Non-admin users get redirected, but show message just in case
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <ShieldAlert className="h-16 w-16 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Accesso Negato</h2>
+        <p className="text-muted-foreground">Non hai i permessi per accedere a questa pagina.</p>
+        <Button onClick={() => router.push("/profile")}>Vai al Profilo</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -255,7 +289,7 @@ export default function SettingsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="USER">Utente</SelectItem>
+                          <SelectItem value="USER">Commerciale</SelectItem>
                           <SelectItem value="ADMIN">Amministratore</SelectItem>
                         </SelectContent>
                       </Select>
@@ -288,7 +322,7 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
-                          {user.role}
+                          {user.role === "ADMIN" ? "Amministratore" : "Commerciale"}
                         </Badge>
                         <Button
                           variant="ghost"
