@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { runFullAudit } from "@/lib/audit";
 import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
 import { Prisma, CommercialTag } from "@prisma/client";
-import type { CommercialSignals, AdsEvidenceLevel } from "@/types/commercial";
+import type { CommercialSignals, AdsEvidenceLevel, CommercialTagResult } from "@/types/commercial";
 
 /**
  * Pattern per riconoscere link social/non-siti-veri
@@ -111,10 +111,10 @@ export async function POST(request: NextRequest) {
     let commercialResult: {
       signals: CommercialSignals;
       tagResult: {
-        tag: "ADS_ATTIVE_CONTROLLO_ASSENTE" | "TRAFFICO_SENZA_DIREZIONE" | "STRUTTURA_OK_NON_PRIORITIZZATA" | "NON_TARGET";
+        tag: CommercialTag;
         tagReason: string;
         isCallable: boolean;
-        priority: 1 | 2 | 3 | 4;
+        priority: number;
       };
     } = {
       signals: {
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         analyzedAt: new Date().toISOString(),
       },
       tagResult: {
-        tag: "NON_TARGET",
+        tag: "NON_TARGET" as CommercialTag,
         tagReason: auditError ? `Sito non raggiungibile: ${auditError}` : "Analisi non completata",
         isCallable: false,
         priority: 4,
@@ -343,10 +343,10 @@ export async function PUT(request: NextRequest) {
       let commercialResult: {
         signals: CommercialSignals;
         tagResult: {
-          tag: "ADS_ATTIVE_CONTROLLO_ASSENTE" | "TRAFFICO_SENZA_DIREZIONE" | "STRUTTURA_OK_NON_PRIORITIZZATA" | "NON_TARGET";
+          tag: CommercialTag;
           tagReason: string;
           isCallable: boolean;
-          priority: 1 | 2 | 3 | 4;
+          priority: number;
         };
       } = {
         signals: {
@@ -359,7 +359,7 @@ export async function PUT(request: NextRequest) {
           analyzedAt: new Date().toISOString(),
         },
         tagResult: {
-          tag: "NON_TARGET",
+          tag: "NON_TARGET" as CommercialTag,
           tagReason: auditError ? `Sito non raggiungibile: ${auditError}` : "Analisi non completata",
           isCallable: false,
           priority: 4,
