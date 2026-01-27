@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw, Target, Phone, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench } from "lucide-react";
+import { Loader2, Save, RotateCcw, Target, Phone, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2 } from "lucide-react";
 
 interface CrmSettings {
   scoreThreshold: number;
@@ -43,10 +43,13 @@ export function CrmConfigTab() {
   const [runningBulkAudit, setRunningBulkAudit] = useState(false);
   const [bulkAuditProgress, setBulkAuditProgress] = useState<{ processed: number; total: number } | null>(null);
   const [recalculatingStages, setRecalculatingStages] = useState(false);
+  const [fixingCallable, setFixingCallable] = useState(false);
+  const [callableStats, setCallableStats] = useState<{ shouldBeCallable: number } | null>(null);
 
   useEffect(() => {
     fetchSettings();
     fetchAuditStats();
+    fetchCallableStats();
   }, []);
 
   useEffect(() => {
@@ -191,6 +194,46 @@ export function CrmConfigTab() {
     } finally {
       setRunningBulkAudit(false);
       setBulkAuditProgress(null);
+    }
+  }
+
+  // Fetch callable status stats
+  async function fetchCallableStats() {
+    try {
+      const res = await fetch("/api/debug/callable-status");
+      if (res.ok) {
+        const data = await res.json();
+        setCallableStats({
+          shouldBeCallable: data.shouldBeCallableButAreNot || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching callable stats:", error);
+    }
+  }
+
+  // Fix isCallable flag for all leads
+  async function fixCallableStatus() {
+    setFixingCallable(true);
+    try {
+      const res = await fetch("/api/debug/callable-status", {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.message);
+        fetchCallableStats();
+        fetchAuditStats();
+      } else {
+        const error = await res.json();
+        toast.error(error.error || "Errore nel fix");
+      }
+    } catch (error) {
+      console.error("Error fixing callable status:", error);
+      toast.error("Errore nel fix isCallable");
+    } finally {
+      setFixingCallable(false);
     }
   }
 
@@ -532,6 +575,48 @@ export function CrmConfigTab() {
                   <>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Ricalcola Stati
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Fix Callable Status */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-base">Fix Flag &quot;Chiamabile&quot;</CardTitle>
+            </div>
+            <CardDescription>
+              Corregge il flag isCallable per tutti i lead in base al loro tag commerciale.
+              Necessario se i lead non appaiono nella pagina &quot;Oggi&quot; nonostante siano in DA_CHIAMARE.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {callableStats && callableStats.shouldBeCallable > 0 ? (
+                  <Badge variant="destructive">{callableStats.shouldBeCallable} lead da correggere</Badge>
+                ) : (
+                  <span className="text-sm text-green-600">Tutti i lead hanno il flag corretto</span>
+                )}
+              </div>
+              <Button
+                onClick={fixCallableStatus}
+                disabled={fixingCallable}
+                variant="outline"
+              >
+                {fixingCallable ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Correzione...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Fix Callable
                   </>
                 )}
               </Button>
