@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { runFullAudit } from "@/lib/audit";
 import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
-import { Prisma, CommercialTag } from "@prisma/client";
+import { Prisma, CommercialTag, PipelineStage } from "@prisma/client";
 import type { CommercialSignals, AdsEvidenceLevel, CommercialTagResult } from "@/types/commercial";
 
 /**
@@ -203,7 +203,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Salva risultati - SEMPRE completa, mai FAILED per errori di fetch
+    // 3. Carica le impostazioni CRM per lo scoreThreshold
+    const settings = await db.settings.findUnique({
+      where: { id: "default" },
+    });
+    const scoreThreshold = settings?.scoreThreshold ?? 60;
+
+    // 4. Salva risultati - SEMPRE completa, mai FAILED per errori di fetch
     const issues = auditResult?.issues || [];
     if (auditError) {
       issues.unshift(`⚠️ Sito lento/non raggiungibile: ${auditError}`);
@@ -212,12 +218,31 @@ export async function POST(request: NextRequest) {
       issues.unshift(`⚠️ Errore caricamento: ${fetchError}`);
     }
 
+    // Calcola opportunityScore
+    const finalScore = auditResult?.opportunityScore ?? 50;
+
+    // Determina il pipelineStage in base a tag commerciale E score threshold
+    let newPipelineStage: PipelineStage;
+    if (commercialResult.tagResult.tag === "DA_APPROFONDIRE") {
+      newPipelineStage = PipelineStage.DA_VERIFICARE;
+    } else if (commercialResult.tagResult.tag === "NON_TARGET") {
+      newPipelineStage = PipelineStage.NON_TARGET;
+    } else if (finalScore < scoreThreshold) {
+      // Score sotto soglia → DA_VERIFICARE (anche se callable)
+      newPipelineStage = PipelineStage.DA_VERIFICARE;
+    } else if (commercialResult.tagResult.isCallable) {
+      // Callable + score sopra soglia → DA_CHIAMARE
+      newPipelineStage = PipelineStage.DA_CHIAMARE;
+    } else {
+      newPipelineStage = PipelineStage.NEW;
+    }
+
     await db.lead.update({
       where: { id: leadId },
       data: {
         auditStatus: "COMPLETED",
         auditCompletedAt: new Date(),
-        opportunityScore: auditResult?.opportunityScore ?? 50, // Default medio se non disponibile
+        opportunityScore: finalScore,
         auditData: (auditResult?.auditData ?? {
           error: auditError || fetchError,
           partial: true,
@@ -229,14 +254,8 @@ export async function POST(request: NextRequest) {
         commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
         commercialPriority: commercialResult.tagResult.priority,
         isCallable: commercialResult.tagResult.isCallable,
-        // Pipeline MSD: routing in base a tag
-        pipelineStage: commercialResult.tagResult.tag === "DA_APPROFONDIRE"
-          ? "DA_VERIFICARE"
-          : commercialResult.tagResult.tag === "NON_TARGET"
-          ? "NON_TARGET"
-          : commercialResult.tagResult.isCallable
-          ? "DA_CHIAMARE"
-          : "NEW",
+        // Pipeline MSD: routing in base a tag E score threshold
+        pipelineStage: newPipelineStage,
       },
     });
 
@@ -295,9 +314,15 @@ export async function PUT(request: NextRequest) {
       });
     }
 
+    // Carica le impostazioni CRM per lo scoreThreshold
+    const settings = await db.settings.findUnique({
+      where: { id: "default" },
+    });
+    const scoreThreshold = settings?.scoreThreshold ?? 60;
+
     let processed = 0;
     let parked = 0; // Link social spostati
-    const results: Array<{ id: string; name: string; status: string; tag?: string; reason?: string }> = [];
+    const results: Array<{ id: string; name: string; status: string; tag?: string; reason?: string; pipelineStage?: string }> = [];
 
     // Processa ogni lead in sequenza
     for (const lead of leads) {
@@ -410,13 +435,32 @@ export async function PUT(request: NextRequest) {
         issues.unshift(`⚠️ Sito lento/non raggiungibile: ${auditError}`);
       }
 
+      // Calcola opportunityScore
+      const finalScore = auditResult?.opportunityScore ?? 50;
+
+      // Determina il pipelineStage in base a tag commerciale E score threshold
+      let newPipelineStage: PipelineStage;
+      if (commercialResult.tagResult.tag === "DA_APPROFONDIRE") {
+        newPipelineStage = PipelineStage.DA_VERIFICARE;
+      } else if (commercialResult.tagResult.tag === "NON_TARGET") {
+        newPipelineStage = PipelineStage.NON_TARGET;
+      } else if (finalScore < scoreThreshold) {
+        // Score sotto soglia → DA_VERIFICARE (anche se callable)
+        newPipelineStage = PipelineStage.DA_VERIFICARE;
+      } else if (commercialResult.tagResult.isCallable) {
+        // Callable + score sopra soglia → DA_CHIAMARE
+        newPipelineStage = PipelineStage.DA_CHIAMARE;
+      } else {
+        newPipelineStage = PipelineStage.NEW;
+      }
+
       // Salva risultati - SEMPRE completa
       await db.lead.update({
         where: { id: lead.id },
         data: {
           auditStatus: "COMPLETED",
           auditCompletedAt: new Date(),
-          opportunityScore: auditResult?.opportunityScore ?? 50,
+          opportunityScore: finalScore,
           auditData: (auditResult?.auditData ?? {
             error: auditError,
             partial: true,
@@ -427,14 +471,8 @@ export async function PUT(request: NextRequest) {
           commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
           commercialPriority: commercialResult.tagResult.priority,
           isCallable: commercialResult.tagResult.isCallable,
-          // Pipeline MSD
-          pipelineStage: commercialResult.tagResult.tag === "DA_APPROFONDIRE"
-            ? "DA_VERIFICARE"
-            : commercialResult.tagResult.tag === "NON_TARGET"
-            ? "NON_TARGET"
-            : commercialResult.tagResult.isCallable
-            ? "DA_CHIAMARE"
-            : "NEW",
+          // Pipeline MSD: routing in base a tag E score threshold
+          pipelineStage: newPipelineStage,
         },
       });
 
@@ -444,6 +482,7 @@ export async function PUT(request: NextRequest) {
         name: lead.name || "N/A",
         status: auditError ? "completed_with_errors" : "completed",
         tag: commercialResult.tagResult.tag,
+        pipelineStage: newPipelineStage,
       });
     }
 

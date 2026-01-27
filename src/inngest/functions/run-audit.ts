@@ -2,7 +2,7 @@ import { inngest } from "../client";
 import { db } from "@/lib/db";
 import { runFullAudit } from "@/lib/audit";
 import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
-import { Prisma, CommercialTag } from "@prisma/client";
+import { Prisma, CommercialTag, PipelineStage } from "@prisma/client";
 
 /**
  * Funzione Inngest per eseguire l'audit di un singolo lead
@@ -114,8 +114,32 @@ export const runAuditFunction = inngest.createFunction(
       }
     });
 
-    // Step 4: Salva tutti i risultati
+    // Step 4: Carica le impostazioni CRM per lo scoreThreshold
+    const scoreThreshold = await step.run("get-settings", async () => {
+      const settings = await db.settings.findUnique({
+        where: { id: "default" },
+      });
+      return settings?.scoreThreshold ?? 60;
+    });
+
+    // Step 5: Salva tutti i risultati
     await step.run("save-results", async () => {
+      // Determina il pipelineStage in base a tag commerciale E score threshold
+      let newPipelineStage: PipelineStage;
+      if (commercialResult.tagResult.tag === "DA_APPROFONDIRE") {
+        newPipelineStage = PipelineStage.DA_VERIFICARE;
+      } else if (commercialResult.tagResult.tag === "NON_TARGET") {
+        newPipelineStage = PipelineStage.NON_TARGET;
+      } else if (result.opportunityScore < scoreThreshold) {
+        // Score sotto soglia → DA_VERIFICARE (anche se callable)
+        newPipelineStage = PipelineStage.DA_VERIFICARE;
+      } else if (commercialResult.tagResult.isCallable) {
+        // Callable + score sopra soglia → DA_CHIAMARE
+        newPipelineStage = PipelineStage.DA_CHIAMARE;
+      } else {
+        newPipelineStage = PipelineStage.NEW;
+      }
+
       await db.lead.update({
         where: { id: leadId },
         data: {
@@ -133,17 +157,8 @@ export const runAuditFunction = inngest.createFunction(
           commercialPriority: commercialResult.tagResult.priority,
           isCallable: commercialResult.tagResult.isCallable,
 
-          // Pipeline MSD: routing in base a tag e score
-          // DA_CHIAMARE: callable + score > soglia
-          // DA_VERIFICARE: tag DA_APPROFONDIRE
-          // NON_TARGET: tag NON_TARGET
-          pipelineStage: commercialResult.tagResult.tag === "DA_APPROFONDIRE"
-            ? "DA_VERIFICARE"
-            : commercialResult.tagResult.tag === "NON_TARGET"
-            ? "NON_TARGET"
-            : commercialResult.tagResult.isCallable
-            ? "DA_CHIAMARE"
-            : "NEW",
+          // Pipeline MSD: routing in base a tag E score threshold
+          pipelineStage: newPipelineStage,
         },
       });
     });
