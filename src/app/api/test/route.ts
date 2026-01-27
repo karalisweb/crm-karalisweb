@@ -7,7 +7,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { startGoogleMapsSearch } from "@/lib/apify";
 import { runFullAudit } from "@/lib/audit";
+import { generateMSDTalkingPoints, generateMSDCallOpener } from "@/lib/audit/talking-points";
 import { isMockMode } from "@/lib/apify-mock";
+import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
 
 export async function GET() {
   // Solo in development
@@ -114,13 +116,52 @@ export async function POST(request: NextRequest) {
           googleReviewsCount: 50,
         });
 
+        // Analisi segnali commerciali - riusa HTML già scaricato dall'audit
+        let commercialSignals = null;
+        let commercialTag = null;
+        try {
+          commercialSignals = await detectCommercialSignals({
+            html: auditResult.html,
+            domain: auditResult.domain,
+            brandName: auditResult.domain.split(".")[0],
+            skipSerp: true,
+          });
+          commercialTag = assignCommercialTag({ signals: commercialSignals });
+        } catch (e) {
+          console.error("Commercial signals error:", e);
+        }
+
+        // Genera MSD talking points
+        const msdTalkingPoints = generateMSDTalkingPoints(commercialSignals, auditResult.auditData);
+        const msdCallOpener = generateMSDCallOpener("Lead", commercialSignals, auditResult.auditData);
+
         return NextResponse.json({
           action: "audit",
           website,
           score: auditResult.opportunityScore,
           issues: auditResult.issues,
-          talkingPointsCount: auditResult.talkingPoints.length,
-          talkingPoints: auditResult.talkingPoints.slice(0, 5), // Prime 5
+          // === NUOVO: MSD Talking Points ===
+          msd: {
+            callOpener: msdCallOpener,
+            mainHook: msdTalkingPoints.mainHook,
+            strategicQuestions: msdTalkingPoints.strategicQuestions,
+            observations: msdTalkingPoints.observations,
+            pitch: msdTalkingPoints.msdPitch,
+          },
+          // === Legacy talking points (deprecati) ===
+          legacyTalkingPoints: auditResult.talkingPoints.slice(0, 5),
+          commercialSignals,
+          commercialTag: commercialTag ? {
+            tag: commercialTag.tag,
+            reason: commercialTag.tagReason,
+            isCallable: commercialTag.isCallable,
+            priority: commercialTag.priority,
+          } : null,
+          auditData: {
+            tracking: auditResult.auditData.tracking,
+            social: auditResult.auditData.social,
+            content: auditResult.auditData.content,
+          },
         });
       }
 

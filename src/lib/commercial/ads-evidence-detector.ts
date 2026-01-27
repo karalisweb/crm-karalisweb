@@ -31,6 +31,12 @@ interface LandingAdsSignals {
   hasGclid: boolean;
   hasFbclid: boolean;
   hasConversionLinker: boolean;
+  // GTM è un segnale importante: chi usa GTM probabilmente fa o ha fatto ads
+  hasGTM: boolean;
+  gtmId: string | null;
+  // LinkedIn e TikTok ads
+  hasLinkedInInsight: boolean;
+  hasTikTokPixel: boolean;
 }
 
 /**
@@ -66,6 +72,18 @@ export function detectLandingAdsSignals(html: string): LandingAdsSignals {
   const hasConversionLinker =
     /conversion_linker/.test(html) || /conversionLinker/.test(html);
 
+  // Google Tag Manager - SEGNALE IMPORTANTE
+  // Chi usa GTM probabilmente gestisce campagne ads (o lo ha fatto)
+  const gtmMatch = html.match(/GTM-[A-Z0-9]{6,}/);
+  const hasGTM = !!gtmMatch || /googletagmanager\.com\/gtm\.js/.test(html);
+
+  // LinkedIn Insight Tag
+  const hasLinkedInInsight =
+    /snap\.licdn\.com/.test(html) || /linkedin\.com\/px/.test(html);
+
+  // TikTok Pixel
+  const hasTikTokPixel = /analytics\.tiktok\.com/.test(html);
+
   return {
     hasGoogleAdsTag,
     googleAdsId: gadsMatch?.[0] || null,
@@ -76,6 +94,10 @@ export function detectLandingAdsSignals(html: string): LandingAdsSignals {
     hasGclid,
     hasFbclid,
     hasConversionLinker,
+    hasGTM,
+    gtmId: gtmMatch?.[0] || null,
+    hasLinkedInInsight,
+    hasTikTokPixel,
   };
 }
 
@@ -214,6 +236,13 @@ export function calculateAdsEvidence(
   if (landingSignals.hasConversionLinker) {
     mediumSignals.push("Conversion Linker attivo");
   }
+  // LinkedIn e TikTok ads sono segnali medium
+  if (landingSignals.hasLinkedInInsight) {
+    mediumSignals.push("LinkedIn Insight Tag presente");
+  }
+  if (landingSignals.hasTikTokPixel) {
+    mediumSignals.push("TikTok Pixel presente");
+  }
 
   if (mediumSignals.length >= 2) {
     return {
@@ -224,11 +253,23 @@ export function calculateAdsEvidence(
     };
   }
 
-  // WEAK: Un solo segnale indiretto
+  // WEAK: Un solo segnale indiretto O presenza di GTM
+  // GTM indica che l'azienda ha infrastruttura per fare ads
   if (mediumSignals.length === 1) {
     return {
       level: "weak",
       reason: mediumSignals[0],
+      serpData: serpResult || undefined,
+      landingSignals,
+    };
+  }
+
+  // GTM presente = WEAK (hanno infrastruttura, potrebbero fare/aver fatto ads)
+  // Questo è il fix critico: GTM non deve andare in "none"
+  if (landingSignals.hasGTM) {
+    return {
+      level: "weak",
+      reason: `GTM presente (${landingSignals.gtmId}) - infrastruttura per ads/tracking avanzato`,
       serpData: serpResult || undefined,
       landingSignals,
     };

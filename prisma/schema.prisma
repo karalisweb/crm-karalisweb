@@ -289,6 +289,7 @@ enum CommercialTag {
   ADS_ATTIVE_CONTROLLO_ASSENTE    // Spendono ma non misurano - PRIORITA 1
   TRAFFICO_SENZA_DIREZIONE        // Traffico ma niente CTA - PRIORITA 2
   STRUTTURA_OK_NON_PRIORITIZZATA  // Funziona ma non ottimizzato - PRIORITA 3
+  DA_APPROFONDIRE                 // Ha GTM/tracking ma non chiaro se fa ads - PRIORITA 3
   NON_TARGET                      // Non spendono in ads - SKIP
 }
 

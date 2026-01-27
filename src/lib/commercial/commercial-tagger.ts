@@ -2,6 +2,11 @@
  * Commercial Tagger
  * Assegna UN SOLO tag commerciale a ogni prospect
  * Basato sui 5 segnali rilevati
+ *
+ * LOGICA AGGIORNATA:
+ * - GTM/tracking presente = potenziale cliente (non scartare)
+ * - DA_APPROFONDIRE per casi ambigui
+ * - NON_TARGET solo se veramente nessun segnale
  */
 
 import type {
@@ -24,13 +29,21 @@ function hasActiveAds(adsEvidence: AdsEvidenceLevel): boolean {
 }
 
 /**
+ * Verifica se c'e' potenziale (weak evidence o tracking presente)
+ */
+function hasPotential(adsEvidence: AdsEvidenceLevel, trackingPresent: boolean): boolean {
+  return adsEvidence === "weak" || trackingPresent;
+}
+
+/**
  * Assegna il tag commerciale basato sui segnali
  *
  * Logica di priorita':
  * 1. ADS_ATTIVE_CONTROLLO_ASSENTE - Spendono ma non misurano (URGENTE)
  * 2. TRAFFICO_SENZA_DIREZIONE - Traffico ma CTA assente
  * 3. STRUTTURA_OK_NON_PRIORITIZZATA - Tutto OK ma non ottimizzato
- * 4. NON_TARGET - Non spendono in ads
+ * 3. DA_APPROFONDIRE - Ha infrastruttura (GTM/tracking) ma non chiaro se fa ads
+ * 4. NON_TARGET - Nessun segnale di investimento digitale
  */
 export function assignCommercialTag(input: TaggingInput): CommercialTagResult {
   const { signals } = input;
@@ -43,20 +56,7 @@ export function assignCommercialTag(input: TaggingInput): CommercialTagResult {
     consentModeV2,
   } = signals;
 
-  // REGOLA 1: Se nessuna evidenza ads -> NON_TARGET
-  if (adsEvidence === "none") {
-    return {
-      tag: "NON_TARGET",
-      tagReason: `Nessuna evidenza di advertising attivo. ${adsEvidenceReason}`,
-      signals,
-      isCallable: false,
-      priority: 4,
-    };
-  }
-
-  // Da qui in poi: adsEvidence = strong | medium | weak
-
-  // REGOLA 2: Ads attive ma tracking assente -> CONTROLLO_ASSENTE (PRIORITA 1)
+  // === PRIORITÀ 1: Ads attive ma tracking assente ===
   // Questo e' il caso peggiore: spendono soldi ma non sanno cosa funziona
   if (hasActiveAds(adsEvidence) && !trackingPresent) {
     return {
@@ -75,7 +75,7 @@ export function assignCommercialTag(input: TaggingInput): CommercialTagResult {
     };
   }
 
-  // REGOLA 3: Ads attive ma CTA non chiara -> TRAFFICO_SENZA_DIREZIONE (PRIORITA 2)
+  // === PRIORITÀ 2: Ads attive ma CTA non chiara ===
   // Portano traffico ma non lo convertono
   if (hasActiveAds(adsEvidence) && !ctaClear) {
     return {
@@ -94,10 +94,8 @@ export function assignCommercialTag(input: TaggingInput): CommercialTagResult {
     };
   }
 
-  // REGOLA 4: Ads attive ma offerta non focalizzata -> STRUTTURA_OK_NON_PRIORITIZZATA (PRIORITA 3)
-  // Hanno tutto ma il messaggio e' generico
+  // === PRIORITÀ 3A: Ads attive ma offerta non focalizzata ===
   if (hasActiveAds(adsEvidence) && !offerFocused) {
-    // Aggiungi warning se manca Consent Mode V2 (compliance issue)
     const complianceWarning =
       consentModeV2 === "no"
         ? "Inoltre, manca Consent Mode V2 (richiesto da Google da Marzo 2024)"
@@ -120,40 +118,50 @@ export function assignCommercialTag(input: TaggingInput): CommercialTagResult {
     };
   }
 
-  // REGOLA 5: Ads WEAK senza altri problemi evidenti -> valuta caso per caso
+  // === PRIORITÀ 3B: Ads WEAK - hanno segnali ma deboli ===
   if (adsEvidence === "weak") {
-    // Se tracking presente e CTA ok, probabilmente fanno poco adv
+    // Weak + tracking ok + CTA ok = DA APPROFONDIRE (non scartare!)
+    // Potrebbero aver fatto ads in passato o usare GTM per altri scopi
     if (trackingPresent && ctaClear) {
       return {
-        tag: "NON_TARGET",
-        tagReason: `Segnali ads deboli (${adsEvidenceReason}). Probabilmente non investono significativamente in advertising.`,
+        tag: "DA_APPROFONDIRE",
+        tagReason: buildTagReason({
+          mainIssue: "Infrastruttura presente, verificare se fanno o hanno fatto advertising",
+          adsEvidence: adsEvidenceReason,
+          details: [
+            "Hanno GTM/tracking configurato - segno di maturita' digitale",
+            "Potrebbero aver fatto campagne in passato",
+            "Da verificare in chiamata: investono in advertising?",
+          ],
+        }),
         signals,
-        isCallable: false,
-        priority: 4,
+        isCallable: true, // SI, chiamabile!
+        priority: 3,
       };
     }
 
-    // Se manca qualcosa, c'e' potenziale
+    // Weak + no tracking = potenziale problema grave
     if (!trackingPresent) {
       return {
         tag: "ADS_ATTIVE_CONTROLLO_ASSENTE",
         tagReason: buildTagReason({
-          mainIssue: "Segnali di ads (deboli) ma tracking completamente assente",
+          mainIssue: "Segnali di ads ma tracking completamente assente",
           adsEvidence: adsEvidenceReason,
-          details: ["Da verificare se fanno realmente advertising"],
+          details: ["Se fanno ads senza tracking, stanno sprecando budget"],
         }),
         signals,
         isCallable: true,
-        priority: 1, // Priorita' alta perche' se fanno ads senza tracking e' grave
+        priority: 1,
       };
     }
 
+    // Weak + tracking ok + no CTA
     return {
       tag: "TRAFFICO_SENZA_DIREZIONE",
       tagReason: buildTagReason({
-        mainIssue: "Segnali di ads (deboli) con problemi di conversione",
+        mainIssue: "Segnali di ads con problemi di conversione",
         adsEvidence: adsEvidenceReason,
-        details: ["CTA non chiare o offerta generica"],
+        details: ["CTA non chiare, il traffico non converte"],
       }),
       signals,
       isCallable: true,
@@ -161,13 +169,71 @@ export function assignCommercialTag(input: TaggingInput): CommercialTagResult {
     };
   }
 
-  // FALLBACK: Se siamo arrivati qui, qualcosa non torna
-  // Ads attive + tracking + CTA + offerta = tutto ok?
-  // In teoria non dovremmo mai arrivare qui, ma gestiamo il caso
+  // === PRIORITÀ 3C: Nessuna evidenza ads MA tracking presente ===
+  // Questo e' il FIX CRITICO: non scartare chi ha GTM/GA
+  if (adsEvidence === "none" && trackingPresent) {
+    return {
+      tag: "DA_APPROFONDIRE",
+      tagReason: buildTagReason({
+        mainIssue: "Hanno tracking/GTM ma nessuna evidenza di ads attive",
+        adsEvidence: adsEvidenceReason,
+        details: [
+          "L'infrastruttura c'e' - potrebbero aver fatto ads in passato",
+          "Oppure usano GTM solo per analytics",
+          "Da verificare in chiamata: investono in advertising?",
+        ],
+      }),
+      signals,
+      isCallable: true, // SI, chiamabile!
+      priority: 3,
+    };
+  }
+
+  // === PRIORITÀ 4: Nessuna evidenza e nessun tracking ===
+  // Solo qui e' veramente NON_TARGET
+  if (adsEvidence === "none" && !trackingPresent) {
+    // Ma se hanno CTA chiare e offerta focalizzata, potrebbero essere interessanti
+    if (ctaClear && offerFocused) {
+      return {
+        tag: "DA_APPROFONDIRE",
+        tagReason: buildTagReason({
+          mainIssue: "Sito strutturato ma nessun investimento in digital marketing rilevato",
+          adsEvidence: adsEvidenceReason,
+          details: [
+            "Nessun tracking o ads rilevato",
+            "Ma il sito ha CTA chiare e offerta definita",
+            "Potrebbero essere pronti a iniziare",
+          ],
+        }),
+        signals,
+        isCallable: true, // Potenziale cliente che non ha ancora iniziato
+        priority: 3,
+      };
+    }
+
+    // Veramente niente
+    return {
+      tag: "NON_TARGET",
+      tagReason: buildTagReason({
+        mainIssue: "Nessuna evidenza di investimento in marketing digitale",
+        adsEvidence: adsEvidenceReason,
+        details: [
+          "Nessun tracking installato",
+          "Nessuna evidenza di advertising",
+          "Probabilmente non investono in digital",
+        ],
+      }),
+      signals,
+      isCallable: false,
+      priority: 4,
+    };
+  }
+
+  // === FALLBACK: Ads attive + tracking + CTA + offerta = tutto ok ===
   return {
     tag: "STRUTTURA_OK_NON_PRIORITIZZATA",
     tagReason: buildTagReason({
-      mainIssue: "Struttura apparentemente completa, verificare margini di ottimizzazione",
+      mainIssue: "Struttura completa, verificare margini di ottimizzazione",
       adsEvidence: adsEvidenceReason,
       details: [
         `Tracking: ${trackingPresent ? "OK" : "MANCANTE"}`,

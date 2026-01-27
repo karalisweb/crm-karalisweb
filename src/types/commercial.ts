@@ -20,6 +20,7 @@ export type CommercialTag =
   | "ADS_ATTIVE_CONTROLLO_ASSENTE"    // Spendono ma non misurano - PRIORITA 1
   | "TRAFFICO_SENZA_DIREZIONE"        // Traffico ma niente CTA - PRIORITA 2
   | "STRUTTURA_OK_NON_PRIORITIZZATA"  // Funziona ma non ottimizzato - PRIORITA 3
+  | "DA_APPROFONDIRE"                 // Ha GTM/tracking ma non chiaro se fa ads - PRIORITA 3
   | "NON_TARGET";                     // Non spendono in ads - SKIP
 
 /**
@@ -162,6 +163,7 @@ export const TAG_PRIORITY: Record<CommercialTag, number> = {
   ADS_ATTIVE_CONTROLLO_ASSENTE: 1,
   TRAFFICO_SENZA_DIREZIONE: 2,
   STRUTTURA_OK_NON_PRIORITIZZATA: 3,
+  DA_APPROFONDIRE: 3,  // Stessa priorità di STRUTTURA_OK, ma motivo diverso
   NON_TARGET: 4,
 };
 
@@ -169,6 +171,7 @@ export const TAG_LABELS: Record<CommercialTag, string> = {
   ADS_ATTIVE_CONTROLLO_ASSENTE: "Ads attive, controllo assente",
   TRAFFICO_SENZA_DIREZIONE: "Traffico senza direzione",
   STRUTTURA_OK_NON_PRIORITIZZATA: "Struttura OK, non prioritizzata",
+  DA_APPROFONDIRE: "Da approfondire",
   NON_TARGET: "Non target",
 };
 
@@ -176,5 +179,6 @@ export const TAG_COLORS: Record<CommercialTag, string> = {
   ADS_ATTIVE_CONTROLLO_ASSENTE: "red",
   TRAFFICO_SENZA_DIREZIONE: "orange",
   STRUTTURA_OK_NON_PRIORITIZZATA: "yellow",
+  DA_APPROFONDIRE: "blue",
   NON_TARGET: "gray",
 };
