@@ -17,6 +17,7 @@ import {
   ClipboardCheck,
   ChevronRight,
   Calendar,
+  Ban,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -44,13 +45,40 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
     notFound();
   }
 
-  // Conta i lead per stato audit
-  const [completedCount, runningCount, pendingCount, failedCount, noWebsiteCount] = await Promise.all([
+  // Conta i lead per stato audit e tag commerciali
+  const [
+    completedCount,
+    runningCount,
+    pendingCount,
+    failedCount,
+    noWebsiteCount,
+    readyToCallCount,
+    noTargetCount,
+  ] = await Promise.all([
     db.lead.count({ where: { searchId, auditStatus: "COMPLETED" } }),
     db.lead.count({ where: { searchId, auditStatus: "RUNNING" } }),
     db.lead.count({ where: { searchId, auditStatus: "PENDING" } }),
     db.lead.count({ where: { searchId, auditStatus: "FAILED" } }),
     db.lead.count({ where: { searchId, auditStatus: "NO_WEBSITE" } }),
+    // Pronti da chiamare: audit completato E tag commerciale valido (non NON_TARGET)
+    db.lead.count({
+      where: {
+        searchId,
+        auditStatus: "COMPLETED",
+        OR: [
+          { commercialTag: null },
+          { commercialTag: { not: "NON_TARGET" } }
+        ]
+      }
+    }),
+    // No target: audit completato ma scartati
+    db.lead.count({
+      where: {
+        searchId,
+        auditStatus: "COMPLETED",
+        commercialTag: "NON_TARGET"
+      }
+    }),
   ]);
 
   const totalLeads = completedCount + runningCount + pendingCount + failedCount + noWebsiteCount;
@@ -90,7 +118,7 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-green-500">{completedCount}</div>
+            <div className="text-3xl font-bold text-green-500">{readyToCallCount}</div>
             <div className="text-sm text-muted-foreground">Pronti da chiamare</div>
           </CardContent>
         </Card>
@@ -113,7 +141,7 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
         <h2 className="text-lg font-semibold">Vai a</h2>
 
         {/* Da chiamare */}
-        {completedCount > 0 && (
+        {readyToCallCount > 0 && (
           <Link href="/leads">
             <Card className="card-hover cursor-pointer">
               <CardContent className="p-4">
@@ -125,12 +153,12 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
                     <div>
                       <p className="font-medium">Da Chiamare</p>
                       <p className="text-sm text-muted-foreground">
-                        {completedCount} lead con audit completato
+                        {readyToCallCount} lead con audit completato
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{completedCount}</Badge>
+                    <Badge variant="secondary">{readyToCallCount}</Badge>
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </div>
@@ -168,6 +196,33 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
                     {pendingCount > 0 && (
                       <Badge variant="secondary">{pendingCount}</Badge>
                     )}
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        {/* No Target (scartati) */}
+        {noTargetCount > 0 && (
+          <Link href="/no-target">
+            <Card className="card-hover cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-gray-500/10">
+                      <Ban className="h-5 w-5 text-gray-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">No Target</p>
+                      <p className="text-sm text-muted-foreground">
+                        {noTargetCount} lead scartati
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{noTargetCount}</Badge>
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </div>
