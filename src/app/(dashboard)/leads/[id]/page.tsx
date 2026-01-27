@@ -17,6 +17,7 @@ import {
   Clock,
 } from "lucide-react";
 import { AuditButton } from "@/components/leads/audit-button";
+import { PipelineStageSelector } from "@/components/leads/pipeline-stage-selector";
 
 // Force dynamic rendering - don't try to prerender at build time
 export const dynamic = "force-dynamic";
@@ -84,9 +85,12 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">{stageInfo.label}</Badge>
-            </div>
+            <PipelineStageSelector
+              leadId={lead.id}
+              currentStage={lead.pipelineStage}
+              lostReason={lead.lostReason}
+              lostReasonNotes={lead.lostReasonNotes}
+            />
             <p className="text-sm text-muted-foreground mt-1">Stage Pipeline</p>
           </CardContent>
         </Card>

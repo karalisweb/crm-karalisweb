@@ -68,6 +68,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         ...(body.category !== undefined && { category: body.category }),
         ...(body.pipelineStage !== undefined && { pipelineStage: body.pipelineStage }),
         ...(body.lostReason !== undefined && { lostReason: body.lostReason }),
+        ...(body.lostReasonNotes !== undefined && { lostReasonNotes: body.lostReasonNotes }),
         ...(body.notes !== undefined && { notes: body.notes }),
         ...(body.nextFollowupAt !== undefined && {
           nextFollowupAt: body.nextFollowupAt ? new Date(body.nextFollowupAt) : null,

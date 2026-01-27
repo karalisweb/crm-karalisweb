@@ -26,8 +26,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
+import { CrmConfigTab } from "@/components/settings/crm-config-tab";
 
 interface User {
   id: string;
@@ -220,6 +221,10 @@ export default function SettingsPage() {
           <TabsTrigger value="search" className="gap-2">
             <Search className="h-4 w-4" />
             Ricerca
+          </TabsTrigger>
+          <TabsTrigger value="crm" className="gap-2">
+            <Target className="h-4 w-4" />
+            CRM
           </TabsTrigger>
           <TabsTrigger value="general" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -475,6 +480,11 @@ export default function SettingsPage() {
         {/* TAB RICERCA */}
         <TabsContent value="search" className="space-y-4">
           <SearchConfigTab />
+        </TabsContent>
+
+        {/* TAB CRM */}
+        <TabsContent value="crm" className="space-y-4">
+          <CrmConfigTab />
         </TabsContent>
 
         {/* TAB GENERALE */}
