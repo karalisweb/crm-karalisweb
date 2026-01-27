@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { CommercialTag } from "@prisma/client";
 
 /**
  * GET /api/debug/callable-status
@@ -37,19 +36,10 @@ export async function GET() {
       },
     });
 
-    // 3. Verifica quanti dovrebbero essere callable in base al tag
-    const callableTagsForCheck: CommercialTag[] = [
-      CommercialTag.ADS_ATTIVE_CONTROLLO_ASSENTE,
-      CommercialTag.TRAFFICO_SENZA_DIREZIONE,
-      CommercialTag.STRUTTURA_OK_NON_PRIORITIZZATA,
-      CommercialTag.DA_APPROFONDIRE,
-    ];
+    // 3. Verifica quanti dovrebbero essere callable (lead in DA_CHIAMARE con isCallable=false)
     const shouldBeCallable = await db.lead.count({
       where: {
-        auditStatus: "COMPLETED",
-        commercialTag: {
-          in: callableTagsForCheck,
-        },
+        pipelineStage: "DA_CHIAMARE",
         isCallable: false,
       },
     });
@@ -103,7 +93,9 @@ export async function GET() {
 
 /**
  * POST /api/debug/callable-status
- * Fix isCallable per tutti i lead in base al commercialTag
+ * Fix isCallable per tutti i lead in base al pipelineStage
+ * - Lead in DA_CHIAMARE → isCallable = true
+ * - Lead in NON_TARGET → isCallable = false
  */
 export async function POST() {
   try {
@@ -112,18 +104,10 @@ export async function POST() {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
     }
 
-    // Tag che dovrebbero essere callable
-    const callableTags: CommercialTag[] = [
-      CommercialTag.ADS_ATTIVE_CONTROLLO_ASSENTE,
-      CommercialTag.TRAFFICO_SENZA_DIREZIONE,
-      CommercialTag.STRUTTURA_OK_NON_PRIORITIZZATA,
-      CommercialTag.DA_APPROFONDIRE,
-    ];
-
-    // Fix: imposta isCallable = true per tag callable
-    const fixedCallable = await db.lead.updateMany({
+    // Fix 1: Lead in DA_CHIAMARE devono essere callable
+    const fixedDaChiamare = await db.lead.updateMany({
       where: {
-        commercialTag: { in: callableTags },
+        pipelineStage: "DA_CHIAMARE",
         isCallable: false,
       },
       data: {
@@ -131,22 +115,25 @@ export async function POST() {
       },
     });
 
-    // Fix: imposta isCallable = false per NON_TARGET
-    const fixedNotCallable = await db.lead.updateMany({
+    // Fix 2: Lead in NON_TARGET non devono essere callable
+    const fixedNonTarget = await db.lead.updateMany({
       where: {
-        commercialTag: CommercialTag.NON_TARGET,
+        pipelineStage: "NON_TARGET",
         isCallable: true,
       },
       data: {
         isCallable: false,
       },
     });
+
+    // Fix 3: Lead in DA_VERIFICARE potrebbero essere callable se hanno tag valido
+    // Ma per ora li lasciamo come sono
 
     return NextResponse.json({
       success: true,
-      fixedCallable: fixedCallable.count,
-      fixedNotCallable: fixedNotCallable.count,
-      message: `Aggiornati ${fixedCallable.count} lead come callable, ${fixedNotCallable.count} come non callable`,
+      fixedDaChiamare: fixedDaChiamare.count,
+      fixedNonTarget: fixedNonTarget.count,
+      message: `Aggiornati ${fixedDaChiamare.count} lead DA_CHIAMARE come callable, ${fixedNonTarget.count} NON_TARGET come non callable`,
     });
   } catch (error) {
     console.error("Error fixing callable status:", error);
