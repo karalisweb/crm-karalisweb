@@ -19,22 +19,22 @@ fi
 export $(cat .env.production | grep -v '^#' | xargs)
 
 echo "📦 Building Docker images..."
-docker compose -f docker compose.yml --env-file .env.production build
+docker compose -f docker-compose.yml --env-file .env.production build
 
 echo "🗄️ Avviando database..."
-docker compose -f docker compose.yml --env-file .env.production up -d db
+docker compose -f docker-compose.yml --env-file .env.production up -d db
 
 echo "⏳ Attendendo che il database sia pronto..."
 sleep 10
 
 echo "🔧 Eseguendo migrazioni database..."
-docker compose -f docker compose.yml --env-file .env.production run --rm app npx prisma migrate deploy
+docker compose -f docker-compose.yml --env-file .env.production run --rm app npx prisma migrate deploy
 
 echo "🌱 Seeding dati iniziali (se necessario)..."
-docker compose -f docker compose.yml --env-file .env.production run --rm app npx tsx prisma/seed.ts || echo "Seed già eseguito o errore (ignorato)"
+docker compose -f docker-compose.yml --env-file .env.production run --rm app npx tsx prisma/seed.ts || echo "Seed già eseguito o errore (ignorato)"
 
 echo "🚀 Avviando applicazione..."
-docker compose -f docker compose.yml --env-file .env.production up -d app
+docker compose -f docker-compose.yml --env-file .env.production up -d app
 
 echo ""
 echo "✅ Deploy completato!"
