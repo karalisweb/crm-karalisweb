@@ -55,7 +55,7 @@ async function main() {
       googleRating: 3.8,
       googleReviewsCount: 120,
       placeId: "example_place_2",
-      pipelineStage: "TO_CALL" as const,
+      pipelineStage: "DA_CHIAMARE" as const,
     },
     {
       name: "Palestra FitLife",
@@ -66,7 +66,7 @@ async function main() {
       googleRating: 4.5,
       googleReviewsCount: 28,
       placeId: "example_place_3",
-      pipelineStage: "NEW" as const,
+      pipelineStage: "SENZA_SITO" as const,
       auditStatus: "NO_WEBSITE" as const,
     },
   ];

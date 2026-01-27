@@ -157,22 +157,44 @@ export interface GoogleMapsResult {
 }
 
 // ==========================================
-// PIPELINE STAGES CONFIG
+// PIPELINE STAGES CONFIG - MSD
 // ==========================================
 
 export const PIPELINE_STAGES = {
-  NEW: { label: "Non prioritari", icon: "inbox", color: "gray" },
-  TO_CALL: { label: "Da chiamare", icon: "phone", color: "blue" },
-  CALLED: { label: "Chiamato", icon: "phone-outgoing", color: "indigo" },
-  INTERESTED: { label: "Interessato", icon: "target", color: "green" },
-  AUDIT_SENT: { label: "Audit inviato", icon: "file-text", color: "purple" },
-  MEETING: { label: "Meeting", icon: "calendar", color: "orange" },
-  PROPOSAL: { label: "Preventivo", icon: "file", color: "yellow" },
-  WON: { label: "Vinto", icon: "check-circle", color: "emerald" },
-  LOST: { label: "Perso", icon: "x-circle", color: "red" },
+  // === SELEZIONE (pre-chiamata) ===
+  NEW: { label: "Nuovo", icon: "inbox", color: "gray", group: "selezione" },
+  DA_CHIAMARE: { label: "Da chiamare oggi", icon: "phone", color: "blue", group: "selezione" },
+  DA_VERIFICARE: { label: "Da verificare", icon: "search", color: "amber", group: "selezione" },
+  NON_TARGET: { label: "Non target", icon: "x", color: "slate", group: "selezione" },
+  SENZA_SITO: { label: "Senza sito", icon: "globe-off", color: "gray", group: "selezione" },
+
+  // === VENDITA MSD (post-chiamata) ===
+  NON_RISPONDE: { label: "Non risponde", icon: "phone-missed", color: "orange", group: "vendita" },
+  RICHIAMARE: { label: "Richiamare", icon: "phone-callback", color: "cyan", group: "vendita" },
+  CALL_FISSATA: { label: "Call fissata", icon: "calendar", color: "purple", group: "vendita" },
+  NON_PRESENTATO: { label: "Non presentato", icon: "user-x", color: "rose", group: "vendita" },
+  OFFERTA_INVIATA: { label: "Offerta inviata", icon: "mail", color: "yellow", group: "vendita" },
+  VINTO: { label: "Cliente MSD", icon: "check-circle", color: "emerald", group: "vendita" },
+  PERSO: { label: "Perso", icon: "x-circle", color: "red", group: "vendita" },
 } as const;
 
 export type PipelineStageKey = keyof typeof PIPELINE_STAGES;
+
+// ==========================================
+// LOST REASONS CONFIG
+// ==========================================
+
+export const LOST_REASONS = {
+  NO_INTERESSE: { label: "Non interessato", icon: "thumbs-down" },
+  NO_BUDGET: { label: "No budget", icon: "wallet" },
+  GHOST_CALL: { label: "Ghost alla call", icon: "ghost" },
+  GHOST_OFFERTA: { label: "Ghost dopo offerta", icon: "clock" },
+  COMPETITOR: { label: "Scelto competitor", icon: "users" },
+  TEMPISTICA: { label: "Tempistica sbagliata", icon: "calendar-x" },
+  ALTRO: { label: "Altro", icon: "more-horizontal" },
+} as const;
+
+export type LostReasonKey = keyof typeof LOST_REASONS;
 
 // ==========================================
 // AUDIT STATUS CONFIG

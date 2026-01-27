@@ -21,7 +21,7 @@ async function DashboardStats() {
     await Promise.all([
       db.lead.count(),
       db.lead.count({ where: { opportunityScore: { gte: 80 } } }),
-      db.lead.count({ where: { pipelineStage: "TO_CALL" } }),
+      db.lead.count({ where: { pipelineStage: "DA_CHIAMARE" } }),
       db.search.findMany({
         take: 3,
         orderBy: { createdAt: "desc" },
@@ -30,7 +30,7 @@ async function DashboardStats() {
       db.lead.findMany({
         where: {
           opportunityScore: { not: null },
-          pipelineStage: "TO_CALL", // Solo lead da chiamare, escludo quelli già chiamati
+          pipelineStage: "DA_CHIAMARE", // Solo lead da chiamare, escludo quelli già chiamati
         },
         orderBy: { opportunityScore: "desc" },
         take: 5,
@@ -118,7 +118,7 @@ async function DashboardStats() {
             </Card>
           </Link>
 
-          <Link href="/leads?stage=TO_CALL">
+          <Link href="/leads?stage=DA_CHIAMARE">
             <Card className="card-hover cursor-pointer">
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-blue-500">

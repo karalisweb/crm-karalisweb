@@ -248,7 +248,14 @@ async function runAuditForLead(lead: { id: string; name: string | null; website:
       commercialSignals: signals as unknown as Prisma.InputJsonValue,
       commercialPriority: tagResult.priority,
       isCallable: tagResult.isCallable,
-      pipelineStage: tagResult.isCallable ? "TO_CALL" : "NEW",
+      // Pipeline MSD
+      pipelineStage: tagResult.tag === "DA_APPROFONDIRE"
+        ? "DA_VERIFICARE"
+        : tagResult.tag === "NON_TARGET"
+        ? "NON_TARGET"
+        : tagResult.isCallable
+        ? "DA_CHIAMARE"
+        : "NEW",
     },
   });
 

@@ -12,20 +12,41 @@ import {
   Settings,
   LogOut,
   FolderSearch,
-  PackageX,
-  ClipboardCheck,
-  Target,
-  Users,
   UserCog,
+  Calendar,
+  Mail,
+  Trophy,
+  XCircle,
+  Globe,
+  AlertCircle,
+  Users,
 } from "lucide-react";
 
-const navigation = [
-  { name: "Oggi (5 call)", href: "/oggi", icon: Target },
-  { name: "Tutti i Lead", href: "/leads", icon: Users },
-  { name: "Audit", href: "/audit", icon: ClipboardCheck },
+// === SELEZIONE (pre-chiamata) ===
+const selectionNav = [
+  { name: "Oggi", href: "/oggi", icon: Phone, description: "Da chiamare oggi" },
+  { name: "Da Verificare", href: "/da-verificare", icon: AlertCircle, description: "Verifica manuale" },
+];
+
+// === VENDITA MSD (post-chiamata) ===
+const salesNav = [
+  { name: "Appuntamenti", href: "/appuntamenti", icon: Calendar, description: "Call fissate" },
+  { name: "Offerte", href: "/offerte", icon: Mail, description: "In attesa pagamento" },
+  { name: "Clienti MSD", href: "/clienti-msd", icon: Trophy, description: "Vinti" },
+];
+
+// === ARCHIVIO ===
+const archiveNav = [
+  { name: "Non Target", href: "/non-target", icon: XCircle, description: "Rivedibile" },
+  { name: "Senza Sito", href: "/senza-sito", icon: Globe, description: "No website" },
+  { name: "Persi", href: "/persi", icon: XCircle, description: "Archivio" },
+];
+
+// === STRUMENTI ===
+const toolsNav = [
   { name: "Nuova Ricerca", href: "/search", icon: Search },
   { name: "Ricerche", href: "/searches", icon: FolderSearch },
-  { name: "Parcheggiati", href: "/parcheggiati", icon: PackageX },
+  { name: "Tutti i Lead", href: "/leads", icon: Users },
 ];
 
 export function Sidebar() {
@@ -33,6 +54,24 @@ export function Sidebar() {
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role;
   const isAdmin = userRole === "ADMIN";
+
+  const isActive = (href: string) =>
+    pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+
+  const NavLink = ({ item }: { item: { name: string; href: string; icon: React.ComponentType<{ className?: string }>; description?: string } }) => (
+    <Link
+      href={item.href}
+      className={cn(
+        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+        isActive(item.href)
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+      )}
+    >
+      <item.icon className="h-5 w-5" />
+      {item.name}
+    </Link>
+  );
 
   return (
     <div className="hidden md:flex h-screen w-64 flex-col bg-card border-r border-border">
@@ -44,75 +83,71 @@ export function Sidebar() {
         </div>
         <div>
           <h1 className="text-lg font-bold">Sales CRM</h1>
-          <p className="text-xs text-muted-foreground">by Karalisweb v. 2.0</p>
+          <p className="text-xs text-muted-foreground">MSD Pipeline v2.1</p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {navigation.map((item) => {
-          // Matching esatto per evitare che /search matchi /searches
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href + "/"));
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        {/* Dashboard */}
+        <div>
+          <NavLink item={{ name: "Dashboard", href: "/", icon: LayoutDashboard }} />
+        </div>
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.name}
-            </Link>
-          );
-        })}
+        {/* SELEZIONE */}
+        <div>
+          <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Selezione
+          </p>
+          <div className="space-y-1">
+            {selectionNav.map((item) => (
+              <NavLink key={item.href} item={item} />
+            ))}
+          </div>
+        </div>
+
+        {/* VENDITA MSD */}
+        <div>
+          <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Vendita MSD
+          </p>
+          <div className="space-y-1">
+            {salesNav.map((item) => (
+              <NavLink key={item.href} item={item} />
+            ))}
+          </div>
+        </div>
+
+        {/* ARCHIVIO */}
+        <div>
+          <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Archivio
+          </p>
+          <div className="space-y-1">
+            {archiveNav.map((item) => (
+              <NavLink key={item.href} item={item} />
+            ))}
+          </div>
+        </div>
+
+        {/* STRUMENTI */}
+        <div>
+          <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Strumenti
+          </p>
+          <div className="space-y-1">
+            {toolsNav.map((item) => (
+              <NavLink key={item.href} item={item} />
+            ))}
+          </div>
+        </div>
       </nav>
 
       {/* Footer */}
       <div className="border-t border-border p-3 space-y-1">
-        <Link
-          href="/"
-          className={cn(
-            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-            pathname === "/"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-          )}
-        >
-          <LayoutDashboard className="h-5 w-5" />
-          Dashboard
-        </Link>
-        <Link
-          href="/profile"
-          className={cn(
-            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-            pathname === "/profile"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-          )}
-        >
-          <UserCog className="h-5 w-5" />
-          Profilo
-        </Link>
+        <NavLink item={{ name: "Profilo", href: "/profile", icon: UserCog }} />
         {isAdmin && (
-          <Link
-            href="/settings"
-            className={cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-              pathname === "/settings"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            )}
-          >
-            <Settings className="h-5 w-5" />
-            Impostazioni
-          </Link>
+          <NavLink item={{ name: "Impostazioni", href: "/settings", icon: Settings }} />
         )}
         <Button
           variant="ghost"

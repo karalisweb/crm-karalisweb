@@ -44,10 +44,8 @@ export async function GET(request: Request) {
         commercialTag: {
           notIn: excludeTags,
         },
-        // Solo in stage TO_CALL o NEW (non gia chiamati oggi)
-        pipelineStage: {
-          in: ["NEW", "TO_CALL"],
-        },
+        // Solo in stage DA_CHIAMARE (pronti per la chiamata)
+        pipelineStage: "DA_CHIAMARE",
         // Con sito web
         website: {
           not: null,
@@ -93,9 +91,7 @@ export async function GET(request: Request) {
       where: {
         auditStatus: "COMPLETED",
         isCallable: true,
-        pipelineStage: {
-          in: ["NEW", "TO_CALL"],
-        },
+        pipelineStage: "DA_CHIAMARE",
       },
       _count: true,
     });

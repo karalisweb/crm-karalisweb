@@ -42,23 +42,30 @@ export async function POST(
       );
     }
 
-    // Determina il nuovo stage in base all'outcome
+    // Determina il nuovo stage in base all'outcome (MSD Pipeline)
     let newStage: PipelineStage;
     switch (outcome) {
       case "INTERESTED":
-        newStage = "INTERESTED";
+        // Interessato -> Fissiamo una call di vendita
+        newStage = "CALL_FISSATA";
         break;
       case "NOT_INTERESTED":
-        newStage = "LOST";
+        // Non interessato -> Perso
+        newStage = "PERSO";
         break;
       case "CALLBACK":
-        newStage = "CALLED";
+        // Richiamare in data X
+        newStage = "RICHIAMARE";
         break;
-      case "ANSWERED":
       case "NO_ANSWER":
       case "BUSY":
+        // Non risponde / Occupato -> incrementa tentativi
+        newStage = "NON_RISPONDE";
+        break;
+      case "ANSWERED":
       default:
-        newStage = "CALLED";
+        // Risposto ma esito non chiaro -> rimane da chiamare
+        newStage = "DA_CHIAMARE";
         break;
     }
 
@@ -84,8 +91,13 @@ export async function POST(
         pipelineStage: newStage,
 
         // Se non interessato, segna lost reason
-        ...(outcome === "NOT_INTERESTED" && objection
-          ? { lostReason: `Obiezione: ${objection}${objectionNotes ? ` - ${objectionNotes}` : ""}` }
+        ...(outcome === "NOT_INTERESTED"
+          ? {
+              lostReason: "NO_INTERESSE" as const,
+              lostReasonNotes: objection
+                ? `Obiezione: ${objection}${objectionNotes ? ` - ${objectionNotes}` : ""}`
+                : null
+            }
           : {}),
       },
     });

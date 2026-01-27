@@ -133,8 +133,17 @@ export const runAuditFunction = inngest.createFunction(
           commercialPriority: commercialResult.tagResult.priority,
           isCallable: commercialResult.tagResult.isCallable,
 
-          // Pipeline: TO_CALL solo se callable
-          pipelineStage: commercialResult.tagResult.isCallable ? "TO_CALL" : "NEW",
+          // Pipeline MSD: routing in base a tag e score
+          // DA_CHIAMARE: callable + score > soglia
+          // DA_VERIFICARE: tag DA_APPROFONDIRE
+          // NON_TARGET: tag NON_TARGET
+          pipelineStage: commercialResult.tagResult.tag === "DA_APPROFONDIRE"
+            ? "DA_VERIFICARE"
+            : commercialResult.tagResult.tag === "NON_TARGET"
+            ? "NON_TARGET"
+            : commercialResult.tagResult.isCallable
+            ? "DA_CHIAMARE"
+            : "NEW",
         },
       });
     });

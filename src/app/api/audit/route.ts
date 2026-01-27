@@ -229,8 +229,14 @@ export async function POST(request: NextRequest) {
         commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
         commercialPriority: commercialResult.tagResult.priority,
         isCallable: commercialResult.tagResult.isCallable,
-        // Pipeline
-        pipelineStage: commercialResult.tagResult.isCallable ? "TO_CALL" : "NEW",
+        // Pipeline MSD: routing in base a tag
+        pipelineStage: commercialResult.tagResult.tag === "DA_APPROFONDIRE"
+          ? "DA_VERIFICARE"
+          : commercialResult.tagResult.tag === "NON_TARGET"
+          ? "NON_TARGET"
+          : commercialResult.tagResult.isCallable
+          ? "DA_CHIAMARE"
+          : "NEW",
       },
     });
 
@@ -421,7 +427,14 @@ export async function PUT(request: NextRequest) {
           commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
           commercialPriority: commercialResult.tagResult.priority,
           isCallable: commercialResult.tagResult.isCallable,
-          pipelineStage: commercialResult.tagResult.isCallable ? "TO_CALL" : "NEW",
+          // Pipeline MSD
+          pipelineStage: commercialResult.tagResult.tag === "DA_APPROFONDIRE"
+            ? "DA_VERIFICARE"
+            : commercialResult.tagResult.tag === "NON_TARGET"
+            ? "NON_TARGET"
+            : commercialResult.tagResult.isCallable
+            ? "DA_CHIAMARE"
+            : "NEW",
         },
       });
 

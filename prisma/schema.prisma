@@ -65,9 +65,19 @@ model Lead {
   // Flag per dashboard "Chiamabili oggi"
   isCallable        Boolean         @default(false) @map("is_callable")
 
-  // CRM Pipeline
+  // CRM Pipeline MSD
   pipelineStage     PipelineStage @default(NEW) @map("pipeline_stage")
-  lostReason        String?       @map("lost_reason")
+  lostReason        LostReason?   @map("lost_reason")
+  lostReasonNotes   String?       @map("lost_reason_notes")
+
+  // Contatore tentativi chiamata (per NON_RISPONDE, max 3)
+  callAttempts      Int           @default(0) @map("call_attempts")
+
+  // Data/ora appuntamento (per CALL_FISSATA)
+  appointmentAt     DateTime?     @map("appointment_at")
+
+  // Data invio offerta (per calcolo 20gg ghost)
+  offerSentAt       DateTime?     @map("offer_sent_at")
 
   // ==========================================
   // CRM MINIMALE per logging chiamate rapido
@@ -108,6 +118,10 @@ model Lead {
   @@index([commercialTag], name: "idx_leads_commercial_tag")
   @@index([commercialPriority], name: "idx_leads_commercial_priority")
   @@index([isCallable], name: "idx_leads_callable")
+  // Indici per pipeline MSD
+  @@index([appointmentAt], name: "idx_leads_appointment")
+  @@index([offerSentAt], name: "idx_leads_offer_sent")
+  @@index([nextFollowupAt], name: "idx_leads_followup")
   @@map("leads")
 }
 
@@ -248,16 +262,36 @@ enum AuditStatus {
   TIMEOUT     // Timeout
 }
 
+// ==========================================
+// PIPELINE VENDITA MSD
+// ==========================================
 enum PipelineStage {
-  NEW           // Nuovo
-  TO_CALL       // Da chiamare
-  CALLED        // Chiamato
-  INTERESTED    // Interessato
-  AUDIT_SENT    // Audit inviato
-  MEETING       // Call/Meeting fissato
-  PROPOSAL      // Preventivo inviato
-  WON           // Chiuso vinto
-  LOST          // Chiuso perso
+  // === SELEZIONE (pre-chiamata) ===
+  NEW             // Appena importato, audit in corso
+  DA_CHIAMARE     // Score > soglia, pronto per chiamata
+  DA_VERIFICARE   // Tag DA_APPROFONDIRE, verifica manuale
+  NON_TARGET      // Nessun segnale ads (rivedibile)
+  SENZA_SITO      // No website (archivio morto)
+
+  // === VENDITA MSD (post-chiamata) ===
+  NON_RISPONDE    // Tentativo fallito (max 3)
+  RICHIAMARE      // Ha chiesto di richiamare (data X)
+  CALL_FISSATA    // Appuntamento vendita fissato
+  NON_PRESENTATO  // Ghost alla call vendita
+  OFFERTA_INVIATA // In attesa pagamento 600€
+  VINTO           // Ha pagato - Cliente MSD
+  PERSO           // Chiuso negativo
+}
+
+// Motivi per cui un lead e' stato perso
+enum LostReason {
+  NO_INTERESSE    // Non gli interessa (in chiamata)
+  NO_BUDGET       // Non ha budget
+  GHOST_CALL      // Non si presenta e sparisce
+  GHOST_OFFERTA   // Non paga dopo 20gg
+  COMPETITOR      // Ha scelto un competitor
+  TEMPISTICA      // Non e' il momento giusto
+  ALTRO           // Altro (specificare in notes)
 }
 
 enum ActivityType {
@@ -350,4 +384,28 @@ model SearchLocation {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("search_locations")
+}
+
+// ==========================================
+// SETTINGS - Configurazioni app
+// ==========================================
+model Settings {
+  id        String   @id @default("default")
+
+  // Soglia score per "Da chiamare oggi" (default 60)
+  scoreThreshold    Int      @default(60) @map("score_threshold")
+
+  // Limite chiamate giornaliere (default 5)
+  dailyCallLimit    Int      @default(5) @map("daily_call_limit")
+
+  // Giorni dopo offerta per considerare ghost (default 20)
+  ghostOfferDays    Int      @default(20) @map("ghost_offer_days")
+
+  // Max tentativi chiamata prima di considerare perso (default 3)
+  maxCallAttempts   Int      @default(3) @map("max_call_attempts")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
 }

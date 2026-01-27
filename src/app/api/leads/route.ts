@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       where.pipelineStage = stage;
     }
 
-    // Filtro per multipli stage (stages=TO_CALL,CALLED,INTERESTED)
+    // Filtro per multipli stage (stages=DA_CHIAMARE,CALL_FISSATA,OFFERTA_INVIATA)
     if (stages) {
       const stageList = stages.split(",").filter(Boolean);
       if (stageList.length > 0) {

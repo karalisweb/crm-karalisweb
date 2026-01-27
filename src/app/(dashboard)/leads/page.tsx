@@ -48,31 +48,37 @@ interface ColumnData {
   [key: string]: Lead[];
 }
 
-// Stages rilevanti per il commerciale
-// NEW = audit completato ma tag NON_TARGET (non prioritari)
-// TO_CALL = audit completato con tag prioritario (da chiamare)
+// Stages per il CRM MSD
+// SELEZIONE: NEW, DA_CHIAMARE, DA_VERIFICARE, NON_TARGET, SENZA_SITO
+// VENDITA: NON_RISPONDE, RICHIAMARE, CALL_FISSATA, NON_PRESENTATO, OFFERTA_INVIATA, VINTO, PERSO
 const ACTIVE_STAGES = [
   "NEW",
-  "TO_CALL",
-  "CALLED",
-  "INTERESTED",
-  "AUDIT_SENT",
-  "MEETING",
-  "PROPOSAL",
-  "WON",
-  "LOST",
+  "DA_CHIAMARE",
+  "DA_VERIFICARE",
+  "NON_TARGET",
+  "SENZA_SITO",
+  "NON_RISPONDE",
+  "RICHIAMARE",
+  "CALL_FISSATA",
+  "NON_PRESENTATO",
+  "OFFERTA_INVIATA",
+  "VINTO",
+  "PERSO",
 ];
 
 const stageOrder = [
   "NEW",
-  "TO_CALL",
-  "CALLED",
-  "INTERESTED",
-  "AUDIT_SENT",
-  "MEETING",
-  "PROPOSAL",
-  "WON",
-  "LOST",
+  "DA_CHIAMARE",
+  "DA_VERIFICARE",
+  "NON_TARGET",
+  "SENZA_SITO",
+  "NON_RISPONDE",
+  "RICHIAMARE",
+  "CALL_FISSATA",
+  "NON_PRESENTATO",
+  "OFFERTA_INVIATA",
+  "VINTO",
+  "PERSO",
 ];
 
 // Lead Card per la lista
@@ -481,8 +487,8 @@ function LeadsPageContent() {
     if (stagesParam) {
       return stagesParam.split(",");
     }
-    // Default: TO_CALL (Da Chiamare)
-    return ["TO_CALL"];
+    // Default: DA_CHIAMARE (Da chiamare oggi)
+    return ["DA_CHIAMARE"];
   });
 
   // Fetch leads con paginazione
@@ -872,8 +878,8 @@ function LeadsPageContent() {
             const currentStageIdx = stageOrder.indexOf(lead.pipelineStage);
             const prevStage = currentStageIdx > 0 ? stageOrder[currentStageIdx - 1] : null;
             const nextStage = currentStageIdx < stageOrder.length - 1 ? stageOrder[currentStageIdx + 1] : null;
-            // Permettiamo di tornare indietro solo fino a TO_CALL (non a NEW)
-            const canMoveLeft = currentStageIdx > 1; // > 1 perché NEW è index 0, TO_CALL è index 1
+            // Permettiamo di tornare indietro solo fino a DA_CHIAMARE (non a NEW)
+            const canMoveLeft = currentStageIdx > 1; // > 1 perché NEW è index 0, DA_CHIAMARE è index 1
             const canMoveRight = nextStage !== null;
 
             return (
@@ -962,7 +968,7 @@ function LeadsPageContent() {
           <div className="hidden md:block">
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                {/* Escludiamo NEW dal Kanban - i lead vanno direttamente in TO_CALL dopo l'audit */}
+                {/* Escludiamo NEW dal Kanban - i lead vanno direttamente in DA_CHIAMARE dopo l'audit */}
                 {stageOrder.filter(s => s !== "NEW").map((stageKey) => {
                   const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
                   const stageLeads = columns[stageKey] || [];
