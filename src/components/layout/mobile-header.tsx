@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, User } from "lucide-react";
+import { Bell, User, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,11 +34,10 @@ export function MobileHeader() {
   return (
     <header className="sticky top-0 z-40 bg-card border-b border-border pt-safe md:hidden">
       <div className="flex items-center justify-between h-14 px-4">
-        {/* Logo */}
+        {/* Logo - Design System */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-[#0f1419] flex items-center justify-center border border-border">
-            <span className="text-primary font-bold text-base">K</span>
-            <span className="text-primary text-[10px]">sc</span>
+          <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center">
+            <Target className="h-[18px] w-[18px] text-primary" />
           </div>
           <span className="font-semibold text-sm">{getPageTitle()}</span>
         </div>

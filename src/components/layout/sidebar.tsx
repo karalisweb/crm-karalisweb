@@ -20,6 +20,9 @@ import {
   Globe,
   AlertCircle,
   Users,
+  Target,
+  BookOpen,
+  User,
 } from "lucide-react";
 
 // === SELEZIONE (pre-chiamata) ===
@@ -62,28 +65,27 @@ export function Sidebar() {
     <Link
       href={item.href}
       className={cn(
-        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all mx-0.5",
         isActive(item.href)
-          ? "bg-primary text-primary-foreground"
+          ? "bg-[rgba(255,107,53,0.1)] text-primary"
           : "text-muted-foreground hover:bg-secondary hover:text-foreground"
       )}
     >
-      <item.icon className="h-5 w-5" />
+      <item.icon className={cn("h-5 w-5", isActive(item.href) ? "opacity-100" : "opacity-70")} />
       {item.name}
     </Link>
   );
 
   return (
     <div className="hidden md:flex h-screen w-64 flex-col bg-card border-r border-border">
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6 border-b border-border">
-        <div className="w-10 h-10 rounded-lg bg-[#0f1419] flex items-center justify-center border border-border">
-          <span className="text-primary font-bold text-lg">K</span>
-          <span className="text-primary text-xs">sc</span>
+      {/* Header App - Design System Zona 1 */}
+      <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
+        <div className="w-10 h-10 rounded-lg bg-background flex items-center justify-center">
+          <Target className="h-[22px] w-[22px] text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-bold">Sales CRM</h1>
-          <p className="text-xs text-muted-foreground">MSD Pipeline v2.1</p>
+          <h1 className="text-[0.95rem] font-semibold">KW Sales CRM</h1>
+          <p className="text-xs text-muted-foreground">v2.0.0</p>
         </div>
       </div>
 
@@ -143,18 +145,19 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer */}
+      {/* Footer - Design System Zona 3 (navigazione fissa) */}
       <div className="border-t border-border p-3 space-y-1">
-        <NavLink item={{ name: "Profilo", href: "/profile", icon: UserCog }} />
+        <NavLink item={{ name: "Profilo", href: "/profile", icon: User }} />
         {isAdmin && (
           <NavLink item={{ name: "Impostazioni", href: "/settings", icon: Settings }} />
         )}
+        <NavLink item={{ name: "Guida", href: "/guida", icon: BookOpen }} />
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 px-3 text-muted-foreground hover:bg-secondary hover:text-foreground rounded-xl"
+          className="w-full justify-start gap-3 px-3 text-muted-foreground hover:bg-secondary hover:text-foreground rounded-lg mx-0.5"
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-5 w-5 opacity-70" />
           Esci
         </Button>
       </div>

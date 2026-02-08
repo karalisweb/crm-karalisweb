@@ -44,84 +44,84 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  /* Karalisweb custom colors */
-  --color-karalis-gold: #f5a623;
-  --color-karalis-gold-light: #ffc14d;
-  --color-karalis-gold-dark: #c78400;
-  --color-karalis-bg: #0f1419;
-  --color-karalis-card: #192230;
-  --color-karalis-card-hover: #1e2a3a;
+  /* Karalisweb Design System colors */
+  --color-karalis-gold: #d4a726;
+  --color-karalis-gold-light: #e6b82e;
+  --color-karalis-gold-dark: #b08a1e;
+  --color-karalis-bg: #0d1521;
+  --color-karalis-card: #132032;
+  --color-karalis-card-hover: #1a2d44;
 }
 
 /* Base - Light theme (unused but required) */
 :root {
   --radius: 0.75rem;
   --background: #f8fafc;
-  --foreground: #0f1419;
+  --foreground: #0d1521;
   --card: #ffffff;
-  --card-foreground: #0f1419;
+  --card-foreground: #0d1521;
   --popover: #ffffff;
-  --popover-foreground: #0f1419;
-  --primary: #f5a623;
-  --primary-foreground: #0f1419;
+  --popover-foreground: #0d1521;
+  --primary: #d4a726;
+  --primary-foreground: #0d1521;
   --secondary: #f1f5f9;
-  --secondary-foreground: #0f1419;
+  --secondary-foreground: #0d1521;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #f5a623;
-  --accent-foreground: #0f1419;
+  --accent: #d4a726;
+  --accent-foreground: #0d1521;
   --destructive: #ef4444;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #f5a623;
-  --chart-1: #f5a623;
+  --ring: #d4a726;
+  --chart-1: #d4a726;
   --chart-2: #22c55e;
   --chart-3: #3b82f6;
   --chart-4: #a855f7;
   --chart-5: #ec4899;
   --sidebar: #ffffff;
-  --sidebar-foreground: #0f1419;
-  --sidebar-primary: #f5a623;
-  --sidebar-primary-foreground: #0f1419;
+  --sidebar-foreground: #0d1521;
+  --sidebar-primary: #d4a726;
+  --sidebar-primary-foreground: #0d1521;
   --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #0f1419;
+  --sidebar-accent-foreground: #0d1521;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: #f5a623;
+  --sidebar-ring: #d4a726;
 }
 
-/* Karalisweb Dark Theme - Primary */
+/* Karalisweb Dark Theme - Design System Standard */
 .dark {
-  --background: #0f1419;
-  --foreground: #ffffff;
-  --card: #192230;
-  --card-foreground: #ffffff;
-  --popover: #192230;
-  --popover-foreground: #ffffff;
-  --primary: #f5a623;
-  --primary-foreground: #0f1419;
-  --secondary: #1e2a3a;
-  --secondary-foreground: #ffffff;
-  --muted: #1e2a3a;
-  --muted-foreground: #8899a6;
-  --accent: #f5a623;
-  --accent-foreground: #0f1419;
+  --background: #0d1521;
+  --foreground: #f5f5f7;
+  --card: #132032;
+  --card-foreground: #f5f5f7;
+  --popover: #132032;
+  --popover-foreground: #f5f5f7;
+  --primary: #d4a726;
+  --primary-foreground: #0d1521;
+  --secondary: #1a2d44;
+  --secondary-foreground: #f5f5f7;
+  --muted: #1a2d44;
+  --muted-foreground: #a1a1aa;
+  --accent: #d4a726;
+  --accent-foreground: #0d1521;
   --destructive: #ef4444;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.1);
-  --ring: #f5a623;
-  --chart-1: #f5a623;
+  --border: #2a2a35;
+  --input: #2a2a35;
+  --ring: #d4a726;
+  --chart-1: #d4a726;
   --chart-2: #22c55e;
   --chart-3: #3b82f6;
   --chart-4: #a855f7;
   --chart-5: #ec4899;
-  --sidebar: #192230;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #f5a623;
-  --sidebar-primary-foreground: #0f1419;
-  --sidebar-accent: #1e2a3a;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #f5a623;
+  --sidebar: #132032;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #d4a726;
+  --sidebar-primary-foreground: #0d1521;
+  --sidebar-accent: #1a2d44;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: #2a2a35;
+  --sidebar-ring: #d4a726;
 }
 
 @layer base {
@@ -195,7 +195,7 @@
 }
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px -5px rgba(245, 166, 35, 0.15);
+  box-shadow: 0 8px 25px -5px rgba(212, 167, 38, 0.15);
 }
 
 /* Active bottom nav item */

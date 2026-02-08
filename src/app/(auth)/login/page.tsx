@@ -13,7 +13,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { Loader2, ArrowLeft, Mail } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, Target } from "lucide-react";
 
 type LoginStep = "credentials" | "2fa";
 
@@ -165,19 +165,18 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4">
-          {/* Logo */}
+          {/* Logo - Design System Standard */}
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-xl bg-[#0f1419] flex items-center justify-center border border-border">
-              <span className="text-primary font-bold text-3xl">K</span>
-              <span className="text-primary text-lg mt-1">sc</span>
+            <div className="w-16 h-16 rounded-xl bg-background flex items-center justify-center">
+              <Target className="h-8 w-8 text-primary" />
             </div>
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              Sales CRM
+            <CardTitle className="text-[1.75rem] font-semibold text-center bg-gradient-to-r from-[#d4a726] to-[#2d7d9a] bg-clip-text text-transparent">
+              KW Sales CRM
             </CardTitle>
-            <CardDescription className="text-center">
-              by Karalisweb v. 2.0
+            <CardDescription className="text-center text-[0.9rem]">
+              Pipeline commerciale
             </CardDescription>
           </div>
         </CardHeader>
