@@ -104,7 +104,7 @@ export function Sidebar() {
       </div>
 
       {/* ═══ Zona 2 - Navigazione Principale ═══ */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      <nav className="flex-1 py-4 overflow-y-auto scrollbar-hide">
         {navSections.map((section, idx) => (
           <div key={section.title}>
             {/* Titolo sezione UPPERCASE */}

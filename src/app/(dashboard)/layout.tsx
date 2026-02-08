@@ -13,8 +13,8 @@ export default function DashboardLayout({
       {/* Desktop Sidebar - hidden on mobile */}
       <Sidebar />
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col min-h-screen w-full overflow-x-hidden">
+      {/* Main content area - offset per sidebar fissa 260px su desktop */}
+      <div className="flex-1 flex flex-col min-h-screen w-full overflow-x-hidden md:ml-[260px]">
         {/* Mobile Header - hidden on desktop */}
         <MobileHeader />
 
