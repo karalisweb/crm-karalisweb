@@ -4,103 +4,105 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Users,
-  TrendingUp,
   Phone,
   Search,
   ChevronRight,
   Flame,
   Clock,
+  AlertCircle,
+  Archive,
 } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 async function DashboardStats() {
-  const [totalLeads, hotLeads, toCallLeads, recentSearches, topLeads] =
+  const [countDaChiamare, countDaVerificare, countArchiviati, recentSearches, topLeads] =
     await Promise.all([
-      db.lead.count(),
-      db.lead.count({ where: { opportunityScore: { gte: 80 } } }),
       db.lead.count({ where: { pipelineStage: "DA_CHIAMARE" } }),
+      db.lead.count({ where: { pipelineStage: "DA_VERIFICARE" } }),
+      db.lead.count({
+        where: {
+          pipelineStage: { in: ["NON_TARGET", "SENZA_SITO", "PERSO"] },
+        },
+      }),
       db.search.findMany({
         take: 3,
         orderBy: { createdAt: "desc" },
       }),
-      // Lead prioritari: solo quelli da chiamare (non già chiamati)
+      // Lead prioritari: top 5 da chiamare per score
       db.lead.findMany({
         where: {
+          pipelineStage: "DA_CHIAMARE",
           opportunityScore: { not: null },
-          pipelineStage: "DA_CHIAMARE", // Solo lead da chiamare, escludo quelli già chiamati
         },
         orderBy: { opportunityScore: "desc" },
         take: 5,
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          opportunityScore: true,
+          talkingPoints: true,
+          commercialTag: true,
+        },
       }),
     ]);
 
   return (
     <>
-      {/* Quick Stats - Mobile optimized grid */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <Card className="card-hover">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Users className="h-5 w-5 text-primary" />
+      {/* Stats - I numeri corrispondono ESATTAMENTE alle pagine */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
+        <Link href="/da-chiamare">
+          <Card className="card-hover cursor-pointer">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-500/10">
+                  <Phone className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-blue-500">{countDaChiamare}</p>
+                  <p className="text-xs text-muted-foreground">Da chiamare</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{totalLeads}</p>
-                <p className="text-xs text-muted-foreground">Lead totali</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="card-hover">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-red-500/10">
-                <Flame className="h-5 w-5 text-red-500" />
+        <Link href="/da-chiamare">
+          <Card className="card-hover cursor-pointer">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-500/10">
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-amber-500">{countDaVerificare}</p>
+                  <p className="text-xs text-muted-foreground">Da verificare</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-red-500">{hotLeads}</p>
-                <p className="text-xs text-muted-foreground">Lead hot</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="card-hover">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-500/10">
-                <Phone className="h-5 w-5 text-blue-500" />
+        <Link href="/archivio">
+          <Card className="card-hover cursor-pointer">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-gray-500/10">
+                  <Archive className="h-5 w-5 text-gray-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-400">{countArchiviati}</p>
+                  <p className="text-xs text-muted-foreground">Archiviati</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-500">{toCallLeads}</p>
-                <p className="text-xs text-muted-foreground">Da chiamare</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-hover">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-green-500/10">
-                <TrendingUp className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-500">
-                  {recentSearches.length}
-                </p>
-                <p className="text-xs text-muted-foreground">Ricerche</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
-      {/* Quick Actions - Mobile first */}
+      {/* Azioni rapide */}
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-3">Azioni rapide</h2>
         <div className="grid grid-cols-2 gap-3">
@@ -118,7 +120,7 @@ async function DashboardStats() {
             </Card>
           </Link>
 
-          <Link href="/leads?stage=DA_CHIAMARE">
+          <Link href="/da-chiamare">
             <Card className="card-hover cursor-pointer">
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-blue-500">
@@ -127,7 +129,7 @@ async function DashboardStats() {
                 <div>
                   <p className="font-medium text-sm">Da chiamare</p>
                   <p className="text-xs text-muted-foreground">
-                    {toCallLeads} lead
+                    {countDaChiamare} lead
                   </p>
                 </div>
               </CardContent>
@@ -136,13 +138,13 @@ async function DashboardStats() {
         </div>
       </div>
 
-      {/* Top Leads - Mobile optimized list */}
+      {/* Top Leads con talking point visibile */}
       {topLeads.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Lead prioritari</h2>
             <Link
-              href="/leads"
+              href="/da-chiamare"
               className="text-sm text-primary hover:underline flex items-center"
             >
               Vedi tutti
@@ -165,8 +167,11 @@ async function DashboardStats() {
                             <Flame className="h-4 w-4 text-red-500 flex-shrink-0" />
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {lead.category || lead.address || "Nessuna categoria"}
+                        {/* Primo talking point come sottotitolo */}
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {lead.talkingPoints && lead.talkingPoints.length > 0
+                            ? lead.talkingPoints[0]
+                            : lead.category || "Nessuna categoria"}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 ml-2">
@@ -193,7 +198,7 @@ async function DashboardStats() {
         </div>
       )}
 
-      {/* Recent Searches */}
+      {/* Ricerche recenti */}
       {recentSearches.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
@@ -248,8 +253,8 @@ async function DashboardStats() {
 function DashboardSkeleton() {
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-3 gap-3">
+        {[...Array(3)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-4">
               <Skeleton className="h-12 w-full" />

@@ -21,8 +21,7 @@ export function BottomNav() {
   const isAdmin = userRole === "ADMIN";
 
   const navigation = [
-    { name: "Oggi", href: "/oggi", icon: Target },
-    { name: "Lead", href: "/leads", icon: Phone },
+    { name: "Chiama", href: "/da-chiamare", icon: Phone },
     { name: "Cerca", href: "/search", icon: Search },
     { name: "Ricerche", href: "/searches", icon: FolderSearch },
     // Se admin mostra Settings, altrimenti mostra Profilo

@@ -33,8 +33,8 @@ const navSections = [
     title: "SELEZIONE",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/oggi", label: "Oggi", icon: Phone },
-      { href: "/da-verificare", label: "Da Verificare", icon: AlertCircle },
+      { href: "/da-chiamare", label: "Da Chiamare", icon: Phone },
+      { href: "/archivio", label: "Archivio", icon: XCircle },
     ],
   },
   {
@@ -46,19 +46,10 @@ const navSections = [
     ],
   },
   {
-    title: "ARCHIVIO",
-    items: [
-      { href: "/non-target", label: "Non Target", icon: XCircle },
-      { href: "/senza-sito", label: "Senza Sito", icon: Globe },
-      { href: "/persi", label: "Persi", icon: XCircle },
-    ],
-  },
-  {
     title: "STRUMENTI",
     items: [
       { href: "/search", label: "Nuova Ricerca", icon: Search },
       { href: "/searches", label: "Ricerche", icon: FolderSearch },
-      { href: "/leads", label: "Tutti i Lead", icon: Users },
     ],
   },
 ];
