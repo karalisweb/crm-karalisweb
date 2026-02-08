@@ -99,6 +99,12 @@ model Lead {
   nextFollowupAt    DateTime?   @map("next_followup_at")
   assignedTo        String?     @map("assigned_to")
 
+  // Verifica audit (checklist di Daniela)
+  auditVerified           Boolean   @default(false) @map("audit_verified")
+  auditVerifiedAt         DateTime? @map("audit_verified_at")
+  auditVerifiedBy         String?   @map("audit_verified_by")
+  auditVerificationChecks Json?     @map("audit_verification_checks")
+
   // Metadata
   source            String      @default("google_maps")
   notes             String?

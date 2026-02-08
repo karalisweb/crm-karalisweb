@@ -235,5 +235,21 @@ export function getScoreCategory(score: number | null): {
   return { label: "Bassa priorita", emoji: "snowflake", color: "blue" };
 }
 
+// ==========================================
+// TIPI PER VERIFICA AUDIT (Checklist Daniela)
+// ==========================================
+
+export interface VerificationItem {
+  key: string;
+  label: string;
+  hint: string;
+  checked: boolean;
+  checkedAt?: string;
+}
+
+export interface VerificationChecks {
+  items: VerificationItem[];
+}
+
 // Re-export commercial types
 export * from "./commercial";

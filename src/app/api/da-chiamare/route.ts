@@ -49,6 +49,10 @@ export async function GET(request: NextRequest) {
         auditData: true,
         talkingPoints: true,
         auditCompletedAt: true,
+        // Verifica audit (checklist Daniela)
+        auditVerified: true,
+        auditVerifiedAt: true,
+        auditVerificationChecks: true,
         // CRM
         pipelineStage: true,
         lastContactedAt: true,
@@ -86,6 +90,9 @@ export async function GET(request: NextRequest) {
           auditData: true,
           talkingPoints: true,
           auditCompletedAt: true,
+          auditVerified: true,
+          auditVerifiedAt: true,
+          auditVerificationChecks: true,
           pipelineStage: true,
           lastContactedAt: true,
           notes: true,
