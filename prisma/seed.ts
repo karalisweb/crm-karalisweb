@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, PipelineStage, AuditStatus } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { hash } from "bcryptjs";
@@ -44,7 +44,7 @@ async function main() {
       googleRating: 4.2,
       googleReviewsCount: 45,
       placeId: "example_place_1",
-      pipelineStage: "NEW" as const,
+      pipelineStage: PipelineStage.NEW,
     },
     {
       name: "Hotel Bellavista",
@@ -55,7 +55,7 @@ async function main() {
       googleRating: 3.8,
       googleReviewsCount: 120,
       placeId: "example_place_2",
-      pipelineStage: "DA_CHIAMARE" as const,
+      pipelineStage: PipelineStage.DA_CHIAMARE,
     },
     {
       name: "Palestra FitLife",
@@ -66,8 +66,8 @@ async function main() {
       googleRating: 4.5,
       googleReviewsCount: 28,
       placeId: "example_place_3",
-      pipelineStage: "SENZA_SITO" as const,
-      auditStatus: "NO_WEBSITE" as const,
+      pipelineStage: PipelineStage.SENZA_SITO,
+      auditStatus: AuditStatus.NO_WEBSITE,
     },
   ];
 
