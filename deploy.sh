@@ -191,7 +191,7 @@ fi
 # STEP 1: Verifica stato Git
 # ═══════════════════════════════════════════
 
-print_step "Step 1/6 - Verifico stato Git locale..."
+print_step "Step 1/7 - Verifico stato Git locale..."
 if [ -n "$(git status --porcelain)" ]; then
     git status --short
 else
@@ -207,7 +207,7 @@ fi
 # STEP 2: Add e Commit
 # ═══════════════════════════════════════════
 
-print_step "Step 2/6 - Aggiungo modifiche e creo commit..."
+print_step "Step 2/7 - Aggiungo modifiche e creo commit..."
 git add .
 git commit -m "$COMMIT_MSG" || print_warning "Niente da committare"
 
@@ -215,7 +215,7 @@ git commit -m "$COMMIT_MSG" || print_warning "Niente da committare"
 # STEP 3: Push a GitHub
 # ═══════════════════════════════════════════
 
-print_step "Step 3/6 - Push a GitHub ($BRANCH)..."
+print_step "Step 3/7 - Push a GitHub ($BRANCH)..."
 git push origin $BRANCH
 print_success "Push completato"
 
@@ -223,24 +223,33 @@ print_success "Push completato"
 # STEP 4: Pull sul VPS + Install dipendenze
 # ═══════════════════════════════════════════
 
-print_step "Step 4/6 - Pull sul VPS e installazione dipendenze..."
+print_step "Step 4/7 - Pull sul VPS e installazione dipendenze..."
 ssh $VPS_HOST "cd $VPS_PATH && git pull origin $BRANCH && npm install"
 print_success "Pull e npm install completati"
 
 # ═══════════════════════════════════════════
-# STEP 5: Build Next.js sul server
+# STEP 5: Prisma Generate
 # ═══════════════════════════════════════════
 
-print_step "Step 5/6 - Build Next.js sul server..."
+print_step "Step 5/7 - Prisma generate sul server..."
+ssh $VPS_HOST "cd $VPS_PATH && npx prisma generate"
+print_success "Prisma client generato"
+
+# ═══════════════════════════════════════════
+# STEP 6: Build Next.js sul server
+# ═══════════════════════════════════════════
+
+print_step "Step 6/7 - Build Next.js sul server..."
 ssh $VPS_HOST "cd $VPS_PATH && npm run build"
 print_success "Build completata"
 
 # ═══════════════════════════════════════════
-# STEP 6: Restart PM2 + Pulizia cache
+# STEP 7: Restart PM2 + Pulizia cache
 # ═══════════════════════════════════════════
 
-print_step "Step 6/6 - Restart $PM2_PROCESS su VPS..."
-ssh $VPS_HOST "cd $VPS_PATH && pm2 restart $PM2_PROCESS --update-env || pm2 start npm --name '$PM2_PROCESS' -- start"
+print_step "Step 7/7 - Restart $PM2_PROCESS su VPS..."
+ssh $VPS_HOST "cd $VPS_PATH && pm2 restart $PM2_PROCESS --update-env || pm2 start npm --name '$PM2_PROCESS' -- start -- -p $SERVER_PORT"
+ssh $VPS_HOST "pm2 save"
 print_success "Restart completato"
 
 # ═══════════════════════════════════════════
