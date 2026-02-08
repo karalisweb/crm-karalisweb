@@ -6,8 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -44,83 +44,89 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  /* Karalisweb Design System colors */
-  --color-karalis-gold: #d4a726;
-  --color-karalis-gold-light: #e6b82e;
-  --color-karalis-gold-dark: #b08a1e;
-  --color-karalis-bg: #0d1521;
-  --color-karalis-card: #132032;
-  --color-karalis-card-hover: #1a2d44;
 }
 
-/* Base - Light theme (unused but required) */
 :root {
-  --radius: 0.75rem;
-  --background: #f8fafc;
+  --radius: 0.5rem;
+  --background: #ffffff;
   --foreground: #0d1521;
   --card: #ffffff;
   --card-foreground: #0d1521;
   --popover: #ffffff;
   --popover-foreground: #0d1521;
-  --primary: #d4a726;
-  --primary-foreground: #0d1521;
-  --secondary: #f1f5f9;
+  --primary: #0d1521;
+  --primary-foreground: #f5f5f7;
+  --secondary: #f5f5f7;
   --secondary-foreground: #0d1521;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #d4a726;
+  --muted: #f5f5f7;
+  --muted-foreground: #71717a;
+  --accent: #f5f5f7;
   --accent-foreground: #0d1521;
   --destructive: #ef4444;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #d4a726;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
   --chart-1: #d4a726;
-  --chart-2: #22c55e;
-  --chart-3: #3b82f6;
+  --chart-2: #2d7d9a;
+  --chart-3: #ef4444;
   --chart-4: #a855f7;
-  --chart-5: #ec4899;
-  --sidebar: #ffffff;
+  --chart-5: #3b82f6;
+  --sidebar: #f5f5f7;
   --sidebar-foreground: #0d1521;
-  --sidebar-primary: #d4a726;
-  --sidebar-primary-foreground: #0d1521;
-  --sidebar-accent: #f1f5f9;
+  --sidebar-primary: #0d1521;
+  --sidebar-primary-foreground: #f5f5f7;
+  --sidebar-accent: #e4e4e7;
   --sidebar-accent-foreground: #0d1521;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #d4a726;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #a1a1aa;
 }
 
-/* Karalisweb Dark Theme - Design System Standard */
+/* ═══════════════════════════════════════════
+   Karalisweb Design System - Dark Theme
+   Ref: DESIGN-SYSTEM.md sezione 2 + 12
+   ═══════════════════════════════════════════ */
 .dark {
-  --background: #0d1521;
-  --foreground: #f5f5f7;
-  --card: #132032;
-  --card-foreground: #f5f5f7;
-  --popover: #132032;
+  /* Sfondi */
+  --background: #0d1521;         /* --bg-primary */
+  --foreground: #f5f5f7;         /* --text-primary */
+  --card: #132032;               /* --bg-secondary */
+  --card-foreground: #f5f5f7;    /* --text-primary */
+  --popover: #132032;            /* --bg-secondary */
   --popover-foreground: #f5f5f7;
-  --primary: #d4a726;
-  --primary-foreground: #0d1521;
-  --secondary: #1a2d44;
+
+  /* Accenti - Karalisweb Brand */
+  --primary: #d4a726;            /* --accent-primary (oro) */
+  --primary-foreground: #0d1521; /* --bg-primary */
+  --secondary: #1a2d44;          /* --bg-tertiary */
   --secondary-foreground: #f5f5f7;
-  --muted: #1a2d44;
-  --muted-foreground: #a1a1aa;
-  --accent: #d4a726;
+  --muted: #1a2d44;              /* --bg-tertiary */
+  --muted-foreground: #71717a;   /* --text-muted */
+  --accent: #d4a726;             /* --accent-primary */
   --accent-foreground: #0d1521;
-  --destructive: #ef4444;
-  --border: #2a2a35;
-  --input: #2a2a35;
-  --ring: #d4a726;
-  --chart-1: #d4a726;
-  --chart-2: #22c55e;
-  --chart-3: #3b82f6;
-  --chart-4: #a855f7;
-  --chart-5: #ec4899;
-  --sidebar: #132032;
-  --sidebar-foreground: #f5f5f7;
-  --sidebar-primary: #d4a726;
+
+  /* Stati */
+  --destructive: #ef4444;        /* --error */
+
+  /* Bordi */
+  --border: #2a2a35;             /* --border-color */
+  --input: #2a2a35;              /* --border-color */
+  --ring: #d4a726;               /* --accent-primary */
+
+  /* Chart colors */
+  --chart-1: #d4a726;            /* Oro */
+  --chart-2: #2d7d9a;            /* Teal */
+  --chart-3: #ef4444;            /* Rosso */
+  --chart-4: #a855f7;            /* Viola */
+  --chart-5: #3b82f6;            /* Blu */
+
+  /* Sidebar */
+  --sidebar: #132032;            /* --bg-secondary */
+  --sidebar-foreground: #a1a1aa; /* --text-secondary */
+  --sidebar-primary: #d4a726;    /* --accent-primary */
   --sidebar-primary-foreground: #0d1521;
-  --sidebar-accent: #1a2d44;
+  --sidebar-accent: #1a2d44;     /* --bg-tertiary */
   --sidebar-accent-foreground: #f5f5f7;
-  --sidebar-border: #2a2a35;
+  --sidebar-border: #2a2a35;     /* --border-color */
   --sidebar-ring: #d4a726;
 }
 
@@ -129,7 +135,10 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 

@@ -4,16 +4,15 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { Loader2, ArrowLeft, Mail, Target } from "lucide-react";
+import { Loader2, ArrowLeft, Mail } from "lucide-react";
 
 type LoginStep = "credentials" | "2fa";
 
@@ -111,7 +110,7 @@ export default function LoginPage() {
       const result = await signIn("credentials", {
         email,
         password,
-        otpVerified: "true", // Flag per indicare che 2FA è stato completato
+        otpVerified: "true",
         redirect: false,
       });
 
@@ -141,8 +140,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (data.success) {
-        setError(""); // Clear any previous errors
-        // Mostra un messaggio temporaneo (si potrebbe usare toast ma per semplicità)
+        setError("");
         setError("Nuovo codice inviato!");
         setTimeout(() => setError(""), 3000);
       } else {
@@ -161,133 +159,171 @@ export default function LoginPage() {
     setError("");
   };
 
+  const getDescription = () => {
+    switch (step) {
+      case "credentials":
+        return "Pipeline commerciale";
+      case "2fa":
+        return "Verifica in due passaggi";
+      default:
+        return "";
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4">
-          {/* Logo - Design System Standard */}
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-xl bg-background flex items-center justify-center">
-              <Target className="h-8 w-8 text-primary" />
+    <div className="min-h-screen flex items-center justify-center px-8" style={{ background: '#0d1521' }}>
+      {/* Login Box - Ref: DESIGN-SYSTEM.md sezione 6.1 */}
+      <div
+        className="w-full max-w-[400px] rounded-xl p-12"
+        style={{
+          background: '#132032',
+          border: '1px solid #2a2a35',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+        }}
+      >
+        {/* Logo negativo Karalisweb (giallo su sfondo scuro) */}
+        <div className="flex justify-center mb-8">
+          <Image
+            src="/logo-kw-negativo.png"
+            alt="Karalisweb"
+            width={180}
+            height={60}
+            className="max-w-[180px] h-auto"
+            priority
+          />
+        </div>
+
+        {/* Titolo app con gradiente oro > teal */}
+        <h1
+          className="text-center text-[1.75rem] font-semibold mb-1"
+          style={{
+            background: 'linear-gradient(135deg, #d4a726, #2d7d9a)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          KW Sales CRM
+        </h1>
+        <p className="text-center text-[0.9rem] text-[#a1a1aa] mb-8">
+          {getDescription()}
+        </p>
+
+        {/* Step: Credentials */}
+        {step === "credentials" && (
+          <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-1 text-[#a1a1aa]">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="nome@agenzia.it"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                autoComplete="email"
+              />
             </div>
-          </div>
-          <div className="space-y-1">
-            <CardTitle className="text-[1.75rem] font-semibold text-center bg-gradient-to-r from-[#d4a726] to-[#2d7d9a] bg-clip-text text-transparent">
-              KW Sales CRM
-            </CardTitle>
-            <CardDescription className="text-center text-[0.9rem]">
-              Pipeline commerciale
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {step === "credentials" ? (
-            <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="nome@agenzia.it"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                />
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-1 text-[#a1a1aa]">
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                autoComplete="current-password"
+              />
+            </div>
+            {error && (
+              <div className="text-[#ef4444] text-sm text-center">{error}</div>
+            )}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Accesso in corso..." : "Accedi"}
+            </Button>
+            <div className="text-center">
+              <Link
+                href="/forgot-password"
+                className="text-sm text-[#a1a1aa] hover:text-[#d4a726] transition-colors"
+              >
+                Password dimenticata?
+              </Link>
+            </div>
+          </form>
+        )}
+
+        {/* Step: 2FA - Verifica OTP email */}
+        {step === "2fa" && (
+          <form onSubmit={handleOtpSubmit} className="space-y-4">
+            <div className="flex items-center justify-center mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(212, 167, 38, 0.2)' }}>
+                <Mail className="h-6 w-6 text-[#d4a726]" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                />
+            </div>
+            <p className="text-sm text-[#a1a1aa] text-center mb-4">
+              Abbiamo inviato un codice di verifica a<br />
+              <strong>{email}</strong>
+            </p>
+
+            <div className="flex justify-center py-4">
+              <InputOTP
+                maxLength={6}
+                value={otpCode}
+                onChange={setOtpCode}
+                disabled={loading}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
+            {error && (
+              <div className={`text-sm text-center ${error.includes("inviato") ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
+                {error}
               </div>
-              {error && (
-                <p className={`text-sm text-center ${error.includes("inviato") ? "text-green-500" : "text-red-500"}`}>
-                  {error}
-                </p>
-              )}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {loading ? "Accesso in corso..." : "Accedi"}
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading || otpCode.length !== 6}>
+              {loading ? "Verifica in corso..." : "Verifica"}
+            </Button>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={handleResendOtp}
+                disabled={loading}
+              >
+                Reinvia codice
               </Button>
-              <div className="text-center">
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Password dimenticata?
-                </Link>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleOtpSubmit} className="space-y-4">
-              <div className="text-center space-y-2">
-                <div className="w-12 h-12 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
-                  <Mail className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold">Verifica la tua identità</h3>
-                <p className="text-sm text-muted-foreground">
-                  Abbiamo inviato un codice di verifica a<br />
-                  <strong>{email}</strong>
-                </p>
-              </div>
-
-              <div className="flex justify-center py-4">
-                <InputOTP
-                  maxLength={6}
-                  value={otpCode}
-                  onChange={setOtpCode}
-                  disabled={loading}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-
-              {error && (
-                <p className={`text-sm text-center ${error.includes("inviato") ? "text-green-500" : "text-red-500"}`}>
-                  {error}
-                </p>
-              )}
-
-              <Button type="submit" className="w-full" disabled={loading || otpCode.length !== 6}>
-                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {loading ? "Verifica in corso..." : "Verifica"}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={handleBackToCredentials}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Torna al login
               </Button>
-
-              <div className="flex items-center justify-between text-sm">
-                <button
-                  type="button"
-                  onClick={handleBackToCredentials}
-                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Torna indietro
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={loading}
-                  className="text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-                >
-                  Rinvia codice
-                </button>
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

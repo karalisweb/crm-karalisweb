@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const inter = Inter({
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
-  title: "Sales CRM by Karalisweb",
-  description: "CRM per il supporto commerciale - Karalisweb v. 2.0",
-  applicationName: "Sales CRM by Karalisweb",
-  authors: [{ name: "Karalisweb" }],
-  generator: "Next.js",
-  keywords: ["CRM", "Sales", "Lead Management", "Karalisweb"],
+  title: "KW - Sales CRM",
+  description: "Pipeline commerciale - Karalisweb",
   icons: {
     icon: "/favicon.svg",
+    apple: "/favicon.svg",
   },
 };
 
@@ -27,7 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="it" className="dark" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body
+        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-background`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>
