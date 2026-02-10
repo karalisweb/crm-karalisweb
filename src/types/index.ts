@@ -244,7 +244,8 @@ export interface VerificationItem {
   label: string;
   hint: string;
   detectedValue: boolean | null; // Cosa ha rilevato l'audit: true=presente, false=assente, null=N/A
-  checked: boolean;
+  userValue: boolean | null;     // Cosa ha verificato Daniela: true=c'è, false=non c'è, null=non ancora verificato
+  checked: boolean;              // true quando Daniela ha dato la sua risposta (Sì o No)
   checkedAt?: string;
 }
 

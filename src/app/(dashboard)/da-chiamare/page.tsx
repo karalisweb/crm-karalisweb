@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Phone,
   Globe,
@@ -23,6 +22,9 @@ import {
   BookOpen,
   Search,
   CheckCircle2,
+  AlertTriangle,
+  Check,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { QuickCallButtons } from "@/components/leads/quick-call-logger";
@@ -177,10 +179,11 @@ function AuditVerificationChecklist({
     }
   };
 
-  const toggleCheck = async (key: string) => {
+  // Daniela clicca Sì o No per una voce
+  const setUserAnswer = async (key: string, answer: boolean) => {
     const updatedChecks = checks.map((c) =>
       c.key === key
-        ? { ...c, checked: !c.checked, checkedAt: new Date().toISOString() }
+        ? { ...c, userValue: answer, checked: true, checkedAt: new Date().toISOString() }
         : c
     );
     setChecks(updatedChecks);
@@ -191,15 +194,31 @@ function AuditVerificationChecklist({
     await saveVerification(updatedChecks);
   };
 
+  // Reset risposta per una voce
+  const resetAnswer = async (key: string) => {
+    const updatedChecks = checks.map((c) =>
+      c.key === key
+        ? { ...c, userValue: null, checked: false, checkedAt: undefined }
+        : c
+    );
+    setChecks(updatedChecks);
+    setVerified(false);
+    await saveVerification(updatedChecks);
+  };
+
   const handleNotesChange = (value: string) => {
     setNotes(value);
-    // Debounce: salva dopo 1 secondo di inattività
     if (notesTimeout) clearTimeout(notesTimeout);
     const timeout = setTimeout(() => {
       saveVerification(checks, value);
     }, 1000);
     setNotesTimeout(timeout);
   };
+
+  // Conta correzioni (Daniela diversa dal sistema)
+  const corrections = checks.filter(
+    (c) => c.checked && c.detectedValue !== null && c.userValue !== null && c.userValue !== c.detectedValue
+  ).length;
 
   // Vista compatta se già verificato
   if (collapsed && verified) {
@@ -211,10 +230,13 @@ function AuditVerificationChecklist({
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           <span className="text-sm font-medium text-emerald-500">
-            Audit verificato ({checks.length}/{checks.length} check)
+            Verificato ({checks.length}/{checks.length})
           </span>
+          {corrections > 0 && (
+            <span className="text-xs text-amber-500">· {corrections} correz.</span>
+          )}
           {notes && (
-            <span className="text-xs text-muted-foreground ml-1">· con note</span>
+            <span className="text-xs text-muted-foreground">· con note</span>
           )}
         </div>
         <span className="text-xs text-muted-foreground">Clicca per rivedere</span>
@@ -230,7 +252,7 @@ function AuditVerificationChecklist({
           : "bg-muted/30 border-border"
       }`}
     >
-      {/* Header checklist */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Search className="h-4 w-4 text-muted-foreground" />
@@ -249,48 +271,138 @@ function AuditVerificationChecklist({
         </Link>
       </div>
 
-      {/* Checkbox items con badge Sì/No */}
-      <div className="space-y-2.5">
-        {checks.map((item) => (
-          <div key={item.key} className="flex items-start gap-3">
-            <Checkbox
-              id={`${leadId}-${item.key}`}
-              checked={item.checked}
-              onCheckedChange={() => toggleCheck(item.key)}
-              className="mt-0.5 h-5 w-5"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor={`${leadId}-${item.key}`}
-                  className={`text-sm font-medium cursor-pointer ${
-                    item.checked
-                      ? "line-through text-muted-foreground/60"
-                      : "text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </label>
-                {item.detectedValue !== null && item.detectedValue !== undefined && (
-                  <span
-                    className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      item.detectedValue
-                        ? "bg-emerald-500/15 text-emerald-500"
-                        : "bg-red-500/15 text-red-400"
-                    }`}
-                  >
-                    {item.detectedValue ? "Sì" : "No"}
+      {/* Legenda compatta */}
+      <div className="flex items-center gap-3 mb-3 text-[10px] text-muted-foreground">
+        <span>Sistema:</span>
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+          Sì/No
+        </span>
+        <span className="mx-1">|</span>
+        <span>Tu verifichi:</span>
+        <span className="inline-flex items-center gap-0.5">
+          <span className="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center"><Check className="h-3 w-3 text-emerald-500" /></span>
+          <span className="w-5 h-5 rounded bg-red-500/20 flex items-center justify-center"><X className="h-3 w-3 text-red-400" /></span>
+        </span>
+      </div>
+
+      {/* Voci verifica */}
+      <div className="space-y-2">
+        {checks.map((item) => {
+          const isAnswered = item.checked && item.userValue !== null && item.userValue !== undefined;
+          const isCorrected = isAnswered && item.detectedValue !== null && item.userValue !== item.detectedValue;
+          const isSitoControllato = item.key === "sito_controllato";
+
+          return (
+            <div
+              key={item.key}
+              className={`p-2.5 rounded-lg border transition-colors ${
+                isAnswered
+                  ? isCorrected
+                    ? "bg-amber-500/5 border-amber-500/20"
+                    : "bg-emerald-500/5 border-emerald-500/20"
+                  : "bg-background border-border"
+              }`}
+            >
+              {/* Riga principale: label + badge sistema + bottoni Sì/No */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {/* Stato risposta */}
+                  {isAnswered ? (
+                    <CheckCircle2 className={`h-4 w-4 flex-shrink-0 ${isCorrected ? "text-amber-500" : "text-emerald-500"}`} />
+                  ) : (
+                    <div className="h-4 w-4 flex-shrink-0 rounded-full border-2 border-muted-foreground/30" />
+                  )}
+
+                  {/* Label */}
+                  <span className={`text-sm font-medium truncate ${isAnswered ? "text-muted-foreground" : "text-foreground"}`}>
+                    {item.label}
                   </span>
-                )}
+
+                  {/* Badge sistema (solo per voci con detectedValue) */}
+                  {item.detectedValue !== null && item.detectedValue !== undefined && (
+                    <span className="flex-shrink-0 text-[10px] text-muted-foreground/60">
+                      sistema: {item.detectedValue ? "sì" : "no"}
+                    </span>
+                  )}
+                </div>
+
+                {/* Bottoni Sì/No o risultato */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {isAnswered ? (
+                    <>
+                      {/* Mostra risposta data */}
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${
+                          item.userValue
+                            ? "bg-emerald-500/20 text-emerald-500"
+                            : "bg-red-500/20 text-red-400"
+                        }`}
+                      >
+                        {item.userValue ? (
+                          <><Check className="h-3 w-3" /> Sì</>
+                        ) : (
+                          <><X className="h-3 w-3" /> No</>
+                        )}
+                      </span>
+                      {/* Bottone reset */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); resetAnswer(item.key); }}
+                        className="ml-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground"
+                        title="Cambia risposta"
+                      >
+                        modifica
+                      </button>
+                    </>
+                  ) : isSitoControllato ? (
+                    /* Sito controllato: solo un bottone OK */
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setUserAnswer(item.key, true); }}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      OK
+                    </button>
+                  ) : (
+                    /* Bottoni Sì / No */
+                    <div className="flex gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setUserAnswer(item.key, true); }}
+                        className="inline-flex items-center gap-0.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/25 transition-colors"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        Sì
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setUserAnswer(item.key, false); }}
+                        className="inline-flex items-center gap-0.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/25 transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        No
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              {!item.checked && (
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+
+              {/* Hint (solo se non ancora risposto) */}
+              {!isAnswered && (
+                <p className="text-xs text-muted-foreground mt-1.5 ml-6 leading-relaxed">
                   {item.hint}
                 </p>
               )}
+
+              {/* Indicatore correzione */}
+              {isCorrected && (
+                <div className="flex items-center gap-1.5 mt-1.5 ml-6">
+                  <AlertTriangle className="h-3 w-3 text-amber-500" />
+                  <span className="text-[11px] text-amber-500 font-medium">
+                    Correzione: il sistema diceva {item.detectedValue ? "Sì" : "No"}, tu hai verificato {item.userValue ? "Sì" : "No"}
+                  </span>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Campo note */}
@@ -318,6 +430,9 @@ function AuditVerificationChecklist({
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             <span className="text-sm font-medium text-emerald-500">Verificato!</span>
+            {corrections > 0 && (
+              <span className="text-xs text-amber-500">({corrections} correzioni)</span>
+            )}
           </div>
           <button
             className="text-xs text-muted-foreground hover:text-foreground"
