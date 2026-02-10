@@ -243,12 +243,14 @@ export interface VerificationItem {
   key: string;
   label: string;
   hint: string;
+  detectedValue: boolean | null; // Cosa ha rilevato l'audit: true=presente, false=assente, null=N/A
   checked: boolean;
   checkedAt?: string;
 }
 
 export interface VerificationChecks {
   items: VerificationItem[];
+  notes?: string; // Note/comunicazioni di Daniela
 }
 
 // Re-export commercial types

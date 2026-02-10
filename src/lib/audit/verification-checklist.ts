@@ -1,12 +1,10 @@
 /**
  * Genera la checklist di verifica audit per Daniela.
- * Ogni voce ha:
- * - label: cosa confermare
- * - hint: istruzioni pratiche per verificare
- * - checked: stato (inizialmente false)
+ * Ogni voce mostra lo stato rilevato dall'audit (Sì/No) e chiede conferma.
+ * Include un campo note per osservazioni manuali.
  *
- * Le voci sono dinamiche: dipendono da cosa ha trovato l'audit.
- * Max 4 voci per tenere la verifica veloce (< 60 secondi).
+ * Le voci coprono le aree principali dell'audit.
+ * Max 6 voci per tenere la verifica gestibile.
  */
 
 import type { AuditData, VerificationItem } from "@/types";
@@ -15,22 +13,21 @@ import type { CommercialSignals } from "@/types/commercial";
 interface CheckCandidate {
   key: string;
   label: string;
+  detectedValue: boolean; // Cosa ha trovato l'audit (true = presente)
   hint: string;
   priority: number; // più basso = più importante
 }
 
 export function generateVerificationChecklist(
   auditData: AuditData | null,
-  commercialSignals: CommercialSignals | null
+  _commercialSignals: CommercialSignals | null
 ): VerificationItem[] {
-  const candidates: CheckCandidate[] = [];
-
   if (!auditData) {
-    // Se non c'è audit, solo check sito
     return [
       {
         key: "sito_controllato",
         label: "Sito controllato",
+        detectedValue: null,
         hint: "Apri il sito del lead. Funziona? Il contenuto corrisponde alla categoria? Non è vuoto o in costruzione?",
         checked: false,
       },
@@ -39,80 +36,93 @@ export function generateVerificationChecklist(
 
   const tracking = auditData.tracking;
   const trust = auditData.trust;
+  const seo = auditData.seo;
+  const content = auditData.content;
+  const websiteAudit = auditData.website;
+
+  const candidates: CheckCandidate[] = [];
 
   // === ANALYTICS ===
-  if (!tracking?.hasGA4 && !tracking?.hasGoogleAnalytics) {
-    candidates.push({
-      key: "no_analytics",
-      label: "Confermo no Analytics",
-      hint: "Apri il sito → tasto destro → 'Visualizza sorgente pagina' → Cerca (Ctrl+F) 'gtag' o 'analytics' o 'G-'. Se non trovi niente, è confermato. Se trovi 'GTM-', Analytics potrebbe essere dentro Tag Manager (vedi Guida).",
-      priority: 1,
-    });
-  } else {
-    candidates.push({
-      key: "analytics_presente",
-      label: "Confermo Analytics presente",
-      hint: "Apri il sito con Tag Assistant attivo (estensione Chrome). Deve mostrare un tag Google Analytics o GA4 con icona verde. Se non lo hai, vedi la Guida per installarlo.",
-      priority: 5,
-    });
-  }
+  const hasAnalytics = !!(tracking?.hasGA4 || tracking?.hasGoogleAnalytics);
+  candidates.push({
+    key: "analytics",
+    label: "Google Analytics",
+    detectedValue: hasAnalytics,
+    hint: hasAnalytics
+      ? "Apri il sito con Tag Assistant attivo. Deve mostrare un tag Google Analytics o GA4."
+      : "Sorgente pagina → Cerca 'gtag' o 'analytics' o 'G-'. Se non trovi niente, conferma No.",
+    priority: 1,
+  });
 
   // === FACEBOOK PIXEL ===
-  if (!tracking?.hasFacebookPixel) {
-    candidates.push({
-      key: "no_pixel_meta",
-      label: "Confermo no Pixel Meta",
-      hint: "Installa l'estensione 'Meta Pixel Helper' (vedi Guida). Apri il sito: se l'icona dell'estensione resta grigia, non c'è il pixel. Se diventa blu con un numero, c'è.",
-      priority: 2,
-    });
-  } else {
-    candidates.push({
-      key: "pixel_meta_presente",
-      label: "Confermo Pixel Meta presente",
-      hint: "Apri il sito con Meta Pixel Helper attivo. L'icona deve diventare blu con un numero dentro.",
-      priority: 6,
-    });
-  }
+  const hasPixel = !!tracking?.hasFacebookPixel;
+  candidates.push({
+    key: "pixel_meta",
+    label: "Pixel Meta / Facebook",
+    detectedValue: hasPixel,
+    hint: hasPixel
+      ? "Apri il sito con Meta Pixel Helper attivo. L'icona deve diventare blu con un numero."
+      : "Installa Meta Pixel Helper. Se l'icona resta grigia, conferma No.",
+    priority: 2,
+  });
 
   // === GOOGLE ADS ===
-  if (!tracking?.hasGoogleAdsTag) {
-    candidates.push({
-      key: "no_google_ads",
-      label: "Confermo no Google Ads",
-      hint: "Nel sorgente pagina (tasto destro → Visualizza sorgente) cerca 'AW-' o 'googleads'. Se non trovi niente, confermato. Se c'è GTM, il tag Ads potrebbe essere dentro (vedi Guida).",
-      priority: 3,
-    });
-  }
+  const hasGAds = !!tracking?.hasGoogleAdsTag;
+  candidates.push({
+    key: "google_ads",
+    label: "Google Ads Tag",
+    detectedValue: hasGAds,
+    hint: hasGAds
+      ? "Nel sorgente pagina cerca 'AW-' o 'googleads'. Deve essere presente."
+      : "Nel sorgente pagina cerca 'AW-' o 'googleads'. Se non trovi niente, conferma No.",
+    priority: 3,
+  });
 
   // === COOKIE BANNER ===
-  if (!trust?.hasCookieBanner) {
-    candidates.push({
-      key: "no_cookie_banner",
-      label: "Confermo no Cookie Banner",
-      hint: "Apri il sito in una finestra anonima (Ctrl+Shift+N). Se alla prima visita NON appare nessun banner/popup sui cookie, è confermato.",
-      priority: 4,
-    });
-  }
+  const hasCookie = !!trust?.hasCookieBanner;
+  candidates.push({
+    key: "cookie_banner",
+    label: "Cookie Banner GDPR",
+    detectedValue: hasCookie,
+    hint: hasCookie
+      ? "Apri il sito in finestra anonima. Deve apparire un banner/popup sui cookie."
+      : "Apri il sito in finestra anonima (Ctrl+Shift+N). Se NON appare nessun banner cookie, conferma No.",
+    priority: 4,
+  });
 
   // === FORM CONTATTO ===
-  const websiteAudit = auditData.website;
-  if (!websiteAudit?.hasContactForm) {
-    candidates.push({
-      key: "no_form_contatto",
-      label: "Confermo no Form Contatto",
-      hint: "Naviga il sito: controlla la home e la pagina 'Contatti' (se c'è). Se non c'è nessun modulo da compilare (nome, email, messaggio), è confermato.",
-      priority: 7,
-    });
-  }
+  const hasForm = !!websiteAudit?.hasContactForm;
+  candidates.push({
+    key: "form_contatto",
+    label: "Form di contatto",
+    detectedValue: hasForm,
+    hint: hasForm
+      ? "Controlla home e pagina Contatti. Deve esserci un modulo compilabile."
+      : "Naviga home e pagina Contatti. Se non c'è nessun modulo (nome, email, messaggio), conferma No.",
+    priority: 5,
+  });
 
-  // Ordina per priorità e prendi i primi 3
+  // === BLOG ===
+  const hasBlog = !!content?.hasBlog;
+  candidates.push({
+    key: "blog",
+    label: "Blog / News",
+    detectedValue: hasBlog,
+    hint: hasBlog
+      ? "Cerca nel menu una sezione Blog, News o Articoli. Deve esistere con contenuti."
+      : "Cerca nel menu Blog, News, Articoli. Se non esiste, conferma No.",
+    priority: 6,
+  });
+
+  // Ordina per priorità e prendi i primi 5
   candidates.sort((a, b) => a.priority - b.priority);
-  const selected = candidates.slice(0, 3);
+  const selected = candidates.slice(0, 5);
 
   // Converti in VerificationItem
   const items: VerificationItem[] = selected.map((c) => ({
     key: c.key,
     label: c.label,
+    detectedValue: c.detectedValue,
     hint: c.hint,
     checked: false,
   }));
@@ -121,7 +131,8 @@ export function generateVerificationChecklist(
   items.push({
     key: "sito_controllato",
     label: "Sito controllato",
-    hint: "Hai aperto il sito? Funziona e si carica? Il contenuto corrisponde alla categoria (es. se dice 'impresa edile', è davvero un'impresa edile)? Non è un sito vuoto, in costruzione, o una pagina di parcheggio?",
+    detectedValue: null,
+    hint: "Hai aperto il sito? Funziona e si carica? Il contenuto corrisponde alla categoria? Non è un sito vuoto, in costruzione, o una pagina di parcheggio?",
     checked: false,
   });
 

@@ -89,9 +89,24 @@ export default function GuidaPage() {
         {/* SEZIONE 1: Come verificare un lead */}
         <Section title="Come verificare un lead" icon={CheckCircle2} defaultOpen={true}>
           <p>
-            Il sistema analizza automaticamente i siti web dei lead e trova problemi
-            (no analytics, no pixel, ecc.). Ma il sistema <strong>non è perfetto</strong>: a volte
-            sbaglia. Il tuo compito è <strong>controllare che i dati siano veri</strong> prima
+            Il sistema analizza automaticamente i siti web dei lead e trova problemi.
+            Per ogni voce della checklist vedrai un badge colorato:
+          </p>
+          <div className="flex gap-3 my-2">
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-emerald-500/15 text-emerald-500">
+              Sì
+            </span>
+            <span className="text-muted-foreground text-sm">= il sistema ha trovato questa cosa sul sito</span>
+          </div>
+          <div className="flex gap-3 my-2">
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-red-500/15 text-red-400">
+              No
+            </span>
+            <span className="text-muted-foreground text-sm">= il sistema NON ha trovato questa cosa sul sito</span>
+          </div>
+          <p>
+            Ma il sistema <strong>non è perfetto</strong>: a volte sbaglia.
+            Il tuo compito è <strong>controllare che i dati siano veri</strong> prima
             di passare il lead ad Alessio.
           </p>
 
@@ -112,8 +127,9 @@ export default function GuidaPage() {
 
             <Step n={3}>
               <p>
-                <strong>Controlla i punti della checklist</strong>. Per ogni voce ci sono
-                istruzioni su come verificare. Leggi l'istruzione e controlla.
+                <strong>Controlla i punti della checklist</strong>. Ogni voce mostra{" "}
+                <strong>Sì</strong> o <strong>No</strong> (cosa ha rilevato il sistema) e
+                le istruzioni su come verificare manualmente.
               </p>
             </Step>
 
@@ -124,11 +140,22 @@ export default function GuidaPage() {
                 dei dati.
               </p>
             </Step>
+
+            <Step n={5}>
+              <p>
+                <strong>Usa il campo &quot;Note verifica&quot;</strong> per scrivere qualsiasi
+                osservazione utile. Ad esempio: &quot;sito in rifacimento&quot;,
+                &quot;GTM presente ma non trovo i tag&quot;, &quot;numero di telefono diverso da quello
+                su Google&quot;, ecc. Le note si salvano automaticamente e Alessio le leggerà
+                prima di chiamare.
+              </p>
+            </Step>
           </div>
 
           <Tip>
             Se non sei sicura di un punto, <strong>NON spuntare</strong> la checkbox.
-            Meglio lasciare un lead non verificato che confermarlo con dati sbagliati.
+            Scrivi il dubbio nel campo note e vai avanti. Meglio lasciare un lead
+            non verificato che confermarlo con dati sbagliati.
           </Tip>
         </Section>
 
@@ -328,16 +355,22 @@ export default function GuidaPage() {
                 confermare dati sbagliati
               </li>
               <li>
-                Vai nel <strong>dettaglio del lead</strong> (freccia → nella card) e lascia
-                una nota nel campo note spiegando il dubbio
+                <strong>Scrivi nel campo &quot;Note verifica&quot;</strong> sotto la checklist.
+                Spiega il dubbio, ad esempio: &quot;GTM presente, tag potrebbero essere dentro&quot;
+                oppure &quot;sito lentissimo, non riesco a verificare&quot;
               </li>
               <li>
                 Se il sito ha <strong>Google Tag Manager (GTM)</strong> ma non vedi i tag
-                direttamente, scrivi nella nota: &quot;GTM presente, tag potrebbero essere dentro&quot;
+                direttamente, scrivi nelle note: &quot;GTM presente, tag potrebbero essere dentro&quot;
               </li>
               <li>
                 Se il sito <strong>non si carica</strong> o dà errore, non spuntare niente e
-                segnalalo
+                scrivilo nelle note
+              </li>
+              <li>
+                Se noti qualcosa di <strong>interessante o utile</strong> (es. &quot;hanno un e-commerce
+                ma nessun tracking&quot;, &quot;il numero di telefono è diverso&quot;, &quot;sito in
+                manutenzione&quot;), <strong>scrivilo nelle note</strong> - Alessio lo apprezzerà
               </li>
               <li>
                 In caso di dubbio, <strong>chiedi ad Alessio</strong> - è meglio chiedere che
@@ -349,7 +382,8 @@ export default function GuidaPage() {
               Ricorda: lo scopo della verifica è dare ad Alessio <strong>argomenti solidi</strong> per
               la chiamata. Se dici &quot;confermato: non hanno Analytics&quot; e poi il cliente dice
               &quot;veramente sì, ce l'abbiamo&quot;, Alessio fa una brutta figura. Meglio
-              essere prudenti!
+              essere prudenti! Le note sono il tuo strumento migliore per segnalare cose
+              che il sistema non può vedere.
             </Tip>
           </div>
         </Section>

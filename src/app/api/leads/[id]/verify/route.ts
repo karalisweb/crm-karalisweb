@@ -13,7 +13,7 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { checks } = body;
+    const { checks, notes } = body;
 
     if (!checks || !Array.isArray(checks)) {
       return NextResponse.json(
@@ -31,7 +31,10 @@ export async function POST(
     const updated = await db.lead.update({
       where: { id },
       data: {
-        auditVerificationChecks: { items: checks },
+        auditVerificationChecks: {
+          items: checks,
+          ...(notes !== undefined ? { notes } : {}),
+        },
         auditVerified: allChecked,
         ...(allChecked
           ? {
@@ -51,11 +54,12 @@ export async function POST(
 
     // Se appena verificato, crea un'attività
     if (allChecked) {
+      const notesSuffix = notes ? ` | Note: ${notes}` : "";
       await db.activity.create({
         data: {
           leadId: id,
           type: "NOTE",
-          notes: `Audit verificato: ${checks.length}/${checks.length} check completati`,
+          notes: `Audit verificato: ${checks.length}/${checks.length} check completati${notesSuffix}`,
           createdBy: "daniela",
         },
       });

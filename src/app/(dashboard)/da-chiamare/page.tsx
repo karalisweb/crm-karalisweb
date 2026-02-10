@@ -150,7 +150,32 @@ function AuditVerificationChecklist({
   });
   const [verified, setVerified] = useState(initialVerified);
   const [saving, setSaving] = useState(false);
-  const [collapsed, setCollapsed] = useState(initialVerified); // Se già verificato, mostra compatto
+  const [collapsed, setCollapsed] = useState(initialVerified);
+  const [notes, setNotes] = useState(initialChecks?.notes || "");
+  const [notesTimeout, setNotesTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveVerification = async (updatedChecks: VerificationItem[], updatedNotes?: string) => {
+    setSaving(true);
+    try {
+      await fetch(`/api/leads/${leadId}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checks: updatedChecks,
+          notes: updatedNotes !== undefined ? updatedNotes : notes,
+        }),
+      });
+      const allChecked = updatedChecks.every((c) => c.checked);
+      if (allChecked && !verified) {
+        toast.success("Lead verificato!");
+        onVerified();
+      }
+    } catch {
+      toast.error("Errore nel salvataggio verifica");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggleCheck = async (key: string) => {
     const updatedChecks = checks.map((c) =>
@@ -163,23 +188,17 @@ function AuditVerificationChecklist({
     const allChecked = updatedChecks.every((c) => c.checked);
     setVerified(allChecked);
 
-    // Salva in background
-    setSaving(true);
-    try {
-      await fetch(`/api/leads/${leadId}/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ checks: updatedChecks }),
-      });
-      if (allChecked) {
-        toast.success("Lead verificato!");
-        onVerified();
-      }
-    } catch {
-      toast.error("Errore nel salvataggio verifica");
-    } finally {
-      setSaving(false);
-    }
+    await saveVerification(updatedChecks);
+  };
+
+  const handleNotesChange = (value: string) => {
+    setNotes(value);
+    // Debounce: salva dopo 1 secondo di inattività
+    if (notesTimeout) clearTimeout(notesTimeout);
+    const timeout = setTimeout(() => {
+      saveVerification(checks, value);
+    }, 1000);
+    setNotesTimeout(timeout);
   };
 
   // Vista compatta se già verificato
@@ -194,6 +213,9 @@ function AuditVerificationChecklist({
           <span className="text-sm font-medium text-emerald-500">
             Audit verificato ({checks.length}/{checks.length} check)
           </span>
+          {notes && (
+            <span className="text-xs text-muted-foreground ml-1">· con note</span>
+          )}
         </div>
         <span className="text-xs text-muted-foreground">Clicca per rivedere</span>
       </div>
@@ -227,8 +249,8 @@ function AuditVerificationChecklist({
         </Link>
       </div>
 
-      {/* Checkbox items */}
-      <div className="space-y-3">
+      {/* Checkbox items con badge Sì/No */}
+      <div className="space-y-2.5">
         {checks.map((item) => (
           <div key={item.key} className="flex items-start gap-3">
             <Checkbox
@@ -238,16 +260,29 @@ function AuditVerificationChecklist({
               className="mt-0.5 h-5 w-5"
             />
             <div className="flex-1 min-w-0">
-              <label
-                htmlFor={`${leadId}-${item.key}`}
-                className={`text-sm font-medium cursor-pointer ${
-                  item.checked
-                    ? "line-through text-muted-foreground/60"
-                    : "text-foreground"
-                }`}
-              >
-                {item.label}
-              </label>
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor={`${leadId}-${item.key}`}
+                  className={`text-sm font-medium cursor-pointer ${
+                    item.checked
+                      ? "line-through text-muted-foreground/60"
+                      : "text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </label>
+                {item.detectedValue !== null && item.detectedValue !== undefined && (
+                  <span
+                    className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      item.detectedValue
+                        ? "bg-emerald-500/15 text-emerald-500"
+                        : "bg-red-500/15 text-red-400"
+                    }`}
+                  >
+                    {item.detectedValue ? "Sì" : "No"}
+                  </span>
+                )}
+              </div>
               {!item.checked && (
                 <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                   {item.hint}
@@ -256,6 +291,25 @@ function AuditVerificationChecklist({
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Campo note */}
+      <div className="mt-3 pt-3 border-t border-border">
+        <label
+          htmlFor={`${leadId}-notes`}
+          className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block"
+        >
+          Note verifica
+        </label>
+        <textarea
+          id={`${leadId}-notes`}
+          value={notes}
+          onChange={(e) => handleNotesChange(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          placeholder="Scrivi qui eventuali osservazioni..."
+          rows={2}
+          className="w-full text-sm rounded-md border border-border bg-background px-3 py-2 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+        />
       </div>
 
       {/* Stato verificato */}
