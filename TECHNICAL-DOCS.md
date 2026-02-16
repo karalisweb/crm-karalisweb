@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **2.0.0** | Ultimo aggiornamento: 2026-02-10
+Versione: **2.1.0** | Ultimo aggiornamento: 2026-02-16
 
 ---
 
@@ -596,7 +596,17 @@ npx prisma migrate deploy
 
 ## Changelog Recente
 
-### 2026-02-10
+> Per lo storico completo vedi [CHANGELOG.md](CHANGELOG.md)
+
+### 2026-02-16 (v2.1.0)
+
+**Documentazione e Versioning**
+- Creato `CHANGELOG.md` con storico completo di tutte le versioni
+- Creato `GUIDA_UTENTE.md` - guida utente stampabile/esportabile
+- Aggiornato `README.md` con porta corretta (3003), link a tutti i documenti e stack aggiornato
+- Versione bumped a 2.1.0 in tutti i file (package.json, deploy.sh, DEPLOY.md, TECHNICAL-DOCS.md, sidebar UI)
+
+### 2026-02-10 (v2.0.0)
 
 **Verifica Audit - Miglioramenti UX**
 - Checklist verifica ora mostra **badge Sì/No** per ogni voce (Analytics, Pixel, Google Ads, Cookie Banner, Form, Blog) invece di mostrare solo le voci negative

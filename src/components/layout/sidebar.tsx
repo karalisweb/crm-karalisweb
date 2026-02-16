@@ -89,7 +89,7 @@ export function Sidebar() {
             KW Sales CRM
           </span>
           <span className="text-xs text-[#71717a]">
-            v2.0.0
+            v2.1.0
           </span>
         </div>
       </div>

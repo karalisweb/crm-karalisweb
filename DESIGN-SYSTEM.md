@@ -696,7 +696,7 @@ L'header della sidebar identifica l'app. E composto da **3 elementi** sempre pre
 +------------------------------------------+
 |                                          |
 |  [ Icona ]  KW NomeApp                  |
-|  [ 40x40 ]  v2.0.0                      |
+|  [ 40x40 ]  v2.1.0                      |
 |                                          |
 +------------------------------------------+
 ```

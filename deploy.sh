@@ -4,8 +4,8 @@
 # ║             KW SALES CRM - Deploy Script                     ║
 # ╠══════════════════════════════════════════════════════════════╣
 # ║ App:              KW Sales CRM                               ║
-# ║ Versione:         2.0.0                                      ║
-# ║ Ultimo update:    2026-02-08                                 ║
+# ║ Versione:         2.1.0                                      ║
+# ║ Ultimo update:    2026-02-16                                 ║
 # ║                                                              ║
 # ║ Cartella locale:  ~/Desktop/Sviluppo App Claude Code/       ║
 # ║                   CRM /sales-app                             ║
@@ -41,7 +41,7 @@ NC='\033[0m' # No Color
 # CONFIGURAZIONE (modifica qui per altre app)
 # ═══════════════════════════════════════════
 APP_NAME="KW Sales CRM"
-APP_VERSION="2.0.0"
+APP_VERSION="2.1.0"
 VPS_HOST="root@185.192.97.108"
 VPS_PATH="/opt/sales-app"
 BRANCH="main"
