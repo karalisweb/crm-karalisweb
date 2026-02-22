@@ -114,50 +114,38 @@ export const runAuditFunction = inngest.createFunction(
       }
     });
 
-    // Step 4: Carica le impostazioni CRM per lo scoreThreshold
-    const scoreThreshold = await step.run("get-settings", async () => {
-      const settings = await db.settings.findUnique({
-        where: { id: "default" },
-      });
-      return settings?.scoreThreshold ?? 60;
-    });
-
-    // Step 5: Salva tutti i risultati
+    // Step 4: Salva tutti i risultati
     await step.run("save-results", async () => {
-      // Determina il pipelineStage in base a tag commerciale E score threshold
+      // Determina il pipelineStage: Daniela decide, l'app pre-filtra solo NON_TARGET
       let newPipelineStage: PipelineStage;
-      if (commercialResult.tagResult.tag === "DA_APPROFONDIRE") {
-        newPipelineStage = PipelineStage.DA_VERIFICARE;
-      } else if (commercialResult.tagResult.tag === "NON_TARGET") {
+      if (commercialResult.tagResult.tag === "NON_TARGET") {
         newPipelineStage = PipelineStage.NON_TARGET;
-      } else if (result.opportunityScore < scoreThreshold) {
-        // Score sotto soglia → DA_VERIFICARE (anche se callable)
-        newPipelineStage = PipelineStage.DA_VERIFICARE;
       } else if (commercialResult.tagResult.isCallable) {
-        // Callable + score sopra soglia → DA_CHIAMARE
-        newPipelineStage = PipelineStage.DA_CHIAMARE;
+        // Tutti i lead callable vanno a Daniela per la qualificazione
+        newPipelineStage = PipelineStage.DA_QUALIFICARE;
       } else {
-        newPipelineStage = PipelineStage.NEW;
+        // Fallback: da qualificare comunque (Daniela decide)
+        newPipelineStage = PipelineStage.DA_QUALIFICARE;
       }
 
       await db.lead.update({
         where: { id: leadId },
         data: {
-          // Audit tecnico (mantenuto per debug/compatibilita)
+          // Audit tecnico
           auditStatus: "COMPLETED",
           auditCompletedAt: new Date(),
           opportunityScore: result.opportunityScore,
           auditData: result.auditData as unknown as Prisma.InputJsonValue,
           talkingPoints: result.talkingPoints,
 
-          // NUOVI: Segnali commerciali
+          // Segnali commerciali
           commercialTag: commercialResult.tagResult.tag as CommercialTag,
           commercialTagReason: commercialResult.tagResult.tagReason,
           commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
           commercialPriority: commercialResult.tagResult.priority,
           isCallable: commercialResult.tagResult.isCallable,
 
-          // Pipeline MSD: routing in base a tag E score threshold
+          // Pipeline: routing a qualificazione
           pipelineStage: newPipelineStage,
         },
       });

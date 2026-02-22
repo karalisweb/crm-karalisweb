@@ -44,7 +44,7 @@ async function main() {
       googleRating: 4.2,
       googleReviewsCount: 45,
       placeId: "example_place_1",
-      pipelineStage: PipelineStage.NEW,
+      pipelineStage: PipelineStage.NUOVO,
     },
     {
       name: "Hotel Bellavista",
@@ -55,7 +55,7 @@ async function main() {
       googleRating: 3.8,
       googleReviewsCount: 120,
       placeId: "example_place_2",
-      pipelineStage: PipelineStage.DA_CHIAMARE,
+      pipelineStage: PipelineStage.DA_QUALIFICARE,
     },
     {
       name: "Palestra FitLife",

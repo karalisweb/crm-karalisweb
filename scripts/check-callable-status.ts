@@ -23,7 +23,7 @@ async function main() {
   // 2. Lead in DA_CHIAMARE che non sono callable
   const dachiamarNotCallable = await db.lead.findMany({
     where: {
-      pipelineStage: "DA_CHIAMARE",
+      pipelineStage: "DA_QUALIFICARE",
       isCallable: false,
     },
     select: {
@@ -35,7 +35,7 @@ async function main() {
     },
   });
 
-  console.log("\n\nLead in DA_CHIAMARE ma con isCallable=false:");
+  console.log("\n\nLead in DA_QUALIFICARE ma con isCallable=false:");
   console.table(dachiamarNotCallable);
 
   // 3. Verifica quanti dovrebbero essere callable in base al tag

@@ -65,22 +65,61 @@ model Lead {
   // Flag per dashboard "Chiamabili oggi"
   isCallable        Boolean         @default(false) @map("is_callable")
 
-  // CRM Pipeline MSD
-  pipelineStage     PipelineStage @default(NEW) @map("pipeline_stage")
+  // CRM Pipeline
+  pipelineStage     PipelineStage @default(NUOVO) @map("pipeline_stage")
   lostReason        LostReason?   @map("lost_reason")
   lostReasonNotes   String?       @map("lost_reason_notes")
 
-  // Contatore tentativi chiamata (per NON_RISPONDE, max 3)
+  // Contatore tentativi chiamata (per fase vendita)
   callAttempts      Int           @default(0) @map("call_attempts")
 
   // Data/ora appuntamento (per CALL_FISSATA)
   appointmentAt     DateTime?     @map("appointment_at")
 
-  // Data invio offerta (per calcolo 20gg ghost)
+  // Data invio proposta (per tracking)
   offerSentAt       DateTime?     @map("offer_sent_at")
 
   // ==========================================
-  // CRM MINIMALE per logging chiamate rapido
+  // VIDEO OUTREACH
+  // ==========================================
+  // Script video generato dall'app
+  videoScriptData   Json?         @map("video_script_data")
+  // Tracking invio video
+  videoSentAt       DateTime?     @map("video_sent_at")
+  videoViewedAt     DateTime?     @map("video_viewed_at")
+
+  // ==========================================
+  // FOLLOW-UP TRACKING
+  // ==========================================
+  letterSentAt      DateTime?     @map("letter_sent_at")
+  linkedinSentAt    DateTime?     @map("linkedin_sent_at")
+
+  // ==========================================
+  // RISPOSTA PROSPECT
+  // ==========================================
+  respondedAt       DateTime?     @map("responded_at")
+  respondedVia      String?       @map("responded_via") // "email" | "phone" | "linkedin" | "whatsapp"
+
+  // ==========================================
+  // QUALIFICAZIONE (Daniela)
+  // ==========================================
+  danielaNotes      String?       @map("daniela_notes")
+  qualifiedAt       DateTime?     @map("qualified_at")
+  qualifiedBy       String?       @map("qualified_by")
+
+  // Verifica audit (checklist di Daniela)
+  auditVerified           Boolean   @default(false) @map("audit_verified")
+  auditVerifiedAt         DateTime? @map("audit_verified_at")
+  auditVerifiedBy         String?   @map("audit_verified_by")
+  auditVerificationChecks Json?     @map("audit_verification_checks")
+
+  // ==========================================
+  // RECONTACT (Da richiamare tra 6 mesi)
+  // ==========================================
+  recontactAt       DateTime?     @map("recontact_at")
+
+  // ==========================================
+  // CRM MINIMALE per logging chiamate
   // ==========================================
   // Ultimo esito chiamata
   lastCallOutcome   CallOutcome?  @map("last_call_outcome")
@@ -98,12 +137,6 @@ model Lead {
   lastContactedAt   DateTime?   @map("last_contacted_at")
   nextFollowupAt    DateTime?   @map("next_followup_at")
   assignedTo        String?     @map("assigned_to")
-
-  // Verifica audit (checklist di Daniela)
-  auditVerified           Boolean   @default(false) @map("audit_verified")
-  auditVerifiedAt         DateTime? @map("audit_verified_at")
-  auditVerifiedBy         String?   @map("audit_verified_by")
-  auditVerificationChecks Json?     @map("audit_verification_checks")
 
   // Metadata
   source            String      @default("google_maps")
@@ -124,10 +157,16 @@ model Lead {
   @@index([commercialTag], name: "idx_leads_commercial_tag")
   @@index([commercialPriority], name: "idx_leads_commercial_priority")
   @@index([isCallable], name: "idx_leads_callable")
-  // Indici per pipeline MSD
+  // Indici per pipeline
   @@index([appointmentAt], name: "idx_leads_appointment")
   @@index([offerSentAt], name: "idx_leads_offer_sent")
   @@index([nextFollowupAt], name: "idx_leads_followup")
+  // Indici per outreach e qualificazione
+  @@index([recontactAt], name: "idx_leads_recontact")
+  @@index([videoSentAt], name: "idx_leads_video_sent")
+  @@index([qualifiedAt], name: "idx_leads_qualified")
+  @@index([letterSentAt], name: "idx_leads_letter_sent")
+  @@index([linkedinSentAt], name: "idx_leads_linkedin_sent")
   @@map("leads")
 }
 
@@ -269,24 +308,35 @@ enum AuditStatus {
 }
 
 // ==========================================
-// PIPELINE VENDITA MSD
+// PIPELINE COMMERCIALE (Video Outreach)
 // ==========================================
 enum PipelineStage {
-  // === SELEZIONE (pre-chiamata) ===
-  NEW             // Appena importato, audit in corso
-  DA_CHIAMARE     // Score > soglia, pronto per chiamata
-  DA_VERIFICARE   // Tag DA_APPROFONDIRE, verifica manuale
-  NON_TARGET      // Nessun segnale ads (rivedibile)
-  SENZA_SITO      // No website (archivio morto)
+  // === SCOUTING ===
+  NUOVO               // Appena importato, audit in corso
 
-  // === VENDITA MSD (post-chiamata) ===
-  NON_RISPONDE    // Tentativo fallito (max 3)
-  RICHIAMARE      // Ha chiesto di richiamare (data X)
-  CALL_FISSATA    // Appuntamento vendita fissato
-  NON_PRESENTATO  // Ghost alla call vendita
-  OFFERTA_INVIATA // In attesa pagamento 600€
-  VINTO           // Ha pagato - Cliente MSD
-  PERSO           // Chiuso negativo
+  // === QUALIFICAZIONE ===
+  DA_QUALIFICARE      // Audit completato, pronto per revisione Daniela
+  QUALIFICATO         // Daniela ha approvato + aggiunto note, pronto per video
+
+  // === OUTREACH ===
+  VIDEO_DA_FARE       // Script generato, Alessio deve registrare
+  VIDEO_INVIATO       // Video inviato via email
+  LETTERA_INVIATA     // Lettera cartacea inviata (follow-up)
+  FOLLOW_UP_LINKEDIN  // Connessione/InMail LinkedIn inviata
+
+  // === VENDITA ===
+  RISPOSTO            // Il prospect ha risposto a un touchpoint
+  CALL_FISSATA        // Call conoscitiva fissata
+  IN_CONVERSAZIONE    // Dialogo attivo
+  PROPOSTA_INVIATA    // Proposta inviata (Intervista/MSD/Bundle)
+  VINTO               // Cliente acquisito
+  PERSO               // Chiuso negativo
+
+  // === ARCHIVIO ===
+  DA_RICHIAMARE_6M    // Nessuna risposta dopo tutti i touchpoint, riprovare tra 6 mesi
+  RICICLATO           // Usato come caso studio anonimizzato
+  NON_TARGET          // Scartato automaticamente (nessun segnale ads)
+  SENZA_SITO          // Nessun sito web
 }
 
 // Motivi per cui un lead e' stato perso
@@ -301,12 +351,18 @@ enum LostReason {
 }
 
 enum ActivityType {
-  CALL          // Chiamata
-  NOTE          // Nota
-  EMAIL_SENT    // Email inviata
-  MEETING       // Meeting
-  PROPOSAL_SENT // Preventivo inviato
-  STAGE_CHANGE  // Cambio stato
+  CALL              // Chiamata
+  NOTE              // Nota
+  EMAIL_SENT        // Email inviata
+  MEETING           // Meeting
+  PROPOSAL_SENT     // Proposta inviata
+  STAGE_CHANGE      // Cambio stato
+  VIDEO_SENT        // Video Tella inviato
+  LETTER_SENT       // Lettera cartacea inviata
+  LINKEDIN_SENT     // Connessione/InMail LinkedIn inviata
+  RESPONSE_RECEIVED // Risposta ricevuta dal prospect
+  VIDEO_VIEWED      // Il prospect ha visto il video
+  QUALIFICATION     // Azione di qualificazione (Daniela)
 }
 
 enum CallOutcome {
@@ -348,10 +404,13 @@ enum Objection {
 
 // Tipi di next step
 enum NextStepType {
+  SEND_VIDEO          // Preparare e inviare video
+  SEND_LETTER         // Inviare lettera cartacea
+  SEND_LINKEDIN       // Contattare su LinkedIn
   CALLBACK            // Richiamare
   SEND_INFO           // Inviare materiale
   MEETING             // Fissare meeting
-  PROPOSAL            // Inviare preventivo
+  PROPOSAL            // Inviare proposta
   WAIT                // Aspettare (loro richiameranno)
   CLOSE               // Chiudere (vinto o perso)
 }
@@ -398,17 +457,23 @@ model SearchLocation {
 model Settings {
   id        String   @id @default("default")
 
-  // Soglia score per "Da chiamare oggi" (default 60)
+  // Soglia score per prioritizzazione (informativa, Daniela decide)
   scoreThreshold    Int      @default(60) @map("score_threshold")
-
-  // Limite chiamate giornaliere (default 5)
-  dailyCallLimit    Int      @default(5) @map("daily_call_limit")
 
   // Giorni dopo offerta per considerare ghost (default 20)
   ghostOfferDays    Int      @default(20) @map("ghost_offer_days")
 
   // Max tentativi chiamata prima di considerare perso (default 3)
   maxCallAttempts   Int      @default(3) @map("max_call_attempts")
+
+  // Giorni dopo video prima di suggerire lettera (default 7)
+  followUpDaysVideo   Int    @default(7) @map("follow_up_days_video")
+
+  // Giorni dopo lettera prima di suggerire LinkedIn (default 7)
+  followUpDaysLetter  Int    @default(7) @map("follow_up_days_letter")
+
+  // Mesi prima di ricontattare DA_RICHIAMARE_6M (default 6)
+  recontactMonths     Int    @default(6) @map("recontact_months")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

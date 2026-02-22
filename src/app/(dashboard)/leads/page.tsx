@@ -27,8 +27,18 @@ import {
   List,
   Kanban,
   Loader2,
+  Minimize2,
+  Maximize2,
 } from "lucide-react";
 import { toast } from "sonner";
+
+function getScoreBorderClass(score: number | null): string {
+  if (score === null) return "border-l-4 border-l-muted";
+  if (score >= 80) return "border-l-4 border-l-red-500";
+  if (score >= 60) return "border-l-4 border-l-amber-500";
+  if (score >= 40) return "border-l-4 border-l-yellow-500";
+  return "border-l-4 border-l-blue-500";
+}
 
 interface Lead {
   id: string;
@@ -48,37 +58,45 @@ interface ColumnData {
   [key: string]: Lead[];
 }
 
-// Stages per il CRM MSD
-// SELEZIONE: NEW, DA_CHIAMARE, DA_VERIFICARE, NON_TARGET, SENZA_SITO
-// VENDITA: NON_RISPONDE, RICHIAMARE, CALL_FISSATA, NON_PRESENTATO, OFFERTA_INVIATA, VINTO, PERSO
+// Stages per il CRM Video Outreach
 const ACTIVE_STAGES = [
-  "NEW",
-  "DA_CHIAMARE",
-  "DA_VERIFICARE",
-  "NON_TARGET",
-  "SENZA_SITO",
-  "NON_RISPONDE",
-  "RICHIAMARE",
+  "NUOVO",
+  "DA_QUALIFICARE",
+  "QUALIFICATO",
+  "VIDEO_DA_FARE",
+  "VIDEO_INVIATO",
+  "LETTERA_INVIATA",
+  "FOLLOW_UP_LINKEDIN",
+  "RISPOSTO",
   "CALL_FISSATA",
-  "NON_PRESENTATO",
-  "OFFERTA_INVIATA",
+  "IN_CONVERSAZIONE",
+  "PROPOSTA_INVIATA",
   "VINTO",
   "PERSO",
+  "DA_RICHIAMARE_6M",
+  "RICICLATO",
+  "NON_TARGET",
+  "SENZA_SITO",
 ];
 
 const stageOrder = [
-  "NEW",
-  "DA_CHIAMARE",
-  "DA_VERIFICARE",
-  "NON_TARGET",
-  "SENZA_SITO",
-  "NON_RISPONDE",
-  "RICHIAMARE",
+  "NUOVO",
+  "DA_QUALIFICARE",
+  "QUALIFICATO",
+  "VIDEO_DA_FARE",
+  "VIDEO_INVIATO",
+  "LETTERA_INVIATA",
+  "FOLLOW_UP_LINKEDIN",
+  "RISPOSTO",
   "CALL_FISSATA",
-  "NON_PRESENTATO",
-  "OFFERTA_INVIATA",
+  "IN_CONVERSAZIONE",
+  "PROPOSTA_INVIATA",
   "VINTO",
   "PERSO",
+  "DA_RICHIAMARE_6M",
+  "RICICLATO",
+  "NON_TARGET",
+  "SENZA_SITO",
 ];
 
 // Lead Card per la lista
@@ -100,7 +118,7 @@ function LeadListCard({
   const stageInfo = PIPELINE_STAGES[lead.pipelineStage as keyof typeof PIPELINE_STAGES];
 
   return (
-    <Card className="card-hover">
+    <Card className={`card-hover ${getScoreBorderClass(lead.opportunityScore)}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -276,7 +294,7 @@ function MobileLeadCard({
   const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
 
   return (
-    <Card className="card-hover mb-3">
+    <Card className={`card-hover mb-3 ${getScoreBorderClass(lead.opportunityScore)}`}>
       <CardContent className="p-3">
         <div className="flex items-start gap-2">
           <div className="flex-shrink-0 pt-1 text-muted-foreground/50">
@@ -382,12 +400,43 @@ function MobileLeadCard({
 }
 
 // Desktop Lead Card per Kanban
-function DesktopLeadCard({ lead }: { lead: Lead }) {
+function DesktopLeadCard({ lead, compact }: { lead: Lead; compact?: boolean }) {
   const scoreInfo = getScoreCategory(lead.opportunityScore);
   const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
 
+  if (compact) {
+    return (
+      <Card className={`cursor-grab active:cursor-grabbing card-hover ${getScoreBorderClass(lead.opportunityScore)}`}>
+        <CardContent className="px-3 py-2">
+          <Link href={`/leads/${lead.id}`} className="block">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="font-medium text-xs truncate hover:underline flex-1">
+                {lead.name}
+              </h4>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {isHot && <Flame className="h-3 w-3 text-red-500" />}
+                {lead.opportunityScore !== null && (
+                  <span className="text-xs font-semibold tabular-nums">{lead.opportunityScore}</span>
+                )}
+                {lead.phone && (
+                  <a
+                    href={`tel:${lead.phone}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-1 hover:bg-accent rounded"
+                  >
+                    <Phone className="h-3 w-3 text-green-500" />
+                  </a>
+                )}
+              </div>
+            </div>
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="cursor-grab active:cursor-grabbing card-hover">
+    <Card className={`cursor-grab active:cursor-grabbing card-hover ${getScoreBorderClass(lead.opportunityScore)}`}>
       <CardContent className="p-3">
         <Link href={`/leads/${lead.id}`} className="block">
           <div className="flex items-center gap-1.5">
@@ -475,6 +524,12 @@ function LeadsPageContent() {
   // View mode: "list" o "kanban"
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
 
+  // Score filter: "all" | "hot" | "good"
+  const [scoreFilter, setScoreFilter] = useState<"all" | "hot" | "good">("all");
+
+  // Compact mode for Kanban
+  const [compactMode, setCompactMode] = useState(false);
+
   // Kanban state
   const [activeStageIndex, setActiveStageIndex] = useState(0);
 
@@ -487,8 +542,8 @@ function LeadsPageContent() {
     if (stagesParam) {
       return stagesParam.split(",");
     }
-    // Default: DA_CHIAMARE (Da chiamare oggi)
-    return ["DA_CHIAMARE"];
+    // Default: DA_QUALIFICARE
+    return ["DA_QUALIFICARE"];
   });
 
   // Fetch leads con paginazione
@@ -747,10 +802,19 @@ function LeadsPageContent() {
     }
   };
 
+  // Filtra lead per score
+  const applyScoreFilter = (leadsToFilter: Lead[]) => {
+    if (scoreFilter === "hot") return leadsToFilter.filter(l => (l.opportunityScore ?? 0) >= 80);
+    if (scoreFilter === "good") return leadsToFilter.filter(l => (l.opportunityScore ?? 0) >= 60);
+    return leadsToFilter;
+  };
+
   // Filtra lead per la lista
-  const filteredLeads = viewMode === "list"
-    ? leads.filter((lead) => selectedStages.includes(lead.pipelineStage))
-    : leads;
+  const filteredLeads = applyScoreFilter(
+    viewMode === "list"
+      ? leads.filter((lead) => selectedStages.includes(lead.pipelineStage))
+      : leads
+  );
 
   // Stages visibili nel Kanban (escluso NEW, solo quelli con lead + quelli selezionati)
   const visibleKanbanStages = stageOrder.filter(
@@ -849,6 +913,49 @@ function LeadsPageContent() {
             <span className="hidden sm:inline">Kanban</span>
           </Button>
         </div>
+      </div>
+
+      {/* Score filter + Compact toggle */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center rounded-lg border border-input p-1">
+          <Button
+            variant={scoreFilter === "all" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setScoreFilter("all")}
+            className="h-7 px-2 text-xs"
+          >
+            Tutti
+          </Button>
+          <Button
+            variant={scoreFilter === "good" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setScoreFilter("good")}
+            className="h-7 px-2 text-xs"
+          >
+            Buono (60+)
+          </Button>
+          <Button
+            variant={scoreFilter === "hot" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setScoreFilter("hot")}
+            className="h-7 px-2 text-xs gap-1"
+          >
+            <Flame className="h-3 w-3" />
+            Hot (80+)
+          </Button>
+        </div>
+
+        {viewMode === "kanban" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCompactMode(!compactMode)}
+            className="h-7 px-2 text-xs gap-1 hidden md:flex"
+          >
+            {compactMode ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
+            {compactMode ? "Normale" : "Compatto"}
+          </Button>
+        )}
       </div>
 
       {/* Contenuto */}
@@ -971,13 +1078,13 @@ function LeadsPageContent() {
                 {/* Escludiamo NEW dal Kanban - i lead vanno direttamente in DA_CHIAMARE dopo l'audit */}
                 {stageOrder.filter(s => s !== "NEW").map((stageKey) => {
                   const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
-                  const stageLeads = columns[stageKey] || [];
+                  const stageLeads = applyScoreFilter(columns[stageKey] || []);
 
                   return (
-                    <div key={stageKey} className="flex-shrink-0 w-72">
-                      <div className="flex items-center justify-between mb-3 px-1">
+                    <div key={stageKey} className={`flex-shrink-0 ${compactMode ? "w-60" : "w-72"}`}>
+                      <div className="flex items-center justify-between mb-3 px-1 pb-2 border-b-2 border-b-primary/30">
                         <h3 className="font-semibold text-sm">{stage.label}</h3>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-xs font-bold">
                           {stageLeads.length}
                         </Badge>
                       </div>
@@ -1008,7 +1115,7 @@ function LeadsPageContent() {
                                       snapshot.isDragging ? "opacity-80 rotate-2" : ""
                                     }`}
                                   >
-                                    <DesktopLeadCard lead={lead} />
+                                    <DesktopLeadCard lead={lead} compact={compactMode} />
                                   </div>
                                 )}
                               </Draggable>

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Lead DA_CHIAMARE - ordinati per score (alto prima)
     const daChiamareLeads = await db.lead.findMany({
       where: {
-        pipelineStage: "DA_CHIAMARE",
+        pipelineStage: "DA_QUALIFICARE",
       },
       orderBy: [
         { opportunityScore: "desc" },
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     if (includeVerifica) {
       daVerificareLeads = await db.lead.findMany({
         where: {
-          pipelineStage: "DA_VERIFICARE",
+          pipelineStage: "QUALIFICATO",
         },
         orderBy: [
           { opportunityScore: "desc" },
@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
     // Conteggi per la dashboard
     const [countDaChiamare, countDaVerificare, countArchiviati] =
       await Promise.all([
-        db.lead.count({ where: { pipelineStage: "DA_CHIAMARE" } }),
-        db.lead.count({ where: { pipelineStage: "DA_VERIFICARE" } }),
+        db.lead.count({ where: { pipelineStage: "DA_QUALIFICARE" } }),
+        db.lead.count({ where: { pipelineStage: "QUALIFICATO" } }),
         db.lead.count({
           where: {
             pipelineStage: { in: ["NON_TARGET", "SENZA_SITO", "PERSO"] },

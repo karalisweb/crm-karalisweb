@@ -45,7 +45,7 @@ export async function GET(request: Request) {
           notIn: excludeTags,
         },
         // Solo in stage DA_CHIAMARE (pronti per la chiamata)
-        pipelineStage: "DA_CHIAMARE",
+        pipelineStage: "DA_QUALIFICARE",
         // Con sito web
         website: {
           not: null,
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
       where: {
         auditStatus: "COMPLETED",
         isCallable: true,
-        pipelineStage: "DA_CHIAMARE",
+        pipelineStage: "DA_QUALIFICARE",
       },
       _count: true,
     });

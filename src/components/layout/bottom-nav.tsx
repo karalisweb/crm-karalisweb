@@ -5,12 +5,11 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
-  Phone,
+  ClipboardCheck,
+  Video,
+  Repeat,
   Search,
   Settings,
-  ClipboardCheck,
-  FolderSearch,
-  Target,
   UserCog,
 } from "lucide-react";
 
@@ -21,10 +20,10 @@ export function BottomNav() {
   const isAdmin = userRole === "ADMIN";
 
   const navigation = [
-    { name: "Chiama", href: "/da-chiamare", icon: Phone },
+    { name: "Qualifica", href: "/da-qualificare", icon: ClipboardCheck },
+    { name: "Video", href: "/video-da-fare", icon: Video },
+    { name: "Follow-up", href: "/follow-up", icon: Repeat },
     { name: "Cerca", href: "/search", icon: Search },
-    { name: "Ricerche", href: "/searches", icon: FolderSearch },
-    // Se admin mostra Settings, altrimenti mostra Profilo
     isAdmin
       ? { name: "Menu", href: "/settings", icon: Settings }
       : { name: "Profilo", href: "/profile", icon: UserCog },

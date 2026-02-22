@@ -33,41 +33,28 @@ import { toast } from "sonner";
 import {
   ChevronDown,
   Loader2,
-  Inbox,
-  Phone,
-  Search,
-  X,
-  Globe,
-  PhoneMissed,
-  PhoneForwarded,
-  Calendar,
-  UserX,
-  Mail,
-  CheckCircle,
-  XCircle,
-  type LucideIcon,
 } from "lucide-react";
 import { PIPELINE_STAGES, LOST_REASONS } from "@/types";
 
-// Mappa stringhe icone -> componenti Lucide
-const STAGE_ICONS: Record<string, LucideIcon> = {
-  inbox: Inbox,
-  phone: Phone,
-  search: Search,
-  x: X,
-  "globe-off": Globe,
-  "phone-missed": PhoneMissed,
-  "phone-callback": PhoneForwarded,
-  calendar: Calendar,
-  "user-x": UserX,
-  mail: Mail,
-  "check-circle": CheckCircle,
-  "x-circle": XCircle,
-};
-
-// Gruppi di stati per il menu
-const SELECTION_STAGES = ["NEW", "DA_CHIAMARE", "DA_VERIFICARE", "NON_TARGET", "SENZA_SITO"];
-const SALES_STAGES = ["NON_RISPONDE", "RICHIAMARE", "CALL_FISSATA", "NON_PRESENTATO", "OFFERTA_INVIATA", "VINTO", "PERSO"];
+// Gruppi di stati per il menu dropdown
+const STAGE_GROUPS = [
+  {
+    label: "Qualificazione",
+    stages: ["NUOVO", "DA_QUALIFICARE", "QUALIFICATO"],
+  },
+  {
+    label: "Outreach",
+    stages: ["VIDEO_DA_FARE", "VIDEO_INVIATO", "LETTERA_INVIATA", "FOLLOW_UP_LINKEDIN"],
+  },
+  {
+    label: "Vendita",
+    stages: ["RISPOSTO", "CALL_FISSATA", "IN_CONVERSAZIONE", "PROPOSTA_INVIATA", "VINTO", "PERSO"],
+  },
+  {
+    label: "Archivio",
+    stages: ["DA_RICHIAMARE_6M", "RICICLATO", "NON_TARGET", "SENZA_SITO"],
+  },
+];
 
 interface PipelineStageSelectorProps {
   leadId: string;
@@ -91,12 +78,10 @@ export function PipelineStageSelector({
   const currentStageInfo = PIPELINE_STAGES[currentStage as keyof typeof PIPELINE_STAGES];
 
   async function changeStage(newStage: string) {
-    // Se lo stato è PERSO, mostra dialog per selezionare il motivo
     if (newStage === "PERSO") {
       setShowLostDialog(true);
       return;
     }
-
     await updateLeadStage(newStage);
   }
 
@@ -108,6 +93,13 @@ export function PipelineStageSelector({
       if (newStage === "PERSO" && lostReasonValue) {
         body.lostReason = lostReasonValue;
         body.lostReasonNotes = notes;
+      }
+
+      // For DA_RICHIAMARE_6M, set recontactAt to +6 months
+      if (newStage === "DA_RICHIAMARE_6M") {
+        const recontactDate = new Date();
+        recontactDate.setMonth(recontactDate.getMonth() + 6);
+        body.recontactAt = recontactDate.toISOString();
       }
 
       const res = await fetch(`/api/leads/${leadId}`, {
@@ -145,9 +137,8 @@ export function PipelineStageSelector({
     if (!stage) return "secondary";
 
     switch (stage.color) {
-      case "emerald": return "default"; // VINTO
-      case "red": return "destructive"; // PERSO
-      case "rose": return "destructive"; // NON_PRESENTATO
+      case "emerald": return "default";
+      case "red": return "destructive";
       default: return "secondary";
     }
   }
@@ -170,44 +161,27 @@ export function PipelineStageSelector({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Selezione</DropdownMenuLabel>
-          {SELECTION_STAGES.map((stage) => {
-            const stageInfo = PIPELINE_STAGES[stage as keyof typeof PIPELINE_STAGES];
-            const Icon = stageInfo?.icon ? STAGE_ICONS[stageInfo.icon] : null;
-            const isActive = currentStage === stage;
-            return (
-              <DropdownMenuItem
-                key={stage}
-                onClick={() => changeStage(stage)}
-                disabled={isActive}
-                className={isActive ? "bg-accent" : ""}
-              >
-                {Icon && <Icon className="mr-2 h-4 w-4" />}
-                {stageInfo?.label || stage}
-                {isActive && <span className="ml-auto text-xs text-muted-foreground">attuale</span>}
-              </DropdownMenuItem>
-            );
-          })}
-
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>Vendita MSD</DropdownMenuLabel>
-          {SALES_STAGES.map((stage) => {
-            const stageInfo = PIPELINE_STAGES[stage as keyof typeof PIPELINE_STAGES];
-            const Icon = stageInfo?.icon ? STAGE_ICONS[stageInfo.icon] : null;
-            const isActive = currentStage === stage;
-            return (
-              <DropdownMenuItem
-                key={stage}
-                onClick={() => changeStage(stage)}
-                disabled={isActive}
-                className={isActive ? "bg-accent" : ""}
-              >
-                {Icon && <Icon className="mr-2 h-4 w-4" />}
-                {stageInfo?.label || stage}
-                {isActive && <span className="ml-auto text-xs text-muted-foreground">attuale</span>}
-              </DropdownMenuItem>
-            );
-          })}
+          {STAGE_GROUPS.map((group, idx) => (
+            <div key={group.label}>
+              {idx > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+              {group.stages.map((stage) => {
+                const stageInfo = PIPELINE_STAGES[stage as keyof typeof PIPELINE_STAGES];
+                const isActive = currentStage === stage;
+                return (
+                  <DropdownMenuItem
+                    key={stage}
+                    onClick={() => changeStage(stage)}
+                    disabled={isActive}
+                    className={isActive ? "bg-accent" : ""}
+                  >
+                    {stageInfo?.label || stage}
+                    {isActive && <span className="ml-auto text-xs text-muted-foreground">attuale</span>}
+                  </DropdownMenuItem>
+                );
+              })}
+            </div>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
 

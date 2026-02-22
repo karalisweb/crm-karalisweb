@@ -20,18 +20,22 @@ export async function GET() {
         data: {
           id: "default",
           scoreThreshold: 60,
-          dailyCallLimit: 5,
           ghostOfferDays: 20,
           maxCallAttempts: 3,
+          followUpDaysVideo: 7,
+          followUpDaysLetter: 7,
+          recontactMonths: 6,
         },
       });
     }
 
     return NextResponse.json({
       scoreThreshold: settings.scoreThreshold,
-      dailyCallLimit: settings.dailyCallLimit,
       ghostOfferDays: settings.ghostOfferDays,
       maxCallAttempts: settings.maxCallAttempts,
+      followUpDaysVideo: settings.followUpDaysVideo,
+      followUpDaysLetter: settings.followUpDaysLetter,
+      recontactMonths: settings.recontactMonths,
     });
   } catch (error) {
     console.error("Error fetching CRM settings:", error);
@@ -60,19 +64,19 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { scoreThreshold, dailyCallLimit, ghostOfferDays, maxCallAttempts } = body;
+    const {
+      scoreThreshold,
+      ghostOfferDays,
+      maxCallAttempts,
+      followUpDaysVideo,
+      followUpDaysLetter,
+      recontactMonths,
+    } = body;
 
     // Validazione
     if (scoreThreshold !== undefined && (scoreThreshold < 0 || scoreThreshold > 100)) {
       return NextResponse.json(
         { error: "Score threshold deve essere tra 0 e 100" },
-        { status: 400 }
-      );
-    }
-
-    if (dailyCallLimit !== undefined && dailyCallLimit < 1) {
-      return NextResponse.json(
-        { error: "Limite chiamate giornaliere deve essere almeno 1" },
         { status: 400 }
       );
     }
@@ -91,29 +95,56 @@ export async function PUT(request: Request) {
       );
     }
 
+    if (followUpDaysVideo !== undefined && followUpDaysVideo < 1) {
+      return NextResponse.json(
+        { error: "Giorni follow-up video deve essere almeno 1" },
+        { status: 400 }
+      );
+    }
+
+    if (followUpDaysLetter !== undefined && followUpDaysLetter < 1) {
+      return NextResponse.json(
+        { error: "Giorni follow-up lettera deve essere almeno 1" },
+        { status: 400 }
+      );
+    }
+
+    if (recontactMonths !== undefined && recontactMonths < 1) {
+      return NextResponse.json(
+        { error: "Mesi di ricontatto deve essere almeno 1" },
+        { status: 400 }
+      );
+    }
+
     const settings = await db.settings.upsert({
       where: { id: "default" },
       update: {
         ...(scoreThreshold !== undefined && { scoreThreshold }),
-        ...(dailyCallLimit !== undefined && { dailyCallLimit }),
         ...(ghostOfferDays !== undefined && { ghostOfferDays }),
         ...(maxCallAttempts !== undefined && { maxCallAttempts }),
+        ...(followUpDaysVideo !== undefined && { followUpDaysVideo }),
+        ...(followUpDaysLetter !== undefined && { followUpDaysLetter }),
+        ...(recontactMonths !== undefined && { recontactMonths }),
         updatedAt: new Date(),
       },
       create: {
         id: "default",
         scoreThreshold: scoreThreshold ?? 60,
-        dailyCallLimit: dailyCallLimit ?? 5,
         ghostOfferDays: ghostOfferDays ?? 20,
         maxCallAttempts: maxCallAttempts ?? 3,
+        followUpDaysVideo: followUpDaysVideo ?? 7,
+        followUpDaysLetter: followUpDaysLetter ?? 7,
+        recontactMonths: recontactMonths ?? 6,
       },
     });
 
     return NextResponse.json({
       scoreThreshold: settings.scoreThreshold,
-      dailyCallLimit: settings.dailyCallLimit,
       ghostOfferDays: settings.ghostOfferDays,
       maxCallAttempts: settings.maxCallAttempts,
+      followUpDaysVideo: settings.followUpDaysVideo,
+      followUpDaysLetter: settings.followUpDaysLetter,
+      recontactMonths: settings.recontactMonths,
     });
   } catch (error) {
     console.error("Error updating CRM settings:", error);

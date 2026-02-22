@@ -49,6 +49,7 @@ interface PipelinePageProps {
   showAppointment?: boolean;
   showOfferSent?: boolean;
   showLostReason?: boolean;
+  hideHeader?: boolean;
 }
 
 function LeadCard({
@@ -218,6 +219,7 @@ export function PipelinePage({
   showAppointment,
   showOfferSent,
   showLostReason,
+  hideHeader,
 }: PipelinePageProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -251,19 +253,21 @@ export function PipelinePage({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{title}</h1>
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{total} lead</Badge>
+            <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Aggiorna
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{total} lead</Badge>
-          <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Aggiorna
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Errore */}
       {error && (

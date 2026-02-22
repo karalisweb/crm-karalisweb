@@ -157,28 +157,70 @@ export interface GoogleMapsResult {
 }
 
 // ==========================================
-// PIPELINE STAGES CONFIG - MSD
+// PIPELINE STAGES CONFIG - Video Outreach
 // ==========================================
 
 export const PIPELINE_STAGES = {
-  // === SELEZIONE (pre-chiamata) ===
-  NEW: { label: "Nuovo", icon: "inbox", color: "gray", group: "selezione" },
-  DA_CHIAMARE: { label: "Da chiamare oggi", icon: "phone", color: "blue", group: "selezione" },
-  DA_VERIFICARE: { label: "Da verificare", icon: "search", color: "amber", group: "selezione" },
-  NON_TARGET: { label: "Non target", icon: "x", color: "slate", group: "selezione" },
-  SENZA_SITO: { label: "Senza sito", icon: "globe-off", color: "gray", group: "selezione" },
+  // === SCOUTING ===
+  NUOVO: { label: "Nuovo", icon: "inbox", color: "gray", group: "scouting" },
 
-  // === VENDITA MSD (post-chiamata) ===
-  NON_RISPONDE: { label: "Non risponde", icon: "phone-missed", color: "orange", group: "vendita" },
-  RICHIAMARE: { label: "Richiamare", icon: "phone-callback", color: "cyan", group: "vendita" },
+  // === QUALIFICAZIONE ===
+  DA_QUALIFICARE: { label: "Da qualificare", icon: "clipboard-check", color: "amber", group: "qualificazione" },
+  QUALIFICATO: { label: "Qualificato", icon: "user-check", color: "blue", group: "qualificazione" },
+
+  // === OUTREACH ===
+  VIDEO_DA_FARE: { label: "Video da fare", icon: "video", color: "purple", group: "outreach" },
+  VIDEO_INVIATO: { label: "Video inviato", icon: "send", color: "indigo", group: "outreach" },
+  LETTERA_INVIATA: { label: "Lettera inviata", icon: "mail", color: "cyan", group: "outreach" },
+  FOLLOW_UP_LINKEDIN: { label: "Follow-up LinkedIn", icon: "linkedin", color: "sky", group: "outreach" },
+
+  // === VENDITA ===
+  RISPOSTO: { label: "Ha risposto", icon: "message-circle", color: "green", group: "vendita" },
   CALL_FISSATA: { label: "Call fissata", icon: "calendar", color: "purple", group: "vendita" },
-  NON_PRESENTATO: { label: "Non presentato", icon: "user-x", color: "rose", group: "vendita" },
-  OFFERTA_INVIATA: { label: "Offerta inviata", icon: "mail", color: "yellow", group: "vendita" },
-  VINTO: { label: "Cliente MSD", icon: "check-circle", color: "emerald", group: "vendita" },
+  IN_CONVERSAZIONE: { label: "In conversazione", icon: "messages-square", color: "teal", group: "vendita" },
+  PROPOSTA_INVIATA: { label: "Proposta inviata", icon: "file-text", color: "yellow", group: "vendita" },
+  VINTO: { label: "Cliente", icon: "trophy", color: "emerald", group: "vendita" },
   PERSO: { label: "Perso", icon: "x-circle", color: "red", group: "vendita" },
+
+  // === ARCHIVIO ===
+  DA_RICHIAMARE_6M: { label: "Richiamare tra 6 mesi", icon: "clock", color: "orange", group: "archivio" },
+  RICICLATO: { label: "Riciclato", icon: "recycle", color: "slate", group: "archivio" },
+  NON_TARGET: { label: "Non target", icon: "x", color: "slate", group: "archivio" },
+  SENZA_SITO: { label: "Senza sito", icon: "globe-off", color: "gray", group: "archivio" },
 } as const;
 
 export type PipelineStageKey = keyof typeof PIPELINE_STAGES;
+
+// Gruppi di stage per navigazione e filtri
+export const STAGE_GROUPS = {
+  scouting: ["NUOVO"] as PipelineStageKey[],
+  qualificazione: ["DA_QUALIFICARE", "QUALIFICATO"] as PipelineStageKey[],
+  outreach: ["VIDEO_DA_FARE", "VIDEO_INVIATO", "LETTERA_INVIATA", "FOLLOW_UP_LINKEDIN"] as PipelineStageKey[],
+  vendita: ["RISPOSTO", "CALL_FISSATA", "IN_CONVERSAZIONE", "PROPOSTA_INVIATA", "VINTO", "PERSO"] as PipelineStageKey[],
+  archivio: ["DA_RICHIAMARE_6M", "RICICLATO", "NON_TARGET", "SENZA_SITO"] as PipelineStageKey[],
+} as const;
+
+// ==========================================
+// VIDEO SCRIPT DATA
+// ==========================================
+
+export interface VideoScriptProblemBlock {
+  area: string;       // es. "Tracking", "SEO", "Performance"
+  problem: string;    // Il problema specifico
+  impact: string;     // Impatto business
+}
+
+export interface VideoScriptData {
+  compliment: string;                    // Una cosa che funziona bene
+  problemBlocks: VideoScriptProblemBlock[]; // 3 blocchi problema dall'audit
+  cta: string;                           // Call to action
+  generatedAt: string;                   // ISO date
+  generatedFrom: {
+    auditScore: number;
+    commercialTag: string | null;
+    danielaNotes: string | null;
+  };
+}
 
 // ==========================================
 // LOST REASONS CONFIG

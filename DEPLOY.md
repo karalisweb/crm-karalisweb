@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Deploy
 
-Versione attuale: **2.1.0**
+Versione attuale: **2.2.0**
 
 ---
 
@@ -145,7 +145,7 @@ La versione va tenuta sincronizzata in:
 |------|-------|---------|
 | `package.json` | `"version"` | `"2.1.0"` |
 | `deploy.sh` | `APP_VERSION` + header | `APP_VERSION="2.1.0"` |
-| `DEPLOY.md` | Intestazione | `Versione attuale: **2.1.0**` |
+| `DEPLOY.md` | Intestazione | `Versione attuale: **2.2.0**` |
 | **Sidebar UI** | Sotto il nome app | `v2.1.0` |
 
 Per aggiornare tutto in automatico usare `--bump`:

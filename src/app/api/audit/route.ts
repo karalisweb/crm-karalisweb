@@ -221,20 +221,14 @@ export async function POST(request: NextRequest) {
     // Calcola opportunityScore
     const finalScore = auditResult?.opportunityScore ?? 50;
 
-    // Determina il pipelineStage in base a tag commerciale E score threshold
+    // Determina il pipelineStage: Daniela decide, l'app pre-filtra solo NON_TARGET
     let newPipelineStage: PipelineStage;
-    if (commercialResult.tagResult.tag === "DA_APPROFONDIRE") {
-      newPipelineStage = PipelineStage.DA_VERIFICARE;
-    } else if (commercialResult.tagResult.tag === "NON_TARGET") {
+    if (commercialResult.tagResult.tag === "NON_TARGET") {
       newPipelineStage = PipelineStage.NON_TARGET;
-    } else if (finalScore < scoreThreshold) {
-      // Score sotto soglia → DA_VERIFICARE (anche se callable)
-      newPipelineStage = PipelineStage.DA_VERIFICARE;
     } else if (commercialResult.tagResult.isCallable) {
-      // Callable + score sopra soglia → DA_CHIAMARE
-      newPipelineStage = PipelineStage.DA_CHIAMARE;
+      newPipelineStage = PipelineStage.DA_QUALIFICARE;
     } else {
-      newPipelineStage = PipelineStage.NEW;
+      newPipelineStage = PipelineStage.DA_QUALIFICARE;
     }
 
     await db.lead.update({
@@ -438,20 +432,12 @@ export async function PUT(request: NextRequest) {
       // Calcola opportunityScore
       const finalScore = auditResult?.opportunityScore ?? 50;
 
-      // Determina il pipelineStage in base a tag commerciale E score threshold
+      // Determina il pipelineStage: NON_TARGET scartato, il resto va a DA_QUALIFICARE
       let newPipelineStage: PipelineStage;
-      if (commercialResult.tagResult.tag === "DA_APPROFONDIRE") {
-        newPipelineStage = PipelineStage.DA_VERIFICARE;
-      } else if (commercialResult.tagResult.tag === "NON_TARGET") {
+      if (commercialResult.tagResult.tag === "NON_TARGET") {
         newPipelineStage = PipelineStage.NON_TARGET;
-      } else if (finalScore < scoreThreshold) {
-        // Score sotto soglia → DA_VERIFICARE (anche se callable)
-        newPipelineStage = PipelineStage.DA_VERIFICARE;
-      } else if (commercialResult.tagResult.isCallable) {
-        // Callable + score sopra soglia → DA_CHIAMARE
-        newPipelineStage = PipelineStage.DA_CHIAMARE;
       } else {
-        newPipelineStage = PipelineStage.NEW;
+        newPipelineStage = PipelineStage.DA_QUALIFICARE;
       }
 
       // Salva risultati - SEMPRE completa

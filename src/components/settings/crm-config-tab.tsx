@@ -8,13 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw, Target, Phone, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, RotateCcw, Target, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2, Video, Mail, CalendarClock } from "lucide-react";
 
 interface CrmSettings {
   scoreThreshold: number;
-  dailyCallLimit: number;
   ghostOfferDays: number;
   maxCallAttempts: number;
+  followUpDaysVideo: number;
+  followUpDaysLetter: number;
+  recontactMonths: number;
 }
 
 interface AuditStats {
@@ -28,9 +30,11 @@ interface AuditStats {
 export function CrmConfigTab() {
   const [settings, setSettings] = useState<CrmSettings>({
     scoreThreshold: 60,
-    dailyCallLimit: 5,
     ghostOfferDays: 20,
     maxCallAttempts: 3,
+    followUpDaysVideo: 7,
+    followUpDaysLetter: 7,
+    recontactMonths: 6,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,9 +60,11 @@ export function CrmConfigTab() {
     if (originalSettings) {
       const changed =
         settings.scoreThreshold !== originalSettings.scoreThreshold ||
-        settings.dailyCallLimit !== originalSettings.dailyCallLimit ||
         settings.ghostOfferDays !== originalSettings.ghostOfferDays ||
-        settings.maxCallAttempts !== originalSettings.maxCallAttempts;
+        settings.maxCallAttempts !== originalSettings.maxCallAttempts ||
+        settings.followUpDaysVideo !== originalSettings.followUpDaysVideo ||
+        settings.followUpDaysLetter !== originalSettings.followUpDaysLetter ||
+        settings.recontactMonths !== originalSettings.recontactMonths;
       setHasChanges(changed);
     }
   }, [settings, originalSettings]);
@@ -107,9 +113,11 @@ export function CrmConfigTab() {
   function resetToDefaults() {
     setSettings({
       scoreThreshold: 60,
-      dailyCallLimit: 5,
       ghostOfferDays: 20,
       maxCallAttempts: 3,
+      followUpDaysVideo: 7,
+      followUpDaysLetter: 7,
+      recontactMonths: 6,
     });
   }
 
@@ -248,7 +256,7 @@ export function CrmConfigTab() {
       if (res.ok) {
         const data = await res.json();
         toast.success(
-          `Ricalcolati ${data.results.total} lead: ${data.results.daChiamare} DA_CHIAMARE, ${data.results.daVerificare} DA_VERIFICARE, ${data.results.nonTarget} NON_TARGET`
+          `Ricalcolati ${data.results.total} lead: ${data.results.daQualificare ?? 0} DA_QUALIFICARE, ${data.results.nonTarget ?? 0} NON_TARGET`
         );
         fetchAuditStats();
       } else {
@@ -278,11 +286,10 @@ export function CrmConfigTab() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-primary" />
-            <CardTitle>Soglia Score MSD</CardTitle>
+            <CardTitle>Soglia Score</CardTitle>
           </div>
           <CardDescription>
-            I lead con score uguale o superiore a questa soglia vengono mostrati in &quot;Da chiamare oggi&quot;.
-            Lead sotto la soglia vanno in &quot;Da Verificare&quot; per revisione manuale.
+            Soglia informativa per prioritizzare i lead. Daniela decide la qualificazione manualmente.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -298,45 +305,101 @@ export function CrmConfigTab() {
                 onChange={(e) => setSettings({ ...settings, scoreThreshold: parseInt(e.target.value) || 0 })}
               />
             </div>
-            <div className="pt-6">
-              <div className="text-sm text-muted-foreground">
-                Score &ge; {settings.scoreThreshold} = Da chiamare
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Score &lt; {settings.scoreThreshold} = Da verificare
-              </div>
+            <div className="pt-6 text-sm text-muted-foreground">
+              Score di riferimento per la qualificazione
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Daily Call Limit */}
+      {/* Follow-up Days Video */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Phone className="h-5 w-5 text-primary" />
-            <CardTitle>Limite Chiamate Giornaliere</CardTitle>
+            <Video className="h-5 w-5 text-primary" />
+            <CardTitle>Follow-up dopo Video</CardTitle>
           </div>
           <CardDescription>
-            Numero massimo di lead da mostrare nella lista &quot;Da chiamare oggi&quot;.
-            Aiuta a mantenere un carico di lavoro gestibile per il commerciale.
+            Giorni dopo l&apos;invio del video prima di suggerire l&apos;invio della lettera.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="dailyCallLimit">Lead da chiamare al giorno</Label>
+              <Label htmlFor="followUpDaysVideo">Giorni dopo il video</Label>
               <Input
-                id="dailyCallLimit"
+                id="followUpDaysVideo"
                 type="number"
                 min={1}
-                max={50}
-                value={settings.dailyCallLimit}
-                onChange={(e) => setSettings({ ...settings, dailyCallLimit: parseInt(e.target.value) || 1 })}
+                max={60}
+                value={settings.followUpDaysVideo}
+                onChange={(e) => setSettings({ ...settings, followUpDaysVideo: parseInt(e.target.value) || 7 })}
               />
             </div>
             <div className="pt-6 text-sm text-muted-foreground">
-              Mostra max {settings.dailyCallLimit} lead per volta
+              Suggerisci lettera dopo {settings.followUpDaysVideo} giorni
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Follow-up Days Letter */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            <CardTitle>Follow-up dopo Lettera</CardTitle>
+          </div>
+          <CardDescription>
+            Giorni dopo l&apos;invio della lettera prima di suggerire il contatto LinkedIn.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="followUpDaysLetter">Giorni dopo la lettera</Label>
+              <Input
+                id="followUpDaysLetter"
+                type="number"
+                min={1}
+                max={60}
+                value={settings.followUpDaysLetter}
+                onChange={(e) => setSettings({ ...settings, followUpDaysLetter: parseInt(e.target.value) || 7 })}
+              />
+            </div>
+            <div className="pt-6 text-sm text-muted-foreground">
+              Suggerisci LinkedIn dopo {settings.followUpDaysLetter} giorni
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recontact Months */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-5 w-5 text-primary" />
+            <CardTitle>Mesi Ricontatto</CardTitle>
+          </div>
+          <CardDescription>
+            Dopo quanti mesi un lead in &quot;Da richiamare&quot; torna automaticamente in pipeline.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="recontactMonths">Mesi prima del ricontatto</Label>
+              <Input
+                id="recontactMonths"
+                type="number"
+                min={1}
+                max={24}
+                value={settings.recontactMonths}
+                onChange={(e) => setSettings({ ...settings, recontactMonths: parseInt(e.target.value) || 6 })}
+              />
+            </div>
+            <div className="pt-6 text-sm text-muted-foreground">
+              Ricontatto automatico dopo {settings.recontactMonths} mesi
             </div>
           </div>
         </CardContent>
@@ -350,7 +413,7 @@ export function CrmConfigTab() {
             <CardTitle>Tentativi Chiamata Massimi</CardTitle>
           </div>
           <CardDescription>
-            Dopo questo numero di chiamate senza risposta, il lead viene spostato in &quot;Da Verificare&quot;.
+            Dopo questo numero di chiamate senza risposta, il lead viene spostato in archivio.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -367,7 +430,7 @@ export function CrmConfigTab() {
               />
             </div>
             <div className="pt-6 text-sm text-muted-foreground">
-              Dopo {settings.maxCallAttempts} tentativi = Da verificare
+              Dopo {settings.maxCallAttempts} tentativi senza risposta
             </div>
           </div>
         </CardContent>
@@ -378,10 +441,10 @@ export function CrmConfigTab() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
-            <CardTitle>Giorni Ghost Offerta</CardTitle>
+            <CardTitle>Giorni Ghost Proposta</CardTitle>
           </div>
           <CardDescription>
-            Se un lead con offerta inviata non risponde dopo questo numero di giorni,
+            Se un lead con proposta inviata non risponde dopo questo numero di giorni,
             viene considerato &quot;ghost&quot; e segnalato per follow-up.
           </CardDescription>
         </CardHeader>
@@ -504,7 +567,6 @@ export function CrmConfigTab() {
             </div>
             <CardDescription>
               Esegue l&apos;audit per tutti i lead in stato PENDING che hanno un sito web.
-              Utile se l&apos;audit automatico ha fallito o per processare lead importati manualmente.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -549,17 +611,13 @@ export function CrmConfigTab() {
               <CardTitle className="text-base">Ricalcola Stati Pipeline</CardTitle>
             </div>
             <CardDescription>
-              Ricalcola gli stati dei lead con audit completato in base allo score e ai tag commerciali.
-              Utile dopo aver modificato la soglia score o per correggere inconsistenze.
+              Ricalcola gli stati dei lead con audit completato in base ai tag commerciali.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Soglia attuale: <Badge variant="outline">{settings.scoreThreshold}</Badge>
-                <span className="ml-2">
-                  (Score &ge; {settings.scoreThreshold} → DA_CHIAMARE, altrimenti → DA_VERIFICARE)
-                </span>
+                Callable → DA_QUALIFICARE, Non target → NON_TARGET
               </div>
               <Button
                 onClick={recalculateStages}
@@ -591,7 +649,6 @@ export function CrmConfigTab() {
             </div>
             <CardDescription>
               Corregge il flag isCallable per tutti i lead in base al loro tag commerciale.
-              Necessario se i lead non appaiono nella pagina &quot;Oggi&quot; nonostante siano in DA_CHIAMARE.
             </CardDescription>
           </CardHeader>
           <CardContent>

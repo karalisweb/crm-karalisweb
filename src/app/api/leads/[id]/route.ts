@@ -74,6 +74,36 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           nextFollowupAt: body.nextFollowupAt ? new Date(body.nextFollowupAt) : null,
         }),
         ...(body.assignedTo !== undefined && { assignedTo: body.assignedTo }),
+        // Video outreach
+        ...(body.videoScriptData !== undefined && { videoScriptData: body.videoScriptData }),
+        ...(body.videoSentAt !== undefined && {
+          videoSentAt: body.videoSentAt ? new Date(body.videoSentAt) : null,
+        }),
+        ...(body.videoViewedAt !== undefined && {
+          videoViewedAt: body.videoViewedAt ? new Date(body.videoViewedAt) : null,
+        }),
+        // Follow-up
+        ...(body.letterSentAt !== undefined && {
+          letterSentAt: body.letterSentAt ? new Date(body.letterSentAt) : null,
+        }),
+        ...(body.linkedinSentAt !== undefined && {
+          linkedinSentAt: body.linkedinSentAt ? new Date(body.linkedinSentAt) : null,
+        }),
+        // Risposta
+        ...(body.respondedAt !== undefined && {
+          respondedAt: body.respondedAt ? new Date(body.respondedAt) : null,
+        }),
+        ...(body.respondedVia !== undefined && { respondedVia: body.respondedVia }),
+        // Qualificazione Daniela
+        ...(body.danielaNotes !== undefined && { danielaNotes: body.danielaNotes }),
+        ...(body.qualifiedAt !== undefined && {
+          qualifiedAt: body.qualifiedAt ? new Date(body.qualifiedAt) : null,
+        }),
+        ...(body.qualifiedBy !== undefined && { qualifiedBy: body.qualifiedBy }),
+        // Recontact
+        ...(body.recontactAt !== undefined && {
+          recontactAt: body.recontactAt ? new Date(body.recontactAt) : null,
+        }),
       },
     });
 

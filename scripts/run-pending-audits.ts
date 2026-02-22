@@ -249,13 +249,11 @@ async function runAuditForLead(lead: { id: string; name: string | null; website:
       commercialPriority: tagResult.priority,
       isCallable: tagResult.isCallable,
       // Pipeline MSD
-      pipelineStage: tagResult.tag === "DA_APPROFONDIRE"
-        ? "DA_VERIFICARE"
-        : tagResult.tag === "NON_TARGET"
+      pipelineStage: tagResult.tag === "NON_TARGET"
         ? "NON_TARGET"
         : tagResult.isCallable
-        ? "DA_CHIAMARE"
-        : "NEW",
+        ? "DA_QUALIFICARE"
+        : "DA_QUALIFICARE",
     },
   });
 

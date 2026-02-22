@@ -33,9 +33,11 @@ interface Lead {
 }
 
 const TABS = [
-  { key: "NON_TARGET", label: "Non Target", description: "Nessun segnale ads" },
+  { key: "PERSO", label: "Persi", description: "Contattati, non interessati" },
+  { key: "DA_RICHIAMARE_6M", label: "6 Mesi", description: "Da richiamare tra 6 mesi" },
+  { key: "RICICLATO", label: "Riciclati", description: "Lead riciclati" },
+  { key: "NON_TARGET", label: "Non Target", description: "Nessun segnale commerciale" },
   { key: "SENZA_SITO", label: "Senza Sito", description: "Niente da analizzare" },
-  { key: "PERSO", label: "Persi", description: "Chiamati, non interessati" },
 ] as const;
 
 function LeadArchiveCard({
@@ -53,10 +55,10 @@ function LeadArchiveCard({
       const res = await fetch(`/api/leads/${lead.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pipelineStage: "DA_CHIAMARE" }),
+        body: JSON.stringify({ pipelineStage: "DA_QUALIFICARE" }),
       });
       if (!res.ok) throw new Error("Errore");
-      toast.success(`${lead.name} spostato in Da Chiamare`);
+      toast.success(`${lead.name} spostato in Da Qualificare`);
       onRestore();
     } catch {
       toast.error("Errore nel ripristino");
@@ -93,7 +95,7 @@ function LeadArchiveCard({
               className="h-8 px-2 border-green-500/50 text-green-500 hover:bg-green-500/10"
               onClick={restore}
               disabled={loading}
-              title="Ripristina in Da Chiamare"
+              title="Ripristina in Da Qualificare"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -192,7 +194,7 @@ export default function ArchivioPage() {
         {TABS.find((t) => t.key === activeTab)?.description}
         {" · "}
         Clicca <ArrowUp className="h-3 w-3 inline text-green-500" /> per
-        ripristinare un lead in Da Chiamare
+        ripristinare un lead in Da Qualificare
       </p>
 
       {/* Lista */}
