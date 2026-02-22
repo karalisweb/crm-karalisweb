@@ -6,6 +6,48 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.2.0] - 2026-02-22
+
+### Aggiunto - UI/UX Overhaul
+- **Cmd+K Command Palette**: Ricerca globale lead + navigazione rapida con `cmdk`
+- **Sidebar collassabile**: Toggle 260px / 64px con badge conteggi in tempo reale (polling 60s)
+- **Dashboard animata**: Contatori animati con `framer-motion`, funnel chart pipeline con `recharts`, sezione "Oggi devi..." con follow-up urgenti
+- **Score Ring**: Anello SVG circolare animato per opportunity score nella pagina dettaglio lead
+- **Audit Radar Chart**: Grafico radar a 6 assi (Performance, SEO, Tracking, Social, Trust, Content)
+- **Semafori audit**: Sostituiti i badge Si/No con icone colorate (verde/ambra/rosso) per ogni check
+- **Talking Points raggruppati**: Punti vendita organizzati per servizio con accordion e icone colorate
+- **Calendario appuntamenti**: Vista settimanale navigabile con griglia 7 colonne + toggle lista
+- **Filtri score Kanban**: Filtro rapido Hot (80+) / Buono (60+) / Tutti
+- **Vista compatta Kanban**: Toggle per card ridotte (solo nome + score + telefono)
+- **Bordi colorati per score**: `border-l-4` rosso/ambra/giallo/blu su tutte le card lead
+- **PDF Report Audit**: Generazione PDF con `jsPDF` (score, barre area, checklist, talking points)
+- **Breadcrumb navigation**: Componente riutilizzabile per navigazione contestuale
+- **Empty State**: Componente riutilizzabile per stati vuoti con icona e CTA
+- **Date utils**: Utility `timeAgo()`, `smartDate()`, `formatDate()` con `date-fns` e locale italiano
+
+### Modificato
+- Header colonne Kanban con bordo inferiore colorato
+- Transizioni pagina con `framer-motion` (fade + slide)
+- Stili cmdk in `globals.css` per dark theme
+- Timestamp relativi ("2 ore fa") al posto di date statiche in dashboard e lead detail
+
+### Rimosso - Pulizia codice morto
+- `lead-card.tsx` - componente non utilizzato
+- `quick-call-logger.tsx` - componente non utilizzato
+- `avatar.tsx`, `checkbox.tsx`, `form.tsx`, `scroll-area.tsx`, `sheet.tsx` - UI components non importati
+- `empty-state.tsx` (UI) - non importato da nessuna pagina
+- `verification-checklist.ts` - funzione mai chiamata
+
+### Dipendenze aggiunte
+- `recharts` - Grafici (funnel, radar)
+- `cmdk@1.0.4` - Command palette
+- `framer-motion` - Animazioni
+- `date-fns` - Formattazione date
+- `jspdf` - Generazione PDF
+- `html2canvas` - Screenshot per PDF
+
+---
+
 ## [2.1.0] - 2026-02-16
 
 ### Aggiunto

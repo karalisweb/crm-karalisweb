@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **2.1.0** | Ultimo aggiornamento: 2026-02-16
+Versione: **2.2.0** | Ultimo aggiornamento: 2026-02-22
 
 ---
 
@@ -44,6 +44,11 @@ Versione: **2.1.0** | Ultimo aggiornamento: 2026-02-16
 | **Forms** | React Hook Form + Zod | 7.71.0 / 4.3.5 |
 | **Toasts** | Sonner | 2.0.7 |
 | **Icons** | Lucide React | 0.562.0 |
+| **Charts** | Recharts | 2.x |
+| **Animations** | Framer Motion | 11.x |
+| **Command Palette** | cmdk | 1.0.4 |
+| **Date Utils** | date-fns | 4.x |
+| **PDF Generation** | jsPDF | 3.x |
 | **Process Manager** | PM2 | (server) |
 
 ---
@@ -390,21 +395,42 @@ File in `src/lib/commercial/`:
 ### Layout
 | File | Componente |
 |------|-----------|
-| `layout/sidebar.tsx` | Sidebar navigazione desktop |
+| `layout/sidebar.tsx` | Sidebar collassabile con badge conteggi e polling |
+| `layout/sidebar-context.tsx` | Context per stato collapsed sidebar (localStorage) |
+| `layout/command-palette.tsx` | Cmd+K ricerca globale lead + navigazione |
+| `layout/breadcrumb.tsx` | Breadcrumb navigazione contestuale |
 | `layout/mobile-header.tsx` | Header mobile responsive |
 | `layout/bottom-nav.tsx` | Navigazione bottom mobile |
 
 ### Lead
 | File | Componente |
 |------|-----------|
-| `leads/lead-card.tsx` | Card lead nella lista |
-| `leads/quick-call-logger.tsx` | Bottoni esito chiamata rapido |
 | `leads/audit-button.tsx` | Bottone avvia audit |
+| `leads/audit-check.tsx` | Semaforo audit (verde/ambra/rosso) |
+| `leads/audit-pdf-button.tsx` | Generazione PDF report audit con jsPDF |
+| `leads/audit-radar.tsx` | Radar chart a 6 assi per panoramica audit |
 | `leads/pipeline-stage-selector.tsx` | Selettore stadio pipeline |
-| `leads/pipeline-page.tsx` | Vista pipeline kanban |
+| `leads/pipeline-page.tsx` | Vista pipeline riutilizzabile (con hideHeader) |
+| `leads/score-ring.tsx` | Anello SVG circolare animato per score |
+| `leads/talking-points-grouped.tsx` | Talking points raggruppati per servizio |
+
+### Dashboard
+| File | Componente |
+|------|-----------|
+| `dashboard/funnel-chart.tsx` | Funnel chart pipeline con Recharts |
+
+### Calendar
+| File | Componente |
+|------|-----------|
+| `calendar/weekly-calendar.tsx` | Calendario settimanale navigabile |
+
+### UI generici
+| File | Componente |
+|------|-----------|
+| `ui/animated-counter.tsx` | Contatore numerico animato (framer-motion) |
 
 ### Shadcn/ui (`components/ui/`)
-button, card, dialog, input, textarea, table, tabs, select, dropdown-menu, checkbox, switch, badge, avatar, label, separator, scroll-area, sheet, input-otp, sonner, skeleton
+button, card, dialog, input, textarea, table, tabs, select, dropdown-menu, switch, badge, label, separator, input-otp, sonner, skeleton
 
 ---
 

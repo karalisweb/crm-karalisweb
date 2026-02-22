@@ -1,6 +1,6 @@
 # KW Sales CRM
 
-Versione: **2.1.0** | [Changelog](CHANGELOG.md) | [Guida Utente](GUIDA_UTENTE.md) | [Docs Tecniche](TECHNICAL-DOCS.md) | [Deploy](DEPLOY.md)
+Versione: **2.2.0** | [Changelog](CHANGELOG.md) | [Guida Utente](GUIDA_UTENTE.md) | [Docs Tecniche](TECHNICAL-DOCS.md) | [Deploy](DEPLOY.md)
 
 CRM per il supporto commerciale di un'agenzia di web marketing. Consente di cercare lead su Google Maps, analizzare i loro siti web automaticamente, e gestire il ciclo di vendita.
 
@@ -14,6 +14,10 @@ CRM per il supporto commerciale di un'agenzia di web marketing. Consente di cerc
 - **Verifica Audit**: Checklist con badge Si/No per validazione manuale
 - **Sistema Commerciale**: Tag automatici e prioritizzazione lead
 - **2FA e RBAC**: Autenticazione a due fattori e controllo accessi
+- **Cmd+K Search**: Ricerca globale lead e navigazione rapida
+- **PDF Report**: Export audit in PDF professionale
+- **Calendario**: Vista settimanale appuntamenti
+- **Dashboard avanzata**: Funnel chart, contatori animati, urgenze del giorno
 
 ## Stack Tecnologico
 

@@ -143,10 +143,10 @@ La versione va tenuta sincronizzata in:
 
 | File | Campo | Esempio |
 |------|-------|---------|
-| `package.json` | `"version"` | `"2.1.0"` |
-| `deploy.sh` | `APP_VERSION` + header | `APP_VERSION="2.1.0"` |
+| `package.json` | `"version"` | `"2.2.0"` |
+| `deploy.sh` | `APP_VERSION` + header | `APP_VERSION="2.2.0"` |
 | `DEPLOY.md` | Intestazione | `Versione attuale: **2.2.0**` |
-| **Sidebar UI** | Sotto il nome app | `v2.1.0` |
+| **Sidebar UI** | Sotto il nome app | `v2.2.0` |
 
 Per aggiornare tutto in automatico usare `--bump`:
 ```bash

@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **2.1.0** | Ultimo aggiornamento: 2026-02-16
+Versione: **2.2.0** | Ultimo aggiornamento: 2026-02-22
 
 > Questa guida spiega come utilizzare il CRM per verificare i lead prima di passarli al commerciale.
 
@@ -218,25 +218,39 @@ Quando apri il sito, chiediti:
 ### Dashboard
 
 La pagina iniziale mostra un riepilogo con:
-- Numero totale di lead nel sistema
-- Lead da verificare
-- Lead da chiamare
-- Statistiche per stage della pipeline
+- Contatori animati: lead totali, da verificare, da chiamare, appuntamenti
+- **Funnel chart**: Grafico visuale della pipeline con i numeri per ogni stadio
+- **"Oggi devi..."**: Follow-up urgenti e appuntamenti del giorno
+- Azioni rapide per le operazioni piu frequenti
+
+> **Novita v2.2:** Usa **Cmd+K** (o Ctrl+K) in qualsiasi pagina per cercare velocemente un lead o navigare alle sezioni del CRM.
 
 ### Da Verificare
 
 Qui trovi i lead con audit completato che devono essere verificati manualmente. Ogni lead mostra:
 - Nome dell'azienda e categoria
-- Punteggio opportunita (0-100)
+- **Anello score** colorato (rosso = hot, ambra = buono, verde = medio, blu = basso)
 - Link al sito web
-- Checklist di verifica con badge Si/No
+- Checklist di verifica con **semafori colorati** (verde/rosso/ambra)
+- **Grafico radar** che mostra la panoramica delle 6 aree audit
 
 ### Da Chiamare
 
 Lead verificati e pronti per la chiamata. Mostra:
-- Talking points (argomenti per la chiamata)
+- **Talking points raggruppati per servizio** (Web Design, SEO, Google Ads, ecc.) con accordion espandibili
 - Storico attivita (chiamate precedenti, note)
 - Bottoni per registrare l'esito della chiamata
+- **Bordo colorato** su ogni card per indicare la priorita del lead
+- **Filtri rapidi**: Hot (80+), Buono (60+), Tutti
+- **Vista Kanban** con drag & drop e modalita compatta
+- **Scarica Report PDF**: Bottone per generare un PDF dell'audit da inviare al prospect
+
+### Appuntamenti
+
+Pagina dedicata alla gestione degli appuntamenti con:
+- **Vista calendario settimanale** navigabile (avanti/indietro)
+- **Vista lista** per una panoramica rapida
+- Toggle tra le due modalita
 
 ### Nuova Ricerca
 
@@ -279,4 +293,4 @@ R: Si, puoi sempre tornare sulla scheda del lead e modificare la verifica o aggi
 
 ---
 
-*Documento generato il 2026-02-16 | KW Sales CRM v2.1.0*
+*Documento aggiornato il 2026-02-22 | KW Sales CRM v2.2.0*
