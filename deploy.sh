@@ -4,8 +4,8 @@
 # ║             KW SALES CRM - Deploy Script                     ║
 # ╠══════════════════════════════════════════════════════════════╣
 # ║ App:              KW Sales CRM                               ║
-# ║ Versione:         2.2.0                                      ║
-# ║ Ultimo update:    2026-02-22                                 ║
+# ║ Versione:         (da package.json)                          ║
+# ║ Ultimo update:    2026-02-23                                 ║
 # ║                                                              ║
 # ║ Cartella locale:  ~/Desktop/Sviluppo App Claude Code/       ║
 # ║                   CRM /sales-app                             ║
@@ -26,8 +26,23 @@
 #      ./deploy.sh --bump patch "messaggio commit"
 #      ./deploy.sh --bump minor "messaggio commit"
 #      ./deploy.sh --bump major "messaggio commit"
+#
+# Il deploy esegue in ordine:
+# 1. Verifica coerenza versione e CHANGELOG
+# 2. Verifica stato Git
+# 3. Build locale di verifica (type-check)
+# 4. Add + Commit
+# 5. Push a GitHub
+# 6. Pull sul VPS (con git stash automatico)
+# 7. npm install (solo se package.json cambiato) + Prisma generate
+# 8. Build Next.js sul server
+# 9. Restart PM2 + health check
 
 set -e  # Esci se un comando fallisce
+
+# Carica nvm se disponibile (necessario per npm su Mac con nvm)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
 # Colori per output
 RED='\033[0;31m'
@@ -41,7 +56,9 @@ NC='\033[0m' # No Color
 # CONFIGURAZIONE (modifica qui per altre app)
 # ═══════════════════════════════════════════
 APP_NAME="KW Sales CRM"
-APP_VERSION="2.2.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Versione letta dinamicamente da package.json
+APP_VERSION=$(grep '"version"' "${SCRIPT_DIR}/package.json" | head -1 | sed 's/.*"version"[^"]*"\([^"]*\)".*/\1/')
 VPS_HOST="root@185.192.97.108"
 VPS_PATH="/opt/sales-app"
 BRANCH="main"
@@ -49,7 +66,6 @@ PM2_PROCESS="sales-crm"
 LOCAL_PORT=3003
 SERVER_PORT=3003
 PUBLIC_URL="https://crm.karalisdemo.it"
-NGINX_CONFIG="/etc/nginx/sites-available/crm.karalisdemo.it"
 GITHUB_REPO="github.com/karalisweb/crm-karalisweb"
 
 # ═══════════════════════════════════════════
@@ -114,22 +130,22 @@ update_version_in_files() {
     local new_version="$2"
 
     # 1. package.json
-    if [ -f "package.json" ]; then
-        sed -i '' "s/\"version\": \"${old_version}\"/\"version\": \"${new_version}\"/" package.json
+    if [ -f "${SCRIPT_DIR}/package.json" ]; then
+        sed -i '' "s/\"version\": \"${old_version}\"/\"version\": \"${new_version}\"/" "${SCRIPT_DIR}/package.json"
         print_success "package.json → v${new_version}"
     fi
 
-    # 2. deploy.sh (questo file - APP_VERSION e header)
-    sed -i '' "s/APP_VERSION=\"${old_version}\"/APP_VERSION=\"${new_version}\"/" deploy.sh
-    sed -i '' "s/# ║ Versione:         ${old_version}/# ║ Versione:         ${new_version}/" deploy.sh
-    # Aggiorna data ultimo update
-    sed -i '' "s/# ║ Ultimo update:    [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}/# ║ Ultimo update:    $(date '+%Y-%m-%d')/" deploy.sh
-    print_success "deploy.sh → v${new_version}"
-
-    # 3. DEPLOY.md
-    if [ -f "DEPLOY.md" ]; then
-        sed -i '' "s/Versione attuale: \*\*${old_version}\*\*/Versione attuale: **${new_version}**/" DEPLOY.md
+    # 2. DEPLOY.md
+    if [ -f "${SCRIPT_DIR}/DEPLOY.md" ]; then
+        sed -i '' "s/Versione attuale: \*\*${old_version}\*\*/Versione attuale: **${new_version}**/" "${SCRIPT_DIR}/DEPLOY.md"
         print_success "DEPLOY.md → v${new_version}"
+    fi
+
+    # 3. Sidebar version label (se presente)
+    local SIDEBAR_FILE="${SCRIPT_DIR}/src/components/layout/sidebar.tsx"
+    if [ -f "$SIDEBAR_FILE" ]; then
+        sed -i '' "s/v${old_version}/v${new_version}/g" "$SIDEBAR_FILE"
+        print_success "sidebar.tsx → v${new_version}"
     fi
 }
 
@@ -188,12 +204,47 @@ if [ -n "$BUMP_TYPE" ]; then
 fi
 
 # ═══════════════════════════════════════════
-# STEP 1: Verifica stato Git
+# STEP 1: Verifica CHANGELOG e coerenza
 # ═══════════════════════════════════════════
 
-print_step "Step 1/7 - Verifico stato Git locale..."
-if [ -n "$(git status --porcelain)" ]; then
-    git status --short
+print_step "Step 1/9 - Verifico CHANGELOG e coerenza versioni..."
+
+# 1a: Verifica che CHANGELOG.md contenga la versione corrente
+if [ -f "${SCRIPT_DIR}/CHANGELOG.md" ]; then
+    if ! grep -q "\[$APP_VERSION\]" "${SCRIPT_DIR}/CHANGELOG.md"; then
+        print_warning "CHANGELOG.md non contiene la versione $APP_VERSION"
+        read -p "  Continuare comunque? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    else
+        print_success "CHANGELOG contiene [$APP_VERSION]"
+    fi
+else
+    print_warning "CHANGELOG.md non trovato, skip verifica"
+fi
+
+# 1b: Verifica coerenza versione sidebar
+SIDEBAR_FILE="${SCRIPT_DIR}/src/components/layout/sidebar.tsx"
+if [ -f "$SIDEBAR_FILE" ]; then
+    SIDEBAR_V=$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' "$SIDEBAR_FILE" | head -1)
+    if [ -n "$SIDEBAR_V" ] && [ "$SIDEBAR_V" != "v$APP_VERSION" ]; then
+        print_warning "Sidebar version ($SIDEBAR_V) diversa da v$APP_VERSION"
+        sed -i '' "s/$SIDEBAR_V/v$APP_VERSION/" "$SIDEBAR_FILE"
+        print_success "Sidebar version aggiornata a v$APP_VERSION"
+    else
+        print_success "Sidebar version $SIDEBAR_V coerente"
+    fi
+fi
+
+# ═══════════════════════════════════════════
+# STEP 2: Verifica stato Git
+# ═══════════════════════════════════════════
+
+print_step "Step 2/9 - Verifico stato Git locale..."
+if [ -n "$(git -C "${SCRIPT_DIR}" status --porcelain)" ]; then
+    git -C "${SCRIPT_DIR}" status --short
 else
     print_warning "Nessuna modifica da committare"
     read -p "Vuoi continuare comunque con il deploy? (y/n) " -n 1 -r
@@ -204,53 +255,104 @@ else
 fi
 
 # ═══════════════════════════════════════════
-# STEP 2: Add e Commit
+# STEP 3: Build locale di verifica
 # ═══════════════════════════════════════════
 
-print_step "Step 2/7 - Aggiungo modifiche e creo commit..."
-git add .
-git commit -m "$COMMIT_MSG" || print_warning "Niente da committare"
+print_step "Step 3/9 - Build locale di verifica (type-check)..."
+BUILD_LOG=$(mktemp)
+if cd "${SCRIPT_DIR}" && npm run build > "$BUILD_LOG" 2>&1; then
+    print_success "Build locale OK"
+else
+    print_error "Build locale fallita!"
+    echo -e "  ${YELLOW}Ultimi errori:${NC}"
+    tail -20 "$BUILD_LOG" 2>/dev/null | sed 's/^/    /'
+    if [ -t 0 ]; then
+        read -p "  Continuare comunque? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            rm -f "$BUILD_LOG"
+            exit 1
+        fi
+    else
+        rm -f "$BUILD_LOG"
+        exit 1
+    fi
+fi
+rm -f "$BUILD_LOG"
 
 # ═══════════════════════════════════════════
-# STEP 3: Push a GitHub
+# STEP 4: Add e Commit
 # ═══════════════════════════════════════════
 
-print_step "Step 3/7 - Push a GitHub ($BRANCH)..."
-git push origin $BRANCH
+print_step "Step 4/9 - Aggiungo modifiche e creo commit..."
+git -C "${SCRIPT_DIR}" add .
+git -C "${SCRIPT_DIR}" commit -m "$COMMIT_MSG" || print_warning "Niente da committare"
+
+# ═══════════════════════════════════════════
+# STEP 5: Push a GitHub
+# ═══════════════════════════════════════════
+
+print_step "Step 5/9 - Push a GitHub ($BRANCH)..."
+git -C "${SCRIPT_DIR}" push origin $BRANCH
 print_success "Push completato"
 
 # ═══════════════════════════════════════════
-# STEP 4: Pull sul VPS + Install dipendenze
+# STEP 6: Pull sul VPS (con git stash)
 # ═══════════════════════════════════════════
 
-print_step "Step 4/7 - Pull sul VPS e installazione dipendenze..."
-ssh $VPS_HOST "cd $VPS_PATH && git pull origin $BRANCH && npm install"
-print_success "Pull e npm install completati"
+print_step "Step 6/9 - Pull sul VPS (con stash automatico)..."
+ssh $VPS_HOST "cd $VPS_PATH && git stash --include-untracked 2>/dev/null; git pull origin $BRANCH"
+print_success "Pull completato"
 
 # ═══════════════════════════════════════════
-# STEP 5: Prisma Generate
+# STEP 7: npm install + Prisma generate
 # ═══════════════════════════════════════════
 
-print_step "Step 5/7 - Prisma generate sul server..."
+print_step "Step 7/9 - Dipendenze e Prisma generate..."
+
+# npm install solo se package.json è cambiato
+PACKAGE_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff HEAD~1 --name-only 2>/dev/null | grep package.json" 2>/dev/null || echo "")
+if [ -n "$PACKAGE_CHANGED" ]; then
+    echo -e "  ${CYAN}package.json modificato → npm install${NC}"
+    ssh $VPS_HOST "cd $VPS_PATH && npm install"
+    print_success "npm install completato"
+else
+    print_success "package.json invariato, skip npm install"
+fi
+
+# Prisma generate (sempre necessario per CRM)
 ssh $VPS_HOST "cd $VPS_PATH && npx prisma generate"
 print_success "Prisma client generato"
 
 # ═══════════════════════════════════════════
-# STEP 6: Build Next.js sul server
+# STEP 8: Build Next.js sul server
 # ═══════════════════════════════════════════
 
-print_step "Step 6/7 - Build Next.js sul server..."
+print_step "Step 8/9 - Build Next.js sul server..."
 ssh $VPS_HOST "cd $VPS_PATH && npm run build"
 print_success "Build completata"
 
 # ═══════════════════════════════════════════
-# STEP 7: Restart PM2 + Pulizia cache
+# STEP 9: Restart PM2 + Health check
 # ═══════════════════════════════════════════
 
-print_step "Step 7/7 - Restart $PM2_PROCESS su VPS..."
-ssh $VPS_HOST "cd $VPS_PATH && pm2 restart $PM2_PROCESS --update-env || pm2 start npm --name '$PM2_PROCESS' -- start -- -p $SERVER_PORT"
+print_step "Step 9/9 - Restart $PM2_PROCESS + health check..."
+ssh $VPS_HOST "pm2 restart $PM2_PROCESS --update-env || pm2 start npm --name '$PM2_PROCESS' -- start -- -p $SERVER_PORT"
 ssh $VPS_HOST "pm2 save"
-print_success "Restart completato"
+
+# Health check: attendi avvio e verifica risposta
+echo -e "  ${CYAN}Attendo avvio server...${NC}"
+sleep 5
+HTTP_STATUS=$(ssh $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/login" 2>/dev/null || echo "000")
+
+if [ "$HTTP_STATUS" = "200" ]; then
+    print_success "Health check OK (HTTP $HTTP_STATUS)"
+elif [ "$HTTP_STATUS" = "307" ] || [ "$HTTP_STATUS" = "302" ]; then
+    print_success "Health check OK (HTTP $HTTP_STATUS - redirect)"
+else
+    print_error "Health check fallito! (HTTP $HTTP_STATUS)"
+    echo -e "  ${YELLOW}Controlla i log: ssh $VPS_HOST \"pm2 logs $PM2_PROCESS --lines 30 --nostream\"${NC}"
+fi
 
 # ═══════════════════════════════════════════
 # RIEPILOGO FINALE
@@ -267,5 +369,6 @@ echo -e "  Branch:   ${BRANCH}"
 echo -e "  Server:   ${VPS_HOST} (porta ${SERVER_PORT})"
 echo -e "  PM2:      ${PM2_PROCESS}"
 echo -e "  URL:      ${PUBLIC_URL}"
+echo -e "  Health:   HTTP ${HTTP_STATUS}"
 echo -e "  Data:     $(date '+%Y-%m-%d %H:%M:%S')"
 echo -e "${GREEN}═══════════════════════════════════════${NC}"
