@@ -26,6 +26,8 @@
 #      ./deploy.sh --bump patch "messaggio commit"
 #      ./deploy.sh --bump minor "messaggio commit"
 #      ./deploy.sh --bump major "messaggio commit"
+#      ./deploy.sh --ci "messaggio commit"          (non-interattivo, per Claude Code)
+#      ./deploy.sh --ci --bump patch "messaggio"     (combinabile con --bump)
 #
 # Il deploy esegue in ordine:
 # 1. Verifica coerenza versione e CHANGELOG
@@ -155,24 +157,39 @@ update_version_in_files() {
 
 BUMP_TYPE=""
 COMMIT_MSG=""
+CI_MODE=false
 
-if [ "$1" = "--bump" ]; then
-    BUMP_TYPE="$2"
-    COMMIT_MSG="$3"
+# Parsing flessibile: --ci e --bump possono apparire in qualsiasi ordine
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ci)
+            CI_MODE=true
+            shift
+            ;;
+        --bump)
+            BUMP_TYPE="$2"
+            if [[ "$BUMP_TYPE" != "major" && "$BUMP_TYPE" != "minor" && "$BUMP_TYPE" != "patch" ]]; then
+                print_error "Tipo di bump non valido: $BUMP_TYPE"
+                echo "Usa: major, minor, o patch"
+                exit 1
+            fi
+            shift 2
+            ;;
+        *)
+            ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
 
-    if [[ "$BUMP_TYPE" != "major" && "$BUMP_TYPE" != "minor" && "$BUMP_TYPE" != "patch" ]]; then
-        print_error "Tipo di bump non valido: $BUMP_TYPE"
-        echo "Usa: major, minor, o patch"
-        exit 1
-    fi
+# Il primo argomento rimanente e' il messaggio di commit
+COMMIT_MSG="${ARGS[0]:-}"
 
-    if [ -z "$COMMIT_MSG" ]; then
-        print_error "Devi specificare un messaggio di commit!"
-        echo "Uso: ./deploy.sh --bump $BUMP_TYPE \"messaggio commit\""
-        exit 1
-    fi
-else
-    COMMIT_MSG="$1"
+if [ -n "$BUMP_TYPE" ] && [ -z "$COMMIT_MSG" ]; then
+    print_error "Devi specificare un messaggio di commit!"
+    echo "Uso: ./deploy.sh --bump $BUMP_TYPE \"messaggio commit\""
+    exit 1
 fi
 
 # Verifica messaggio commit
@@ -184,7 +201,13 @@ if [ -z "$COMMIT_MSG" ]; then
     echo "  ./deploy.sh --bump patch \"fix bug XYZ\""
     echo "  ./deploy.sh --bump minor \"nuova funzionalita ABC\""
     echo "  ./deploy.sh --bump major \"redesign completo\""
+    echo "  ./deploy.sh --ci \"messaggio commit\"          (non-interattivo)"
+    echo "  ./deploy.sh --ci --bump patch \"messaggio\"     (combinabile)"
     exit 1
+fi
+
+if [ "$CI_MODE" = true ]; then
+    print_warning "Modalita CI attiva (non-interattivo, skip prompt)"
 fi
 
 # Header
@@ -213,10 +236,14 @@ print_step "Step 1/9 - Verifico CHANGELOG e coerenza versioni..."
 if [ -f "${SCRIPT_DIR}/CHANGELOG.md" ]; then
     if ! grep -q "\[$APP_VERSION\]" "${SCRIPT_DIR}/CHANGELOG.md"; then
         print_warning "CHANGELOG.md non contiene la versione $APP_VERSION"
-        read -p "  Continuare comunque? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
+        if [ "$CI_MODE" = true ]; then
+            print_warning "CI mode: continuo senza CHANGELOG aggiornato"
+        else
+            read -p "  Continuare comunque? (y/n) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                exit 1
+            fi
         fi
     else
         print_success "CHANGELOG contiene [$APP_VERSION]"
@@ -247,10 +274,14 @@ if [ -n "$(git -C "${SCRIPT_DIR}" status --porcelain)" ]; then
     git -C "${SCRIPT_DIR}" status --short
 else
     print_warning "Nessuna modifica da committare"
-    read -p "Vuoi continuare comunque con il deploy? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 0
+    if [ "$CI_MODE" = true ]; then
+        print_warning "CI mode: continuo con deploy (push commit esistenti)"
+    else
+        read -p "Vuoi continuare comunque con il deploy? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 0
+        fi
     fi
 fi
 
@@ -266,7 +297,12 @@ else
     print_error "Build locale fallita!"
     echo -e "  ${YELLOW}Ultimi errori:${NC}"
     tail -20 "$BUILD_LOG" 2>/dev/null | sed 's/^/    /'
-    if [ -t 0 ]; then
+    # In CI mode, build failure blocca sempre il deploy (sicurezza)
+    if [ "$CI_MODE" = true ]; then
+        print_error "CI mode: build fallita, deploy annullato"
+        rm -f "$BUILD_LOG"
+        exit 1
+    elif [ -t 0 ]; then
         read -p "  Continuare comunque? (y/n) " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -320,9 +356,19 @@ else
     print_success "package.json invariato, skip npm install"
 fi
 
-# Prisma generate (sempre necessario per CRM)
+# Prisma generate + db push (sempre necessario per CRM)
 ssh $VPS_HOST "cd $VPS_PATH && npx prisma generate"
 print_success "Prisma client generato"
+
+# Sincronizza schema DB (se ci sono nuovi campi)
+SCHEMA_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff HEAD~1 --name-only 2>/dev/null | grep schema.prisma" 2>/dev/null || echo "")
+if [ -n "$SCHEMA_CHANGED" ]; then
+    echo -e "  ${CYAN}schema.prisma modificato → prisma db push${NC}"
+    ssh $VPS_HOST "cd $VPS_PATH && npx prisma db push"
+    print_success "Database sincronizzato"
+else
+    print_success "schema.prisma invariato, skip db push"
+fi
 
 # ═══════════════════════════════════════════
 # STEP 8: Build Next.js sul server
