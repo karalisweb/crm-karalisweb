@@ -2,6 +2,7 @@ import { inngest } from "../client";
 import { db } from "@/lib/db";
 import { runFullAudit } from "@/lib/audit";
 import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
+import { qualificaProspect } from "@/lib/qualification";
 import { Prisma, CommercialTag, PipelineStage } from "@prisma/client";
 
 /**
@@ -114,7 +115,23 @@ export const runAuditFunction = inngest.createFunction(
       }
     });
 
-    // Step 4: Salva tutti i risultati
+    // Step 4: Qualifica automatica prospect (DataForSEO + Meta Ads + scoring)
+    const qualificationResult = await step.run("qualify-prospect", async () => {
+      try {
+        let dominio = website;
+        if (dominio.startsWith("http://") || dominio.startsWith("https://")) {
+          dominio = new URL(dominio).hostname;
+        }
+        dominio = dominio.replace(/^www\./, "");
+
+        return await qualificaProspect(brandName || dominio, dominio);
+      } catch (error) {
+        console.error("[INNGEST] Errore qualifica prospect:", error);
+        return null;
+      }
+    });
+
+    // Step 5: Salva tutti i risultati
     await step.run("save-results", async () => {
       // Determina il pipelineStage: Daniela decide, l'app pre-filtra solo NON_TARGET
       let newPipelineStage: PipelineStage;
@@ -147,6 +164,21 @@ export const runAuditFunction = inngest.createFunction(
 
           // Pipeline: routing a qualificazione
           pipelineStage: newPipelineStage,
+
+          // Qualifica automatica prospect
+          ...(qualificationResult ? {
+            qualificationScore: qualificationResult.punteggio_qualifica,
+            qualificationPriority: qualificationResult.priorita,
+            angoloLoom: qualificationResult.angolo_loom,
+            googleAdsActive: qualificationResult.google_ads_attive,
+            googleAdsCount: qualificationResult.google_ads_numero,
+            metaAdsActive: qualificationResult.meta_ads_attive,
+            metaAdsCount: qualificationResult.meta_ads_numero,
+            metaPageName: qualificationResult.meta_pagina,
+            qualificationData: qualificationResult as unknown as Prisma.InputJsonValue,
+            qualificationErrors: qualificationResult.errori,
+            qualificationAt: new Date(),
+          } : {}),
         },
       });
     });
@@ -157,6 +189,8 @@ export const runAuditFunction = inngest.createFunction(
       issues: result.issues.length,
       commercialTag: commercialResult.tagResult.tag,
       isCallable: commercialResult.tagResult.isCallable,
+      qualificationScore: qualificationResult?.punteggio_qualifica ?? null,
+      qualificationPriority: qualificationResult?.priorita ?? null,
     };
   }
 );

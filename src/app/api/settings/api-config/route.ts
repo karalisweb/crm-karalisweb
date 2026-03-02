@@ -19,6 +19,10 @@ export async function GET() {
       apifyWebhookSecret: process.env.APIFY_WEBHOOK_SECRET ? "••••••••" : "",
       inngestEventKey: process.env.INNGEST_EVENT_KEY ? "••••" + (process.env.INNGEST_EVENT_KEY.slice(-4) || "") : "",
       inngestSigningKey: process.env.INNGEST_SIGNING_KEY ? "••••••••" : "",
+      dataForSeoLogin: process.env.DATAFORSEO_LOGIN ? "••••" + (process.env.DATAFORSEO_LOGIN.slice(-4) || "") : "",
+      dataForSeoPassword: process.env.DATAFORSEO_PASSWORD ? "••••••••" : "",
+      metaAccessToken: process.env.META_ACCESS_TOKEN ? "••••" + (process.env.META_ACCESS_TOKEN.slice(-4) || "") : "",
+      pageSpeedApiKey: process.env.PAGESPEED_API_KEY ? "••••" + (process.env.PAGESPEED_API_KEY.slice(-4) || "") : "",
     };
 
     return NextResponse.json(config);
@@ -36,7 +40,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
     }
 
-    const { apifyToken, apifyWebhookSecret, inngestEventKey, inngestSigningKey } = await request.json();
+    const {
+      apifyToken, apifyWebhookSecret, inngestEventKey, inngestSigningKey,
+      dataForSeoLogin, dataForSeoPassword, metaAccessToken, pageSpeedApiKey,
+    } = await request.json();
 
     // Leggi file .env esistente o crea nuovo
     let envContent = "";
@@ -64,6 +71,10 @@ export async function PUT(request: NextRequest) {
     envContent = updateEnvVar(envContent, "APIFY_WEBHOOK_SECRET", apifyWebhookSecret);
     envContent = updateEnvVar(envContent, "INNGEST_EVENT_KEY", inngestEventKey);
     envContent = updateEnvVar(envContent, "INNGEST_SIGNING_KEY", inngestSigningKey);
+    envContent = updateEnvVar(envContent, "DATAFORSEO_LOGIN", dataForSeoLogin);
+    envContent = updateEnvVar(envContent, "DATAFORSEO_PASSWORD", dataForSeoPassword);
+    envContent = updateEnvVar(envContent, "META_ACCESS_TOKEN", metaAccessToken);
+    envContent = updateEnvVar(envContent, "PAGESPEED_API_KEY", pageSpeedApiKey);
 
     await writeFile(CONFIG_FILE, envContent.trim() + "\n", "utf-8");
 

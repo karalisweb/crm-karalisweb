@@ -43,6 +43,10 @@ interface ApiConfig {
   apifyWebhookSecret: string;
   inngestEventKey: string;
   inngestSigningKey: string;
+  dataForSeoLogin: string;
+  dataForSeoPassword: string;
+  metaAccessToken: string;
+  pageSpeedApiKey: string;
 }
 
 export default function SettingsPage() {
@@ -56,6 +60,10 @@ export default function SettingsPage() {
     apifyWebhookSecret: "",
     inngestEventKey: "",
     inngestSigningKey: "",
+    dataForSeoLogin: "",
+    dataForSeoPassword: "",
+    metaAccessToken: "",
+    pageSpeedApiKey: "",
   });
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "USER" });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -469,6 +477,142 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
+          {/* DataForSEO */}
+          <Card>
+            <CardHeader>
+              <CardTitle>DataForSEO</CardTitle>
+              <CardDescription>
+                Verifica Google Ads attive dei prospect.{" "}
+                <a
+                  href="https://app.dataforseo.com/api-dashboard"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  Ottieni credenziali
+                </a>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="dataForSeoLogin">Login (email)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="dataForSeoLogin"
+                    type={showTokens.dataForSeoLogin ? "text" : "password"}
+                    value={apiConfig.dataForSeoLogin}
+                    onChange={(e) => setApiConfig({ ...apiConfig, dataForSeoLogin: e.target.value })}
+                    placeholder="your@email.com"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => toggleShowToken("dataForSeoLogin")}
+                  >
+                    {showTokens.dataForSeoLogin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dataForSeoPassword">Password API</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="dataForSeoPassword"
+                    type={showTokens.dataForSeoPassword ? "text" : "password"}
+                    value={apiConfig.dataForSeoPassword}
+                    onChange={(e) => setApiConfig({ ...apiConfig, dataForSeoPassword: e.target.value })}
+                    placeholder="••••••••"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => toggleShowToken("dataForSeoPassword")}
+                  >
+                    {showTokens.dataForSeoPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Meta Ad Library */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Meta Ad Library</CardTitle>
+              <CardDescription>
+                Verifica Meta Ads attive dei prospect (Facebook/Instagram).{" "}
+                <a
+                  href="https://developers.facebook.com/apps/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  Ottieni token
+                </a>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="metaAccessToken">Access Token</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="metaAccessToken"
+                    type={showTokens.metaAccessToken ? "text" : "password"}
+                    value={apiConfig.metaAccessToken}
+                    onChange={(e) => setApiConfig({ ...apiConfig, metaAccessToken: e.target.value })}
+                    placeholder="EAAxxxxxxx..."
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => toggleShowToken("metaAccessToken")}
+                  >
+                    {showTokens.metaAccessToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Google PageSpeed */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Google PageSpeed Insights</CardTitle>
+              <CardDescription>
+                Analisi performance siti web (opzionale, 25k richieste/giorno gratis).{" "}
+                <a
+                  href="https://console.cloud.google.com/apis/library/pagespeedonline.googleapis.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  Ottieni API key
+                </a>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="pageSpeedApiKey">API Key</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="pageSpeedApiKey"
+                    type={showTokens.pageSpeedApiKey ? "text" : "password"}
+                    value={apiConfig.pageSpeedApiKey}
+                    onChange={(e) => setApiConfig({ ...apiConfig, pageSpeedApiKey: e.target.value })}
+                    placeholder="AIzaSy..."
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => toggleShowToken("pageSpeedApiKey")}
+                  >
+                    {showTokens.pageSpeedApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Salva tutto */}
           <div className="flex justify-end">
             <Button onClick={saveApiConfig} size="lg">
@@ -531,6 +675,54 @@ export default function SettingsPage() {
                       <>
                         <X className="h-4 w-4 text-yellow-500" />
                         <span className="font-medium">Non configurato (usa audit locale)</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-muted-foreground">DataForSEO</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {apiConfig.dataForSeoLogin ? (
+                      <>
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span className="font-medium">Configurato</span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="h-4 w-4 text-yellow-500" />
+                        <span className="font-medium">Non configurato</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-muted-foreground">Meta Ad Library</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {apiConfig.metaAccessToken ? (
+                      <>
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span className="font-medium">Configurato</span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="h-4 w-4 text-yellow-500" />
+                        <span className="font-medium">Non configurato</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-muted-foreground">PageSpeed Insights</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {apiConfig.pageSpeedApiKey ? (
+                      <>
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span className="font-medium">Configurato</span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="h-4 w-4 text-yellow-500" />
+                        <span className="font-medium">Non configurato (usa valori default)</span>
                       </>
                     )}
                   </div>

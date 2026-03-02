@@ -114,6 +114,35 @@ model Lead {
   auditVerificationChecks Json?     @map("audit_verification_checks")
 
   // ==========================================
+  // QUALIFICA AUTOMATICA PROSPECT
+  // ==========================================
+  // Punteggio qualifica (0-100) — scoring basato su sito + ads attive
+  qualificationScore    Int?        @map("qualification_score")
+  // Priorita derivata: "ALTA" / "MEDIA" / "BASSA"
+  qualificationPriority String?     @map("qualification_priority")
+  // Angolo pre-compilato per video Loom
+  angoloLoom            String?     @map("angolo_loom")
+
+  // Dati Google Ads (da DataForSEO)
+  googleAdsActive       Boolean?    @map("google_ads_active")
+  googleAdsCount        Int?        @map("google_ads_count")
+
+  // Dati Meta Ads (da Meta Ad Library)
+  metaAdsActive         Boolean?    @map("meta_ads_active")
+  metaAdsCount          Int?        @map("meta_ads_count")
+  metaPageName          String?     @map("meta_page_name")
+
+  // Flag titolare verificato (Daniela)
+  titolareVerificato    Boolean     @default(false) @map("titolare_verificato")
+
+  // Output completo qualifica (JSON)
+  qualificationData     Json?       @map("qualification_data")
+  // Errori non bloccanti durante qualifica
+  qualificationErrors   String[]    @map("qualification_errors")
+  // Timestamp qualifica automatica
+  qualificationAt       DateTime?   @map("qualification_at")
+
+  // ==========================================
   // RECONTACT (Da richiamare tra 6 mesi)
   // ==========================================
   recontactAt       DateTime?     @map("recontact_at")
@@ -167,6 +196,9 @@ model Lead {
   @@index([qualifiedAt], name: "idx_leads_qualified")
   @@index([letterSentAt], name: "idx_leads_letter_sent")
   @@index([linkedinSentAt], name: "idx_leads_linkedin_sent")
+  // Indici per qualifica automatica
+  @@index([qualificationScore(sort: Desc)], name: "idx_leads_qualification_score")
+  @@index([qualificationPriority], name: "idx_leads_qualification_priority")
   @@map("leads")
 }
 

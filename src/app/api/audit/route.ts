@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { runFullAudit } from "@/lib/audit";
 import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
+import { qualificaProspect } from "@/lib/qualification";
 import { Prisma, CommercialTag, PipelineStage } from "@prisma/client";
-import type { CommercialSignals, AdsEvidenceLevel, CommercialTagResult } from "@/types/commercial";
+import type { CommercialSignals, AdsEvidenceLevel } from "@/types/commercial";
 
 /**
  * Pattern per riconoscere link social/non-siti-veri
@@ -203,13 +204,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Carica le impostazioni CRM per lo scoreThreshold
+    // 3. Qualifica automatica prospect (DataForSEO + Meta Ads + scoring)
+    let qualificationResult: Awaited<ReturnType<typeof qualificaProspect>> | null = null;
+    try {
+      // Estrai dominio pulito
+      let dominio = lead.website!;
+      if (dominio.startsWith("http://") || dominio.startsWith("https://")) {
+        dominio = new URL(dominio).hostname;
+      }
+      dominio = dominio.replace(/^www\./, "");
+
+      qualificationResult = await qualificaProspect(lead.name, dominio);
+    } catch (qualError) {
+      console.error("[AUDIT] Errore qualifica prospect:", qualError);
+    }
+
+    // 4. Carica le impostazioni CRM per lo scoreThreshold
     const settings = await db.settings.findUnique({
       where: { id: "default" },
     });
     const scoreThreshold = settings?.scoreThreshold ?? 60;
 
-    // 4. Salva risultati - SEMPRE completa, mai FAILED per errori di fetch
+    // 5. Salva risultati - SEMPRE completa, mai FAILED per errori di fetch
     const issues = auditResult?.issues || [];
     if (auditError) {
       issues.unshift(`⚠️ Sito lento/non raggiungibile: ${auditError}`);
@@ -250,6 +266,20 @@ export async function POST(request: NextRequest) {
         isCallable: commercialResult.tagResult.isCallable,
         // Pipeline MSD: routing in base a tag E score threshold
         pipelineStage: newPipelineStage,
+        // Qualifica automatica prospect
+        ...(qualificationResult ? {
+          qualificationScore: qualificationResult.punteggio_qualifica,
+          qualificationPriority: qualificationResult.priorita,
+          angoloLoom: qualificationResult.angolo_loom,
+          googleAdsActive: qualificationResult.google_ads_attive,
+          googleAdsCount: qualificationResult.google_ads_numero,
+          metaAdsActive: qualificationResult.meta_ads_attive,
+          metaAdsCount: qualificationResult.meta_ads_numero,
+          metaPageName: qualificationResult.meta_pagina,
+          qualificationData: qualificationResult as unknown as Prisma.InputJsonValue,
+          qualificationErrors: qualificationResult.errori,
+          qualificationAt: new Date(),
+        } : {}),
       },
     });
 
@@ -261,6 +291,12 @@ export async function POST(request: NextRequest) {
       commercialTag: commercialResult.tagResult.tag,
       isCallable: commercialResult.tagResult.isCallable,
       hadErrors: !!(auditError || fetchError),
+      // Qualifica prospect
+      qualificationScore: qualificationResult?.punteggio_qualifica ?? null,
+      qualificationPriority: qualificationResult?.priorita ?? null,
+      angoloLoom: qualificationResult?.angolo_loom ?? null,
+      googleAdsActive: qualificationResult?.google_ads_attive ?? false,
+      metaAdsActive: qualificationResult?.meta_ads_attive ?? false,
     });
   } catch (error) {
     console.error("Error starting audit:", error);
@@ -423,6 +459,20 @@ export async function PUT(request: NextRequest) {
         // Ignora errori fetch, usa default
       }
 
+      // Qualifica automatica prospect
+      let qualificationResult: Awaited<ReturnType<typeof qualificaProspect>> | null = null;
+      try {
+        let dominio = lead.website!;
+        if (dominio.startsWith("http://") || dominio.startsWith("https://")) {
+          dominio = new URL(dominio).hostname;
+        }
+        dominio = dominio.replace(/^www\./, "");
+
+        qualificationResult = await qualificaProspect(lead.name || dominio, dominio);
+      } catch (qualError) {
+        console.error(`[AUDIT] Errore qualifica per ${lead.name}:`, qualError);
+      }
+
       // Genera issues
       const issues = auditResult?.issues || [];
       if (auditError) {
@@ -459,6 +509,20 @@ export async function PUT(request: NextRequest) {
           isCallable: commercialResult.tagResult.isCallable,
           // Pipeline MSD: routing in base a tag E score threshold
           pipelineStage: newPipelineStage,
+          // Qualifica automatica prospect
+          ...(qualificationResult ? {
+            qualificationScore: qualificationResult.punteggio_qualifica,
+            qualificationPriority: qualificationResult.priorita,
+            angoloLoom: qualificationResult.angolo_loom,
+            googleAdsActive: qualificationResult.google_ads_attive,
+            googleAdsCount: qualificationResult.google_ads_numero,
+            metaAdsActive: qualificationResult.meta_ads_attive,
+            metaAdsCount: qualificationResult.meta_ads_numero,
+            metaPageName: qualificationResult.meta_pagina,
+            qualificationData: qualificationResult as unknown as Prisma.InputJsonValue,
+            qualificationErrors: qualificationResult.errori,
+            qualificationAt: new Date(),
+          } : {}),
         },
       });
 

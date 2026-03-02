@@ -13,6 +13,7 @@ import { detectTech } from "@/lib/audit/tech-detector";
 import { runPageSpeedAnalysis, isPageSpeedConfigured } from "@/lib/audit/pagespeed";
 import { calculateOpportunityScore } from "@/lib/audit/score-calculator";
 import { generateTalkingPoints, flattenTalkingPoints } from "@/lib/audit/talking-points";
+import { qualificaProspect } from "@/lib/qualification";
 
 /**
  * GET /api/audit/stream?leadId=xxx
@@ -256,7 +257,31 @@ export async function GET(request: NextRequest) {
           issuesCount: issues.length,
         });
 
-        // Step 11: Salvataggio
+        // Step 11: Qualifica automatica prospect
+        sendEvent("qualification", "running", { message: "Qualifica prospect (Google Ads + Meta Ads)..." });
+
+        let qualificationResult: Awaited<ReturnType<typeof qualificaProspect>> | null = null;
+        try {
+          let dominio = website;
+          if (dominio.startsWith("http://") || dominio.startsWith("https://")) {
+            dominio = new URL(dominio).hostname;
+          }
+          dominio = dominio.replace(/^www\./, "");
+
+          qualificationResult = await qualificaProspect(lead.name, dominio);
+          sendEvent("qualification", "done", {
+            message: `Qualifica: ${qualificationResult.punteggio_qualifica}/100 (${qualificationResult.priorita})`,
+            score: qualificationResult.punteggio_qualifica,
+            priority: qualificationResult.priorita,
+            googleAds: qualificationResult.google_ads_attive,
+            metaAds: qualificationResult.meta_ads_attive,
+          });
+        } catch (qualError) {
+          console.error("[STREAM] Errore qualifica:", qualError);
+          sendEvent("qualification", "done", { message: "Qualifica non disponibile" });
+        }
+
+        // Step 12: Salvataggio
         sendEvent("save", "running", { message: "Salvataggio risultati..." });
 
         await db.lead.update({
@@ -267,6 +292,20 @@ export async function GET(request: NextRequest) {
             opportunityScore,
             auditData: auditData as unknown as Prisma.InputJsonValue,
             talkingPoints,
+            // Qualifica automatica prospect
+            ...(qualificationResult ? {
+              qualificationScore: qualificationResult.punteggio_qualifica,
+              qualificationPriority: qualificationResult.priorita,
+              angoloLoom: qualificationResult.angolo_loom,
+              googleAdsActive: qualificationResult.google_ads_attive,
+              googleAdsCount: qualificationResult.google_ads_numero,
+              metaAdsActive: qualificationResult.meta_ads_attive,
+              metaAdsCount: qualificationResult.meta_ads_numero,
+              metaPageName: qualificationResult.meta_pagina,
+              qualificationData: qualificationResult as unknown as Prisma.InputJsonValue,
+              qualificationErrors: qualificationResult.errori,
+              qualificationAt: new Date(),
+            } : {}),
           },
         });
 
@@ -278,6 +317,9 @@ export async function GET(request: NextRequest) {
           score: opportunityScore,
           issues,
           talkingPointsCount: talkingPoints.length,
+          qualificationScore: qualificationResult?.punteggio_qualifica ?? null,
+          qualificationPriority: qualificationResult?.priorita ?? null,
+          angoloLoom: qualificationResult?.angolo_loom ?? null,
         });
 
       } catch (error) {
