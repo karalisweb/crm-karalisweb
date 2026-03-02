@@ -169,12 +169,57 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings/test-apify");
       const data = await res.json();
       if (data.success) {
-        toast.success("Connessione Apify OK");
+        toast.success(data.message || "Connessione Apify OK");
       } else {
         toast.error(data.message || "Connessione Apify fallita");
       }
     } catch (error) {
       toast.error("Errore nel test connessione");
+    }
+  }
+
+  async function testDataForSeoConnection() {
+    try {
+      toast.info("Test DataForSEO in corso...");
+      const res = await fetch("/api/settings/test-dataforseo");
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connessione DataForSEO OK");
+      } else {
+        toast.error(data.message || "Connessione DataForSEO fallita");
+      }
+    } catch (error) {
+      toast.error("Errore nel test connessione DataForSEO");
+    }
+  }
+
+  async function testMetaConnection() {
+    try {
+      toast.info("Test Meta in corso...");
+      const res = await fetch("/api/settings/test-meta");
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connessione Meta OK");
+      } else {
+        toast.error(data.message || "Connessione Meta fallita");
+      }
+    } catch (error) {
+      toast.error("Errore nel test connessione Meta");
+    }
+  }
+
+  async function testPageSpeedConnection() {
+    try {
+      toast.info("Test PageSpeed in corso (può richiedere ~15s)...");
+      const res = await fetch("/api/settings/test-pagespeed");
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connessione PageSpeed OK");
+      } else {
+        toast.error(data.message || "Connessione PageSpeed fallita");
+      }
+    } catch (error) {
+      toast.error("Errore nel test connessione PageSpeed");
     }
   }
 
@@ -532,6 +577,11 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </div>
+              <div className="flex gap-2">
+                <Button onClick={testDataForSeoConnection} variant="outline">
+                  Test Connessione
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -571,6 +621,11 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </div>
+              <div className="flex gap-2">
+                <Button onClick={testMetaConnection} variant="outline">
+                  Test Connessione
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -609,6 +664,11 @@ export default function SettingsPage() {
                     {showTokens.pageSpeedApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={testPageSpeedConnection} variant="outline">
+                  Test Connessione
+                </Button>
               </div>
             </CardContent>
           </Card>
