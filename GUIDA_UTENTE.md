@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **2.2.0** | Ultimo aggiornamento: 2026-02-22
+Versione: **2.3.0** | Ultimo aggiornamento: 2026-03-11
 
 > Questa guida spiega come utilizzare il CRM per verificare i lead prima di passarli al commerciale.
 
@@ -15,7 +15,9 @@ Versione: **2.2.0** | Ultimo aggiornamento: 2026-02-22
 5. [Come controllare caso per caso](#5-come-controllare-caso-per-caso)
 6. [Cosa fare nei casi dubbi](#6-cosa-fare-nei-casi-dubbi)
 7. [Le pagine principali](#7-le-pagine-principali)
-8. [FAQ - Domande frequenti](#8-faq---domande-frequenti)
+8. [Analisi AI (Gemini)](#8-analisi-ai-gemini)
+9. [Ricerche Programmate](#9-ricerche-programmate)
+10. [FAQ - Domande frequenti](#10-faq---domande-frequenti)
 
 ---
 
@@ -271,7 +273,69 @@ Tutte le ricerche effettuate con:
 
 ---
 
-## 8. FAQ - Domande frequenti
+## 8. Analisi AI (Gemini)
+
+> **Novita v2.3:** Ogni lead con audit completato puo essere analizzato dall'intelligenza artificiale.
+
+### Come funziona
+
+1. Apri la scheda di un lead con audit completato
+2. Vai al tab **"Analisi AI"**
+3. Clicca **"Genera Analisi AI"**
+4. L'AI analizza il sito e genera:
+   - **Coerenza marketing**: Quanto e coerente la comunicazione del prospect
+   - **3 errori principali**: I problemi piu gravi con impatto sul business
+   - **Prompt HeyGen**: Testo pronto per registrare un video personalizzato
+
+### Prompt HeyGen
+
+Il prompt generato e pensato per essere copiato e incollato in HeyGen (strumento esterno). Il video dura 60-90 secondi e include:
+- Un complimento iniziale al prospect
+- I problemi trovati sul sito
+- Una CTA morbida per una call conoscitiva
+
+> **Nota:** HeyGen e un servizio esterno. Il CRM genera solo il testo, la registrazione avviene fuori dall'app.
+
+### Configurazione
+
+La API key di Gemini si configura in **Impostazioni → API & Token → Google Gemini AI**. Puoi scegliere il modello:
+- **Gemini 2.5 Flash** (raccomandato) — veloce ed economico
+- **Gemini 2.5 Pro** — piu potente per analisi complesse
+- **Gemini 2.5 Flash Lite** — il piu veloce
+
+---
+
+## 9. Ricerche Programmate
+
+> **Novita v2.3:** Le ricerche Google Maps possono essere automatizzate e eseguite durante la notte.
+
+### Come funziona
+
+1. Vai in **Impostazioni → Programmate**
+2. Vedrai la coda delle ricerche pianificate
+3. Il sistema esegue **2 ricerche per notte** alle ore 02:00
+4. Ogni ricerca importa fino a 50 lead da Google Maps
+5. L'audit parte automaticamente per i lead con sito web
+
+### Gestire la coda
+
+- **Carica Lista Predefinita**: Carica le 39 ricerche predefinite
+- **Aggiungi manualmente**: Inserisci categoria + citta e clicca "Aggiungi"
+- **Re-queue**: Rimetti in coda una ricerca completata o fallita
+- **Elimina**: Rimuovi una ricerca dalla coda
+
+### Status delle ricerche
+
+| Status | Significato |
+|--------|-------------|
+| In coda | In attesa di esecuzione |
+| In esecuzione | In corso ora |
+| Completata | Eseguita con successo |
+| Fallita | Errore durante l'esecuzione (puo essere rimessa in coda) |
+
+---
+
+## 10. FAQ - Domande frequenti
 
 **D: Quanto tempo ci vuole per verificare un lead?**
 R: In media 2-3 minuti per lead, una volta presa la mano con le estensioni Chrome.
@@ -293,4 +357,4 @@ R: Si, puoi sempre tornare sulla scheda del lead e modificare la verifica o aggi
 
 ---
 
-*Documento aggiornato il 2026-02-22 | KW Sales CRM v2.2.0*
+*Documento aggiornato il 2026-03-11 | KW Sales CRM v2.3.0*

@@ -5,7 +5,7 @@
 # ╠══════════════════════════════════════════════════════════════╣
 # ║ App:              KW Sales CRM                               ║
 # ║ Versione:         (da package.json)                          ║
-# ║ Ultimo update:    2026-02-23                                 ║
+# ║ Ultimo update:    2026-03-11                                 ║
 # ║                                                              ║
 # ║ Cartella locale:  ~/Desktop/Sviluppo App Claude Code/       ║
 # ║                   CRM /sales-app                             ║
@@ -22,14 +22,19 @@
 # ║ Restart locale:   npm run dev                                ║
 # ╚══════════════════════════════════════════════════════════════╝
 #
-# Uso: ./deploy.sh "messaggio commit"
-#      ./deploy.sh --bump patch "messaggio commit"
+# Uso: ./deploy.sh "messaggio commit"               (auto-patch bump)
+#      ./deploy.sh --bump patch "messaggio commit"   (esplicito patch)
 #      ./deploy.sh --bump minor "messaggio commit"
 #      ./deploy.sh --bump major "messaggio commit"
-#      ./deploy.sh --ci "messaggio commit"          (non-interattivo, per Claude Code)
-#      ./deploy.sh --ci --bump patch "messaggio"     (combinabile con --bump)
+#      ./deploy.sh --no-bump "messaggio commit"      (nessun bump versione)
+#      ./deploy.sh --ci "messaggio commit"           (non-interattivo, per Claude Code)
+#      ./deploy.sh --ci --bump minor "messaggio"     (combinabile)
 #
 # Il deploy esegue in ordine:
+# 0. Versioning (auto-patch di default, --bump per minor/major)
+#    → Aggiorna: package.json, DEPLOY.md, sidebar.tsx, settings/page.tsx
+#    → Auto-genera entry in CHANGELOG.md dal commit message
+#    → Auto-aggiorna versione e data in GUIDA_UTENTE.md
 # 1. Verifica coerenza versione e CHANGELOG
 # 2. Verifica stato Git
 # 3. Build locale di verifica (type-check)
@@ -143,12 +148,100 @@ update_version_in_files() {
         print_success "DEPLOY.md → v${new_version}"
     fi
 
-    # 3. Sidebar version label (se presente)
+    # 3. Sidebar version label
     local SIDEBAR_FILE="${SCRIPT_DIR}/src/components/layout/sidebar.tsx"
     if [ -f "$SIDEBAR_FILE" ]; then
         sed -i '' "s/v${old_version}/v${new_version}/g" "$SIDEBAR_FILE"
         print_success "sidebar.tsx → v${new_version}"
     fi
+
+    # 4. Settings page version
+    local SETTINGS_FILE="${SCRIPT_DIR}/src/app/(dashboard)/settings/page.tsx"
+    if [ -f "$SETTINGS_FILE" ]; then
+        sed -i '' "s/v${old_version}/v${new_version}/g" "$SETTINGS_FILE"
+        print_success "settings/page.tsx → v${new_version}"
+    fi
+}
+
+# Auto-append entry in CHANGELOG.md
+append_changelog_entry() {
+    local version="$1"
+    local commit_msg="$2"
+    local today
+    today=$(date '+%Y-%m-%d')
+
+    local CHANGELOG="${SCRIPT_DIR}/CHANGELOG.md"
+    if [ ! -f "$CHANGELOG" ]; then
+        print_warning "CHANGELOG.md non trovato, skip auto-entry"
+        return
+    fi
+
+    # Se la versione è già nel CHANGELOG, skip
+    if grep -q "\[${version}\]" "$CHANGELOG"; then
+        print_success "CHANGELOG contiene già [${version}], skip auto-entry"
+        return
+    fi
+
+    # Inserisci dopo la prima riga "---" (separatore dopo header)
+    # Formato: ## [VERSION] - DATE\n\n- commit_msg\n
+    local ENTRY="## [${version}] - ${today}\n\n- ${commit_msg}\n"
+
+    # Trova la prima occorrenza di "---" e inserisci dopo
+    sed -i '' "/^---$/,/^---$/{
+        /^---$/{
+            n
+            i\\
+\\
+${ENTRY}
+        }
+    }" "$CHANGELOG" 2>/dev/null
+
+    # Fallback: se sed non ha funzionato (struttura diversa), usa approccio più robusto
+    if ! grep -q "\[${version}\]" "$CHANGELOG"; then
+        # Cerca la prima riga ## [ e inserisci prima
+        local TEMP_FILE
+        TEMP_FILE=$(mktemp)
+        local inserted=false
+        while IFS= read -r line; do
+            if [ "$inserted" = false ] && echo "$line" | grep -q "^## \["; then
+                echo "" >> "$TEMP_FILE"
+                echo "## [${version}] - ${today}" >> "$TEMP_FILE"
+                echo "" >> "$TEMP_FILE"
+                echo "- ${commit_msg}" >> "$TEMP_FILE"
+                echo "" >> "$TEMP_FILE"
+                inserted=true
+            fi
+            echo "$line" >> "$TEMP_FILE"
+        done < "$CHANGELOG"
+        mv "$TEMP_FILE" "$CHANGELOG"
+    fi
+
+    print_success "CHANGELOG.md → aggiunta entry [${version}]"
+}
+
+# Auto-update GUIDA_UTENTE.md version e date
+update_guida_utente() {
+    local new_version="$1"
+    local today
+    today=$(date '+%Y-%m-%d')
+
+    local GUIDA="${SCRIPT_DIR}/GUIDA_UTENTE.md"
+    if [ ! -f "$GUIDA" ]; then
+        print_warning "GUIDA_UTENTE.md non trovato, skip"
+        return
+    fi
+
+    # Aggiorna riga "Versione: **X.Y.Z**"
+    sed -i '' "s/Versione: \*\*[0-9]*\.[0-9]*\.[0-9]*\*\*/Versione: **${new_version}**/" "$GUIDA"
+
+    # Aggiorna riga "Ultimo aggiornamento: YYYY-MM-DD"
+    sed -i '' "s/Ultimo aggiornamento: [0-9]*-[0-9]*-[0-9]*/Ultimo aggiornamento: ${today}/" "$GUIDA"
+
+    # Aggiorna footer "Documento aggiornato il YYYY-MM-DD | KW Sales CRM vX.Y.Z"
+    sed -i '' "s/Documento aggiornato il [0-9]*-[0-9]*-[0-9]*/Documento aggiornato il ${today}/" "$GUIDA"
+    sed -i '' "s/KW Sales CRM v[0-9]*\.[0-9]*\.[0-9]*/KW Sales CRM v${new_version}/" "$GUIDA"
+
+    print_success "GUIDA_UTENTE.md → v${new_version} (${today})"
 }
 
 # ═══════════════════════════════════════════
@@ -158,13 +251,18 @@ update_version_in_files() {
 BUMP_TYPE=""
 COMMIT_MSG=""
 CI_MODE=false
+NO_BUMP=false
 
-# Parsing flessibile: --ci e --bump possono apparire in qualsiasi ordine
+# Parsing flessibile: --ci, --bump, --no-bump possono apparire in qualsiasi ordine
 ARGS=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --ci)
             CI_MODE=true
+            shift
+            ;;
+        --no-bump)
+            NO_BUMP=true
             shift
             ;;
         --bump)
@@ -186,24 +284,23 @@ done
 # Il primo argomento rimanente e' il messaggio di commit
 COMMIT_MSG="${ARGS[0]:-}"
 
-if [ -n "$BUMP_TYPE" ] && [ -z "$COMMIT_MSG" ]; then
-    print_error "Devi specificare un messaggio di commit!"
-    echo "Uso: ./deploy.sh --bump $BUMP_TYPE \"messaggio commit\""
-    exit 1
-fi
-
 # Verifica messaggio commit
 if [ -z "$COMMIT_MSG" ]; then
     print_error "Devi specificare un messaggio di commit!"
     echo ""
     echo "Uso:"
-    echo "  ./deploy.sh \"messaggio commit\""
-    echo "  ./deploy.sh --bump patch \"fix bug XYZ\""
-    echo "  ./deploy.sh --bump minor \"nuova funzionalita ABC\""
+    echo "  ./deploy.sh \"messaggio commit\"                (auto-patch bump)"
+    echo "  ./deploy.sh --bump minor \"nuova funzionalita\""
     echo "  ./deploy.sh --bump major \"redesign completo\""
-    echo "  ./deploy.sh --ci \"messaggio commit\"          (non-interattivo)"
-    echo "  ./deploy.sh --ci --bump patch \"messaggio\"     (combinabile)"
+    echo "  ./deploy.sh --no-bump \"hotfix veloce\"         (nessun bump)"
+    echo "  ./deploy.sh --ci \"messaggio commit\"           (non-interattivo)"
+    echo "  ./deploy.sh --ci --bump minor \"messaggio\"     (combinabile)"
     exit 1
+fi
+
+# Default: auto-patch bump se non specificato --bump e non specificato --no-bump
+if [ -z "$BUMP_TYPE" ] && [ "$NO_BUMP" = false ]; then
+    BUMP_TYPE="patch"
 fi
 
 if [ "$CI_MODE" = true ]; then
@@ -221,7 +318,16 @@ if [ -n "$BUMP_TYPE" ]; then
     print_step "Step 0 - Aggiornamento versione ($BUMP_TYPE)..."
     NEW_VERSION=$(bump_version "$APP_VERSION" "$BUMP_TYPE")
     echo -e "  ${CYAN}${APP_VERSION}${NC} → ${GREEN}${NEW_VERSION}${NC}"
+
+    # Aggiorna versione in tutti i file
     update_version_in_files "$APP_VERSION" "$NEW_VERSION"
+
+    # Auto-append entry in CHANGELOG.md
+    append_changelog_entry "$NEW_VERSION" "$COMMIT_MSG"
+
+    # Auto-update GUIDA_UTENTE.md
+    update_guida_utente "$NEW_VERSION"
+
     APP_VERSION="$NEW_VERSION"
     echo ""
 fi

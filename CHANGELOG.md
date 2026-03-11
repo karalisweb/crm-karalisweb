@@ -6,6 +6,46 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.3.0] - 2026-03-11
+
+### Aggiunto - Qualifica Automatica & Gemini AI
+- **Qualifica automatica prospect**: Punteggio 0-100 basato su sito + ads attive (DataForSEO + Meta Ad Library)
+- **Google Ads check**: Verifica ads attive tramite DataForSEO SERP API
+- **Meta Ads check via Apify**: Verifica inserzioni Facebook/Instagram tramite Apify actor (no token Meta necessario)
+- **Gemini AI Analysis**: Analisi marketing con AI generativa — coerenza, 3 errori principali, prompt HeyGen
+- **Selettore modello Gemini**: Dropdown nelle impostazioni per scegliere il modello (2.5 Flash, Lite, Pro, 2.0 Flash)
+- **Angolo Loom**: Pre-compilazione automatica angolo per video personalizzato
+- **Pannello credenziali API**: Impostazioni per tutte le API key (Apify, Inngest, DataForSEO, PageSpeed, Gemini)
+- **Test connessione**: Bottoni test per ogni servizio (DataForSEO, Meta, PageSpeed, Gemini)
+
+### Aggiunto - Filtro Siti Falsi
+- **Filtro URL social**: Lead con URL Facebook/Instagram/Maps come "website" vengono automaticamente spostati in SENZA_SITO
+- **Campo socialUrl**: URL social preservato nel campo dedicato, sito reale nel campo website
+- **Endpoint filter-social**: Filtraggio retroattivo lead esistenti con URL social
+- **Modulo url-utils**: Funzioni condivise `isSocialLink()`, `isRealWebsite()`, `getSocialPlatform()`
+
+### Aggiunto - Ricerche Automatiche
+- **Ricerche programmate notturne**: Coda di ricerche Google Maps eseguite automaticamente (2 per notte alle 02:00)
+- **Modello ScheduledSearch**: Tabella dedicata con status QUEUED/RUNNING/COMPLETED/FAILED
+- **Inngest cron**: Funzione `runScheduledSearches` con polling Apify e import automatico
+- **Tab "Programmate" in Settings**: UI per gestire la coda, aggiungere ricerche, re-queue, seed lista predefinita
+- **39 ricerche precaricate**: Lista completa delle combinazioni categoria/citta prioritarie
+
+### Aggiunto - Citta & Categorie
+- **Gold List citta**: Pordenone, Latina + citta prioritarie confermate
+- **59 categorie**: Lista completa con icone per ogni settore
+- **Rimozione citta sature**: Bergamo, Padova, Verona, Modena, Reggio Emilia, Rimini, Pisa, Vicenza
+
+### Modificato
+- Pagina ricerca mostra tutte le citta (rimosso limite `.slice(0, 6)`)
+- Deploy.sh supporta `--ci` per automazione non-interattiva
+- Deploy.sh include `prisma db push` automatico quando schema cambia
+- API config salva anche in `process.env` per effetto immediato senza restart
+- Settings API: rimosso campo `metaAccessToken` (non piu necessario)
+- Meta Ad Library: usa Apify actor `facebook-ads-scraper` invece di Graph API
+
+---
+
 ## [2.2.0] - 2026-02-22
 
 ### Aggiunto - UI/UX Overhaul
