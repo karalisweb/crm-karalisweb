@@ -45,7 +45,6 @@ interface ApiConfig {
   inngestSigningKey: string;
   dataForSeoLogin: string;
   dataForSeoPassword: string;
-  metaAccessToken: string;
   pageSpeedApiKey: string;
   geminiApiKey: string;
   geminiModel: string;
@@ -64,7 +63,6 @@ export default function SettingsPage() {
     inngestSigningKey: "",
     dataForSeoLogin: "",
     dataForSeoPassword: "",
-    metaAccessToken: "",
     pageSpeedApiKey: "",
     geminiApiKey: "",
     geminiModel: "",
@@ -609,36 +607,13 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Meta Ad Library</CardTitle>
               <CardDescription>
-                Verifica Meta Ads attive dei prospect (Facebook/Instagram).{" "}
-                <a
-                  href="https://developers.facebook.com/apps/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline"
-                >
-                  Ottieni token
-                </a>
+                Verifica Meta Ads attive dei prospect (Facebook/Instagram). Usa il token Apify — nessun token Meta necessario.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="metaAccessToken">Access Token</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="metaAccessToken"
-                    type={showTokens.metaAccessToken ? "text" : "password"}
-                    value={apiConfig.metaAccessToken}
-                    onChange={(e) => setApiConfig({ ...apiConfig, metaAccessToken: e.target.value })}
-                    placeholder="EAAxxxxxxx..."
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => toggleShowToken("metaAccessToken")}
-                  >
-                    {showTokens.metaAccessToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
+              <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                <p>Questo modulo usa l&apos;actor Apify <strong>facebook-ads-scraper</strong> per cercare nella Meta Ad Library pubblica.</p>
+                <p className="mt-1 text-muted-foreground">Richiede solo il token Apify (configurato sopra).</p>
               </div>
               <div className="flex gap-2">
                 <Button onClick={testMetaConnection} variant="outline">
@@ -838,15 +813,15 @@ export default function SettingsPage() {
                 <div className="p-4 border rounded-lg">
                   <p className="text-sm text-muted-foreground">Meta Ad Library</p>
                   <div className="flex items-center gap-2 mt-1">
-                    {apiConfig.metaAccessToken ? (
+                    {apiConfig.apifyToken ? (
                       <>
                         <Check className="h-4 w-4 text-green-500" />
-                        <span className="font-medium">Configurato</span>
+                        <span className="font-medium">Via Apify</span>
                       </>
                     ) : (
                       <>
                         <X className="h-4 w-4 text-yellow-500" />
-                        <span className="font-medium">Non configurato</span>
+                        <span className="font-medium">Richiede Apify</span>
                       </>
                     )}
                   </div>

@@ -21,7 +21,6 @@ export async function GET() {
       inngestSigningKey: process.env.INNGEST_SIGNING_KEY ? "••••••••" : "",
       dataForSeoLogin: process.env.DATAFORSEO_LOGIN ? "••••" + (process.env.DATAFORSEO_LOGIN.slice(-4) || "") : "",
       dataForSeoPassword: process.env.DATAFORSEO_PASSWORD ? "••••••••" : "",
-      metaAccessToken: process.env.META_ACCESS_TOKEN ? "••••" + (process.env.META_ACCESS_TOKEN.slice(-4) || "") : "",
       pageSpeedApiKey: process.env.PAGESPEED_API_KEY ? "••••" + (process.env.PAGESPEED_API_KEY.slice(-4) || "") : "",
       geminiApiKey: process.env.GEMINI_API_KEY ? "••••" + (process.env.GEMINI_API_KEY.slice(-4) || "") : "",
       geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
@@ -44,7 +43,7 @@ export async function PUT(request: NextRequest) {
 
     const {
       apifyToken, apifyWebhookSecret, inngestEventKey, inngestSigningKey,
-      dataForSeoLogin, dataForSeoPassword, metaAccessToken, pageSpeedApiKey,
+      dataForSeoLogin, dataForSeoPassword, pageSpeedApiKey,
       geminiApiKey, geminiModel,
     } = await request.json();
 
@@ -78,7 +77,6 @@ export async function PUT(request: NextRequest) {
     envContent = updateEnvVar(envContent, "INNGEST_SIGNING_KEY", inngestSigningKey);
     envContent = updateEnvVar(envContent, "DATAFORSEO_LOGIN", dataForSeoLogin);
     envContent = updateEnvVar(envContent, "DATAFORSEO_PASSWORD", dataForSeoPassword);
-    envContent = updateEnvVar(envContent, "META_ACCESS_TOKEN", metaAccessToken);
     envContent = updateEnvVar(envContent, "PAGESPEED_API_KEY", pageSpeedApiKey);
     envContent = updateEnvVar(envContent, "GEMINI_API_KEY", geminiApiKey);
     envContent = updateEnvVar(envContent, "GEMINI_MODEL", geminiModel);
