@@ -217,7 +217,7 @@ export default function SearchPage() {
                     ))}
                   </>
                 ) : (
-                  displayLocations.slice(0, 6).map((loc) => (
+                  displayLocations.map((loc) => (
                     <Badge
                       key={loc}
                       variant={location === loc ? "default" : "secondary"}
