@@ -11,7 +11,6 @@ import {
   Search,
   LogOut,
   FolderSearch,
-  Calendar,
   FileText,
   Trophy,
   Target,
@@ -19,7 +18,7 @@ import {
   User,
   Settings,
   ClipboardCheck,
-  UserCheck,
+  Phone,
   Video,
   Send,
   Repeat,
@@ -27,16 +26,15 @@ import {
   Archive,
   PanelLeftClose,
   PanelLeftOpen,
+  CalendarCheck,
 } from "lucide-react";
 
 const stageMapping: Record<string, string[]> = {
   "/da-qualificare": ["DA_QUALIFICARE"],
-  "/qualificati": ["QUALIFICATO"],
   "/video-da-fare": ["VIDEO_DA_FARE"],
   "/video-inviati": ["VIDEO_INVIATO"],
   "/follow-up": ["VIDEO_INVIATO", "LETTERA_INVIATA", "FOLLOW_UP_LINKEDIN"],
-  "/risposto": ["RISPOSTO"],
-  "/appuntamenti": ["CALL_FISSATA"],
+  "/trattative": ["RISPOSTO", "CALL_FISSATA", "IN_CONVERSAZIONE"],
   "/proposte": ["PROPOSTA_INVIATA"],
   "/clienti": ["VINTO"],
   "/archivio": ["PERSO", "DA_RICHIAMARE_6M", "RICICLATO", "NON_TARGET", "SENZA_SITO"],
@@ -44,23 +42,17 @@ const stageMapping: Record<string, string[]> = {
 
 const navSections = [
   {
-    title: "SCOUTING",
+    title: "PANORAMICA",
     items: [
+      { href: "/oggi", label: "Oggi", icon: CalendarCheck },
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/search", label: "Nuova Ricerca", icon: Search },
-      { href: "/searches", label: "Ricerche", icon: FolderSearch },
     ],
   },
   {
-    title: "QUALIFICAZIONE",
+    title: "PIPELINE",
     items: [
       { href: "/da-qualificare", label: "Da Qualificare", icon: ClipboardCheck },
-      { href: "/qualificati", label: "Qualificati", icon: UserCheck },
-    ],
-  },
-  {
-    title: "OUTREACH",
-    items: [
+      { href: "/da-chiamare", label: "Da Chiamare", icon: Phone },
       { href: "/video-da-fare", label: "Video da Fare", icon: Video },
       { href: "/video-inviati", label: "Video Inviati", icon: Send },
       { href: "/follow-up", label: "Follow-up", icon: Repeat },
@@ -69,10 +61,16 @@ const navSections = [
   {
     title: "VENDITA",
     items: [
-      { href: "/risposto", label: "Ha Risposto", icon: MessageCircle },
-      { href: "/appuntamenti", label: "Call Fissate", icon: Calendar },
+      { href: "/trattative", label: "Trattative", icon: MessageCircle },
       { href: "/proposte", label: "Proposte", icon: FileText },
       { href: "/clienti", label: "Clienti", icon: Trophy },
+    ],
+  },
+  {
+    title: "SCOUTING",
+    items: [
+      { href: "/search", label: "Nuova Ricerca", icon: Search },
+      { href: "/searches", label: "Ricerche", icon: FolderSearch },
     ],
   },
   {
@@ -147,7 +145,7 @@ export function Sidebar() {
             <span className="font-semibold text-[0.95rem] text-[#f5f5f7]">
               KW Sales CRM
             </span>
-            <span className="text-xs text-[#71717a]">v2.3.0</span>
+            <span className="text-xs text-[#71717a]">v2.4.0</span>
           </div>
         )}
       </div>

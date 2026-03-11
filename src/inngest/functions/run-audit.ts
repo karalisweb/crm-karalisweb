@@ -132,7 +132,7 @@ export const runAuditFunction = inngest.createFunction(
     });
 
     // Step 5: Salva tutti i risultati
-    await step.run("save-results", async () => {
+    const savedPipelineStage = await step.run("save-results", async () => {
       // Determina il pipelineStage: Daniela decide, l'app pre-filtra solo NON_TARGET
       let newPipelineStage: PipelineStage;
       if (commercialResult.tagResult.tag === "NON_TARGET") {
@@ -181,7 +181,19 @@ export const runAuditFunction = inngest.createFunction(
           } : {}),
         },
       });
+
+      return newPipelineStage;
     });
+
+    // Step 6: Trigger analisi Gemini automatica se lead è DA_QUALIFICARE
+    if (savedPipelineStage === PipelineStage.DA_QUALIFICARE) {
+      await step.run("trigger-gemini", async () => {
+        await inngest.send({
+          name: "gemini/analyze",
+          data: { leadId },
+        });
+      });
+    }
 
     return {
       leadId,
@@ -191,6 +203,7 @@ export const runAuditFunction = inngest.createFunction(
       isCallable: commercialResult.tagResult.isCallable,
       qualificationScore: qualificationResult?.punteggio_qualifica ?? null,
       qualificationPriority: qualificationResult?.priorita ?? null,
+      geminiTriggered: savedPipelineStage === PipelineStage.DA_QUALIFICARE,
     };
   }
 );

@@ -31,8 +31,16 @@ export type ScheduledSearchRunEvent = {
   };
 };
 
+export type GeminiAnalyzeEvent = {
+  name: "gemini/analyze";
+  data: {
+    leadId: string;
+  };
+};
+
 export type Events = {
   "audit/run": AuditRunEvent;
   "audit/batch": AuditBatchEvent;
   "search/scheduled-run": ScheduledSearchRunEvent;
+  "gemini/analyze": GeminiAnalyzeEvent;
 };
