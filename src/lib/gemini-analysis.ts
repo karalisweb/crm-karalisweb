@@ -166,6 +166,27 @@ function summarizeAuditData(audit: AuditData): string {
 // ESECUZIONE ANALISI
 // ==========================================
 
+// Trova il miglior modello Flash disponibile
+async function findBestModel(apiKey: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const models = (data.models || []) as Array<{ name: string }>;
+      const flash20 = models.find((m) => m.name.includes("gemini-2.0-flash"));
+      if (flash20) return flash20.name.replace("models/", "");
+      const flash15 = models.find((m) => m.name.includes("gemini-1.5-flash"));
+      if (flash15) return flash15.name.replace("models/", "");
+    }
+  } catch {
+    // Fallback silenzioso
+  }
+  return "gemini-1.5-flash"; // Fallback sicuro
+}
+
 export async function runGeminiAnalysis(
   input: GeminiAnalysisInput
 ): Promise<GeminiAnalysisResult> {
@@ -174,7 +195,8 @@ export async function runGeminiAnalysis(
     throw new Error("Gemini API key non configurata. Vai in Impostazioni > API & Token.");
   }
 
-  const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const modelName = await findBestModel(process.env.GEMINI_API_KEY || "");
+  const model = client.getGenerativeModel({ model: modelName });
   const prompt = buildPrompt(input);
 
   const result = await model.generateContent(prompt);
@@ -205,6 +227,6 @@ export async function runGeminiAnalysis(
   return {
     ...parsed,
     generatedAt: new Date().toISOString(),
-    model: "gemini-2.0-flash",
+    model: modelName,
   };
 }

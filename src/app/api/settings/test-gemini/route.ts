@@ -18,37 +18,64 @@ export async function GET() {
       });
     }
 
-    // Testa la key con una chiamata minimale
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Rispondi solo: OK" }] }],
-        }),
-        signal: AbortSignal.timeout(15000),
-      }
+    // Step 1: Lista modelli per verificare la key e trovare modelli disponibili
+    const listResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      { signal: AbortSignal.timeout(10000) }
     );
 
-    if (response.ok) {
-      return NextResponse.json({
-        success: true,
-        message: "API Key valida | Modello: gemini-2.0-flash",
-      });
-    } else if (response.status === 400 || response.status === 403) {
-      const errorData = await response.json().catch(() => null);
-      const errorMsg = errorData?.error?.message || "API Key non valida";
-      return NextResponse.json({
-        success: false,
-        message: errorMsg,
-      });
-    } else {
+    if (!listResponse.ok) {
+      if (listResponse.status === 400 || listResponse.status === 403) {
+        const errorData = await listResponse.json().catch(() => null);
+        return NextResponse.json({
+          success: false,
+          message: errorData?.error?.message || "API Key non valida",
+        });
+      }
       return NextResponse.json({
         success: false,
-        message: `Errore API: HTTP ${response.status}`,
+        message: `Errore API: HTTP ${listResponse.status}`,
       });
     }
+
+    const listData = await listResponse.json();
+    const models = (listData.models || []) as Array<{ name: string; displayName?: string }>;
+
+    // Cerca un modello flash disponibile (preferenza: 2.0-flash > 1.5-flash)
+    const flashModel = models.find((m) => m.name.includes("gemini-2.0-flash"))
+      || models.find((m) => m.name.includes("gemini-1.5-flash"));
+
+    const modelName = flashModel
+      ? flashModel.name.replace("models/", "")
+      : null;
+
+    // Step 2: Testa generazione con il modello trovato
+    if (modelName) {
+      const genResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "Rispondi solo: OK" }] }],
+          }),
+          signal: AbortSignal.timeout(15000),
+        }
+      );
+
+      if (genResponse.ok) {
+        return NextResponse.json({
+          success: true,
+          message: `API Key valida | Modello: ${modelName} | ${models.length} modelli disponibili`,
+        });
+      }
+    }
+
+    // La key funziona (lista modelli OK) ma nessun modello flash trovato
+    return NextResponse.json({
+      success: true,
+      message: `API Key valida | ${models.length} modelli disponibili${modelName ? ` | Flash: ${modelName}` : " | Nessun modello Flash trovato"}`,
+    });
   } catch (error) {
     console.error("Error testing Gemini:", error);
     return NextResponse.json({
