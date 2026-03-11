@@ -56,12 +56,14 @@ export async function PUT(request: NextRequest) {
       envContent = "";
     }
 
-    // Funzione per aggiornare o aggiungere una variabile
+    // Aggiorna file .env.local E process.env in memoria
     function updateEnvVar(content: string, key: string, value: string): string {
       if (!value || value.includes("••••")) {
         // Non aggiornare se vuoto o mascherato
         return content;
       }
+      // Aggiorna process.env in memoria (effetto immediato senza restart)
+      process.env[key] = value;
       const regex = new RegExp(`^${key}=.*$`, "m");
       if (regex.test(content)) {
         return content.replace(regex, `${key}="${value}"`);
@@ -81,7 +83,7 @@ export async function PUT(request: NextRequest) {
 
     await writeFile(CONFIG_FILE, envContent.trim() + "\n", "utf-8");
 
-    return NextResponse.json({ success: true, message: "Riavvia il server per applicare le modifiche" });
+    return NextResponse.json({ success: true, message: "Configurazione salvata e attiva" });
   } catch (error) {
     console.error("Error saving API config:", error);
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
