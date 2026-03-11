@@ -23,6 +23,7 @@ export async function GET() {
       dataForSeoPassword: process.env.DATAFORSEO_PASSWORD ? "••••••••" : "",
       metaAccessToken: process.env.META_ACCESS_TOKEN ? "••••" + (process.env.META_ACCESS_TOKEN.slice(-4) || "") : "",
       pageSpeedApiKey: process.env.PAGESPEED_API_KEY ? "••••" + (process.env.PAGESPEED_API_KEY.slice(-4) || "") : "",
+      geminiApiKey: process.env.GEMINI_API_KEY ? "••••" + (process.env.GEMINI_API_KEY.slice(-4) || "") : "",
     };
 
     return NextResponse.json(config);
@@ -43,6 +44,7 @@ export async function PUT(request: NextRequest) {
     const {
       apifyToken, apifyWebhookSecret, inngestEventKey, inngestSigningKey,
       dataForSeoLogin, dataForSeoPassword, metaAccessToken, pageSpeedApiKey,
+      geminiApiKey,
     } = await request.json();
 
     // Leggi file .env esistente o crea nuovo
@@ -75,6 +77,7 @@ export async function PUT(request: NextRequest) {
     envContent = updateEnvVar(envContent, "DATAFORSEO_PASSWORD", dataForSeoPassword);
     envContent = updateEnvVar(envContent, "META_ACCESS_TOKEN", metaAccessToken);
     envContent = updateEnvVar(envContent, "PAGESPEED_API_KEY", pageSpeedApiKey);
+    envContent = updateEnvVar(envContent, "GEMINI_API_KEY", geminiApiKey);
 
     await writeFile(CONFIG_FILE, envContent.trim() + "\n", "utf-8");
 

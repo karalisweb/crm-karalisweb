@@ -20,6 +20,7 @@ model Lead {
   address           String?
   phone             String?
   website           String?
+  socialUrl         String?   @map("social_url")
   category          String?
   googleRating      Decimal?  @map("google_rating") @db.Decimal(2, 1)
   googleReviewsCount Int?     @map("google_reviews_count")
@@ -87,6 +88,12 @@ model Lead {
   // Tracking invio video
   videoSentAt       DateTime?     @map("video_sent_at")
   videoViewedAt     DateTime?     @map("video_viewed_at")
+
+  // ==========================================
+  // GEMINI AI ANALYSIS
+  // ==========================================
+  geminiAnalysis    Json?         @map("gemini_analysis")
+  geminiAnalyzedAt  DateTime?     @map("gemini_analyzed_at")
 
   // ==========================================
   // FOLLOW-UP TRACKING

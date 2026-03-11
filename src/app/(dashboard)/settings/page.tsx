@@ -47,6 +47,7 @@ interface ApiConfig {
   dataForSeoPassword: string;
   metaAccessToken: string;
   pageSpeedApiKey: string;
+  geminiApiKey: string;
 }
 
 export default function SettingsPage() {
@@ -64,6 +65,7 @@ export default function SettingsPage() {
     dataForSeoPassword: "",
     metaAccessToken: "",
     pageSpeedApiKey: "",
+    geminiApiKey: "",
   });
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "USER" });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -220,6 +222,21 @@ export default function SettingsPage() {
       }
     } catch (error) {
       toast.error("Errore nel test connessione PageSpeed");
+    }
+  }
+
+  async function testGeminiConnection() {
+    try {
+      toast.info("Test Gemini in corso...");
+      const res = await fetch("/api/settings/test-gemini");
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connessione Gemini OK");
+      } else {
+        toast.error(data.message || "Connessione Gemini fallita");
+      }
+    } catch (error) {
+      toast.error("Errore nel test connessione Gemini");
     }
   }
 
@@ -673,6 +690,50 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Google Gemini AI */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Google Gemini AI</CardTitle>
+              <CardDescription>
+                Analisi marketing con AI generativa (coerenza, errori, prompt HeyGen).{" "}
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  Ottieni API key
+                </a>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="geminiApiKey">API Key</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="geminiApiKey"
+                    type={showTokens.geminiApiKey ? "text" : "password"}
+                    value={apiConfig.geminiApiKey}
+                    onChange={(e) => setApiConfig({ ...apiConfig, geminiApiKey: e.target.value })}
+                    placeholder="AIzaSy..."
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => toggleShowToken("geminiApiKey")}
+                  >
+                    {showTokens.geminiApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={testGeminiConnection} variant="outline">
+                  Test Connessione
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Salva tutto */}
           <div className="flex justify-end">
             <Button onClick={saveApiConfig} size="lg">
@@ -783,6 +844,22 @@ export default function SettingsPage() {
                       <>
                         <X className="h-4 w-4 text-yellow-500" />
                         <span className="font-medium">Non configurato (usa valori default)</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm text-muted-foreground">Gemini AI</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {apiConfig.geminiApiKey ? (
+                      <>
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span className="font-medium">Configurato</span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="h-4 w-4 text-yellow-500" />
+                        <span className="font-medium">Non configurato</span>
                       </>
                     )}
                   </div>

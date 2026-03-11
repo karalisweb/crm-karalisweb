@@ -223,6 +223,28 @@ export interface VideoScriptData {
 }
 
 // ==========================================
+// GEMINI AI ANALYSIS
+// ==========================================
+
+export interface GeminiAnalysisResult {
+  marketingCoherence: {
+    summary: string;
+    targetAudience: string;
+    messagingIssues: string[];
+    score: "coerente" | "parzialmente_coerente" | "incoerente";
+  };
+  topErrors: Array<{
+    title: string;
+    description: string;
+    businessImpact: string;
+    suggestion: string;
+  }>;
+  heygenPrompt: string;
+  generatedAt: string;
+  model: string;
+}
+
+// ==========================================
 // LOST REASONS CONFIG
 // ==========================================
 

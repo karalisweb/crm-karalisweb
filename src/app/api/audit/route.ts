@@ -3,34 +3,9 @@ import { db } from "@/lib/db";
 import { runFullAudit } from "@/lib/audit";
 import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
 import { qualificaProspect } from "@/lib/qualification";
+import { isSocialLink } from "@/lib/url-utils";
 import { Prisma, CommercialTag, PipelineStage } from "@prisma/client";
 import type { CommercialSignals, AdsEvidenceLevel } from "@/types/commercial";
-
-/**
- * Pattern per riconoscere link social/non-siti-veri
- */
-const SOCIAL_PATTERNS = [
-  /facebook\.com/i,
-  /fb\.com/i,
-  /instagram\.com/i,
-  /linkedin\.com/i,
-  /twitter\.com/i,
-  /x\.com/i,
-  /tiktok\.com/i,
-  /youtube\.com/i,
-  /wa\.me/i,
-  /whatsapp\.com/i,
-  /t\.me/i,         // Telegram
-  /example\.com/i,  // Dati test
-  /example\d*\.com/i,
-];
-
-/**
- * Verifica se un URL è un link social invece che un sito vero
- */
-function isSocialLink(url: string): boolean {
-  return SOCIAL_PATTERNS.some(pattern => pattern.test(url));
-}
 
 /**
  * POST /api/audit
@@ -71,6 +46,9 @@ export async function POST(request: NextRequest) {
         where: { id: leadId },
         data: {
           auditStatus: "NO_WEBSITE",
+          pipelineStage: "SENZA_SITO",
+          socialUrl: lead.website,
+          website: null,
           auditData: {
             error: "Link social - non è un sito web aziendale",
             originalUrl: lead.website,
@@ -80,7 +58,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         leadId,
-        message: "Link social spostato in parcheggiati",
+        message: "Link social spostato in SENZA_SITO",
         isSocialLink: true,
       });
     }

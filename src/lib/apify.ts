@@ -3,6 +3,8 @@ import { db } from "./db";
 import type { GoogleMapsResult } from "@/types";
 import { generateMockResults, simulateApiDelay, isMockMode } from "./apify-mock";
 import { inngest } from "@/inngest/client";
+import { isRealWebsite } from "./url-utils";
+import type { AuditStatus, PipelineStage } from "@prisma/client";
 
 const apifyClient = new ApifyClient({
   token: process.env.APIFY_TOKEN,
@@ -151,10 +153,24 @@ export async function importSearchResults(
   let withWebsite = 0;
 
   for (const result of results) {
-    // Determina audit status basato su presenza website
-    const auditStatus = result.website ? "PENDING" : "NO_WEBSITE";
+    // Classifica URL: sito reale, social, o assente
+    const urlCheck = isRealWebsite(result.website);
+    let auditStatus: AuditStatus;
+    let pipelineStage: PipelineStage | undefined;
+    let realWebsite: string | null = null;
+    let socialUrl: string | null = null;
 
-    if (result.website) {
+    if (!result.website) {
+      auditStatus = "NO_WEBSITE";
+      pipelineStage = "SENZA_SITO";
+    } else if (!urlCheck.isReal) {
+      // URL social (Facebook, Instagram, ecc.) — non è un sito vero
+      auditStatus = "NO_WEBSITE";
+      pipelineStage = "SENZA_SITO";
+      socialUrl = result.website;
+    } else {
+      auditStatus = "PENDING";
+      realWebsite = result.website;
       withWebsite++;
     }
 
@@ -170,8 +186,9 @@ export async function importSearchResults(
         data: {
           googleRating: result.totalScore,
           googleReviewsCount: result.reviewsCount,
-          // Non sovrascrivere website se gia presente e il nuovo e null
-          ...(result.website && { website: result.website }),
+          // Non sovrascrivere un website reale con un social URL o null
+          ...(realWebsite && { website: realWebsite }),
+          ...(socialUrl && !existingLead.socialUrl && { socialUrl }),
         },
       });
       updated++;
@@ -182,7 +199,8 @@ export async function importSearchResults(
           name: result.title,
           address: result.address,
           phone: result.phone,
-          website: result.website,
+          website: realWebsite,
+          socialUrl,
           category: result.categoryName,
           googleRating: result.totalScore,
           googleReviewsCount: result.reviewsCount,
@@ -190,6 +208,7 @@ export async function importSearchResults(
           placeId: result.placeId,
           searchId,
           auditStatus,
+          ...(pipelineStage && { pipelineStage }),
           source: "google_maps",
         },
       });

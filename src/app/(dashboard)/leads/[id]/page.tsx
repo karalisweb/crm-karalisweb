@@ -23,6 +23,7 @@ import { AuditCheck } from "@/components/leads/audit-check";
 import { AuditRadar } from "@/components/leads/audit-radar";
 import { TalkingPointsGrouped } from "@/components/leads/talking-points-grouped";
 import { AuditPdfButton } from "@/components/leads/audit-pdf-button";
+import { GeminiAnalysisCard } from "@/components/leads/gemini-analysis-card";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { timeAgo } from "@/lib/date-utils";
 
@@ -167,6 +168,7 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
           <TabsTrigger value="info">Informazioni</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
           <TabsTrigger value="talking-points">Talking Points</TabsTrigger>
+          <TabsTrigger value="ai-analysis">Analisi AI</TabsTrigger>
           <TabsTrigger value="activities">Attivita</TabsTrigger>
         </TabsList>
 
@@ -214,6 +216,24 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
                       className="text-sm text-blue-400 hover:underline flex items-center gap-1"
                     >
                       {lead.website}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {lead.socialUrl && (
+                <div className="flex items-start gap-3">
+                  <Globe className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">Profilo Social</p>
+                    <a
+                      href={lead.socialUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      {lead.socialUrl}
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
@@ -432,6 +452,16 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* AI Analysis Tab */}
+        <TabsContent value="ai-analysis">
+          <GeminiAnalysisCard
+            leadId={lead.id}
+            auditStatus={lead.auditStatus}
+            geminiAnalysis={lead.geminiAnalysis as Parameters<typeof GeminiAnalysisCard>[0]["geminiAnalysis"]}
+            geminiAnalyzedAt={lead.geminiAnalyzedAt?.toISOString() ?? null}
+          />
         </TabsContent>
 
         {/* Activities Tab with timeAgo */}
