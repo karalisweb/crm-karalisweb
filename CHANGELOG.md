@@ -6,6 +6,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
+
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
 ## [2.3.0] - 2026-03-11
@@ -47,6 +49,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Meta Ad Library: usa Apify actor `facebook-ads-scraper` invece di Graph API
 
 ---
+
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
@@ -92,6 +96,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
+
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
 ## [2.1.0] - 2026-02-16
@@ -105,6 +111,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Versione bumped a 2.1.0 in tutti i file
 
 ---
+
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
@@ -132,6 +140,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
+
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
 ## [1.9.0] - 2026-01-27
@@ -153,6 +163,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
+
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
 ## [1.8.0] - 2026-01-22
@@ -164,6 +176,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Variabili SMTP in docker-compose per invio email
 
 ---
+
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
@@ -183,6 +197,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
+
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
 ## [1.6.0] - 2026-01-20
@@ -191,6 +207,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Sistema commerciale per 5 chiamate/giorno con prioritizzazione automatica
 
 ---
+
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
@@ -215,6 +233,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
+
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
 ## [1.4.0] - 2026-01-16
@@ -228,6 +248,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Errore TypeScript: rimossa duplicate-key in oggetto
 
 ---
+
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
@@ -244,6 +266,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Porta fissata a 3003 per evitare conflitti
 
 ---
+
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 
@@ -262,6 +286,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Prisma incluso nel runner per migrazioni
 
 ---
+
+## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
 

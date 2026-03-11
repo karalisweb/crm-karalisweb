@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **2.4.0** | Ultimo aggiornamento: 2026-03-11
+Versione: **2.4.1** | Ultimo aggiornamento: 2026-03-11
 
 > Questa guida spiega come utilizzare il CRM per verificare i lead prima di passarli al commerciale.
 
@@ -357,4 +357,4 @@ R: Si, puoi sempre tornare sulla scheda del lead e modificare la verifica o aggi
 
 ---
 
-*Documento aggiornato il 2026-03-11 | KW Sales CRM v2.4.0*
+*Documento aggiornato il 2026-03-11 | KW Sales CRM v2.4.1*

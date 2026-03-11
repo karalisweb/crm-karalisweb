@@ -4,16 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ClipboardCheck,
-  Video,
-  Search,
+  Users,
+  Target,
+  Trophy,
   ChevronRight,
   Flame,
-  Repeat,
+  Video,
+  Send,
   MessageCircle,
-  AlertTriangle,
-  Calendar,
-  TrendingUp,
+  ClipboardCheck,
+  BarChart3,
+  CalendarCheck,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
@@ -22,38 +24,94 @@ import { timeAgo } from "@/lib/date-utils";
 
 export const dynamic = "force-dynamic";
 
+function getStartOfWeek(): Date {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? 6 : day - 1; // Monday = start
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diff);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function getStartOfMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
 async function DashboardStats() {
+  const startOfWeek = getStartOfWeek();
+  const startOfMonth = getStartOfMonth();
+
   const [
-    countDaQualificare,
-    countVideoDaFare,
-    countFollowUp,
-    countRisposto,
-    recentSearches,
-    topLeads,
+    // KPI globali
+    totalLeads,
+    leadsThisWeek,
+    leadsThisMonth,
+    totalAuditCompleted,
+    totalVinto,
+    totalRisposto,
     // Funnel data
+    countDaQualificare,
     countQualificati,
+    countVideoDaFare,
     countVideoInviato,
+    countFollowUp,
+    countRisposti,
     countCallFissata,
+    countInConversazione,
     countProposta,
     countVinto,
-    // Today items
-    overdueFollowups,
-    todayAppointments,
+    // Attività questa settimana
+    auditThisWeek,
+    geminiThisWeek,
+    videoSentThisWeek,
+    letterSentThisWeek,
+    linkedinSentThisWeek,
+    respondedThisWeek,
+    qualifiedThisWeek,
+    // Lead prioritari
+    topLeads,
+    // Ricerche recenti
+    recentSearches,
   ] = await Promise.all([
-    db.lead.count({ where: { pipelineStage: "DA_QUALIFICARE" } }),
-    db.lead.count({ where: { pipelineStage: "VIDEO_DA_FARE" } }),
+    // KPI
+    db.lead.count(),
+    db.lead.count({ where: { createdAt: { gte: startOfWeek } } }),
+    db.lead.count({ where: { createdAt: { gte: startOfMonth } } }),
+    db.lead.count({ where: { auditStatus: "COMPLETED" } }),
+    db.lead.count({ where: { pipelineStage: "VINTO" } }),
     db.lead.count({
       where: {
         pipelineStage: {
-          in: ["VIDEO_INVIATO", "LETTERA_INVIATA", "FOLLOW_UP_LINKEDIN"],
+          in: ["RISPOSTO", "CALL_FISSATA", "IN_CONVERSAZIONE", "PROPOSTA_INVIATA", "VINTO"],
         },
       },
     }),
-    db.lead.count({ where: { pipelineStage: "RISPOSTO" } }),
-    db.search.findMany({
-      take: 3,
-      orderBy: { createdAt: "desc" },
+    // Funnel
+    db.lead.count({ where: { pipelineStage: "DA_QUALIFICARE" } }),
+    db.lead.count({ where: { pipelineStage: "QUALIFICATO" } }),
+    db.lead.count({ where: { pipelineStage: "VIDEO_DA_FARE" } }),
+    db.lead.count({ where: { pipelineStage: "VIDEO_INVIATO" } }),
+    db.lead.count({
+      where: {
+        pipelineStage: { in: ["VIDEO_INVIATO", "LETTERA_INVIATA", "FOLLOW_UP_LINKEDIN"] },
+      },
     }),
+    db.lead.count({ where: { pipelineStage: "RISPOSTO" } }),
+    db.lead.count({ where: { pipelineStage: "CALL_FISSATA" } }),
+    db.lead.count({ where: { pipelineStage: "IN_CONVERSAZIONE" } }),
+    db.lead.count({ where: { pipelineStage: "PROPOSTA_INVIATA" } }),
+    db.lead.count({ where: { pipelineStage: "VINTO" } }),
+    // Attività settimana
+    db.lead.count({ where: { auditCompletedAt: { gte: startOfWeek } } }),
+    db.lead.count({ where: { geminiAnalyzedAt: { gte: startOfWeek } } }),
+    db.lead.count({ where: { videoSentAt: { gte: startOfWeek } } }),
+    db.lead.count({ where: { letterSentAt: { gte: startOfWeek } } }),
+    db.lead.count({ where: { linkedinSentAt: { gte: startOfWeek } } }),
+    db.lead.count({ where: { respondedAt: { gte: startOfWeek } } }),
+    db.lead.count({ where: { qualifiedAt: { gte: startOfWeek } } }),
+    // Top leads
     db.lead.findMany({
       where: {
         pipelineStage: "DA_QUALIFICARE",
@@ -70,191 +128,125 @@ async function DashboardStats() {
         commercialTag: true,
       },
     }),
-    // Funnel counts
-    db.lead.count({ where: { pipelineStage: "QUALIFICATO" } }),
-    db.lead.count({ where: { pipelineStage: "VIDEO_INVIATO" } }),
-    db.lead.count({ where: { pipelineStage: "CALL_FISSATA" } }),
-    db.lead.count({ where: { pipelineStage: "PROPOSTA_INVIATA" } }),
-    db.lead.count({ where: { pipelineStage: "VINTO" } }),
-    // Overdue follow-ups
-    db.lead.findMany({
-      where: {
-        nextFollowupAt: { lt: new Date() },
-        pipelineStage: {
-          in: [
-            "VIDEO_INVIATO",
-            "LETTERA_INVIATA",
-            "FOLLOW_UP_LINKEDIN",
-            "RISPOSTO",
-            "IN_CONVERSAZIONE",
-          ],
-        },
-      },
-      take: 5,
-      orderBy: { nextFollowupAt: "asc" },
-      select: { id: true, name: true, nextFollowupAt: true, pipelineStage: true },
-    }),
-    // Today's appointments
-    db.lead.findMany({
-      where: {
-        pipelineStage: "CALL_FISSATA",
-        appointmentAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          lt: new Date(new Date().setHours(23, 59, 59, 999)),
-        },
-      },
-      take: 5,
-      select: { id: true, name: true, appointmentAt: true },
+    // Ricerche
+    db.search.findMany({
+      take: 3,
+      orderBy: { createdAt: "desc" },
     }),
   ]);
+
+  // Calcoli derivati
+  const conversionRate = totalAuditCompleted > 0
+    ? Math.round((totalRisposto / totalAuditCompleted) * 100)
+    : 0;
+
+  const touchpointsThisWeek = videoSentThisWeek + letterSentThisWeek + linkedinSentThisWeek;
 
   const funnelData = [
     { name: "Qualifica", value: countDaQualificare, color: "#f59e0b" },
     { name: "Qualificati", value: countQualificati, color: "#8b5cf6" },
     { name: "Video", value: countVideoDaFare + countVideoInviato, color: "#a855f7" },
-    { name: "Risposto", value: countRisposto, color: "#06b6d4" },
-    { name: "Call", value: countCallFissata, color: "#3b82f6" },
-    { name: "Proposta", value: countProposta, color: "#2d7d9a" },
-    { name: "Vinto", value: countVinto, color: "#22c55e" },
+    { name: "Follow-up", value: countFollowUp, color: "#06b6d4" },
+    { name: "Trattative", value: countRisposti + countCallFissata + countInConversazione, color: "#3b82f6" },
+    { name: "Proposte", value: countProposta, color: "#2d7d9a" },
+    { name: "Vinti", value: countVinto, color: "#22c55e" },
   ];
-
-  const hasUrgentItems = overdueFollowups.length > 0 || todayAppointments.length > 0;
 
   return (
     <>
-      {/* Stats Cards with Animated Counters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <Link href="/da-qualificare">
-          <Card className="card-hover cursor-pointer">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-amber-500/10">
-                  <ClipboardCheck className="h-5 w-5 text-amber-500" />
-                </div>
-                <div>
-                  <AnimatedCounter
-                    value={countDaQualificare}
-                    className="text-2xl font-bold text-amber-500"
-                  />
-                  <p className="text-xs text-muted-foreground">Da qualificare</p>
-                </div>
+      {/* ROW 1: KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-blue-500/10">
+                <Users className="h-5 w-5 text-blue-500" />
               </div>
-            </CardContent>
-          </Card>
-        </Link>
+              <div>
+                <AnimatedCounter
+                  value={totalLeads}
+                  className="text-2xl font-bold text-foreground"
+                />
+                <p className="text-xs text-muted-foreground">Lead totali</p>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="text-xs text-green-500 font-medium">+{leadsThisWeek}</span>
+              <span className="text-xs text-muted-foreground">questa settimana</span>
+            </div>
+          </CardContent>
+        </Card>
 
-        <Link href="/video-da-fare">
-          <Card className="card-hover cursor-pointer">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-purple-500/10">
-                  <Video className="h-5 w-5 text-purple-500" />
-                </div>
-                <div>
-                  <AnimatedCounter
-                    value={countVideoDaFare}
-                    className="text-2xl font-bold text-purple-500"
-                  />
-                  <p className="text-xs text-muted-foreground">Video da fare</p>
-                </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/10">
+                <Target className="h-5 w-5 text-amber-500" />
               </div>
-            </CardContent>
-          </Card>
-        </Link>
+              <div>
+                <AnimatedCounter
+                  value={totalAuditCompleted}
+                  className="text-2xl font-bold text-foreground"
+                />
+                <p className="text-xs text-muted-foreground">Audit completati</p>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="text-xs text-green-500 font-medium">+{auditThisWeek}</span>
+              <span className="text-xs text-muted-foreground">questa settimana</span>
+            </div>
+          </CardContent>
+        </Card>
 
-        <Link href="/follow-up">
-          <Card className="card-hover cursor-pointer">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-cyan-500/10">
-                  <Repeat className="h-5 w-5 text-cyan-500" />
-                </div>
-                <div>
-                  <AnimatedCounter
-                    value={countFollowUp}
-                    className="text-2xl font-bold text-cyan-500"
-                  />
-                  <p className="text-xs text-muted-foreground">Follow-up</p>
-                </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-cyan-500/10">
+                <MessageCircle className="h-5 w-5 text-cyan-500" />
               </div>
-            </CardContent>
-          </Card>
-        </Link>
+              <div>
+                <span className="text-2xl font-bold">{conversionRate}%</span>
+                <p className="text-xs text-muted-foreground">Tasso risposta</p>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">
+                {totalRisposto} risposte su {totalAuditCompleted} contattati
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
-        <Link href="/risposto">
-          <Card className="card-hover cursor-pointer">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-green-500/10">
-                  <MessageCircle className="h-5 w-5 text-green-500" />
-                </div>
-                <div>
-                  <AnimatedCounter
-                    value={countRisposto}
-                    className="text-2xl font-bold text-green-500"
-                  />
-                  <p className="text-xs text-muted-foreground">Hanno risposto</p>
-                </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-green-500/10">
+                <Trophy className="h-5 w-5 text-green-500" />
               </div>
-            </CardContent>
-          </Card>
-        </Link>
+              <div>
+                <AnimatedCounter
+                  value={totalVinto}
+                  className="text-2xl font-bold text-green-500"
+                />
+                <p className="text-xs text-muted-foreground">Clienti acquisiti</p>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">
+                {leadsThisMonth} lead questo mese
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* "Oggi devi..." Section */}
-      {hasUrgentItems && (
-        <div className="mt-6">
-          <Card className="border-amber-500/30">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                Oggi devi...
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 pt-0">
-              {todayAppointments.map((lead) => (
-                <Link key={lead.id} href={`/leads/${lead.id}`}>
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors">
-                    <Calendar className="h-4 w-4 text-blue-400 shrink-0" />
-                    <span className="text-sm flex-1 truncate">
-                      Call con <span className="font-medium">{lead.name}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {lead.appointmentAt
-                        ? new Date(lead.appointmentAt).toLocaleTimeString("it-IT", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : ""}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-              {overdueFollowups.map((lead) => (
-                <Link key={lead.id} href={`/leads/${lead.id}`}>
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors">
-                    <Repeat className="h-4 w-4 text-amber-400 shrink-0" />
-                    <span className="text-sm flex-1 truncate">
-                      Follow-up scaduto: <span className="font-medium">{lead.name}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {timeAgo(lead.nextFollowupAt)}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Two Column Layout: Funnel + Quick Actions */}
-      <div className="mt-6 grid md:grid-cols-2 gap-4">
-        {/* Funnel Chart */}
-        <Card>
+      {/* ROW 2: Pipeline + Attività Settimana */}
+      <div className="grid lg:grid-cols-5 gap-4 mt-4">
+        {/* Pipeline Funnel - 3 cols */}
+        <Card className="lg:col-span-3">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" />
+              <BarChart3 className="h-4 w-4 text-primary" />
               Pipeline
             </CardTitle>
           </CardHeader>
@@ -263,55 +255,54 @@ async function DashboardStats() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <div className="space-y-3">
-          <h2 className="text-base font-semibold">Azioni rapide</h2>
-          <Link href="/search">
-            <Card className="card-hover cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-primary">
-                  <Search className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Nuova Ricerca</p>
-                  <p className="text-xs text-muted-foreground">Google Maps</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/da-qualificare">
-            <Card className="card-hover cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-amber-500">
-                  <ClipboardCheck className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Da qualificare</p>
-                  <p className="text-xs text-muted-foreground">
-                    {countDaQualificare} lead
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Cmd+K hint */}
-          <div className="flex items-center justify-center gap-2 py-2">
-            <span className="text-xs text-muted-foreground">Premi</span>
-            <kbd className="inline-flex h-5 items-center gap-1 rounded border border-border bg-secondary px-1.5 text-[10px] text-muted-foreground">
-              Cmd+K
-            </kbd>
-            <span className="text-xs text-muted-foreground">per cercare</span>
-          </div>
-        </div>
+        {/* Attività Settimana - 2 cols */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-500" />
+              Attività questa settimana
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2.5">
+            <ActivityRow
+              icon={<ClipboardCheck className="h-4 w-4 text-amber-500" />}
+              label="Lead qualificati"
+              value={qualifiedThisWeek}
+            />
+            <ActivityRow
+              icon={<CalendarCheck className="h-4 w-4 text-purple-500" />}
+              label="Analisi Gemini"
+              value={geminiThisWeek}
+            />
+            <ActivityRow
+              icon={<Video className="h-4 w-4 text-violet-500" />}
+              label="Video inviati"
+              value={videoSentThisWeek}
+            />
+            <ActivityRow
+              icon={<Send className="h-4 w-4 text-blue-500" />}
+              label="Touchpoint totali"
+              value={touchpointsThisWeek}
+              sublabel={`${videoSentThisWeek}V + ${letterSentThisWeek}L + ${linkedinSentThisWeek}LI`}
+            />
+            <ActivityRow
+              icon={<MessageCircle className="h-4 w-4 text-green-500" />}
+              label="Risposte ricevute"
+              value={respondedThisWeek}
+              highlight
+            />
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Top Leads */}
+      {/* ROW 3: Lead Prioritari */}
       {topLeads.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold">Lead prioritari</h2>
+            <h2 className="text-base font-semibold flex items-center gap-2">
+              <Flame className="h-4 w-4 text-red-500" />
+              Lead prioritari
+            </h2>
             <Link
               href="/da-qualificare"
               className="text-sm text-primary hover:underline flex items-center"
@@ -346,11 +337,9 @@ async function DashboardStats() {
                       <div className="flex items-center gap-2 ml-2">
                         <Badge
                           variant={
-                            lead.opportunityScore &&
-                            lead.opportunityScore >= 80
+                            lead.opportunityScore && lead.opportunityScore >= 80
                               ? "destructive"
-                              : lead.opportunityScore &&
-                                lead.opportunityScore >= 60
+                              : lead.opportunityScore && lead.opportunityScore >= 60
                               ? "default"
                               : "secondary"
                           }
@@ -369,10 +358,19 @@ async function DashboardStats() {
         </div>
       )}
 
-      {/* Recent Searches with timeAgo */}
+      {/* ROW 4: Ricerche Recenti */}
       {recentSearches.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-base font-semibold mb-3">Ricerche recenti</h2>
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold">Ricerche recenti</h2>
+            <Link
+              href="/searches"
+              className="text-sm text-primary hover:underline flex items-center"
+            >
+              Tutte
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
           <div className="space-y-2">
             {recentSearches.map((search) => (
               <Card key={search.id} className="card-hover">
@@ -409,43 +407,83 @@ async function DashboardStats() {
           </div>
         </div>
       )}
+
+      {/* Cmd+K hint */}
+      <div className="flex items-center justify-center gap-2 py-4 mt-2">
+        <span className="text-xs text-muted-foreground">Premi</span>
+        <kbd className="inline-flex h-5 items-center gap-1 rounded border border-border bg-secondary px-1.5 text-[10px] text-muted-foreground">
+          Cmd+K
+        </kbd>
+        <span className="text-xs text-muted-foreground">per cercare</span>
+      </div>
     </>
+  );
+}
+
+function ActivityRow({
+  icon,
+  label,
+  value,
+  sublabel,
+  highlight,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  sublabel?: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between py-1.5">
+      <div className="flex items-center gap-2.5">
+        {icon}
+        <div>
+          <span className="text-sm">{label}</span>
+          {sublabel && (
+            <p className="text-[10px] text-muted-foreground">{sublabel}</p>
+          )}
+        </div>
+      </div>
+      <span
+        className={`text-lg font-bold tabular-nums ${
+          highlight && value > 0 ? "text-green-500" : ""
+        }`}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 
 function DashboardSkeleton() {
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-4">
-              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-16 w-full" />
             </CardContent>
           </Card>
         ))}
       </div>
-
-      <div className="mt-6 grid md:grid-cols-2 gap-4">
-        <Card>
+      <div className="mt-4 grid lg:grid-cols-5 gap-4">
+        <Card className="lg:col-span-3">
           <CardContent className="p-4">
-            <Skeleton className="h-[200px] w-full" />
+            <Skeleton className="h-[220px] w-full" />
           </CardContent>
         </Card>
-        <div className="space-y-3">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </div>
+        <Card className="lg:col-span-2">
+          <CardContent className="p-4">
+            <Skeleton className="h-[220px] w-full" />
+          </CardContent>
+        </Card>
       </div>
-
-      <div className="mt-6">
+      <div className="mt-4">
         <Skeleton className="h-6 w-32 mb-3" />
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full mb-2" />
+        ))}
       </div>
     </>
   );
@@ -455,15 +493,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-2">
       <div className="md:hidden mb-4">
-        <h1 className="text-xl font-bold">Buongiorno!</h1>
+        <h1 className="text-xl font-bold">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Ecco il riepilogo di oggi
+          Panoramica del tuo CRM
         </p>
       </div>
 
-      <div className="hidden md:block mb-6">
+      <div className="hidden md:block mb-4">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Panoramica del tuo CRM</p>
+        <p className="text-muted-foreground">Statistiche e performance commerciale</p>
       </div>
 
       <Suspense fallback={<DashboardSkeleton />}>
