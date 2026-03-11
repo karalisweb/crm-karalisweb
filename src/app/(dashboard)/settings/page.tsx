@@ -48,6 +48,7 @@ interface ApiConfig {
   metaAccessToken: string;
   pageSpeedApiKey: string;
   geminiApiKey: string;
+  geminiModel: string;
 }
 
 export default function SettingsPage() {
@@ -66,6 +67,7 @@ export default function SettingsPage() {
     metaAccessToken: "",
     pageSpeedApiKey: "",
     geminiApiKey: "",
+    geminiModel: "",
   });
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "USER" });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -725,6 +727,23 @@ export default function SettingsPage() {
                     {showTokens.geminiApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="geminiModel">Modello</Label>
+                <Select
+                  value={apiConfig.geminiModel || "gemini-2.5-flash"}
+                  onValueChange={(value) => setApiConfig({ ...apiConfig, geminiModel: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona modello" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (raccomandato)</SelectItem>
+                    <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (piu veloce)</SelectItem>
+                    <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro (piu potente)</SelectItem>
+                    <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash (legacy)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex gap-2">
                 <Button onClick={testGeminiConnection} variant="outline">

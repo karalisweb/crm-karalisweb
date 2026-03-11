@@ -166,26 +166,8 @@ function summarizeAuditData(audit: AuditData): string {
 // ESECUZIONE ANALISI
 // ==========================================
 
-// Trova il miglior modello Flash disponibile
-async function findBestModel(apiKey: string): Promise<string> {
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
-      { signal: AbortSignal.timeout(10000) }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const models = (data.models || []) as Array<{ name: string }>;
-      const flash20 = models.find((m) => m.name.includes("gemini-2.0-flash"));
-      if (flash20) return flash20.name.replace("models/", "");
-      const flash15 = models.find((m) => m.name.includes("gemini-1.5-flash"));
-      if (flash15) return flash15.name.replace("models/", "");
-    }
-  } catch {
-    // Fallback silenzioso
-  }
-  return "gemini-1.5-flash"; // Fallback sicuro
-}
+// Modello di default se non configurato dall'utente
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 export async function runGeminiAnalysis(
   input: GeminiAnalysisInput
@@ -195,7 +177,8 @@ export async function runGeminiAnalysis(
     throw new Error("Gemini API key non configurata. Vai in Impostazioni > API & Token.");
   }
 
-  const modelName = await findBestModel(process.env.GEMINI_API_KEY || "");
+  // Usa il modello scelto dall'utente nelle impostazioni, o il default
+  const modelName = process.env.GEMINI_MODEL || DEFAULT_MODEL;
   const model = client.getGenerativeModel({ model: modelName });
   const prompt = buildPrompt(input);
 

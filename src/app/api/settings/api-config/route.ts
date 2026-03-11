@@ -24,6 +24,7 @@ export async function GET() {
       metaAccessToken: process.env.META_ACCESS_TOKEN ? "••••" + (process.env.META_ACCESS_TOKEN.slice(-4) || "") : "",
       pageSpeedApiKey: process.env.PAGESPEED_API_KEY ? "••••" + (process.env.PAGESPEED_API_KEY.slice(-4) || "") : "",
       geminiApiKey: process.env.GEMINI_API_KEY ? "••••" + (process.env.GEMINI_API_KEY.slice(-4) || "") : "",
+      geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
     };
 
     return NextResponse.json(config);
@@ -44,7 +45,7 @@ export async function PUT(request: NextRequest) {
     const {
       apifyToken, apifyWebhookSecret, inngestEventKey, inngestSigningKey,
       dataForSeoLogin, dataForSeoPassword, metaAccessToken, pageSpeedApiKey,
-      geminiApiKey,
+      geminiApiKey, geminiModel,
     } = await request.json();
 
     // Leggi file .env esistente o crea nuovo
@@ -80,6 +81,7 @@ export async function PUT(request: NextRequest) {
     envContent = updateEnvVar(envContent, "META_ACCESS_TOKEN", metaAccessToken);
     envContent = updateEnvVar(envContent, "PAGESPEED_API_KEY", pageSpeedApiKey);
     envContent = updateEnvVar(envContent, "GEMINI_API_KEY", geminiApiKey);
+    envContent = updateEnvVar(envContent, "GEMINI_MODEL", geminiModel);
 
     await writeFile(CONFIG_FILE, envContent.trim() + "\n", "utf-8");
 

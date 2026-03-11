@@ -18,7 +18,10 @@ export async function GET() {
       });
     }
 
-    // Step 1: Lista modelli per verificare la key e trovare modelli disponibili
+    // Usa il modello scelto dall'utente, o il default
+    const selectedModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+    // Step 1: Lista modelli per verificare la key e i modelli disponibili
     const listResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
       { signal: AbortSignal.timeout(10000) }
@@ -41,40 +44,40 @@ export async function GET() {
     const listData = await listResponse.json();
     const models = (listData.models || []) as Array<{ name: string; displayName?: string }>;
 
-    // Cerca un modello flash disponibile (preferenza: 2.0-flash > 1.5-flash)
-    const flashModel = models.find((m) => m.name.includes("gemini-2.0-flash"))
-      || models.find((m) => m.name.includes("gemini-1.5-flash"));
+    // Verifica che il modello selezionato esista
+    const modelExists = models.some((m) => {
+      const name = m.name.replace("models/", "");
+      return name === selectedModel || name.startsWith(selectedModel + "-0");
+    });
 
-    const modelName = flashModel
-      ? flashModel.name.replace("models/", "")
-      : null;
-
-    // Step 2: Testa generazione con il modello trovato
-    if (modelName) {
-      const genResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: "Rispondi solo: OK" }] }],
-          }),
-          signal: AbortSignal.timeout(15000),
-        }
-      );
-
-      if (genResponse.ok) {
-        return NextResponse.json({
-          success: true,
-          message: `API Key valida | Modello: ${modelName} | ${models.length} modelli disponibili`,
-        });
+    // Step 2: Testa generazione con il modello selezionato
+    const testModel = modelExists ? selectedModel : "gemini-2.5-flash";
+    const genResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Rispondi solo: OK" }] }],
+        }),
+        signal: AbortSignal.timeout(15000),
       }
+    );
+
+    if (genResponse.ok) {
+      const modelNote = !modelExists
+        ? ` (${selectedModel} non disponibile, testato con ${testModel})`
+        : "";
+      return NextResponse.json({
+        success: true,
+        message: `API Key valida | Modello: ${testModel}${modelNote} | ${models.length} modelli disponibili`,
+      });
     }
 
-    // La key funziona (lista modelli OK) ma nessun modello flash trovato
+    // La key funziona (lista OK) ma generazione fallita
     return NextResponse.json({
       success: true,
-      message: `API Key valida | ${models.length} modelli disponibili${modelName ? ` | Flash: ${modelName}` : " | Nessun modello Flash trovato"}`,
+      message: `API Key valida | ${models.length} modelli disponibili | Test generazione fallito per ${testModel}`,
     });
   } catch (error) {
     console.error("Error testing Gemini:", error);
