@@ -24,7 +24,15 @@ export type AuditBatchEvent = {
   };
 };
 
+export type ScheduledSearchRunEvent = {
+  name: "search/scheduled-run";
+  data: {
+    scheduledSearchId: string;
+  };
+};
+
 export type Events = {
   "audit/run": AuditRunEvent;
   "audit/batch": AuditBatchEvent;
+  "search/scheduled-run": ScheduledSearchRunEvent;
 };

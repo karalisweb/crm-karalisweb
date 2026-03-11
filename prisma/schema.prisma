@@ -420,6 +420,13 @@ enum SearchStatus {
   FAILED      // Fallita
 }
 
+enum ScheduledSearchStatus {
+  QUEUED      // In coda, da eseguire
+  RUNNING     // In esecuzione ora
+  COMPLETED   // Eseguita con successo
+  FAILED      // Fallita
+}
+
 enum CommercialTag {
   ADS_ATTIVE_CONTROLLO_ASSENTE    // Spendono ma non misurano - PRIORITA 1
   TRAFFICO_SENZA_DIREZIONE        // Traffico ma niente CTA - PRIORITA 2
@@ -488,6 +495,28 @@ model SearchLocation {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("search_locations")
+}
+
+// ==========================================
+// SCHEDULED SEARCH - Ricerche automatiche notturne
+// ==========================================
+model ScheduledSearch {
+  id           String                @id @default(uuid())
+  query        String                // es. "Infissi"
+  location     String                // es. "Lecce"
+  status       ScheduledSearchStatus @default(QUEUED)
+  priority     Int                   @default(0) // Ordine esecuzione (0 = prima)
+
+  // Tracking esecuzione
+  lastRunAt    DateTime?             @map("last_run_at")
+  searchId     String?               @map("search_id")
+  errorMessage String?               @map("error_message")
+
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+
+  @@unique([query, location])
+  @@map("scheduled_searches")
 }
 
 // ==========================================
