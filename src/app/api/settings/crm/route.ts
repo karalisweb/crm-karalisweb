@@ -25,6 +25,9 @@ export async function GET() {
           followUpDaysVideo: 7,
           followUpDaysLetter: 7,
           recontactMonths: 6,
+          scheduledSearchesPerRun: 1,
+          scheduledSearchHour: 2,
+          scheduledLeadsPerSearch: 50,
         },
       });
     }
@@ -36,6 +39,9 @@ export async function GET() {
       followUpDaysVideo: settings.followUpDaysVideo,
       followUpDaysLetter: settings.followUpDaysLetter,
       recontactMonths: settings.recontactMonths,
+      scheduledSearchesPerRun: settings.scheduledSearchesPerRun,
+      scheduledSearchHour: settings.scheduledSearchHour,
+      scheduledLeadsPerSearch: settings.scheduledLeadsPerSearch,
     });
   } catch (error) {
     console.error("Error fetching CRM settings:", error);
@@ -71,6 +77,9 @@ export async function PUT(request: Request) {
       followUpDaysVideo,
       followUpDaysLetter,
       recontactMonths,
+      scheduledSearchesPerRun,
+      scheduledSearchHour,
+      scheduledLeadsPerSearch,
     } = body;
 
     // Validazione
@@ -116,6 +125,27 @@ export async function PUT(request: Request) {
       );
     }
 
+    if (scheduledSearchesPerRun !== undefined && (scheduledSearchesPerRun < 1 || scheduledSearchesPerRun > 5)) {
+      return NextResponse.json(
+        { error: "Ricerche per esecuzione deve essere tra 1 e 5" },
+        { status: 400 }
+      );
+    }
+
+    if (scheduledSearchHour !== undefined && (scheduledSearchHour < 0 || scheduledSearchHour > 23)) {
+      return NextResponse.json(
+        { error: "Ora esecuzione deve essere tra 0 e 23" },
+        { status: 400 }
+      );
+    }
+
+    if (scheduledLeadsPerSearch !== undefined && (scheduledLeadsPerSearch < 10 || scheduledLeadsPerSearch > 100)) {
+      return NextResponse.json(
+        { error: "Lead per ricerca deve essere tra 10 e 100" },
+        { status: 400 }
+      );
+    }
+
     const settings = await db.settings.upsert({
       where: { id: "default" },
       update: {
@@ -125,6 +155,9 @@ export async function PUT(request: Request) {
         ...(followUpDaysVideo !== undefined && { followUpDaysVideo }),
         ...(followUpDaysLetter !== undefined && { followUpDaysLetter }),
         ...(recontactMonths !== undefined && { recontactMonths }),
+        ...(scheduledSearchesPerRun !== undefined && { scheduledSearchesPerRun }),
+        ...(scheduledSearchHour !== undefined && { scheduledSearchHour }),
+        ...(scheduledLeadsPerSearch !== undefined && { scheduledLeadsPerSearch }),
         updatedAt: new Date(),
       },
       create: {
@@ -135,6 +168,9 @@ export async function PUT(request: Request) {
         followUpDaysVideo: followUpDaysVideo ?? 7,
         followUpDaysLetter: followUpDaysLetter ?? 7,
         recontactMonths: recontactMonths ?? 6,
+        scheduledSearchesPerRun: scheduledSearchesPerRun ?? 1,
+        scheduledSearchHour: scheduledSearchHour ?? 2,
+        scheduledLeadsPerSearch: scheduledLeadsPerSearch ?? 50,
       },
     });
 
@@ -145,6 +181,9 @@ export async function PUT(request: Request) {
       followUpDaysVideo: settings.followUpDaysVideo,
       followUpDaysLetter: settings.followUpDaysLetter,
       recontactMonths: settings.recontactMonths,
+      scheduledSearchesPerRun: settings.scheduledSearchesPerRun,
+      scheduledSearchHour: settings.scheduledSearchHour,
+      scheduledLeadsPerSearch: settings.scheduledLeadsPerSearch,
     });
   } catch (error) {
     console.error("Error updating CRM settings:", error);

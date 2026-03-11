@@ -543,6 +543,11 @@ model Settings {
   // Mesi prima di ricontattare DA_RICHIAMARE_6M (default 6)
   recontactMonths     Int    @default(6) @map("recontact_months")
 
+  // Ricerche Programmate
+  scheduledSearchesPerRun  Int    @default(1)  @map("scheduled_searches_per_run")
+  scheduledSearchHour      Int    @default(2)  @map("scheduled_search_hour")
+  scheduledLeadsPerSearch  Int    @default(50) @map("scheduled_leads_per_search")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

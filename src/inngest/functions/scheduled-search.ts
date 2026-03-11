@@ -8,27 +8,49 @@ import {
 } from "@/lib/apify";
 import { isMockMode } from "@/lib/apify-mock";
 
-const SEARCHES_PER_NIGHT = 2;
-
 /**
- * Cron notturno: esegue N ricerche programmate dalla coda.
- * Ogni notte alle 2:00, prende le prime SEARCHES_PER_NIGHT ricerche QUEUED
- * e le esegue tramite Apify (Google Maps Scraper).
+ * Cron orario: ogni ora controlla se è l'ora configurata per le ricerche.
+ * Legge i parametri (quante ricerche, a che ora, quanti lead) dal DB Settings.
  */
 export const runScheduledSearchesFunction = inngest.createFunction(
   {
     id: "run-scheduled-searches",
-    name: "Run Scheduled Searches (Nightly)",
+    name: "Run Scheduled Searches (Hourly Check)",
     retries: 1,
   },
-  { cron: "0 2 * * *" },
+  { cron: "0 * * * *" },
   async ({ step }) => {
-    // Step 1: Trova le prossime ricerche da eseguire
+    // Step 1: Leggi configurazione dal DB
+    const config = await step.run("load-config", async () => {
+      const settings = await db.settings.findUnique({
+        where: { id: "default" },
+      });
+      return {
+        searchesPerRun: settings?.scheduledSearchesPerRun ?? 1,
+        hour: settings?.scheduledSearchHour ?? 2,
+        leadsPerSearch: settings?.scheduledLeadsPerSearch ?? 50,
+      };
+    });
+
+    // Step 2: Controlla se è l'ora giusta
+    // Il server è in UTC, le ore configurate sono in fuso orario italiano (CET/CEST)
+    const currentHour = new Date().getUTCHours();
+    const italianHourCET = (currentHour + 1) % 24;
+    const italianHourCEST = (currentHour + 2) % 24;
+
+    if (italianHourCET !== config.hour && italianHourCEST !== config.hour) {
+      return {
+        executed: 0,
+        message: `Skip: ora corrente IT ~${italianHourCET}/${italianHourCEST}, configurata ${config.hour}:00`,
+      };
+    }
+
+    // Step 3: Trova le prossime ricerche da eseguire
     const searches = await step.run("find-queued-searches", async () => {
       return db.scheduledSearch.findMany({
         where: { status: "QUEUED" },
         orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-        take: SEARCHES_PER_NIGHT,
+        take: config.searchesPerRun,
       });
     });
 
@@ -45,7 +67,7 @@ export const runScheduledSearchesFunction = inngest.createFunction(
       error?: string;
     }> = [];
 
-    // Step 2: Esegui ogni ricerca sequenzialmente
+    // Step 4: Esegui ogni ricerca sequenzialmente
     for (const scheduled of searches) {
       // Marca come RUNNING
       await step.run(`mark-running-${scheduled.id}`, async () => {
@@ -63,7 +85,7 @@ export const runScheduledSearchesFunction = inngest.createFunction(
             return startGoogleMapsSearch({
               query: scheduled.query,
               location: scheduled.location,
-              limit: 50,
+              limit: config.leadsPerSearch,
             });
           }
         );

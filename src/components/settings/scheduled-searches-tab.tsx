@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Trash2, RotateCcw, Plus, Download } from "lucide-react";
+import { Loader2, Trash2, RotateCcw, Plus, Download, Save, Settings } from "lucide-react";
 
 interface ScheduledSearch {
   id: string;
@@ -20,6 +22,12 @@ interface ScheduledSearch {
   createdAt: string;
 }
 
+interface ScheduledConfig {
+  scheduledSearchesPerRun: number;
+  scheduledSearchHour: number;
+  scheduledLeadsPerSearch: number;
+}
+
 const STATUS_BADGES: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   QUEUED: { label: "In coda", variant: "outline" },
   RUNNING: { label: "In esecuzione", variant: "default" },
@@ -27,12 +35,24 @@ const STATUS_BADGES: Record<string, { label: string; variant: "default" | "secon
   FAILED: { label: "Fallita", variant: "destructive" },
 };
 
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const LEADS_OPTIONS = [10, 20, 30, 50, 100];
+
 export function ScheduledSearchesTab() {
   const [searches, setSearches] = useState<ScheduledSearch[]>([]);
   const [loading, setLoading] = useState(true);
   const [newQuery, setNewQuery] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [seeding, setSeeding] = useState(false);
+
+  // Configurazione
+  const [config, setConfig] = useState<ScheduledConfig>({
+    scheduledSearchesPerRun: 1,
+    scheduledSearchHour: 2,
+    scheduledLeadsPerSearch: 50,
+  });
+  const [configLoading, setConfigLoading] = useState(true);
+  const [savingConfig, setSavingConfig] = useState(false);
 
   const fetchSearches = useCallback(async () => {
     try {
@@ -47,9 +67,49 @@ export function ScheduledSearchesTab() {
     }
   }, []);
 
+  const fetchConfig = useCallback(async () => {
+    try {
+      const res = await fetch("/api/settings/crm");
+      if (res.ok) {
+        const data = await res.json();
+        setConfig({
+          scheduledSearchesPerRun: data.scheduledSearchesPerRun ?? 1,
+          scheduledSearchHour: data.scheduledSearchHour ?? 2,
+          scheduledLeadsPerSearch: data.scheduledLeadsPerSearch ?? 50,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching config:", error);
+    } finally {
+      setConfigLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSearches();
-  }, [fetchSearches]);
+    fetchConfig();
+  }, [fetchSearches, fetchConfig]);
+
+  async function saveConfig() {
+    setSavingConfig(true);
+    try {
+      const res = await fetch("/api/settings/crm", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+      if (res.ok) {
+        toast.success("Configurazione salvata");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Errore nel salvataggio");
+      }
+    } catch {
+      toast.error("Errore nel salvataggio configurazione");
+    } finally {
+      setSavingConfig(false);
+    }
+  }
 
   async function seedDefaults() {
     setSeeding(true);
@@ -127,15 +187,128 @@ export function ScheduledSearchesTab() {
   const queued = searches.filter((s) => s.status === "QUEUED").length;
   const completed = searches.filter((s) => s.status === "COMPLETED").length;
   const failed = searches.filter((s) => s.status === "FAILED").length;
+  const nightsRemaining = config.scheduledSearchesPerRun > 0
+    ? Math.ceil(queued / config.scheduledSearchesPerRun)
+    : queued;
 
   return (
     <div className="space-y-4">
+      {/* Pannello Configurazione */}
       <Card>
         <CardHeader>
-          <CardTitle>Ricerche Programmate</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Configurazione Ricerche Automatiche
+          </CardTitle>
           <CardDescription>
-            Vengono eseguite automaticamente 2 ricerche per notte alle 02:00.
-            Ogni ricerca importa fino a 50 lead da Google Maps.
+            Imposta quante ricerche eseguire, a che ora e quanti lead importare per ogni ricerca.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {configLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Ricerche per esecuzione */}
+                <div className="space-y-2">
+                  <Label htmlFor="searches-per-run">Ricerche per esecuzione</Label>
+                  <Select
+                    value={String(config.scheduledSearchesPerRun)}
+                    onValueChange={(v) =>
+                      setConfig((prev) => ({ ...prev, scheduledSearchesPerRun: Number(v) }))
+                    }
+                  >
+                    <SelectTrigger id="searches-per-run">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n} {n === 1 ? "ricerca" : "ricerche"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Quante ricerche eseguire per notte</p>
+                </div>
+
+                {/* Ora esecuzione */}
+                <div className="space-y-2">
+                  <Label htmlFor="search-hour">Ora esecuzione</Label>
+                  <Select
+                    value={String(config.scheduledSearchHour)}
+                    onValueChange={(v) =>
+                      setConfig((prev) => ({ ...prev, scheduledSearchHour: Number(v) }))
+                    }
+                  >
+                    <SelectTrigger id="search-hour">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOURS.map((h) => (
+                        <SelectItem key={h} value={String(h)}>
+                          {String(h).padStart(2, "0")}:00
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Ora italiana di esecuzione</p>
+                </div>
+
+                {/* Lead per ricerca */}
+                <div className="space-y-2">
+                  <Label htmlFor="leads-per-search">Lead per ricerca</Label>
+                  <Select
+                    value={String(config.scheduledLeadsPerSearch)}
+                    onValueChange={(v) =>
+                      setConfig((prev) => ({ ...prev, scheduledLeadsPerSearch: Number(v) }))
+                    }
+                  >
+                    <SelectTrigger id="leads-per-search">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEADS_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n} lead
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Massimo lead importati per ricerca</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-sm text-muted-foreground">
+                  Ogni notte alle {String(config.scheduledSearchHour).padStart(2, "0")}:00 verranno
+                  eseguite {config.scheduledSearchesPerRun}{" "}
+                  {config.scheduledSearchesPerRun === 1 ? "ricerca" : "ricerche"} con max{" "}
+                  {config.scheduledLeadsPerSearch} lead ciascuna.
+                </p>
+                <Button onClick={saveConfig} disabled={savingConfig}>
+                  {savingConfig ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Salva
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Coda Ricerche */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Coda Ricerche</CardTitle>
+          <CardDescription>
+            Gestisci le ricerche programmate. L&apos;audit parte in automatico per ogni lead con sito web.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -157,7 +330,7 @@ export function ScheduledSearchesTab() {
             )}
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                Totale: {searches.length} | ~{Math.ceil(queued / 2)} notti rimanenti
+                Totale: {searches.length} | ~{nightsRemaining} notti rimanenti
               </span>
             </div>
           </div>
@@ -201,7 +374,7 @@ export function ScheduledSearchesTab() {
       {/* Lista ricerche */}
       <Card>
         <CardHeader>
-          <CardTitle>Coda Ricerche</CardTitle>
+          <CardTitle>Lista Ricerche</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
