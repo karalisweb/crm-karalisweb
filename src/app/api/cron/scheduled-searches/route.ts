@@ -38,17 +38,16 @@ export async function POST(request: NextRequest) {
     };
 
     // 2. Controlla se e' l'ora giusta (ora italiana CET/CEST)
-    // TODO: ripristinare check orario dopo test
-    // const currentHour = new Date().getUTCHours();
-    // const italianHourCET = (currentHour + 1) % 24;
-    // const italianHourCEST = (currentHour + 2) % 24;
-    //
-    // if (italianHourCET !== config.hour && italianHourCEST !== config.hour) {
-    //   return NextResponse.json({
-    //     executed: 0,
-    //     message: `Skip: ora corrente IT ~${italianHourCET}/${italianHourCEST}, configurata ${config.hour}:00`,
-    //   });
-    // }
+    const currentHour = new Date().getUTCHours();
+    const italianHourCET = (currentHour + 1) % 24;
+    const italianHourCEST = (currentHour + 2) % 24;
+
+    if (italianHourCET !== config.hour && italianHourCEST !== config.hour) {
+      return NextResponse.json({
+        executed: 0,
+        message: `Skip: ora corrente IT ~${italianHourCET}/${italianHourCEST}, configurata ${config.hour}:00`,
+      });
+    }
 
     // 3. Trova ricerche in coda
     const searches = await db.scheduledSearch.findMany({
