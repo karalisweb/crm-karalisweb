@@ -22,6 +22,9 @@ import {
   Share2,
   Tag,
   ChevronRight,
+  MessageSquareText,
+  Sparkles,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -80,6 +83,80 @@ function getCommercialTagColor(tag: string | null): string {
     case "DA_APPROFONDIRE": return "bg-amber-500/10 text-amber-500 border-amber-500/20";
     default: return "bg-gray-500/10 text-gray-400 border-gray-500/20";
   }
+}
+
+function getTopIssues(auditData: AuditData): Array<{ label: string; severity: "critical" | "warning" }> {
+  const issues: Array<{ label: string; severity: "critical" | "warning"; priority: number }> = [];
+  const { tracking, website, social, trust, seo, content, emailMarketing } = auditData;
+
+  // Critical issues (severity: critical, alta priorità)
+  if (!tracking.hasGA4 && !tracking.hasGoogleAnalytics && !tracking.hasGTM)
+    issues.push({ label: "Nessun Analytics", severity: "critical", priority: 1 });
+  if (website.performance < 40)
+    issues.push({ label: `Performance critica (${website.performance}/100)`, severity: "critical", priority: 2 });
+  if (!website.mobile)
+    issues.push({ label: "Non mobile-friendly", severity: "critical", priority: 3 });
+  if (!trust.hasCookieBanner)
+    issues.push({ label: "No GDPR cookie banner", severity: "critical", priority: 4 });
+  if (!trust.hasPrivacyPolicy)
+    issues.push({ label: "Privacy policy mancante", severity: "critical", priority: 5 });
+  if (!website.https)
+    issues.push({ label: "Sito non sicuro (no HTTPS)", severity: "critical", priority: 6 });
+
+  // Warning issues (severity: warning, media priorità)
+  if (!tracking.hasFacebookPixel && !tracking.hasGoogleAdsTag)
+    issues.push({ label: "No ads tracking", severity: "warning", priority: 10 });
+  if (!seo?.hasMetaDescription)
+    issues.push({ label: "Meta description mancante", severity: "warning", priority: 11 });
+  if (!seo?.hasSchemaMarkup)
+    issues.push({ label: "No schema markup", severity: "warning", priority: 12 });
+  if (website.performance >= 40 && website.performance < 60)
+    issues.push({ label: `Performance bassa (${website.performance}/100)`, severity: "warning", priority: 13 });
+
+  const socialCount = [
+    social.facebook?.linkedFromSite, social.instagram?.linkedFromSite,
+    social.linkedin?.linkedFromSite, social.youtube?.linkedFromSite,
+  ].filter(Boolean).length;
+  if (socialCount === 0)
+    issues.push({ label: "Nessun social collegato", severity: "warning", priority: 14 });
+
+  if (content && !content.hasBlog)
+    issues.push({ label: "Nessun blog", severity: "warning", priority: 15 });
+  else if (content?.daysSinceLastPost && content.daysSinceLastPost > 180)
+    issues.push({ label: `Blog fermo da ${Math.floor(content.daysSinceLastPost / 30)} mesi`, severity: "warning", priority: 16 });
+
+  if (emailMarketing && !emailMarketing.hasNewsletterForm)
+    issues.push({ label: "No form newsletter", severity: "warning", priority: 17 });
+
+  // Ordina per priorità e prendi i primi 4
+  return issues
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 4)
+    .map(({ label, severity }) => ({ label, severity }));
+}
+
+function CriticalIssues({ auditData }: { auditData: AuditData }) {
+  const issues = getTopIssues(auditData);
+  if (issues.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {issues.map((issue, i) => (
+        <span
+          key={i}
+          className={cn(
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
+            issue.severity === "critical"
+              ? "bg-red-500/15 text-red-400 border border-red-500/20"
+              : "bg-amber-500/15 text-amber-400 border border-amber-500/20"
+          )}
+        >
+          <Zap className="h-2.5 w-2.5" />
+          {issue.label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function AuditSummary({ auditData }: { auditData: AuditData }) {
@@ -278,6 +355,25 @@ function QualificaCard({
                 </div>
               )}
 
+              {lead.auditData && (
+                <CriticalIssues auditData={lead.auditData} />
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button asChild variant="outline" size="sm" className="h-9 border-violet-500/30 text-violet-400 hover:bg-violet-500/10">
+                  <Link href={`/leads/${lead.id}?tab=talking-points`}>
+                    <MessageSquareText className="h-4 w-4 mr-2" />
+                    Talking Points
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="h-9 border-sky-500/30 text-sky-400 hover:bg-sky-500/10">
+                  <Link href={`/leads/${lead.id}?tab=ai-analysis`}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Analisi AI
+                  </Link>
+                </Button>
+              </div>
+
               {lead.commercialTag && (
                 <div className="p-3 bg-muted/30 rounded-lg">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
@@ -357,36 +453,47 @@ function QualificaCard({
         )}
 
         {!expanded && (
-          <div className="px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {lead.commercialTag && (
-                <span className={cn(
-                  "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border flex-shrink-0",
-                  getCommercialTagColor(lead.commercialTag)
-                )}>
-                  {getCommercialTagLabel(lead.commercialTag)}
-                </span>
-              )}
-              {lead.auditData && (
-                <p className="text-xs text-muted-foreground truncate">
-                  Perf: {lead.auditData.website.performance} ·{" "}
-                  {lead.auditData.tracking.hasGA4 || lead.auditData.tracking.hasGoogleAnalytics
-                    ? "Analytics OK"
-                    : "No Analytics"}
-                </p>
-              )}
-            </div>
-            {lead.website && (
-              <Button asChild size="sm" variant="outline" className="h-7 px-2 ml-2">
-                <a
-                  href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Globe className="h-3.5 w-3.5" />
-                </a>
-              </Button>
+          <div className="px-4 py-2 space-y-2">
+            {lead.auditData && (
+              <CriticalIssues auditData={lead.auditData} />
             )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {lead.commercialTag && (
+                  <span className={cn(
+                    "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border flex-shrink-0",
+                    getCommercialTagColor(lead.commercialTag)
+                  )}>
+                    {getCommercialTagLabel(lead.commercialTag)}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 ml-2">
+                <Button asChild size="sm" variant="outline" className="h-7 px-2.5 text-[10px]">
+                  <Link href={`/leads/${lead.id}?tab=talking-points`}>
+                    <MessageSquareText className="h-3 w-3 mr-1" />
+                    Talking Points
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="h-7 px-2.5 text-[10px]">
+                  <Link href={`/leads/${lead.id}?tab=ai-analysis`}>
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Analisi AI
+                  </Link>
+                </Button>
+                {lead.website && (
+                  <Button asChild size="sm" variant="outline" className="h-7 px-2">
+                    <a
+                      href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Globe className="h-3.5 w-3.5" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </CardContent>

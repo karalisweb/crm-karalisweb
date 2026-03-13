@@ -31,10 +31,16 @@ export const dynamic = "force-dynamic";
 
 interface LeadPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
-export default async function LeadDetailPage({ params }: LeadPageProps) {
+export default async function LeadDetailPage({ params, searchParams }: LeadPageProps) {
   const { id } = await params;
+  const { tab } = await searchParams;
+  const validTabs = ["info", "audit", "talking-points", "ai-analysis", "activities"];
+  const defaultTab = tab && validTabs.includes(tab) ? tab : "info";
+  // Supporta anche alias "analisi-ai" -> "ai-analysis"
+  const resolvedTab = tab === "analisi-ai" ? "ai-analysis" : defaultTab;
 
   const lead = await db.lead.findUnique({
     where: { id },
@@ -163,7 +169,7 @@ export default async function LeadDetailPage({ params }: LeadPageProps) {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="info" className="space-y-4">
+      <Tabs defaultValue={resolvedTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Informazioni</TabsTrigger>
           <TabsTrigger value="audit">Audit</TabsTrigger>
