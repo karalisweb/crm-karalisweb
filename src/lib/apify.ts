@@ -2,7 +2,7 @@ import { ApifyClient } from "apify-client";
 import { db } from "./db";
 import type { GoogleMapsResult } from "@/types";
 import { generateMockResults, simulateApiDelay, isMockMode } from "./apify-mock";
-import { inngest } from "@/inngest/client";
+import { processBatchAudits } from "@/lib/background-jobs";
 import { isRealWebsite } from "./url-utils";
 import type { AuditStatus, PipelineStage } from "@prisma/client";
 
@@ -230,15 +230,9 @@ export async function importSearchResults(
   // AUDIT AUTOMATICO: Se ci sono lead con sito, lancia audit in background
   if (withWebsite > 0) {
     console.log(`[AUTO AUDIT] Avvio audit automatico per ${withWebsite} lead con sito`);
-    try {
-      await inngest.send({
-        name: "audit/batch",
-        data: { searchId },
-      });
-    } catch (error) {
+    processBatchAudits(searchId).catch((error) => {
       console.error("[AUTO AUDIT] Errore nell'avvio batch audit:", error);
-      // Non blocchiamo l'import se l'audit fallisce
-    }
+    });
   }
 
   return { imported, updated, withWebsite };

@@ -17,8 +17,7 @@ export async function GET() {
     const config = {
       apifyToken: process.env.APIFY_TOKEN ? "••••" + (process.env.APIFY_TOKEN.slice(-4) || "") : "",
       apifyWebhookSecret: process.env.APIFY_WEBHOOK_SECRET ? "••••••••" : "",
-      inngestEventKey: process.env.INNGEST_EVENT_KEY ? "••••" + (process.env.INNGEST_EVENT_KEY.slice(-4) || "") : "",
-      inngestSigningKey: process.env.INNGEST_SIGNING_KEY ? "••••••••" : "",
+      cronSecret: process.env.CRON_SECRET ? "••••" + (process.env.CRON_SECRET.slice(-4) || "") : "",
       dataForSeoLogin: process.env.DATAFORSEO_LOGIN ? "••••" + (process.env.DATAFORSEO_LOGIN.slice(-4) || "") : "",
       dataForSeoPassword: process.env.DATAFORSEO_PASSWORD ? "••••••••" : "",
       pageSpeedApiKey: process.env.PAGESPEED_API_KEY ? "••••" + (process.env.PAGESPEED_API_KEY.slice(-4) || "") : "",
@@ -42,7 +41,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const {
-      apifyToken, apifyWebhookSecret, inngestEventKey, inngestSigningKey,
+      apifyToken, apifyWebhookSecret, cronSecret,
       dataForSeoLogin, dataForSeoPassword, pageSpeedApiKey,
       geminiApiKey, geminiModel,
     } = await request.json();
@@ -73,8 +72,7 @@ export async function PUT(request: NextRequest) {
 
     envContent = updateEnvVar(envContent, "APIFY_TOKEN", apifyToken);
     envContent = updateEnvVar(envContent, "APIFY_WEBHOOK_SECRET", apifyWebhookSecret);
-    envContent = updateEnvVar(envContent, "INNGEST_EVENT_KEY", inngestEventKey);
-    envContent = updateEnvVar(envContent, "INNGEST_SIGNING_KEY", inngestSigningKey);
+    envContent = updateEnvVar(envContent, "CRON_SECRET", cronSecret);
     envContent = updateEnvVar(envContent, "DATAFORSEO_LOGIN", dataForSeoLogin);
     envContent = updateEnvVar(envContent, "DATAFORSEO_PASSWORD", dataForSeoPassword);
     envContent = updateEnvVar(envContent, "PAGESPEED_API_KEY", pageSpeedApiKey);

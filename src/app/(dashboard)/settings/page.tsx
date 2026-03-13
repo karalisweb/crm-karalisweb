@@ -42,8 +42,7 @@ interface User {
 interface ApiConfig {
   apifyToken: string;
   apifyWebhookSecret: string;
-  inngestEventKey: string;
-  inngestSigningKey: string;
+  cronSecret: string;
   dataForSeoLogin: string;
   dataForSeoPassword: string;
   pageSpeedApiKey: string;
@@ -60,8 +59,7 @@ export default function SettingsPage() {
   const [apiConfig, setApiConfig] = useState<ApiConfig>({
     apifyToken: "",
     apifyWebhookSecret: "",
-    inngestEventKey: "",
-    inngestSigningKey: "",
+    cronSecret: "",
     dataForSeoLogin: "",
     dataForSeoPassword: "",
     pageSpeedApiKey: "",
@@ -486,58 +484,32 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Inngest */}
+          {/* Cron Secret */}
           <Card>
             <CardHeader>
-              <CardTitle>Inngest</CardTitle>
+              <CardTitle>Cron Jobs</CardTitle>
               <CardDescription>
-                Configurazione per job in background (audit).{" "}
-                <a
-                  href="https://app.inngest.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline"
-                >
-                  Ottieni chiavi
-                </a>
+                Secret per autenticare le chiamate cron dal server VPS.
+                Usato negli header Authorization: Bearer.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="inngestEventKey">Event Key</Label>
+                <Label htmlFor="cronSecret">Cron Secret</Label>
                 <div className="flex gap-2">
                   <Input
-                    id="inngestEventKey"
-                    type={showTokens.inngestEventKey ? "text" : "password"}
-                    value={apiConfig.inngestEventKey}
-                    onChange={(e) => setApiConfig({ ...apiConfig, inngestEventKey: e.target.value })}
-                    placeholder="your-event-key"
+                    id="cronSecret"
+                    type={showTokens.cronSecret ? "text" : "password"}
+                    value={apiConfig.cronSecret}
+                    onChange={(e) => setApiConfig({ ...apiConfig, cronSecret: e.target.value })}
+                    placeholder="secret-per-cron-jobs"
                   />
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => toggleShowToken("inngestEventKey")}
+                    onClick={() => toggleShowToken("cronSecret")}
                   >
-                    {showTokens.inngestEventKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="inngestSigningKey">Signing Key</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="inngestSigningKey"
-                    type={showTokens.inngestSigningKey ? "text" : "password"}
-                    value={apiConfig.inngestSigningKey}
-                    onChange={(e) => setApiConfig({ ...apiConfig, inngestSigningKey: e.target.value })}
-                    placeholder="your-signing-key"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => toggleShowToken("inngestSigningKey")}
-                  >
-                    {showTokens.inngestSigningKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showTokens.cronSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -789,9 +761,9 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Inngest</p>
+                  <p className="text-sm text-muted-foreground">Cron Jobs</p>
                   <div className="flex items-center gap-2 mt-1">
-                    {apiConfig.inngestEventKey ? (
+                    {apiConfig.cronSecret ? (
                       <>
                         <Check className="h-4 w-4 text-green-500" />
                         <span className="font-medium">Configurato</span>
@@ -799,7 +771,7 @@ export default function SettingsPage() {
                     ) : (
                       <>
                         <X className="h-4 w-4 text-yellow-500" />
-                        <span className="font-medium">Non configurato (usa audit locale)</span>
+                        <span className="font-medium">Non configurato</span>
                       </>
                     )}
                   </div>
@@ -870,7 +842,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="p-4 border rounded-lg">
                   <p className="text-sm text-muted-foreground">Versione App</p>
-                  <span className="font-medium">Sales CRM by Karalisweb v2.4.1</span>
+                  <span className="font-medium">Sales CRM by Karalisweb v2.5.0</span>
                 </div>
               </div>
             </CardContent>

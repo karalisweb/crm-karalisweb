@@ -9,7 +9,7 @@ export default auth((req) => {
   const pathname = req.nextUrl.pathname;
   const isApiRoute = pathname.startsWith("/api");
   const isAuthRoute = pathname.startsWith("/api/auth");
-  const isInngestRoute = pathname.startsWith("/api/inngest");
+  const isCronRoute = pathname.startsWith("/api/cron");
 
   // Pagine pubbliche di autenticazione
   const publicAuthPages = ["/login", "/forgot-password", "/reset-password"];
@@ -20,8 +20,8 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Allow Inngest routes (needed for dev server)
-  if (isInngestRoute) {
+  // Allow cron routes (protected internally by CRON_SECRET header)
+  if (isCronRoute) {
     return NextResponse.next();
   }
 

@@ -6,6 +6,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
+
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
@@ -49,6 +51,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Meta Ad Library: usa Apify actor `facebook-ads-scraper` invece di Graph API
 
 ---
+
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
 
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
@@ -96,6 +100,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
+
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
@@ -111,6 +117,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Versione bumped a 2.1.0 in tutti i file
 
 ---
+
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
 
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
@@ -140,6 +148,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
+
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
@@ -163,6 +173,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
+
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
@@ -176,6 +188,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Variabili SMTP in docker-compose per invio email
 
 ---
+
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
 
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
@@ -197,6 +211,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
+
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
@@ -207,6 +223,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Sistema commerciale per 5 chiamate/giorno con prioritizzazione automatica
 
 ---
+
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
 
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
@@ -233,6 +251,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
+
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
 ## [2.4.0] - 2026-03-11nn- Auto-Gemini dopo audit + Sidebar redesign per workflow Danielan
@@ -248,6 +268,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Errore TypeScript: rimossa duplicate-key in oggetto
 
 ---
+
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
 
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
@@ -266,6 +288,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Porta fissata a 3003 per evitare conflitti
 
 ---
+
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
 
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
@@ -286,6 +310,8 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 - Prisma incluso nel runner per migrazioni
 
 ---
+
+## [2.5.0] - 2026-03-13nn- Rimozione Inngest: sostituito con cron API + p-queue per job in backgroundn
 
 ## [2.4.1] - 2026-03-11nn- Dashboard ridisegnata: KPI aggregati, pipeline funnel, attività settimanale, report commercialen
 
