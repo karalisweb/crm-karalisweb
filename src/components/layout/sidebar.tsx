@@ -14,7 +14,6 @@ import {
   BookOpen,
   User,
   Settings,
-  Video,
   Send,
   Repeat,
   CalendarCheck,
@@ -25,6 +24,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Target,
+  ScanSearch,
 } from "lucide-react";
 
 // Badge types per colore
@@ -62,8 +62,9 @@ const navSections: NavSection[] = [
   {
     title: "DATABASE",
     items: [
+      { href: "/da-qualificare", label: "Da Analizzare", icon: ScanSearch, badgeKey: "daAnalizzare", badgeColor: "default" },
       { href: "/video-da-fare", label: "Hot Leads", icon: Flame, badgeKey: "hotLeads", badgeColor: "red" },
-      { href: "/da-qualificare", label: "Warm Leads", icon: Sun, badgeKey: "warmLeads", badgeColor: "yellow" },
+      { href: "/leads", label: "Warm Leads", icon: Sun, badgeKey: "warmLeads", badgeColor: "yellow" },
     ],
   },
   {

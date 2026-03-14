@@ -45,6 +45,7 @@ interface MissionData {
   followUpPrioritari: MissionLead[];
   badges: {
     daRegistrare: number;
+    daAnalizzare: number;
     followUp: number;
     inviati: number;
     appuntamenti: number;
@@ -153,14 +154,15 @@ export default function MissionPage() {
         <p className="text-muted-foreground mt-1">
           {videoDaFare.length > 0
             ? `${videoDaFare.length} video da registrare, ${followUp.length} follow-up in attesa`
-            : "Nessun video in coda. Rigenera la lista dai lead qualificati."}
+            : "Nessun lead analizzato pronto. Lancia le analisi Gemini per popolare la lista."}
         </p>
       </div>
 
       {/* KPI row compatta */}
       {badges && (
-        <div className="grid grid-cols-4 gap-3">
-          <MiniKpi label="Da Registrare" value={badges.daRegistrare} color="red" max={5} />
+        <div className="grid grid-cols-5 gap-3">
+          <MiniKpi label="Video Pronti" value={badges.daRegistrare} color="red" max={5} />
+          <MiniKpi label="Da Analizzare" value={badges.daAnalizzare} color="amber" />
           <MiniKpi label="Follow-up" value={badges.followUp} color="amber" />
           <MiniKpi label="Inviati" value={badges.inviati} color="blue" />
           <MiniKpi label="Appuntamenti" value={badges.appuntamenti} color="green" />
@@ -193,10 +195,10 @@ export default function MissionPage() {
             <CardContent className="p-8 text-center">
               <Video className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
               <p className="text-muted-foreground">
-                Nessun video in coda.{" "}
-                {badges && badges.hotLeads > 0
-                  ? `Ci sono ${badges.hotLeads} Hot Lead pronti — clicca "Rigenera lista".`
-                  : "Qualifica nuovi lead per popolare la lista."}
+                Nessun lead con analisi pronto.{" "}
+                {badges && badges.daAnalizzare > 0
+                  ? `Ci sono ${badges.daAnalizzare} lead da analizzare con Gemini.`
+                  : "Importa nuovi lead dallo scouting."}
               </p>
             </CardContent>
           </Card>
