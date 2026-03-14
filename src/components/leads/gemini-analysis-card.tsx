@@ -114,14 +114,26 @@ export function GeminiAnalysisCard({
     );
   }
 
-  // Nessuna analisi ancora
-  if (!geminiAnalysis) {
+  // Controlla se è il nuovo formato (con teleprompter_script) o vecchio/null
+  const isNewFormat =
+    geminiAnalysis &&
+    typeof geminiAnalysis === "object" &&
+    "teleprompter_script" in geminiAnalysis &&
+    geminiAnalysis.teleprompter_script &&
+    "cliche_found" in geminiAnalysis;
+
+  // Nessuna analisi o formato vecchio → mostra bottone per generare
+  if (!geminiAnalysis || !isNewFormat) {
     return (
       <Card>
         <CardContent className="py-8 text-center space-y-4">
           <MonitorPlay className="h-8 w-8 mx-auto text-purple-500" />
           <div>
-            <p className="font-medium">Analisi Strategica non ancora generata</p>
+            <p className="font-medium">
+              {geminiAnalysis && !isNewFormat
+                ? "Analisi precedente (formato legacy) — Rigenera per il nuovo Teleprompter"
+                : "Analisi Strategica non ancora generata"}
+            </p>
             <p className="text-sm text-muted-foreground mt-1">
               Gemini analizzerà il posizionamento del sito e genererà
               un copione per il teleprompter in 4 atti.
@@ -136,7 +148,9 @@ export function GeminiAnalysisCard({
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Genera Analisi Strategica
+                {geminiAnalysis && !isNewFormat
+                  ? "Rigenera Analisi Strategica"
+                  : "Genera Analisi Strategica"}
               </>
             )}
           </Button>

@@ -109,15 +109,17 @@ function VideoLeadCard({
   const handleGenerateScript = async () => {
     setGeneratingScript(true);
     try {
-      const res = await fetch(`/api/leads/${lead.id}/generate-script`, {
+      const res = await fetch(`/api/leads/${lead.id}/gemini-analysis`, {
         method: "POST",
       });
-      if (!res.ok) throw new Error("Errore nella generazione");
-      const json = await res.json();
-      setScript(json.videoScriptData);
-      toast.success("Script generato!");
-    } catch {
-      toast.error("Errore nella generazione dello script");
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Errore nella generazione");
+      }
+      toast.success("Analisi strategica generata! Vai alla scheda lead per vedere il copione.");
+      onAction();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore nella generazione");
     } finally {
       setGeneratingScript(false);
     }

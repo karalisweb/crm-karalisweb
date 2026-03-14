@@ -85,37 +85,47 @@ function getCommercialTagColor(tag: string | null): string {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isLegacyAudit(data: any): data is AuditData {
+  return data && typeof data === "object" && "tracking" in data && "website" in data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isStrategicAudit(data: any): boolean {
+  return data && typeof data === "object" && "hero_text" in data;
+}
+
 function getTopIssues(auditData: AuditData): Array<{ label: string; severity: "critical" | "warning" }> {
+  if (!isLegacyAudit(auditData)) return [];
+
   const issues: Array<{ label: string; severity: "critical" | "warning"; priority: number }> = [];
   const { tracking, website, social, trust, seo, content, emailMarketing } = auditData;
 
-  // Critical issues (severity: critical, alta priorità)
-  if (!tracking.hasGA4 && !tracking.hasGoogleAnalytics && !tracking.hasGTM)
+  if (!tracking?.hasGA4 && !tracking?.hasGoogleAnalytics && !tracking?.hasGTM)
     issues.push({ label: "Nessun Analytics", severity: "critical", priority: 1 });
-  if (website.performance < 40)
+  if (website?.performance < 40)
     issues.push({ label: `Performance critica (${website.performance}/100)`, severity: "critical", priority: 2 });
-  if (!website.mobile)
+  if (!website?.mobile)
     issues.push({ label: "Non mobile-friendly", severity: "critical", priority: 3 });
-  if (!trust.hasCookieBanner)
+  if (!trust?.hasCookieBanner)
     issues.push({ label: "No GDPR cookie banner", severity: "critical", priority: 4 });
-  if (!trust.hasPrivacyPolicy)
+  if (!trust?.hasPrivacyPolicy)
     issues.push({ label: "Privacy policy mancante", severity: "critical", priority: 5 });
-  if (!website.https)
+  if (!website?.https)
     issues.push({ label: "Sito non sicuro (no HTTPS)", severity: "critical", priority: 6 });
 
-  // Warning issues (severity: warning, media priorità)
-  if (!tracking.hasFacebookPixel && !tracking.hasGoogleAdsTag)
+  if (!tracking?.hasFacebookPixel && !tracking?.hasGoogleAdsTag)
     issues.push({ label: "No ads tracking", severity: "warning", priority: 10 });
   if (!seo?.hasMetaDescription)
     issues.push({ label: "Meta description mancante", severity: "warning", priority: 11 });
   if (!seo?.hasSchemaMarkup)
     issues.push({ label: "No schema markup", severity: "warning", priority: 12 });
-  if (website.performance >= 40 && website.performance < 60)
+  if (website?.performance >= 40 && website?.performance < 60)
     issues.push({ label: `Performance bassa (${website.performance}/100)`, severity: "warning", priority: 13 });
 
   const socialCount = [
-    social.facebook?.linkedFromSite, social.instagram?.linkedFromSite,
-    social.linkedin?.linkedFromSite, social.youtube?.linkedFromSite,
+    social?.facebook?.linkedFromSite, social?.instagram?.linkedFromSite,
+    social?.linkedin?.linkedFromSite, social?.youtube?.linkedFromSite,
   ].filter(Boolean).length;
   if (socialCount === 0)
     issues.push({ label: "Nessun social collegato", severity: "warning", priority: 14 });
@@ -128,7 +138,6 @@ function getTopIssues(auditData: AuditData): Array<{ label: string; severity: "c
   if (emailMarketing && !emailMarketing.hasNewsletterForm)
     issues.push({ label: "No form newsletter", severity: "warning", priority: 17 });
 
-  // Ordina per priorità e prendi i primi 4
   return issues
     .sort((a, b) => a.priority - b.priority)
     .slice(0, 4)
@@ -136,6 +145,7 @@ function getTopIssues(auditData: AuditData): Array<{ label: string; severity: "c
 }
 
 function CriticalIssues({ auditData }: { auditData: AuditData }) {
+  if (!isLegacyAudit(auditData)) return null;
   const issues = getTopIssues(auditData);
   if (issues.length === 0) return null;
 
@@ -159,16 +169,41 @@ function CriticalIssues({ auditData }: { auditData: AuditData }) {
   );
 }
 
-function AuditSummary({ auditData }: { auditData: AuditData }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function AuditSummary({ auditData }: { auditData: any }) {
+  // Nuovo formato strategico: mostra badge Ads
+  if (isStrategicAudit(auditData)) {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        <div className={cn(
+          "flex items-center gap-2 p-2 rounded-lg border text-xs",
+          auditData.has_active_ads
+            ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
+            : "bg-amber-500/5 border-amber-500/20 text-amber-500"
+        )}>
+          <Tag className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>{auditData.has_active_ads ? "Ads attive" : "Niente Ads"}</span>
+        </div>
+        <div className="flex items-center gap-2 p-2 rounded-lg border text-xs bg-sky-500/5 border-sky-500/20 text-sky-400">
+          <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>Analisi strategica</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Vecchio formato legacy
+  if (!isLegacyAudit(auditData)) return null;
+
   const { tracking, website, social, trust } = auditData;
-  const hasAnyTracking = tracking.hasGA4 || tracking.hasGoogleAnalytics || tracking.hasGTM;
-  const hasAnyAds = tracking.hasFacebookPixel || tracking.hasGoogleAdsTag;
+  const hasAnyTracking = tracking?.hasGA4 || tracking?.hasGoogleAnalytics || tracking?.hasGTM;
+  const hasAnyAds = tracking?.hasFacebookPixel || tracking?.hasGoogleAdsTag;
   const socialCount = [
-    social.facebook?.linkedFromSite,
-    social.instagram?.linkedFromSite,
-    social.linkedin?.linkedFromSite,
-    social.youtube?.linkedFromSite,
-    social.tiktok?.linkedFromSite,
+    social?.facebook?.linkedFromSite,
+    social?.instagram?.linkedFromSite,
+    social?.linkedin?.linkedFromSite,
+    social?.youtube?.linkedFromSite,
+    social?.tiktok?.linkedFromSite,
   ].filter(Boolean).length;
 
   return (
@@ -193,23 +228,23 @@ function AuditSummary({ auditData }: { auditData: AuditData }) {
       </div>
       <div className={cn(
         "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        website.performance >= 60
+        website?.performance >= 60
           ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
-          : website.performance >= 40
+          : website?.performance >= 40
           ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
           : "bg-red-500/5 border-red-500/20 text-red-400"
       )}>
         <BarChart3 className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>Perf: {website.performance}/100</span>
+        <span>Perf: {website?.performance ?? "N/A"}/100</span>
       </div>
       <div className={cn(
         "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        website.mobile
+        website?.mobile
           ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
           : "bg-red-500/5 border-red-500/20 text-red-400"
       )}>
         <Smartphone className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>{website.mobile ? "Mobile OK" : "Non mobile"}</span>
+        <span>{website?.mobile ? "Mobile OK" : "Non mobile"}</span>
       </div>
       <div className={cn(
         "flex items-center gap-2 p-2 rounded-lg border text-xs",
@@ -224,17 +259,17 @@ function AuditSummary({ auditData }: { auditData: AuditData }) {
       </div>
       <div className={cn(
         "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        trust.hasCookieBanner && trust.hasPrivacyPolicy
+        trust?.hasCookieBanner && trust?.hasPrivacyPolicy
           ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
           : "bg-red-500/5 border-red-500/20 text-red-400"
       )}>
         <Shield className="h-3.5 w-3.5 flex-shrink-0" />
         <span>
-          {trust.hasCookieBanner && trust.hasPrivacyPolicy
+          {trust?.hasCookieBanner && trust?.hasPrivacyPolicy
             ? "GDPR OK"
-            : !trust.hasCookieBanner && !trust.hasPrivacyPolicy
+            : !trust?.hasCookieBanner && !trust?.hasPrivacyPolicy
             ? "No GDPR"
-            : !trust.hasCookieBanner
+            : !trust?.hasCookieBanner
             ? "No cookie banner"
             : "No privacy policy"}
         </span>
@@ -359,20 +394,12 @@ function QualificaCard({
                 <CriticalIssues auditData={lead.auditData} />
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <Button asChild variant="outline" size="sm" className="h-9 border-violet-500/30 text-violet-400 hover:bg-violet-500/10">
-                  <Link href={`/leads/${lead.id}?tab=talking-points`}>
-                    <MessageSquareText className="h-4 w-4 mr-2" />
-                    Talking Points
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="h-9 border-sky-500/30 text-sky-400 hover:bg-sky-500/10">
-                  <Link href={`/leads/${lead.id}?tab=ai-analysis`}>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Analisi AI
-                  </Link>
-                </Button>
-              </div>
+              <Button asChild variant="outline" size="sm" className="h-9 w-full border-violet-500/30 text-violet-400 hover:bg-violet-500/10">
+                <Link href={`/leads/${lead.id}?tab=analisi-strategica`}>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Analisi Strategica
+                </Link>
+              </Button>
 
               {lead.commercialTag && (
                 <div className="p-3 bg-muted/30 rounded-lg">
@@ -470,15 +497,9 @@ function QualificaCard({
               </div>
               <div className="flex items-center gap-1.5 ml-2">
                 <Button asChild size="sm" variant="outline" className="h-7 px-2.5 text-[10px]">
-                  <Link href={`/leads/${lead.id}?tab=talking-points`}>
-                    <MessageSquareText className="h-3 w-3 mr-1" />
-                    Talking Points
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="h-7 px-2.5 text-[10px]">
-                  <Link href={`/leads/${lead.id}?tab=ai-analysis`}>
+                  <Link href={`/leads/${lead.id}?tab=analisi-strategica`}>
                     <Sparkles className="h-3 w-3 mr-1" />
-                    Analisi AI
+                    Analisi Strategica
                   </Link>
                 </Button>
                 {lead.website && (
