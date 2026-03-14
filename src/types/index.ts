@@ -251,6 +251,7 @@ export interface GeminiAnalysisResult {
   ads_networks_found: string[];
   generatedAt: string;
   model: string;
+  analysisVersion?: string;
 }
 
 // ==========================================

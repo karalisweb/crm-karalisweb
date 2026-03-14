@@ -165,5 +165,6 @@ export async function runGeminiAnalysis(
     ads_networks_found: input.ads_networks_found || [],
     generatedAt: new Date().toISOString(),
     model: modelName,
+    analysisVersion: "2.0",
   };
 }

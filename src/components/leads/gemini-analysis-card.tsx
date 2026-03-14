@@ -32,6 +32,7 @@ interface GeminiAnalysisResult {
   ads_networks_found?: string[];
   generatedAt: string;
   model: string;
+  analysisVersion?: string;
 }
 
 interface GeminiAnalysisCardProps {
@@ -189,6 +190,11 @@ export function GeminiAnalysisCard({
           {geminiAnalysis.primary_error_pattern && (
             <Badge variant="outline" className="text-sm px-3 py-1 border-red-500/30 text-red-400">
               {geminiAnalysis.primary_error_pattern}
+            </Badge>
+          )}
+          {geminiAnalysis.analysisVersion && (
+            <Badge variant="outline" className="text-sm px-2 py-0.5 border-blue-500/40 text-blue-400 font-mono">
+              v{geminiAnalysis.analysisVersion}
             </Badge>
           )}
           <p className="text-sm text-muted-foreground">
