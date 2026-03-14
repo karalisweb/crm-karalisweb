@@ -364,8 +364,8 @@ function QualificaCard({
           <div className="p-4">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-              {/* ---- COLONNA SINISTRA: Dati + Diagnosi ---- */}
-              <div className="lg:col-span-4 space-y-4">
+              {/* ---- COLONNA SINISTRA: Dati + Gancio di Vendita (FOCUS) ---- */}
+              <div className="lg:col-span-7 space-y-4">
 
                 {/* Dati base */}
                 <div className="space-y-2">
@@ -426,30 +426,30 @@ function QualificaCard({
                   )}
                 </div>
 
-                {/* Box Diagnosi AI — Gancio di vendita */}
+                {/* Box Diagnosi AI — GANCIO DI VENDITA (Focus principale) */}
                 {isAnalyzed && analysis?.cliche_found && (
-                  <div className="rounded-lg border-2 border-red-500/30 bg-red-500/5 p-4 space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-red-400">
+                  <div className="rounded-xl border-2 border-red-500/40 bg-red-950/30 p-5 space-y-4">
+                    <p className="text-xs font-black uppercase tracking-widest text-red-400">
                       Gancio di Vendita
                     </p>
                     {analysis.primary_error_pattern && (
                       <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Pattern Errore</p>
-                        <p className="text-sm font-semibold text-red-300">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Pattern Errore</p>
+                        <p className="text-lg font-bold text-red-300">
                           {analysis.primary_error_pattern}
                         </p>
                       </div>
                     )}
                     <div>
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Frase Cliche Trovata</p>
-                      <p className="text-base font-medium italic text-amber-300">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Frase Cliche Trovata</p>
+                      <p className="text-xl font-bold italic text-yellow-400 leading-relaxed">
                         &ldquo;{analysis.cliche_found}&rdquo;
                       </p>
                     </div>
                     {analysis.strategic_note && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Nota Strategica</p>
-                        <p className="text-xs text-muted-foreground">
+                      <div className="pt-2 border-t border-red-500/20">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Nota Strategica</p>
+                        <p className="text-base leading-relaxed text-gray-300">
                           {analysis.strategic_note}
                         </p>
                       </div>
@@ -513,51 +513,52 @@ function QualificaCard({
                 </div>
               </div>
 
-              {/* ---- COLONNA DESTRA: Teleprompter ---- */}
-              <div className="lg:col-span-8">
+              {/* ---- COLONNA DESTRA: Teleprompter (compatto, scroll) ---- */}
+              <div className="lg:col-span-5">
                 {isAnalyzed && analysis?.teleprompter_script ? (
-                  <div className="bg-gray-900 text-white p-6 rounded-lg shadow-inner space-y-6 relative">
-                    {/* Copia Script */}
-                    <div className="flex items-center justify-between">
+                  <div className="bg-gray-900 text-white rounded-lg shadow-inner relative">
+                    {/* Header fisso con bottone Copia */}
+                    <div className="flex items-center justify-between p-4 pb-3 border-b border-gray-700/50">
                       <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                        Teleprompter Script
+                        Script
                       </p>
                       <Button
                         onClick={copyFullScript}
-                        variant="outline"
                         size="sm"
-                        className="h-7 px-3 text-[11px] border-gray-600 text-gray-300 hover:bg-gray-800"
+                        className="h-8 px-4 text-xs bg-white text-gray-900 hover:bg-gray-200 font-semibold"
                       >
                         {copied ? (
                           <>
-                            <Check className="h-3 w-3 mr-1" />
+                            <Check className="h-3.5 w-3.5 mr-1.5" />
                             Copiato!
                           </>
                         ) : (
                           <>
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copia Script per Tella
+                            <Copy className="h-3.5 w-3.5 mr-1.5" />
+                            Copia per Tella
                           </>
                         )}
                       </Button>
                     </div>
 
-                    {/* 4 Atti — Font grande per lettura a distanza */}
-                    {ATTO_LABELS.map((atto, i) => (
-                      <div key={atto.key}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="bg-white text-gray-900 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                            {i + 1}
-                          </span>
-                          <span className="text-xs font-bold uppercase tracking-wide text-gray-400">
-                            {atto.label} — {atto.subtitle}
-                          </span>
+                    {/* 4 Atti — Scrollabile, font standard */}
+                    <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                      {ATTO_LABELS.map((atto, i) => (
+                        <div key={atto.key}>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="bg-white text-gray-900 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                              {i + 1}
+                            </span>
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                              {atto.label} — {atto.subtitle}
+                            </span>
+                          </div>
+                          <p className="text-sm leading-relaxed text-gray-200">
+                            {analysis.teleprompter_script![atto.key]}
+                          </p>
                         </div>
-                        <p className="text-2xl leading-relaxed font-light">
-                          {analysis.teleprompter_script![atto.key]}
-                        </p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/20 rounded-lg border border-dashed border-muted-foreground/20">
