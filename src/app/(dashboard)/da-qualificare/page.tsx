@@ -16,20 +16,37 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  Shield,
-  BarChart3,
-  Smartphone,
-  Share2,
-  Tag,
   ChevronRight,
-  MessageSquareText,
   Sparkles,
-  Zap,
+  Copy,
+  Check,
+  Phone,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { AuditData } from "@/types";
+
+// ==========================================
+// TYPES
+// ==========================================
+
+interface TeleprompterScript {
+  atto_1: string;
+  atto_2: string;
+  atto_3: string;
+  atto_4: string;
+}
+
+interface GeminiAnalysis {
+  cliche_found?: string;
+  primary_error_pattern?: string;
+  teleprompter_script?: TeleprompterScript;
+  strategic_note?: string;
+  has_active_ads?: boolean;
+  ads_networks_found?: string[];
+  analysisVersion?: string;
+}
 
 interface Lead {
   id: string;
@@ -41,242 +58,84 @@ interface Lead {
   googleRating: string | null;
   googleReviewsCount: number | null;
   opportunityScore: number | null;
-  auditData: AuditData | null;
+  auditData: unknown;
   commercialTag: string | null;
   commercialPriority: number | null;
   pipelineStage: string;
   danielaNotes: string | null;
+  geminiAnalysis: GeminiAnalysis | null;
+  geminiAnalyzedAt: string | null;
 }
 
-function getScoreColor(score: number | null): string {
-  if (!score) return "bg-gray-500";
-  if (score >= 80) return "bg-red-500";
-  if (score >= 60) return "bg-orange-500";
-  if (score >= 40) return "bg-yellow-600";
-  return "bg-blue-500";
+// ==========================================
+// SCORE HELPERS
+// ==========================================
+
+function getScoreBadgeColor(score: number | null): string {
+  if (score === null) return "bg-gray-600 text-gray-200";
+  if (score >= 80) return "bg-red-600 text-white";
+  if (score >= 50) return "bg-yellow-600 text-white";
+  return "bg-gray-600 text-gray-200";
 }
 
 function getScoreLabel(score: number | null): string {
-  if (!score) return "N/D";
+  if (score === null) return "N/D";
   if (score >= 80) return "HOT";
-  if (score >= 60) return "BUONO";
-  if (score >= 40) return "MEDIO";
-  return "BASSO";
+  if (score >= 50) return "WARM";
+  return "COLD";
 }
 
-function getCommercialTagLabel(tag: string | null): string {
-  switch (tag) {
-    case "ADS_ATTIVE_CONTROLLO_ASSENTE": return "Ads attive, controllo assente";
-    case "TRAFFICO_SENZA_DIREZIONE": return "Traffico senza direzione";
-    case "STRUTTURA_OK_NON_PRIORITIZZATA": return "Struttura OK, non prioritizzata";
-    case "DA_APPROFONDIRE": return "Da approfondire";
-    case "NON_TARGET": return "Non target";
-    default: return tag || "N/D";
-  }
+function getScoreHeaderColor(score: number | null): string {
+  if (score === null) return "bg-gray-800";
+  if (score >= 80) return "bg-red-600";
+  if (score >= 50) return "bg-yellow-700";
+  return "bg-gray-700";
 }
 
-function getCommercialTagColor(tag: string | null): string {
-  switch (tag) {
-    case "ADS_ATTIVE_CONTROLLO_ASSENTE": return "bg-red-500/10 text-red-500 border-red-500/20";
-    case "TRAFFICO_SENZA_DIREZIONE": return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-    case "STRUTTURA_OK_NON_PRIORITIZZATA": return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-    case "DA_APPROFONDIRE": return "bg-amber-500/10 text-amber-500 border-amber-500/20";
-    default: return "bg-gray-500/10 text-gray-400 border-gray-500/20";
-  }
-}
+// ==========================================
+// STRATEGIC TAG HELPERS
+// ==========================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isLegacyAudit(data: any): data is AuditData {
-  return data && typeof data === "object" && "tracking" in data && "website" in data;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isStrategicAudit(data: any): boolean {
-  return data && typeof data === "object" && ("home_text" in data || "hero_text" in data);
-}
-
-function getTopIssues(auditData: AuditData): Array<{ label: string; severity: "critical" | "warning" }> {
-  if (!isLegacyAudit(auditData)) return [];
-
-  const issues: Array<{ label: string; severity: "critical" | "warning"; priority: number }> = [];
-  const { tracking, website, social, trust, seo, content, emailMarketing } = auditData;
-
-  if (!tracking?.hasGA4 && !tracking?.hasGoogleAnalytics && !tracking?.hasGTM)
-    issues.push({ label: "Nessun Analytics", severity: "critical", priority: 1 });
-  if (website?.performance < 40)
-    issues.push({ label: `Performance critica (${website.performance}/100)`, severity: "critical", priority: 2 });
-  if (!website?.mobile)
-    issues.push({ label: "Non mobile-friendly", severity: "critical", priority: 3 });
-  if (!trust?.hasCookieBanner)
-    issues.push({ label: "No GDPR cookie banner", severity: "critical", priority: 4 });
-  if (!trust?.hasPrivacyPolicy)
-    issues.push({ label: "Privacy policy mancante", severity: "critical", priority: 5 });
-  if (!website?.https)
-    issues.push({ label: "Sito non sicuro (no HTTPS)", severity: "critical", priority: 6 });
-
-  if (!tracking?.hasFacebookPixel && !tracking?.hasGoogleAdsTag)
-    issues.push({ label: "No ads tracking", severity: "warning", priority: 10 });
-  if (!seo?.hasMetaDescription)
-    issues.push({ label: "Meta description mancante", severity: "warning", priority: 11 });
-  if (!seo?.hasSchemaMarkup)
-    issues.push({ label: "No schema markup", severity: "warning", priority: 12 });
-  if (website?.performance >= 40 && website?.performance < 60)
-    issues.push({ label: `Performance bassa (${website.performance}/100)`, severity: "warning", priority: 13 });
-
-  const socialCount = [
-    social?.facebook?.linkedFromSite, social?.instagram?.linkedFromSite,
-    social?.linkedin?.linkedFromSite, social?.youtube?.linkedFromSite,
-  ].filter(Boolean).length;
-  if (socialCount === 0)
-    issues.push({ label: "Nessun social collegato", severity: "warning", priority: 14 });
-
-  if (content && !content.hasBlog)
-    issues.push({ label: "Nessun blog", severity: "warning", priority: 15 });
-  else if (content?.daysSinceLastPost && content.daysSinceLastPost > 180)
-    issues.push({ label: `Blog fermo da ${Math.floor(content.daysSinceLastPost / 30)} mesi`, severity: "warning", priority: 16 });
-
-  if (emailMarketing && !emailMarketing.hasNewsletterForm)
-    issues.push({ label: "No form newsletter", severity: "warning", priority: 17 });
-
-  return issues
-    .sort((a, b) => a.priority - b.priority)
-    .slice(0, 4)
-    .map(({ label, severity }) => ({ label, severity }));
-}
-
-function CriticalIssues({ auditData }: { auditData: AuditData }) {
-  if (!isLegacyAudit(auditData)) return null;
-  const issues = getTopIssues(auditData);
-  if (issues.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {issues.map((issue, i) => (
-        <span
-          key={i}
-          className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
-            issue.severity === "critical"
-              ? "bg-red-500/15 text-red-400 border border-red-500/20"
-              : "bg-amber-500/15 text-amber-400 border border-amber-500/20"
-          )}
-        >
-          <Zap className="h-2.5 w-2.5" />
-          {issue.label}
-        </span>
-      ))}
-    </div>
+function hasAnalysis(lead: Lead): boolean {
+  return !!(
+    lead.geminiAnalysis &&
+    typeof lead.geminiAnalysis === "object" &&
+    "teleprompter_script" in lead.geminiAnalysis &&
+    lead.geminiAnalysis.teleprompter_script
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function AuditSummary({ auditData }: { auditData: any }) {
-  // Nuovo formato strategico: mostra badge Ads
-  if (isStrategicAudit(auditData)) {
-    return (
-      <div className="grid grid-cols-2 gap-2">
-        <div className={cn(
-          "flex items-center gap-2 p-2 rounded-lg border text-xs",
-          auditData.has_active_ads
-            ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
-            : "bg-amber-500/5 border-amber-500/20 text-amber-500"
-        )}>
-          <Tag className="h-3.5 w-3.5 flex-shrink-0" />
-          <span>{auditData.has_active_ads ? "Ads attive" : "Niente Ads"}</span>
-        </div>
-        <div className="flex items-center gap-2 p-2 rounded-lg border text-xs bg-sky-500/5 border-sky-500/20 text-sky-400">
-          <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
-          <span>Analisi strategica</span>
-        </div>
-      </div>
-    );
-  }
+function getAdsNetworks(lead: Lead): string[] {
+  if (!lead.geminiAnalysis) return [];
+  return lead.geminiAnalysis.ads_networks_found || [];
+}
 
-  // Vecchio formato legacy
-  if (!isLegacyAudit(auditData)) return null;
-
-  const { tracking, website, social, trust } = auditData;
-  const hasAnyTracking = tracking?.hasGA4 || tracking?.hasGoogleAnalytics || tracking?.hasGTM;
-  const hasAnyAds = tracking?.hasFacebookPixel || tracking?.hasGoogleAdsTag;
-  const socialCount = [
-    social?.facebook?.linkedFromSite,
-    social?.instagram?.linkedFromSite,
-    social?.linkedin?.linkedFromSite,
-    social?.youtube?.linkedFromSite,
-    social?.tiktok?.linkedFromSite,
-  ].filter(Boolean).length;
-
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      <div className={cn(
-        "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        hasAnyTracking
-          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
-          : "bg-red-500/5 border-red-500/20 text-red-400"
-      )}>
-        <BarChart3 className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>{hasAnyTracking ? "Tracking presente" : "No tracking"}</span>
-      </div>
-      <div className={cn(
-        "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        hasAnyAds
-          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
-          : "bg-amber-500/5 border-amber-500/20 text-amber-500"
-      )}>
-        <Tag className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>{hasAnyAds ? "Ads tracking OK" : "No ads tracking"}</span>
-      </div>
-      <div className={cn(
-        "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        website?.performance >= 60
-          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
-          : website?.performance >= 40
-          ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
-          : "bg-red-500/5 border-red-500/20 text-red-400"
-      )}>
-        <BarChart3 className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>Perf: {website?.performance ?? "N/A"}/100</span>
-      </div>
-      <div className={cn(
-        "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        website?.mobile
-          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
-          : "bg-red-500/5 border-red-500/20 text-red-400"
-      )}>
-        <Smartphone className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>{website?.mobile ? "Mobile OK" : "Non mobile"}</span>
-      </div>
-      <div className={cn(
-        "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        socialCount >= 2
-          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
-          : socialCount >= 1
-          ? "bg-amber-500/5 border-amber-500/20 text-amber-500"
-          : "bg-red-500/5 border-red-500/20 text-red-400"
-      )}>
-        <Share2 className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>{socialCount} social collegati</span>
-      </div>
-      <div className={cn(
-        "flex items-center gap-2 p-2 rounded-lg border text-xs",
-        trust?.hasCookieBanner && trust?.hasPrivacyPolicy
-          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500"
-          : "bg-red-500/5 border-red-500/20 text-red-400"
-      )}>
-        <Shield className="h-3.5 w-3.5 flex-shrink-0" />
-        <span>
-          {trust?.hasCookieBanner && trust?.hasPrivacyPolicy
-            ? "GDPR OK"
-            : !trust?.hasCookieBanner && !trust?.hasPrivacyPolicy
-            ? "No GDPR"
-            : !trust?.hasCookieBanner
-            ? "No cookie banner"
-            : "No privacy policy"}
-        </span>
-      </div>
-    </div>
+function hasTrackingPixel(lead: Lead): boolean {
+  const networks = getAdsNetworks(lead);
+  const trackingNames = [
+    "meta pixel", "google analytics", "google tag manager",
+    "google ads", "linkedin insight", "tiktok pixel",
+    "microsoft clarity", "hotjar",
+  ];
+  return networks.some(n =>
+    trackingNames.some(t => n.toLowerCase().includes(t))
   );
 }
+
+// ==========================================
+// ATTO LABELS for Teleprompter
+// ==========================================
+
+const ATTO_LABELS = [
+  { key: "atto_1" as const, label: "ATTO 1", subtitle: "Ghiaccio e Metafora" },
+  { key: "atto_2" as const, label: "ATTO 2", subtitle: "La Scena del Crimine" },
+  { key: "atto_3" as const, label: "ATTO 3", subtitle: "I Soldi" },
+  { key: "atto_4" as const, label: "ATTO 4", subtitle: "La Soluzione" },
+];
+
+// ==========================================
+// QUALIFICA CARD COMPONENT
+// ==========================================
 
 function QualificaCard({
   lead,
@@ -287,9 +146,19 @@ function QualificaCard({
   index: number;
   onAction: () => void;
 }) {
-  const [expanded, setExpanded] = useState(index === 0);
+  const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(lead.danielaNotes || "");
   const [loading, setLoading] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
+
+  const analysis = lead.geminiAnalysis;
+  const isAnalyzed = hasAnalysis(lead);
+  const adsOn = analysis?.has_active_ads === true;
+  const pixelOk = hasTrackingPixel(lead);
+  const errorPattern = analysis?.primary_error_pattern || null;
+
+  // ---- Actions ----
 
   const handleQualify = async () => {
     setLoading("qualify");
@@ -331,187 +200,392 @@ function QualificaCard({
     }
   };
 
+  const handleGenerateAI = async () => {
+    setGeneratingAI(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/gemini-analysis`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Errore");
+      }
+      toast.success(`Analisi generata per ${lead.name}`);
+      onAction();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore nell'analisi");
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
+  const copyFullScript = async () => {
+    if (!analysis?.teleprompter_script) return;
+    const script = ATTO_LABELS.map(
+      (a) => `[${a.label} - ${a.subtitle}]\n${analysis.teleprompter_script![a.key]}`
+    ).join("\n\n");
+
+    try {
+      await navigator.clipboard.writeText(script);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = script;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // ==========================================
+  // COLLAPSED VIEW (Overview veloce)
+  // ==========================================
   return (
-    <Card className="card-hover overflow-hidden">
+    <Card className="overflow-hidden">
       <CardContent className="p-0">
+        {/* ---- HEADER BAR (sempre visibile) ---- */}
         <div
           className={cn(
             "px-4 py-3 flex items-center justify-between cursor-pointer text-white",
-            getScoreColor(lead.opportunityScore)
+            getScoreHeaderColor(lead.opportunityScore)
           )}
           onClick={() => setExpanded(!expanded)}
         >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl font-black">
-              {lead.opportunityScore || "?"}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {/* Score number */}
+            <span className="text-2xl font-black tabular-nums w-10 text-center flex-shrink-0">
+              {lead.opportunityScore ?? "?"}
             </span>
-            <div>
-              <p className="font-semibold text-sm">{lead.name}</p>
-              <p className="text-xs opacity-80">
+            <div className="min-w-0">
+              <p className="font-semibold text-sm truncate">{lead.name}</p>
+              <p className="text-xs opacity-80 truncate">
                 {lead.category}
-                {lead.googleRating && ` · ★ ${lead.googleRating}`}
-                {lead.googleReviewsCount ? ` (${lead.googleReviewsCount})` : ""}
+                {lead.googleRating && (
+                  <span className="ml-1">
+                    · <Star className="h-2.5 w-2.5 inline fill-yellow-300 text-yellow-300" />{" "}
+                    {Number(lead.googleRating).toFixed(1)}
+                    {lead.googleReviewsCount ? ` (${lead.googleReviewsCount})` : ""}
+                  </span>
+                )}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-white/20 text-white text-xs">
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Badge className={cn("text-xs font-bold px-2 py-0.5", getScoreBadgeColor(lead.opportunityScore))}>
               {getScoreLabel(lead.opportunityScore)}
             </Badge>
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>
 
-        {expanded && (
-          <div className="space-y-0">
-            {lead.website && (
-              <a
-                href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mx-4 mt-3 flex items-center gap-2 px-3 py-2.5 bg-primary/10 border border-primary/20 rounded-lg text-primary hover:bg-primary/20 transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Globe className="h-4 w-4 flex-shrink-0" />
-                <span className="text-sm font-medium truncate">
-                  {lead.website.replace(/^https?:\/\//, "").replace(/\/.*$/, "")}
+        {/* ---- COLLAPSED TAGS (quando chiuso) ---- */}
+        {!expanded && (
+          <div className="px-4 py-2.5 flex items-center justify-between gap-2">
+            {/* 3 Tag Strategici */}
+            <div className="flex items-center gap-1.5 flex-wrap flex-1">
+              {/* Tag 1: Ads */}
+              <span className={cn(
+                "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
+                adsOn
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                  : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+              )}>
+                Ads: {adsOn ? "ON" : "OFF"}
+              </span>
+
+              {/* Tag 2: Pixel */}
+              {isAnalyzed && (
+                <span className={cn(
+                  "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
+                  pixelOk
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                    : "bg-red-500/15 text-red-400 border border-red-500/25"
+                )}>
+                  Pixel: {pixelOk ? "OK" : "MANCANTE"}
                 </span>
-                <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 opacity-60 ml-auto" />
-              </a>
-            )}
-
-            <div className="p-4 space-y-4">
-              {lead.auditData && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                    Riepilogo Audit
-                  </p>
-                  <AuditSummary auditData={lead.auditData} />
-                </div>
               )}
 
-              {lead.auditData && (
-                <CriticalIssues auditData={lead.auditData} />
+              {/* Tag 3: Error Pattern */}
+              {errorPattern && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-red-900/30 text-red-300 border border-red-800/40">
+                  {errorPattern}
+                </span>
               )}
 
-              <Button asChild variant="outline" size="sm" className="h-9 w-full border-violet-500/30 text-violet-400 hover:bg-violet-500/10">
-                <Link href={`/leads/${lead.id}?tab=analisi-strategica`}>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Analisi Strategica
-                </Link>
-              </Button>
-
-              {lead.commercialTag && (
-                <div className="p-3 bg-muted/30 rounded-lg">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                    Segnali Commerciali
-                  </p>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={cn(
-                      "inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border",
-                      getCommercialTagColor(lead.commercialTag)
-                    )}>
-                      <Tag className="h-3 w-3" />
-                      {getCommercialTagLabel(lead.commercialTag)}
-                    </span>
-                    {lead.commercialPriority && (
-                      <Badge variant="outline" className="text-xs">
-                        Priorita: {lead.commercialPriority === 1 ? "Alta" : lead.commercialPriority === 2 ? "Media" : "Bassa"}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+              {/* Badge v2.0 */}
+              {analysis?.analysisVersion && (
+                <span className="text-[10px] font-mono text-blue-400 opacity-60">
+                  v{analysis.analysisVersion}
+                </span>
               )}
+            </div>
 
-              <div>
-                <label
-                  htmlFor={`notes-${lead.id}`}
-                  className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block"
-                >
-                  Note di Daniela
-                </label>
-                <textarea
-                  id={`notes-${lead.id}`}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  placeholder="Scrivi qui le tue osservazioni sul lead..."
-                  rows={3}
-                  className="w-full text-sm rounded-md border border-border bg-background px-3 py-2 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                />
-              </div>
-
-              <div className="flex gap-2">
+            {/* Azioni collapsed */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {!isAnalyzed ? (
                 <Button
-                  onClick={handleQualify}
-                  disabled={!!loading}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={(e) => { e.stopPropagation(); handleGenerateAI(); }}
+                  disabled={generatingAI}
                   size="sm"
+                  className="h-7 px-2.5 text-[11px] bg-violet-600 hover:bg-violet-700"
                 >
-                  {loading === "qualify" ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {generatingAI ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    <>
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Genera AI
+                    </>
                   )}
-                  Qualifica
                 </Button>
+              ) : (
                 <Button
-                  onClick={handleNonTarget}
-                  disabled={!!loading}
+                  onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
                   variant="outline"
-                  className="border-gray-500/50 text-gray-400 hover:bg-gray-500/10"
                   size="sm"
+                  className="h-7 px-2"
                 >
-                  {loading === "non_target" ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <XCircle className="h-4 w-4 mr-2" />
-                  )}
-                  Non Target
+                  <ChevronDown className="h-3.5 w-3.5" />
                 </Button>
-                <Button asChild variant="ghost" size="sm">
-                  <Link href={`/leads/${lead.id}`}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {!expanded && (
-          <div className="px-4 py-2 space-y-2">
-            {lead.auditData && (
-              <CriticalIssues auditData={lead.auditData} />
-            )}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                {lead.commercialTag && (
-                  <span className={cn(
-                    "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border flex-shrink-0",
-                    getCommercialTagColor(lead.commercialTag)
-                  )}>
-                    {getCommercialTagLabel(lead.commercialTag)}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 ml-2">
-                <Button asChild size="sm" variant="outline" className="h-7 px-2.5 text-[10px]">
-                  <Link href={`/leads/${lead.id}?tab=analisi-strategica`}>
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Analisi Strategica
-                  </Link>
-                </Button>
-                {lead.website && (
-                  <Button asChild size="sm" variant="outline" className="h-7 px-2">
+        {/* ==========================================
+            EXPANDED VIEW — 2 colonne
+            ========================================== */}
+        {expanded && (
+          <div className="p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+              {/* ---- COLONNA SINISTRA: Dati + Diagnosi ---- */}
+              <div className="lg:col-span-4 space-y-4">
+
+                {/* Dati base */}
+                <div className="space-y-2">
+                  {lead.website && (
                     <a
                       href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg text-primary hover:bg-primary/20 transition-colors text-sm"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Globe className="h-3.5 w-3.5" />
+                      <Globe className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{lead.website.replace(/^https?:\/\//, "").replace(/\/.*$/, "")}</span>
+                      <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-60 ml-auto" />
                     </a>
+                  )}
+                  {lead.phone && (
+                    <a
+                      href={`tel:${lead.phone}`}
+                      className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 hover:bg-green-500/20 transition-colors text-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Phone className="h-4 w-4 flex-shrink-0" />
+                      <span>{lead.phone}</span>
+                    </a>
+                  )}
+                </div>
+
+                {/* 3 Tag Strategici (anche nell'expanded) */}
+                <div className="flex flex-wrap gap-1.5">
+                  <span className={cn(
+                    "inline-flex items-center px-2 py-1 rounded text-xs font-semibold",
+                    adsOn
+                      ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                      : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+                  )}>
+                    Ads: {adsOn ? "ON" : "OFF"}
+                    {adsOn && analysis?.ads_networks_found && analysis.ads_networks_found.length > 0 && (
+                      <span className="ml-1 opacity-70 font-normal">
+                        ({analysis.ads_networks_found.join(", ")})
+                      </span>
+                    )}
+                  </span>
+                  {isAnalyzed && (
+                    <span className={cn(
+                      "inline-flex items-center px-2 py-1 rounded text-xs font-semibold",
+                      pixelOk
+                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                        : "bg-red-500/15 text-red-400 border border-red-500/25"
+                    )}>
+                      Pixel: {pixelOk ? "OK" : "MANCANTE"}
+                    </span>
+                  )}
+                  {errorPattern && (
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-900/30 text-red-300 border border-red-800/40">
+                      {errorPattern}
+                    </span>
+                  )}
+                </div>
+
+                {/* Box Diagnosi AI — Gancio di vendita */}
+                {isAnalyzed && analysis?.cliche_found && (
+                  <div className="rounded-lg border-2 border-red-500/30 bg-red-500/5 p-4 space-y-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-red-400">
+                      Gancio di Vendita
+                    </p>
+                    {analysis.primary_error_pattern && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Pattern Errore</p>
+                        <p className="text-sm font-semibold text-red-300">
+                          {analysis.primary_error_pattern}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Frase Cliche Trovata</p>
+                      <p className="text-base font-medium italic text-amber-300">
+                        &ldquo;{analysis.cliche_found}&rdquo;
+                      </p>
+                    </div>
+                    {analysis.strategic_note && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Nota Strategica</p>
+                        <p className="text-xs text-muted-foreground">
+                          {analysis.strategic_note}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Note Daniela */}
+                <div>
+                  <label
+                    htmlFor={`notes-${lead.id}`}
+                    className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5 block"
+                  >
+                    Note di Daniela
+                  </label>
+                  <textarea
+                    id={`notes-${lead.id}`}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="Osservazioni..."
+                    rows={2}
+                    className="w-full text-sm rounded-md border border-border bg-background px-3 py-2 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  />
+                </div>
+
+                {/* Bottoni operativi */}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleQualify}
+                    disabled={!!loading}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    size="sm"
+                  >
+                    {loading === "qualify" ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Qualifica
                   </Button>
+                  <Button
+                    onClick={handleNonTarget}
+                    disabled={!!loading}
+                    variant="outline"
+                    className="border-gray-500/50 text-gray-400 hover:bg-gray-500/10"
+                    size="sm"
+                  >
+                    {loading === "non_target" ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Squalifica
+                  </Button>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href={`/leads/${lead.id}`}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              {/* ---- COLONNA DESTRA: Teleprompter ---- */}
+              <div className="lg:col-span-8">
+                {isAnalyzed && analysis?.teleprompter_script ? (
+                  <div className="bg-gray-900 text-white p-6 rounded-lg shadow-inner space-y-6 relative">
+                    {/* Copia Script */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                        Teleprompter Script
+                      </p>
+                      <Button
+                        onClick={copyFullScript}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-3 text-[11px] border-gray-600 text-gray-300 hover:bg-gray-800"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="h-3 w-3 mr-1" />
+                            Copiato!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copia Script per Tella
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* 4 Atti — Font grande per lettura a distanza */}
+                    {ATTO_LABELS.map((atto, i) => (
+                      <div key={atto.key}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="bg-white text-gray-900 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {i + 1}
+                          </span>
+                          <span className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                            {atto.label} — {atto.subtitle}
+                          </span>
+                        </div>
+                        <p className="text-2xl leading-relaxed font-light">
+                          {analysis.teleprompter_script![atto.key]}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/20 rounded-lg border border-dashed border-muted-foreground/20">
+                    <Sparkles className="h-10 w-10 text-muted-foreground/30 mb-4" />
+                    <p className="font-medium text-muted-foreground mb-2">
+                      Analisi Strategica non ancora generata
+                    </p>
+                    <p className="text-sm text-muted-foreground/60 mb-4">
+                      Genera l&apos;analisi AI per vedere il copione teleprompter
+                    </p>
+                    <Button
+                      onClick={handleGenerateAI}
+                      disabled={generatingAI || !lead.website}
+                      className="bg-violet-600 hover:bg-violet-700"
+                    >
+                      {generatingAI ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Generando...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Genera Analisi AI
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -521,6 +595,10 @@ function QualificaCard({
     </Card>
   );
 }
+
+// ==========================================
+// PAGE COMPONENT
+// ==========================================
 
 export default function DaQualificarePage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -579,12 +657,8 @@ export default function DaQualificarePage() {
             <Card key={i}><CardContent className="p-0">
               <Skeleton className="h-14 w-full" />
               <div className="p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Skeleton className="h-9 w-full" />
-                  <Skeleton className="h-9 w-full" />
-                </div>
+                <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-20 w-full" />
-                <div className="flex gap-2"><Skeleton className="h-9 flex-1" /><Skeleton className="h-9 w-24" /></div>
               </div>
             </CardContent></Card>
           ))}
@@ -595,7 +669,7 @@ export default function DaQualificarePage() {
             <ClipboardCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-semibold text-lg mb-2">Nessun lead da qualificare</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              I lead con audit completato appariranno qui per la revisione.
+              I lead appariranno qui per la revisione.
             </p>
             <Button asChild><Link href="/search">Nuova Ricerca</Link></Button>
           </CardContent>

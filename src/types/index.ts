@@ -298,15 +298,12 @@ export function getScoreCategory(score: number | null): {
     return { label: "Non analizzato", emoji: "?", color: "gray" };
   }
   if (score >= 80) {
-    return { label: "Hot lead", emoji: "fire", color: "red" };
+    return { label: "HOT", emoji: "fire", color: "red" };
   }
-  if (score >= 60) {
-    return { label: "Buon potenziale", emoji: "thumbs-up", color: "green" };
+  if (score >= 50) {
+    return { label: "WARM", emoji: "flame", color: "yellow" };
   }
-  if (score >= 40) {
-    return { label: "Potenziale medio", emoji: "ok-hand", color: "yellow" };
-  }
-  return { label: "Bassa priorita", emoji: "snowflake", color: "blue" };
+  return { label: "COLD", emoji: "snowflake", color: "gray" };
 }
 
 // ==========================================

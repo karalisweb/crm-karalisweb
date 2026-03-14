@@ -4,6 +4,7 @@ import { runGeminiAnalysis } from "@/lib/gemini-analysis";
 import { isGeminiConfigured } from "@/lib/gemini";
 import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { Prisma } from "@prisma/client";
+import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
 
 const FETCH_HEADERS = {
   "User-Agent":
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
       id: true,
       name: true,
       website: true,
+      category: true,
     },
     take: maxLeads,
     orderBy: { createdAt: "desc" },
@@ -138,17 +140,21 @@ export async function POST(request: NextRequest) {
       // 3. Analisi Gemini
       const analysis = await runGeminiAnalysis(strategicData);
 
-      // 4. Salva
+      // 4. Calcola score e salva
+      const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category);
+      const scoreResult = calculateLeadScore(scoreInput);
+
       await db.lead.update({
         where: { id: lead.id },
         data: {
           geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
           geminiAnalyzedAt: new Date(),
+          opportunityScore: scoreResult.score,
         },
       });
 
       results.push({ id: lead.id, name: lead.name, status: "ok" });
-      console.log(`[BATCH] ✅ ${lead.name}`);
+      console.log(`[BATCH] ✅ ${lead.name} — score=${scoreResult.score}`);
 
       // Pausa 2 sec tra richieste per non sovraccaricare Gemini
       await new Promise((resolve) => setTimeout(resolve, 2000));

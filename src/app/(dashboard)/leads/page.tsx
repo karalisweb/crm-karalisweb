@@ -35,9 +35,35 @@ import { toast } from "sonner";
 function getScoreBorderClass(score: number | null): string {
   if (score === null) return "border-l-4 border-l-muted";
   if (score >= 80) return "border-l-4 border-l-red-500";
-  if (score >= 60) return "border-l-4 border-l-amber-500";
-  if (score >= 40) return "border-l-4 border-l-yellow-500";
-  return "border-l-4 border-l-blue-500";
+  if (score >= 50) return "border-l-4 border-l-yellow-500";
+  return "border-l-4 border-l-gray-500";
+}
+
+function getScoreBadgeVariant(score: number | null): "destructive" | "default" | "secondary" {
+  if (score === null) return "secondary";
+  if (score >= 80) return "destructive";
+  if (score >= 50) return "default";
+  return "secondary";
+}
+
+function getLeadScoreLabel(score: number | null): string {
+  if (score === null) return "?";
+  if (score >= 80) return "HOT";
+  if (score >= 50) return "WARM";
+  return "COLD";
+}
+
+function hasGeminiAnalysis(lead: Lead): boolean {
+  return !!(lead.geminiAnalysis && typeof lead.geminiAnalysis === "object" && "teleprompter_script" in lead.geminiAnalysis);
+}
+
+interface GeminiAnalysisData {
+  has_active_ads?: boolean;
+  ads_networks_found?: string[];
+  primary_error_pattern?: string;
+  cliche_found?: string;
+  teleprompter_script?: unknown;
+  analysisVersion?: string;
 }
 
 interface Lead {
@@ -52,6 +78,7 @@ interface Lead {
   googleReviewsCount: number | null;
   pipelineStage: string;
   auditStatus: string;
+  geminiAnalysis: GeminiAnalysisData | null;
 }
 
 interface ColumnData {
@@ -99,7 +126,7 @@ const stageOrder = [
   "SENZA_SITO",
 ];
 
-// Lead Card per la lista
+// Lead Card per la lista — Vista strategica
 function LeadListCard({
   lead,
   onMoveLeft,
@@ -113,9 +140,17 @@ function LeadListCard({
   canMoveLeft: boolean;
   canMoveRight: boolean;
 }) {
-  const scoreInfo = getScoreCategory(lead.opportunityScore);
   const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
   const stageInfo = PIPELINE_STAGES[lead.pipelineStage as keyof typeof PIPELINE_STAGES];
+  const analysis = lead.geminiAnalysis;
+  const adsOn = analysis?.has_active_ads === true;
+  const errorPattern = analysis?.primary_error_pattern || null;
+  const isAnalyzed = hasGeminiAnalysis(lead);
+
+  // Pixel detection
+  const networks = analysis?.ads_networks_found || [];
+  const trackingNames = ["meta pixel", "google analytics", "google tag manager", "google ads", "linkedin insight", "tiktok pixel", "microsoft clarity", "hotjar"];
+  const pixelOk = networks.some(n => trackingNames.some(t => n.toLowerCase().includes(t)));
 
   return (
     <Card className={`card-hover ${getScoreBorderClass(lead.opportunityScore)}`}>
@@ -129,49 +164,58 @@ function LeadListCard({
               </div>
             </Link>
 
-            {lead.category && (
-              <p className="text-sm text-muted-foreground truncate mb-2">
-                {lead.category}
-              </p>
-            )}
-
-            <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-3 text-sm mb-2">
+              {lead.category && (
+                <span className="text-muted-foreground truncate">{lead.category}</span>
+              )}
               {lead.googleRating && (
-                <span className="flex items-center gap-1 text-muted-foreground">
+                <span className="flex items-center gap-1 text-muted-foreground flex-shrink-0">
                   <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                   {Number(lead.googleRating).toFixed(1)}
-                  {lead.googleReviewsCount && (
+                  {lead.googleReviewsCount != null && (
                     <span className="text-xs">({lead.googleReviewsCount})</span>
                   )}
                 </span>
               )}
-              {lead.address && (
-                <span className="text-muted-foreground truncate text-xs">
-                  {lead.address.split(",")[0]}
+            </div>
+
+            {/* Tag Strategici */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                adsOn
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                  : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+              }`}>
+                Ads: {adsOn ? "ON" : "OFF"}
+              </span>
+              {isAnalyzed && (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                  pixelOk
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                    : "bg-red-500/15 text-red-400 border border-red-500/25"
+                }`}>
+                  Pixel: {pixelOk ? "OK" : "MANCANTE"}
+                </span>
+              )}
+              {errorPattern && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-red-900/30 text-red-300 border border-red-800/40">
+                  {errorPattern}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <Badge variant="outline" className="text-xs whitespace-nowrap">
               {stageInfo?.label || lead.pipelineStage}
             </Badge>
 
-            {lead.opportunityScore !== null && (
-              <Badge
-                variant={
-                  scoreInfo.color === "red"
-                    ? "destructive"
-                    : scoreInfo.color === "green"
-                    ? "default"
-                    : "secondary"
-                }
-                className="text-xs"
-              >
-                Score: {lead.opportunityScore}
-              </Badge>
-            )}
+            <Badge
+              variant={getScoreBadgeVariant(lead.opportunityScore)}
+              className="text-xs font-bold"
+            >
+              {lead.opportunityScore ?? "?"} · {getLeadScoreLabel(lead.opportunityScore)}
+            </Badge>
           </div>
         </div>
 
@@ -399,10 +443,11 @@ function MobileLeadCard({
   );
 }
 
-// Desktop Lead Card per Kanban
+// Desktop Lead Card per Kanban — Vista strategica
 function DesktopLeadCard({ lead, compact }: { lead: Lead; compact?: boolean }) {
-  const scoreInfo = getScoreCategory(lead.opportunityScore);
   const isHot = lead.opportunityScore && lead.opportunityScore >= 80;
+  const adsOn = lead.geminiAnalysis?.has_active_ads === true;
+  const errorPattern = lead.geminiAnalysis?.primary_error_pattern || null;
 
   if (compact) {
     return (
@@ -416,16 +461,10 @@ function DesktopLeadCard({ lead, compact }: { lead: Lead; compact?: boolean }) {
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 {isHot && <Flame className="h-3 w-3 text-red-500" />}
                 {lead.opportunityScore !== null && (
-                  <span className="text-xs font-semibold tabular-nums">{lead.opportunityScore}</span>
+                  <span className="text-xs font-bold tabular-nums">{lead.opportunityScore}</span>
                 )}
-                {lead.phone && (
-                  <a
-                    href={`tel:${lead.phone}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-1 hover:bg-accent rounded"
-                  >
-                    <Phone className="h-3 w-3 text-green-500" />
-                  </a>
+                {adsOn && (
+                  <span className="text-[9px] font-bold text-emerald-400">ADS</span>
                 )}
               </div>
             </div>
@@ -447,59 +486,57 @@ function DesktopLeadCard({ lead, compact }: { lead: Lead; compact?: boolean }) {
           </div>
         </Link>
 
-        {lead.category && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {lead.category}
-          </p>
-        )}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+          {lead.category && <span className="truncate">{lead.category}</span>}
+          {lead.googleRating && (
+            <span className="flex items-center flex-shrink-0">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-0.5" />
+              {Number(lead.googleRating).toFixed(1)}
+            </span>
+          )}
+        </div>
 
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-2">
-            {lead.opportunityScore !== null && (
-              <Badge
-                variant={
-                  scoreInfo.color === "red"
-                    ? "destructive"
-                    : scoreInfo.color === "green"
-                    ? "default"
-                    : "secondary"
-                }
-                className="text-xs"
-              >
-                {lead.opportunityScore}
-              </Badge>
-            )}
+        {/* Strategic tags */}
+        <div className="flex items-center gap-1 mt-2 flex-wrap">
+          <Badge
+            variant={getScoreBadgeVariant(lead.opportunityScore)}
+            className="text-[10px] px-1.5 py-0"
+          >
+            {lead.opportunityScore ?? "?"}
+          </Badge>
+          <span className={`text-[10px] px-1.5 py-0 rounded font-semibold ${
+            adsOn ? "bg-emerald-500/15 text-emerald-400" : "bg-gray-500/15 text-gray-500"
+          }`}>
+            {adsOn ? "Ads ON" : "Ads OFF"}
+          </span>
+          {errorPattern && (
+            <span className="text-[10px] px-1.5 py-0 rounded font-semibold bg-red-900/30 text-red-300 truncate max-w-[120px]">
+              {errorPattern}
+            </span>
+          )}
+        </div>
 
-            {lead.googleRating && (
-              <span className="flex items-center text-xs text-muted-foreground">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-0.5" />
-                {Number(lead.googleRating).toFixed(1)}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            {lead.phone && (
-              <a
-                href={`tel:${lead.phone}`}
-                onClick={(e) => e.stopPropagation()}
-                className="p-1.5 hover:bg-accent rounded-lg"
-              >
-                <Phone className="h-3.5 w-3.5 text-green-500" />
-              </a>
-            )}
-            {lead.website && (
-              <a
-                href={lead.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-1.5 hover:bg-accent rounded-lg"
-              >
-                <Globe className="h-3.5 w-3.5 text-blue-500" />
-              </a>
-            )}
-          </div>
+        <div className="flex items-center justify-end gap-1 mt-2">
+          {lead.phone && (
+            <a
+              href={`tel:${lead.phone}`}
+              onClick={(e) => e.stopPropagation()}
+              className="p-1.5 hover:bg-accent rounded-lg"
+            >
+              <Phone className="h-3.5 w-3.5 text-green-500" />
+            </a>
+          )}
+          {lead.website && (
+            <a
+              href={lead.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="p-1.5 hover:bg-accent rounded-lg"
+            >
+              <Globe className="h-3.5 w-3.5 text-blue-500" />
+            </a>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -805,7 +842,7 @@ function LeadsPageContent() {
   // Filtra lead per score
   const applyScoreFilter = (leadsToFilter: Lead[]) => {
     if (scoreFilter === "hot") return leadsToFilter.filter(l => (l.opportunityScore ?? 0) >= 80);
-    if (scoreFilter === "good") return leadsToFilter.filter(l => (l.opportunityScore ?? 0) >= 60);
+    if (scoreFilter === "good") return leadsToFilter.filter(l => (l.opportunityScore ?? 0) >= 50);
     return leadsToFilter;
   };
 
@@ -932,7 +969,7 @@ function LeadsPageContent() {
             onClick={() => setScoreFilter("good")}
             className="h-7 px-2 text-xs"
           >
-            Buono (60+)
+            Warm (50+)
           </Button>
           <Button
             variant={scoreFilter === "hot" ? "default" : "ghost"}

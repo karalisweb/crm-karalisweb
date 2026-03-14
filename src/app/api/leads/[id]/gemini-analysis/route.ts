@@ -4,6 +4,7 @@ import { runGeminiAnalysis } from "@/lib/gemini-analysis";
 import { isGeminiConfigured } from "@/lib/gemini";
 import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { Prisma } from "@prisma/client";
+import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
 
 /**
  * POST /api/leads/[id]/gemini-analysis
@@ -121,14 +122,24 @@ export async function POST(
     // 3. Analisi Gemini
     const analysis = await runGeminiAnalysis(strategicData);
 
-    // 4. Salva risultato
+    // 4. Calcola score e salva risultato
+    const fullLead = await db.lead.findUnique({
+      where: { id },
+      select: { category: true },
+    });
+    const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, fullLead?.category ?? null);
+    const scoreResult = calculateLeadScore(scoreInput);
+
     await db.lead.update({
       where: { id },
       data: {
         geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
         geminiAnalyzedAt: new Date(),
+        opportunityScore: scoreResult.score,
       },
     });
+
+    console.log(`[SCORING] ${lead.name}: score=${scoreResult.score} (${scoreResult.breakdown.join(", ")})`);
 
     return NextResponse.json({
       success: true,
