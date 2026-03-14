@@ -30,17 +30,17 @@ const MAX_TEXT_LENGTH = 3000;
 
 function extractHomeText($: CheerioRoot): string {
   // NOTA: NON rimuoviamo nav/footer qui per non mutare il DOM
-  // Lavoriamo su un clone o selezioniamo solo il contenuto principale
+  // Lavoriamo filtrando via selettori, controllando solo tag specifici (non classi su body)
 
   const parts: string[] = [];
 
-  // Selettori per ignorare noise (senza rimuoverli dal DOM)
-  const noiseSelectors =
-    "nav, footer, aside, [class*='sidebar'], [class*='menu'], [class*='cookie'], [class*='popup'], [class*='modal'], [class*='nav'], [role='navigation']";
+  // Noise detection: controlla solo elementi SPECIFICI, non classi generiche
+  // Motivo: WordPress mette classi come "cookies-not-set", "sidebar_hide" sul <body>,
+  // che matcherebbero [class*='cookie'] e [class*='sidebar'] e ucciderebbero TUTTO.
+  const noiseTagSelectors = "nav, footer, aside, [role='navigation']";
 
-  // Funzione helper: prendi testo solo se NON è dentro noise
   const isInsideNoise = (el: cheerio.Element): boolean => {
-    return $(el).parents(noiseSelectors).length > 0 || $(el).is(noiseSelectors);
+    return $(el).parents(noiseTagSelectors).length > 0 || $(el).is(noiseTagSelectors);
   };
 
   // 1. Tutti gli H1 (claim principale)
