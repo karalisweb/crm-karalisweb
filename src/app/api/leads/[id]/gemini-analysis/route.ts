@@ -92,14 +92,30 @@ export async function POST(
       lead.name
     );
 
-    if (!strategicData.home_text || strategicData.home_text.trim().length < 10) {
+    // Se il testo della home è troppo corto, prova a usare about/services come fallback
+    const totalText = [
+      strategicData.home_text,
+      strategicData.about_text,
+      strategicData.services_text,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    if (totalText.length < 10) {
       return NextResponse.json(
         {
           error:
-            "Impossibile estrarre testo sufficiente dal sito. La homepage potrebbe essere vuota o protetta.",
+            "Impossibile estrarre testo sufficiente dal sito. La homepage potrebbe essere vuota, protetta da JavaScript o bloccata.",
         },
         { status: 400 }
       );
+    }
+
+    // Se home_text è vuoto ma abbiamo about/services, usa quelli come home_text
+    if (!strategicData.home_text || strategicData.home_text.trim().length < 10) {
+      strategicData.home_text =
+        strategicData.about_text || strategicData.services_text || "";
     }
 
     // 3. Analisi Gemini

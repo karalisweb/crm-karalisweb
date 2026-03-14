@@ -29,46 +29,85 @@ const MAX_TEXT_LENGTH = 3000;
 // ==========================================
 
 function extractHomeText($: CheerioRoot): string {
-  // Rimuovi noise dal DOM
-  $("nav, footer, aside, [class*='sidebar'], [class*='menu'], [class*='cookie'], [class*='popup'], [class*='modal']").remove();
+  // NOTA: NON rimuoviamo nav/footer qui per non mutare il DOM
+  // Lavoriamo su un clone o selezioniamo solo il contenuto principale
 
   const parts: string[] = [];
 
+  // Selettori per ignorare noise (senza rimuoverli dal DOM)
+  const noiseSelectors =
+    "nav, footer, aside, [class*='sidebar'], [class*='menu'], [class*='cookie'], [class*='popup'], [class*='modal'], [class*='nav'], [role='navigation']";
+
+  // Funzione helper: prendi testo solo se NON è dentro noise
+  const isInsideNoise = (el: cheerio.Element): boolean => {
+    return $(el).parents(noiseSelectors).length > 0 || $(el).is(noiseSelectors);
+  };
+
   // 1. Tutti gli H1 (claim principale)
   $("h1").each((_, el) => {
+    if (isInsideNoise(el)) return;
     const text = $(el).text().trim();
     if (text && text.length > 3) parts.push(text);
   });
 
   // 2. Tutti gli H2 (sezioni pagina)
   $("h2").each((_, el) => {
+    if (isInsideNoise(el)) return;
     const text = $(el).text().trim();
     if (text && text.length > 5) parts.push(text);
   });
 
   // 3. H3 (sotto-sezioni rilevanti)
-  $("h3").slice(0, 8).each((_, el) => {
+  $("h3").slice(0, 10).each((_, el) => {
+    if (isInsideNoise(el)) return;
     const text = $(el).text().trim();
     if (text && text.length > 5) parts.push(text);
   });
 
-  // 4. Paragrafi significativi (> 30 char per evitare label/button)
+  // 4. Paragrafi significativi (> 20 char per evitare label/button)
   $("p").each((_, el) => {
+    if (isInsideNoise(el)) return;
     const text = $(el).text().trim();
-    if (text && text.length > 30) parts.push(text);
+    if (text && text.length > 20) parts.push(text);
   });
 
   // 5. Liste descrittive (servizi elencati in li)
-  $("main li, [class*='content'] li, [class*='service'] li, [class*='feature'] li")
-    .slice(0, 10)
+  $("main li, [class*='content'] li, [class*='service'] li, [class*='feature'] li, section li")
+    .slice(0, 15)
     .each((_, el) => {
+      if (isInsideNoise(el)) return;
       const text = $(el).text().trim();
       if (text && text.length > 15) parts.push(`• ${text}`);
     });
 
+  // 6. Span e div con testo diretto significativo (per SPA/Wix/React)
+  $("main, section, article, [class*='content'], [class*='hero'], [class*='banner'], [class*='intro'], [role='main'], #content, .entry-content")
+    .find("span, div, strong, em, blockquote")
+    .each((_, el) => {
+      if (isInsideNoise(el)) return;
+      const $el = $(el);
+      // Solo testo diretto (non dei figli per evitare duplicati)
+      const directText = $el.contents().filter((__, node) => node.type === "text").text().trim();
+      if (directText && directText.length > 25) parts.push(directText);
+    });
+
   // Deduplica e tronca
   const unique = [...new Set(parts)];
-  const result = unique.join("\n\n");
+  let result = unique.join("\n\n");
+
+  // === FALLBACK AGGRESSIVO ===
+  // Se meno di 50 caratteri estratti, prendi TUTTO il testo visibile del body
+  if (result.trim().length < 50) {
+    const bodyClone = $.root().clone();
+    bodyClone.find("nav, footer, aside, script, style, noscript, iframe, svg, [class*='cookie'], [class*='popup'], [class*='modal']").remove();
+    const bodyText = bodyClone.find("body").text()
+      .replace(/\s+/g, " ")
+      .trim();
+    if (bodyText.length > result.length) {
+      result = bodyText;
+    }
+  }
+
   return result.length > MAX_TEXT_LENGTH
     ? result.substring(0, MAX_TEXT_LENGTH) + "..."
     : result;
@@ -155,7 +194,7 @@ async function fetchAndExtractPageText(url: string): Promise<string | null> {
     for (const selector of contentSelectors) {
       const container = $(selector).first();
       if (container.length > 0) {
-        container.find("h1, h2, h3, p, li").each((_, el) => {
+        container.find("h1, h2, h3, p, li, span, div, strong, blockquote").each((_, el) => {
           const text = $(el).text().trim();
           if (text && text.length > 10) parts.push(text);
         });
@@ -169,12 +208,20 @@ async function fetchAndExtractPageText(url: string): Promise<string | null> {
     // Fallback: body diretto
     if (!foundContent) {
       $("body")
-        .find("h1, h2, h3, p, li")
-        .slice(0, 20)
+        .find("h1, h2, h3, p, li, span, div")
+        .slice(0, 30)
         .each((_, el) => {
           const text = $(el).text().trim();
           if (text && text.length > 10) parts.push(text);
         });
+    }
+
+    // Fallback estremo: tutto il testo del body
+    if (parts.length === 0) {
+      const bodyText = $("body").text().replace(/\s+/g, " ").trim();
+      if (bodyText.length > 20) {
+        parts.push(bodyText);
+      }
     }
 
     if (parts.length === 0) return null;
@@ -395,35 +442,43 @@ function detectActiveAds(html: string, $: CheerioRoot): AdsDetectionResult {
  * 2. Cerca e scarica pagina Chi Siamo
  * 3. Cerca e scarica pagina Servizi
  * 4. Deep check ads su script src + inline + noscript + img pixel
+ *
+ * ORDINE CRITICO:
+ * - Prima cerchiamo i link interni (About/Servizi) sul DOM PULITO ma COMPLETO (nav inclusa!)
+ * - Poi estraiamo il testo della home (filtrando nav/footer via selettori, non rimuovendoli)
  */
 export async function extractStrategicData(
   html: string,
   baseUrl: string,
   companyName: string
 ): Promise<StrategicExtractionResult> {
-  // Crea una copia per l'ads detection (prima di rimuovere script)
-  const rawHtml = html;
-  const $raw = cheerio.load(rawHtml);
+  // === 1. Ads detection sul DOM grezzo (inclusi script) ===
+  const $raw = cheerio.load(html);
+  const adsResult = detectActiveAds(html, $raw);
 
-  // Ads detection sul DOM completo (inclusi script)
-  const adsResult = detectActiveAds(rawHtml, $raw);
+  // === 2. DOM per navigazione: rimuovi solo script/style, ma MANTIENI nav/footer ===
+  const $nav = cheerio.load(html);
+  $nav("script, style, noscript, iframe, svg").remove();
 
-  // Ora pulisci per l'estrazione testo
-  const $ = cheerio.load(html);
-  $("script, style, noscript, iframe, svg").remove();
+  // === 3. Cerca link About + Services PRIMA di toccare nav ===
+  const aboutUrl = findInternalLink($nav, baseUrl, ABOUT_PATTERNS);
+  const servicesUrl = findInternalLink($nav, baseUrl, SERVICES_PATTERNS);
 
-  // Estrai home text (deep, non solo hero)
-  const home_text = extractHomeText($);
+  // === 4. Estrai home text (usa filtro per noise, non rimozione) ===
+  const $content = cheerio.load(html);
+  $content("script, style, noscript, iframe, svg").remove();
+  const home_text = extractHomeText($content);
 
-  // Cerca e scarica About + Services in parallelo
+  // === 5. Scarica About + Services in parallelo ===
   const [about_text, services_text] = await Promise.all([
-    extractAboutText($, baseUrl),
-    extractServicesText($, baseUrl),
+    aboutUrl ? fetchAndExtractPageText(aboutUrl) : Promise.resolve(null),
+    servicesUrl ? fetchAndExtractPageText(servicesUrl) : Promise.resolve(null),
   ]);
 
   console.log(
     `[STRATEGIC] ${companyName}: home=${home_text.length}ch, ` +
-    `about=${about_text?.length ?? 0}ch, services=${services_text?.length ?? 0}ch, ` +
+    `about=${about_text?.length ?? 0}ch (${aboutUrl ?? "no link"}), ` +
+    `services=${services_text?.length ?? 0}ch (${servicesUrl ?? "no link"}), ` +
     `ads=${adsResult.networksFound.length > 0 ? adsResult.networksFound.join(", ") : "NONE"}`
   );
 
