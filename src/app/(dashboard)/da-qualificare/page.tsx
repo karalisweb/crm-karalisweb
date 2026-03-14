@@ -72,6 +72,14 @@ interface Lead {
   danielaNotes: string | null;
   geminiAnalysis: GeminiAnalysis | null;
   geminiAnalyzedAt: string | null;
+  // Ads Intelligence (DB)
+  hasActiveGoogleAds: boolean;
+  hasActiveMetaAds: boolean;
+  googleAdsCopy: string | null;
+  metaAdsCopy: string | null;
+  landingPageUrl: string | null;
+  landingPageText: string | null;
+  adsCheckedAt: string | null;
 }
 
 // ==========================================
@@ -158,10 +166,21 @@ function QualificaCard({
   const [loading, setLoading] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [checkingAds, setCheckingAds] = useState(false);
+  const [adsData, setAdsData] = useState({
+    hasGoogle: lead.hasActiveGoogleAds,
+    hasMeta: lead.hasActiveMetaAds,
+    googleCopy: lead.googleAdsCopy,
+    metaCopy: lead.metaAdsCopy,
+    lpUrl: lead.landingPageUrl,
+    lpText: lead.landingPageText,
+    checkedAt: lead.adsCheckedAt,
+  });
 
   const analysis = lead.geminiAnalysis;
   const isAnalyzed = hasAnalysis(lead);
-  const adsOn = analysis?.has_active_ads === true;
+  // Combina: ads on-page (Gemini analysis) + ads DB (Apify check)
+  const adsOn = analysis?.has_active_ads === true || adsData.hasGoogle || adsData.hasMeta;
   const pixelOk = hasTrackingPixel(lead);
   const errorPattern = analysis?.primary_error_pattern || null;
 
@@ -223,6 +242,35 @@ function QualificaCard({
       toast.error(err instanceof Error ? err.message : "Errore nell'analisi");
     } finally {
       setGeneratingAI(false);
+    }
+  };
+
+  const handleCheckAds = async () => {
+    setCheckingAds(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/ads-check`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Errore");
+      }
+      const { data } = await res.json();
+      setAdsData({
+        hasGoogle: data.hasActiveGoogleAds,
+        hasMeta: data.hasActiveMetaAds,
+        googleCopy: data.googleAdsCopy,
+        metaCopy: data.metaAdsCopy,
+        lpUrl: data.landingPageUrl,
+        lpText: data.landingPageText,
+        checkedAt: new Date().toISOString(),
+      });
+      const found = data.hasActiveGoogleAds || data.hasActiveMetaAds;
+      toast.success(found ? `Ads trovate per ${lead.name}!` : `Nessuna ad trovata per ${lead.name}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore check Ads");
+    } finally {
+      setCheckingAds(false);
     }
   };
 
@@ -433,72 +481,126 @@ function QualificaCard({
                   )}
                 </div>
 
-                {/* Box Ads Intelligence (verde) — LP, Copy, Fallback manuali */}
-                {isAnalyzed && (
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+                {/* Box Ads Intelligence (verde) — Dati DB + Check asincrono + Fallback */}
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
                       Ads Intelligence
                     </p>
-
-                    {/* Landing Page trovata da DataForSEO */}
-                    {analysis?.landing_page_url && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Landing Page Annuncio</p>
-                        <a
-                          href={analysis.landing_page_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-emerald-400 hover:text-emerald-300 underline break-all"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {analysis.landing_page_url.replace(/^https?:\/\//, "").substring(0, 60)}
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Google Ad Copy */}
-                    {analysis?.google_ad_copy && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Google Ad Copy</p>
-                        <p className="text-sm italic text-gray-300">&ldquo;{analysis.google_ad_copy}&rdquo;</p>
-                      </div>
-                    )}
-
-                    {/* Meta Ads Copy */}
-                    {analysis?.meta_ads_copy && analysis.meta_ads_copy.length > 0 && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Meta Ads Copy</p>
-                        {analysis.meta_ads_copy.slice(0, 2).map((copy, i) => (
-                          <p key={i} className="text-sm italic text-gray-300 mb-1">&ldquo;{copy}&rdquo;</p>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Bottoni fallback manuali */}
-                    <div className="flex gap-2 pt-1">
-                      <a
-                        href={analysis?.ad_library_url || `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=IT&q=${encodeURIComponent(lead.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-2.5 py-1.5 rounded text-[11px] font-semibold bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
+                    <div className="flex items-center gap-2">
+                      {adsData.checkedAt && (
+                        <span className="text-[9px] text-muted-foreground">
+                          {new Date(adsData.checkedAt).toLocaleDateString("it-IT")}
+                        </span>
+                      )}
+                      <Button
+                        onClick={(e) => { e.stopPropagation(); handleCheckAds(); }}
+                        disabled={checkingAds || !lead.website}
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[10px] border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
                       >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Meta Ads Library
-                      </a>
-                      <a
-                        href={analysis?.google_ads_transparency_url || `https://adstransparency.google.com/?domain=${encodeURIComponent((lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])}&region=IT`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-2.5 py-1.5 rounded text-[11px] font-semibold bg-orange-600/20 text-orange-400 border border-orange-500/30 hover:bg-orange-600/30 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Google Ads Transparency
-                      </a>
+                        {checkingAds ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            Analisi Ads...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Check Ads
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
-                )}
+
+                  {/* Spinner durante il check */}
+                  {checkingAds && (
+                    <div className="flex items-center gap-2 py-3 justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                      <span className="text-sm text-emerald-400/80">Analisi Ads in corso via Apify...</span>
+                    </div>
+                  )}
+
+                  {/* Risultati: Landing Page */}
+                  {adsData.lpUrl && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Landing Page Annuncio</p>
+                      <a
+                        href={adsData.lpUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-emerald-400 hover:text-emerald-300 underline break-all"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {adsData.lpUrl.replace(/^https?:\/\//, "").substring(0, 60)}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Risultati: Google Ad Copy */}
+                  {adsData.googleCopy && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Google Ad Copy</p>
+                      <p className="text-sm italic text-gray-300">&ldquo;{adsData.googleCopy}&rdquo;</p>
+                    </div>
+                  )}
+
+                  {/* Risultati: Meta Ads Copy */}
+                  {adsData.metaCopy && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Meta Ads Copy</p>
+                      <p className="text-sm italic text-gray-300">&ldquo;{adsData.metaCopy}&rdquo;</p>
+                    </div>
+                  )}
+
+                  {/* Status badges */}
+                  {adsData.checkedAt && !checkingAds && (
+                    <div className="flex gap-2">
+                      <span className={cn(
+                        "text-[10px] px-2 py-0.5 rounded font-semibold",
+                        adsData.hasGoogle
+                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                          : "bg-gray-500/10 text-gray-500 border border-gray-500/20"
+                      )}>
+                        Google Ads: {adsData.hasGoogle ? "SI" : "NO"}
+                      </span>
+                      <span className={cn(
+                        "text-[10px] px-2 py-0.5 rounded font-semibold",
+                        adsData.hasMeta
+                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                          : "bg-gray-500/10 text-gray-500 border border-gray-500/20"
+                      )}>
+                        Meta Ads: {adsData.hasMeta ? "SI" : "NO"}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* FALLBACK OBBLIGATORIO: Bottoni manuali SEMPRE visibili */}
+                  <div className="flex gap-2 pt-1">
+                    <a
+                      href={`https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=IT&q=${encodeURIComponent(lead.name)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-2.5 py-1.5 rounded text-[11px] font-semibold bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Meta Ads Library
+                    </a>
+                    <a
+                      href={`https://adstransparency.google.com/?domain=${encodeURIComponent((lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])}&region=IT`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-2.5 py-1.5 rounded text-[11px] font-semibold bg-orange-600/20 text-orange-400 border border-orange-500/30 hover:bg-orange-600/30 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Google Ads Transparency
+                    </a>
+                  </div>
+                </div>
 
                 {/* Box Diagnosi AI — GANCIO DI VENDITA (Focus principale) */}
                 {isAnalyzed && analysis?.cliche_found && (

@@ -5,18 +5,16 @@ import { isGeminiConfigured } from "@/lib/gemini";
 import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { Prisma } from "@prisma/client";
 import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
-import { checkGoogleAds, isDataForSEOConfigured } from "@/lib/qualification/check-google-ads";
-import { checkMetaAds, isMetaAdsConfigured, buildAdLibraryUrl, buildGoogleAdsTransparencyUrl } from "@/lib/qualification/check-meta-ads";
+import { buildMetaAdLibraryUrl, buildGoogleAdsTransparencyUrl } from "@/lib/ads-intelligence";
 
 /**
  * POST /api/leads/[id]/gemini-analysis
  *
  * Esegue l'Analisi Strategica del Posizionamento v3:
  * 1. Scarica HTML del sito
- * 2. Deep scraping: home_text, about_text, services_text, has_active_ads
- * 3. Check Google Ads (DataForSEO) → landing page URL + text + ad copy
- * 4. Check Meta Ads (Apify) → meta_ads_copy
- * 5. Invia tutto a Gemini per generare il copione teleprompter
+ * 2. Deep scraping: home_text, about_text, services_text, has_active_ads (on-page)
+ * 3. Legge dati Ads Intelligence dal DB (se già analizzati)
+ * 4. Invia tutto a Gemini per generare il copione teleprompter
  */
 export async function POST(
   request: Request,
@@ -27,10 +25,7 @@ export async function POST(
 
     if (!isGeminiConfigured()) {
       return NextResponse.json(
-        {
-          error:
-            "Gemini API key non configurata. Vai in Impostazioni > API & Token.",
-        },
+        { error: "Gemini API key non configurata. Vai in Impostazioni > API & Token." },
         { status: 400 }
       );
     }
@@ -42,6 +37,13 @@ export async function POST(
         name: true,
         website: true,
         category: true,
+        // Dati Ads Intelligence (se già presenti nel DB)
+        hasActiveGoogleAds: true,
+        hasActiveMetaAds: true,
+        googleAdsCopy: true,
+        metaAdsCopy: true,
+        landingPageUrl: true,
+        landingPageText: true,
       },
     });
 
@@ -81,8 +83,7 @@ export async function POST(
 
       html = await response.text();
     } catch (fetchErr) {
-      const msg =
-        fetchErr instanceof Error ? fetchErr.message : "Errore sconosciuto";
+      const msg = fetchErr instanceof Error ? fetchErr.message : "Errore sconosciuto";
       return NextResponse.json(
         { error: `Impossibile raggiungere il sito: ${msg}` },
         { status: 400 }
@@ -90,12 +91,11 @@ export async function POST(
     }
 
     const baseUrl = new URL(url).origin;
-    const cleanDomain = baseUrl.replace(/^https?:\/\//, "").replace(/^www\./, "");
 
     // 2. Estrazione strategica (testo sito + ads detection on-page)
     const strategicData = await extractStrategicData(html, baseUrl, lead.name);
 
-    // Se il testo della home è troppo corto, prova about/services come fallback
+    // Fallback testo
     const totalText = [
       strategicData.home_text,
       strategicData.about_text,
@@ -107,10 +107,7 @@ export async function POST(
 
     if (totalText.length < 10) {
       return NextResponse.json(
-        {
-          error:
-            "Impossibile estrarre testo sufficiente dal sito. La homepage potrebbe essere vuota, protetta da JavaScript o bloccata.",
-        },
+        { error: "Impossibile estrarre testo sufficiente dal sito." },
         { status: 400 }
       );
     }
@@ -120,48 +117,29 @@ export async function POST(
         strategicData.about_text || strategicData.services_text || "";
     }
 
-    // 3. Check Ads esterni (DataForSEO + Meta Ads) — in parallelo, non bloccanti
-    console.log(`[ANALYSIS] ${lead.name}: avvio check ads esterni...`);
+    // 3. Combina ads on-page con dati Ads Intelligence dal DB
+    const hasAdsFromDB = lead.hasActiveGoogleAds || lead.hasActiveMetaAds;
+    const hasAdsOnPage = strategicData.has_active_ads;
 
-    const [googleAdsResult, metaAdsResult] = await Promise.allSettled([
-      isDataForSEOConfigured()
-        ? checkGoogleAds(cleanDomain)
-        : Promise.resolve(null),
-      isMetaAdsConfigured()
-        ? checkMetaAds(lead.name, cleanDomain)
-        : Promise.resolve(null),
-    ]);
-
-    const googleAds = googleAdsResult.status === "fulfilled" ? googleAdsResult.value : null;
-    const metaAds = metaAdsResult.status === "fulfilled" ? metaAdsResult.value : null;
-
-    console.log(
-      `[ANALYSIS] ${lead.name}: GoogleAds=${googleAds?.google_ads_attive ? "SI" : "no"} (LP: ${googleAds?.landing_page_url ?? "N/A"}), ` +
-      `MetaAds=${metaAds?.meta_ads_attive ? "SI" : "no"} (copy: ${metaAds?.meta_ads_copy?.length ?? 0})`
-    );
-
-    // 4. Prepara input Gemini con tutti i dati raccolti
     const geminiInput = {
       ...strategicData,
-      // Sovrascrive has_active_ads se le API esterne confermano (union con on-page detection)
-      has_active_ads: strategicData.has_active_ads ||
-        (googleAds?.google_ads_attive ?? false) ||
-        (metaAds?.meta_ads_attive ?? false),
-      // Nuovi campi Ads Intelligence
-      landing_page_text: googleAds?.landing_page_text ?? null,
-      landing_page_url: googleAds?.landing_page_url ?? null,
-      google_ad_copy: googleAds?.ad_copy ?? null,
-      meta_ads_copy: metaAds?.meta_ads_copy ?? [],
+      has_active_ads: hasAdsOnPage || hasAdsFromDB,
+      // Dati dal DB (Apify ads-check)
+      landing_page_text: lead.landingPageText || null,
+      landing_page_url: lead.landingPageUrl || null,
+      google_ad_copy: lead.googleAdsCopy || null,
+      meta_ads_copy: lead.metaAdsCopy ? [lead.metaAdsCopy] : [],
     };
 
-    // 5. Analisi Gemini
+    // 4. Analisi Gemini
     const analysis = await runGeminiAnalysis(geminiInput);
 
-    // Aggiungi URL di fallback per ricerca manuale
-    analysis.ad_library_url = metaAds?.ad_library_url ?? buildAdLibraryUrl(lead.name);
+    // Aggiungi URL fallback per UI
+    const cleanDomain = baseUrl.replace(/^https?:\/\//, "").replace(/^www\./, "");
+    analysis.ad_library_url = buildMetaAdLibraryUrl(lead.name);
     analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);
 
-    // 6. Calcola score e salva risultato
+    // 5. Calcola score e salva
     const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null);
     const scoreResult = calculateLeadScore(scoreInput);
 
@@ -182,8 +160,7 @@ export async function POST(
     });
   } catch (error) {
     console.error("[API] gemini-analysis error:", error);
-    const message =
-      error instanceof Error ? error.message : "Errore nell'analisi AI";
+    const message = error instanceof Error ? error.message : "Errore nell'analisi AI";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

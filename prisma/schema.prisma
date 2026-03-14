@@ -96,6 +96,17 @@ model Lead {
   geminiAnalyzedAt  DateTime?     @map("gemini_analyzed_at")
 
   // ==========================================
+  // ADS INTELLIGENCE (Apify)
+  // ==========================================
+  hasActiveGoogleAds  Boolean     @default(false) @map("has_active_google_ads")
+  hasActiveMetaAds    Boolean     @default(false) @map("has_active_meta_ads")
+  googleAdsCopy       String?     @map("google_ads_copy")
+  metaAdsCopy         String?     @map("meta_ads_copy")
+  landingPageUrl      String?     @map("landing_page_url")
+  landingPageText     String?     @map("landing_page_text") @db.Text
+  adsCheckedAt        DateTime?   @map("ads_checked_at")
+
+  // ==========================================
   // FOLLOW-UP TRACKING
   // ==========================================
   letterSentAt      DateTime?     @map("letter_sent_at")
