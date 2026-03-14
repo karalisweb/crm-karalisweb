@@ -6,7 +6,26 @@ Il formato segue [Semantic Versioning](https://semver.org/lang/it/).
 
 ---
 
-## [2.6.0] - 2026-03-14nn- Refactoring: sostituito audit tecnico con Analisi Strategica + Teleprompter Mode. Eliminato codice morto (17 file).n
+## [2.7.0] - 2026-03-14
+
+### Aggiunto - Ads Intelligence Engine (100% Apify)
+- **Ads Intelligence Engine v4**: Motore unificato per rilevamento Google Ads e Meta Ads, interamente basato su Apify (rimosso DataForSEO dal flusso attivo)
+- **Google Ads check**: Via `apify/google-search-scraper` — estrae paidResults, ad copy e landing page URL
+- **Meta Ads check**: Via `curious_coder/facebook-ads-library-scraper` con fallback automatico su actor secondario
+- **Landing Page scraper**: Cheerio estrae automaticamente il testo della LP degli annunci trovati (max 2000 char)
+- **Resilienza camaleontica**: Ogni chiamata Apify wrappata in try/catch con timeout 45s, gestione errori 402/429/deprecation — mai crash, graceful degradation
+- **7 nuovi campi DB**: hasActiveGoogleAds, hasActiveMetaAds, googleAdsCopy, metaAdsCopy, landingPageUrl, landingPageText, adsCheckedAt
+- **API asincrona**: `POST/GET /api/leads/[id]/ads-check` — check Ads non bloccante con salvataggio DB
+- **Gemini Prompt v3**: Atto 3 analizza incoerenza annuncio/landing page quando dati disponibili
+- **UI Ads Intelligence**: Box verde sempre visibile, bottone "Check Ads" con spinner, risultati live, bottoni fallback manuali (Meta Ads Library + Google Ads Transparency) sempre presenti
+
+### Modificato
+- UX expanded view: griglia ribilanciata 7/5, Gancio di Vendita ingrandito, Teleprompter compatto con scroll
+- Analysis version bumped a 3.0
+
+## [2.6.0] - 2026-03-14
+
+- Refactoring: sostituito audit tecnico con Analisi Strategica + Teleprompter Mode. Eliminato codice morto (17 file).
 
 ## [2.5.1] - 2026-03-13nn- UI: problemi critici in anteprima lead + bottoni Talking Points e Analisi AI + deep link tabn
 

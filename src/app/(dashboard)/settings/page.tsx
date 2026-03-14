@@ -842,7 +842,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="p-4 border rounded-lg">
                   <p className="text-sm text-muted-foreground">Versione App</p>
-                  <span className="font-medium">Sales CRM by Karalisweb v2.6.0</span>
+                  <span className="font-medium">Sales CRM by Karalisweb v2.7.0</span>
                 </div>
               </div>
             </CardContent>
