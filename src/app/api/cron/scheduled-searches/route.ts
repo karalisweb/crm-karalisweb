@@ -31,22 +31,29 @@ export async function POST(request: NextRequest) {
       where: { id: "default" },
     });
 
+    const limitParam = request.nextUrl.searchParams.get("limit");
+
     const config = {
-      searchesPerRun: settings?.scheduledSearchesPerRun ?? 1,
+      searchesPerRun: limitParam ? parseInt(limitParam, 10) : (settings?.scheduledSearchesPerRun ?? 1),
       hour: settings?.scheduledSearchHour ?? 2,
       leadsPerSearch: settings?.scheduledLeadsPerSearch ?? 50,
     };
 
     // 2. Controlla se e' l'ora giusta (ora italiana CET/CEST)
-    const currentHour = new Date().getUTCHours();
-    const italianHourCET = (currentHour + 1) % 24;
-    const italianHourCEST = (currentHour + 2) % 24;
+    // ?force=true bypassa il check orario (per trigger manuali)
+    const forceRun = request.nextUrl.searchParams.get("force") === "true";
 
-    if (italianHourCET !== config.hour && italianHourCEST !== config.hour) {
-      return NextResponse.json({
-        executed: 0,
-        message: `Skip: ora corrente IT ~${italianHourCET}/${italianHourCEST}, configurata ${config.hour}:00`,
-      });
+    if (!forceRun) {
+      const currentHour = new Date().getUTCHours();
+      const italianHourCET = (currentHour + 1) % 24;
+      const italianHourCEST = (currentHour + 2) % 24;
+
+      if (italianHourCET !== config.hour && italianHourCEST !== config.hour) {
+        return NextResponse.json({
+          executed: 0,
+          message: `Skip: ora corrente IT ~${italianHourCET}/${italianHourCEST}, configurata ${config.hour}:00`,
+        });
+      }
     }
 
     // 3. Trova ricerche in coda
