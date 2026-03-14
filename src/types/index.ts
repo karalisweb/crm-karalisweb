@@ -228,9 +228,11 @@ export interface VideoScriptData {
 
 export interface StrategicAnalysisInput {
   company_name: string;
-  hero_text: string;
-  about_us_text: string | null;
+  home_text: string;
+  about_text: string | null;
+  services_text: string | null;
   has_active_ads: boolean;
+  ads_networks_found?: string[];
 }
 
 export interface TeleprompterScript {
@@ -242,9 +244,11 @@ export interface TeleprompterScript {
 
 export interface GeminiAnalysisResult {
   cliche_found: string;
+  primary_error_pattern: string;
   teleprompter_script: TeleprompterScript;
   strategic_note: string;
   has_active_ads: boolean;
+  ads_networks_found: string[];
   generatedAt: string;
   model: string;
 }

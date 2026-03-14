@@ -14,12 +14,21 @@ import { signOut } from "next-auth/react";
 
 const pageNames: Record<string, string> = {
   "/": "Dashboard",
-  "/leads": "Da Chiamare",
-  "/audit": "Audit",
+  "/oggi": "Oggi",
+  "/da-qualificare": "Da Qualificare",
+  "/da-chiamare": "Da Chiamare",
+  "/video-da-fare": "Video da Fare",
+  "/video-inviati": "Video Inviati",
+  "/follow-up": "Follow-up",
+  "/trattative": "Trattative",
+  "/proposte": "Proposte",
+  "/clienti": "Clienti",
+  "/archivio": "Archivio",
   "/search": "Nuova Ricerca",
   "/searches": "Ricerche",
-  "/parcheggiati": "Parcheggiati",
   "/settings": "Impostazioni",
+  "/profile": "Profilo",
+  "/guida": "Guida",
 };
 
 export function MobileHeader() {

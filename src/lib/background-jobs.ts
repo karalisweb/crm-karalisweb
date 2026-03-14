@@ -153,14 +153,16 @@ async function processGeminiAnalysis(leadId: string): Promise<void> {
   if (
     auditData &&
     typeof auditData === "object" &&
-    "hero_text" in auditData &&
+    "home_text" in auditData &&
     "company_name" in auditData
   ) {
     const analysis = await runGeminiAnalysis({
       company_name: auditData.company_name as string,
-      hero_text: auditData.hero_text as string,
-      about_us_text: (auditData.about_us_text as string) || null,
+      home_text: auditData.home_text as string,
+      about_text: (auditData.about_text as string) || null,
+      services_text: (auditData.services_text as string) || null,
       has_active_ads: (auditData.has_active_ads as boolean) || false,
+      ads_networks_found: (auditData.ads_networks_found as string[]) || [],
     });
 
     await db.lead.update({

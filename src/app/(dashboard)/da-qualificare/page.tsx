@@ -92,7 +92,7 @@ function isLegacyAudit(data: any): data is AuditData {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isStrategicAudit(data: any): boolean {
-  return data && typeof data === "object" && "hero_text" in data;
+  return data && typeof data === "object" && ("home_text" in data || "hero_text" in data);
 }
 
 function getTopIssues(auditData: AuditData): Array<{ label: string; severity: "critical" | "warning" }> {

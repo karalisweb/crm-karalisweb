@@ -8,7 +8,7 @@ import { Prisma, PipelineStage } from "@prisma/client";
  * POST /api/audit
  * Esegue l'estrazione strategica per un lead:
  * 1. Scarica HTML del sito
- * 2. Estrae hero_text, about_us_text, has_active_ads
+ * 2. Estrae home_text, about_text, services_text, has_active_ads
  * 3. Salva i dati nel lead
  */
 export async function POST(request: NextRequest) {

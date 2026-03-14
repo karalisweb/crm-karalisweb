@@ -10,7 +10,7 @@ import { Prisma } from "@prisma/client";
  *
  * Esegue l'Analisi Strategica del Posizionamento:
  * 1. Scarica HTML del sito
- * 2. Estrae hero_text, about_us_text, has_active_ads
+ * 2. Deep scraping: home_text, about_text, services_text, has_active_ads
  * 3. Invia a Gemini per generare il copione teleprompter
  */
 export async function POST(
@@ -92,7 +92,7 @@ export async function POST(
       lead.name
     );
 
-    if (!strategicData.hero_text || strategicData.hero_text.trim().length < 10) {
+    if (!strategicData.home_text || strategicData.home_text.trim().length < 10) {
       return NextResponse.json(
         {
           error:

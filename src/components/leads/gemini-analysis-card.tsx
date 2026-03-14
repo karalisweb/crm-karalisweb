@@ -25,9 +25,11 @@ interface TeleprompterScript {
 
 interface GeminiAnalysisResult {
   cliche_found: string;
+  primary_error_pattern: string;
   teleprompter_script: TeleprompterScript;
   strategic_note: string;
   has_active_ads: boolean;
+  ads_networks_found?: string[];
   generatedAt: string;
   model: string;
 }
@@ -171,11 +173,22 @@ export function GeminiAnalysisCard({
             <Badge className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1">
               <Megaphone className="mr-1.5 h-3.5 w-3.5" />
               Fanno Ads!
+              {geminiAnalysis.ads_networks_found && geminiAnalysis.ads_networks_found.length > 0 && (
+                <span className="ml-1 opacity-80">
+                  ({geminiAnalysis.ads_networks_found.join(", ")})
+                </span>
+              )}
             </Badge>
           ) : (
             <Badge variant="secondary" className="text-sm px-3 py-1">
               <Megaphone className="mr-1.5 h-3.5 w-3.5 opacity-50" />
               Niente Ads
+            </Badge>
+          )}
+          {/* Badge Pattern Errore */}
+          {geminiAnalysis.primary_error_pattern && (
+            <Badge variant="outline" className="text-sm px-3 py-1 border-red-500/30 text-red-400">
+              {geminiAnalysis.primary_error_pattern}
             </Badge>
           )}
           <p className="text-sm text-muted-foreground">
