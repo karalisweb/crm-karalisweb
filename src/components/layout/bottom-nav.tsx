@@ -20,8 +20,8 @@ export function BottomNav() {
   const isAdmin = userRole === "ADMIN";
 
   const navigation = [
-    { name: "Qualifica", href: "/da-qualificare", icon: ClipboardCheck },
-    { name: "Video", href: "/video-da-fare", icon: Video },
+    { name: "Analizza", href: "/da-analizzare", icon: ClipboardCheck },
+    { name: "Video", href: "/fare-video", icon: Video },
     { name: "Follow-up", href: "/follow-up", icon: Repeat },
     { name: "Cerca", href: "/search", icon: Search },
     isAdmin
