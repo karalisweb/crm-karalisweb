@@ -5,8 +5,8 @@ import { Prisma } from "@prisma/client";
 /**
  * POST /api/cron/check-recontact
  *
- * Endpoint cron: controlla i lead DA_RICHIAMARE_6M con recontactAt scaduto
- * e li riporta a DA_QUALIFICARE.
+ * Endpoint cron: controlla i lead ARCHIVIATO con recontactAt scaduto
+ * e li riporta a DA_ANALIZZARE.
  * Chiamato da crontab VPS ogni giorno alle 8:00: 0 8 * * *
  * Protetto da CRON_SECRET.
  */
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Trova lead pronti per il recontact
     const leadsToRecontact = await db.lead.findMany({
       where: {
-        pipelineStage: "DA_RICHIAMARE_6M",
+        pipelineStage: "ARCHIVIATO",
         recontactAt: {
           lte: new Date(),
         },
@@ -39,13 +39,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ moved: 0, message: "Nessun lead da ricontattare" });
     }
 
-    // Sposta ogni lead a DA_QUALIFICARE
+    // Sposta ogni lead a DA_ANALIZZARE
     let count = 0;
     for (const lead of leadsToRecontact) {
       await db.lead.update({
         where: { id: lead.id },
         data: {
-          pipelineStage: "DA_QUALIFICARE",
+          pipelineStage: "DA_ANALIZZARE",
           recontactAt: null,
           videoSentAt: null,
           videoViewedAt: null,
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `[RECONTACT] Spostati ${count} lead a DA_QUALIFICARE:`,
+      `[RECONTACT] Spostati ${count} lead a DA_ANALIZZARE:`,
       leadsToRecontact.map((l) => l.name)
     );
 

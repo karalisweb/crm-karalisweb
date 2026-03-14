@@ -13,6 +13,7 @@ import {
   Megaphone,
   MonitorPlay,
   StickyNote,
+  Crosshair,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -40,6 +41,9 @@ interface GeminiAnalysisCardProps {
   hasWebsite: boolean;
   geminiAnalysis: GeminiAnalysisResult | null;
   geminiAnalyzedAt: string | null;
+  adsCheckedAt?: string | null;
+  googleAdsCopy?: string | null;
+  metaAdsCopy?: string | null;
 }
 
 const ATTO_LABELS = [
@@ -54,8 +58,12 @@ export function GeminiAnalysisCard({
   hasWebsite,
   geminiAnalysis,
   geminiAnalyzedAt,
+  adsCheckedAt,
+  googleAdsCopy,
+  metaAdsCopy,
 }: GeminiAnalysisCardProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isPrecisionLoading, setIsPrecisionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const router = useRouter();
@@ -82,6 +90,32 @@ export function GeminiAnalysisCard({
       setIsLoading(false);
     }
   };
+
+  const runPrecisionCorrector = async () => {
+    setIsPrecisionLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/leads/${leadId}/gemini-precision`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Errore precisione");
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+    } finally {
+      setIsPrecisionLoading(false);
+    }
+  };
+
+  // Mostra bottone "Inietta Dati Ads" solo se: analisi esiste + ads checked + dati ads presenti
+  const canInjectAds =
+    geminiAnalysis &&
+    adsCheckedAt &&
+    (googleAdsCopy || metaAdsCopy) &&
+    geminiAnalysis.analysisVersion !== "precision-v1";
 
   const copyFullScript = async () => {
     if (!geminiAnalysis) return;
@@ -240,6 +274,22 @@ export function GeminiAnalysisCard({
             )}
             Rigenera
           </Button>
+          {canInjectAds && (
+            <Button
+              onClick={runPrecisionCorrector}
+              variant="default"
+              size="sm"
+              disabled={isPrecisionLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isPrecisionLoading ? (
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              ) : (
+                <Crosshair className="mr-2 h-3 w-3" />
+              )}
+              Inietta Dati Ads
+            </Button>
+          )}
         </div>
       </div>
 

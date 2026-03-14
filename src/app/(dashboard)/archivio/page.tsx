@@ -34,8 +34,7 @@ interface Lead {
 
 const TABS = [
   { key: "PERSO", label: "Persi", description: "Contattati, non interessati" },
-  { key: "DA_RICHIAMARE_6M", label: "6 Mesi", description: "Da richiamare tra 6 mesi" },
-  { key: "RICICLATO", label: "Riciclati", description: "Lead riciclati" },
+  { key: "ARCHIVIATO", label: "Archiviati", description: "Lead archiviati (ricontattare dopo)" },
   { key: "NON_TARGET", label: "Non Target", description: "Nessun segnale commerciale" },
   { key: "SENZA_SITO", label: "Senza Sito", description: "Niente da analizzare" },
 ] as const;
@@ -55,10 +54,10 @@ function LeadArchiveCard({
       const res = await fetch(`/api/leads/${lead.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pipelineStage: "DA_QUALIFICARE" }),
+        body: JSON.stringify({ pipelineStage: "DA_ANALIZZARE" }),
       });
       if (!res.ok) throw new Error("Errore");
-      toast.success(`${lead.name} spostato in Da Qualificare`);
+      toast.success(`${lead.name} spostato in Da Analizzare`);
       onRestore();
     } catch {
       toast.error("Errore nel ripristino");
@@ -194,7 +193,7 @@ export default function ArchivioPage() {
         {TABS.find((t) => t.key === activeTab)?.description}
         {" · "}
         Clicca <ArrowUp className="h-3 w-3 inline text-green-500" /> per
-        ripristinare un lead in Da Qualificare
+        ripristinare un lead in Da Analizzare
       </p>
 
       {/* Lista */}

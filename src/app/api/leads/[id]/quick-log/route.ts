@@ -14,16 +14,15 @@ import { CallOutcome, Objection, NextStepType, PipelineStage, ActivityType } fro
 
 type ActionType =
   | "VIDEO_SENT"
-  | "LETTER_SENT"
+  | "FOLLOW_UP"
   | "LINKEDIN_SENT"
-  | "RESPONSE_RECEIVED"
+  | "TELEFONATA"
   | "CALL_SCHEDULED"
-  | "PROPOSAL_SENT"
-  | "MARK_6M"
-  | "MARK_RECYCLED"
+  | "IN_TRATTATIVA"
+  | "MARK_ARCHIVED"
   | "MARK_LOST"
   | "MARK_WON"
-  | "QUALIFY"
+  | "MOVE_TO_VIDEO"
   | "CALL_LOGGED";
 
 export async function POST(
@@ -62,9 +61,9 @@ async function handleAction(leadId: string, body: any) {
   const { action, notes, respondedVia, appointmentAt, recontactMonths, lostReason, lostReasonNotes } = body;
 
   const validActions: ActionType[] = [
-    "VIDEO_SENT", "LETTER_SENT", "LINKEDIN_SENT", "RESPONSE_RECEIVED",
-    "CALL_SCHEDULED", "PROPOSAL_SENT", "MARK_6M", "MARK_RECYCLED",
-    "MARK_LOST", "MARK_WON", "QUALIFY", "CALL_LOGGED",
+    "VIDEO_SENT", "FOLLOW_UP", "LINKEDIN_SENT", "TELEFONATA",
+    "CALL_SCHEDULED", "IN_TRATTATIVA", "MARK_ARCHIVED",
+    "MARK_LOST", "MARK_WON", "MOVE_TO_VIDEO", "CALL_LOGGED",
   ];
 
   if (!validActions.includes(action)) {
@@ -82,39 +81,60 @@ async function handleAction(leadId: string, body: any) {
   let activityType: ActivityType = "STAGE_CHANGE";
   let activityNotes = notes || "";
 
-  switch (action as ActionType) {
-    case "VIDEO_SENT":
-      newStage = "VIDEO_INVIATO";
-      updateData = { videoSentAt: now, lastContactedAt: now };
-      activityType = "VIDEO_SENT";
-      activityNotes = notes || "Video Tella inviato via email";
-      break;
+  // Fetch current lead to determine next stage for progressive actions
+  const currentLead = await db.lead.findUnique({
+    where: { id: leadId },
+    select: { pipelineStage: true, outreachChannel: true },
+  });
 
-    case "LETTER_SENT":
-      newStage = "LETTERA_INVIATA";
-      updateData = { letterSentAt: now, lastContactedAt: now };
-      activityType = "LETTER_SENT";
-      activityNotes = notes || "Lettera cartacea inviata";
+  switch (action as ActionType) {
+    case "VIDEO_SENT": {
+      const channel = body.channel || "EMAIL"; // "WA" | "EMAIL"
+      newStage = "VIDEO_INVIATO";
+      updateData = { videoSentAt: now, lastContactedAt: now, outreachChannel: channel };
+      activityType = "VIDEO_SENT";
+      activityNotes = notes || `Video inviato via ${channel === "WA" ? "WhatsApp" : "Email"}`;
       break;
+    }
+
+    case "FOLLOW_UP": {
+      // Progressive: FOLLOW_UP_1 → 2 → 3
+      const currentStage = currentLead?.pipelineStage;
+      if (currentStage === "FOLLOW_UP_2" || currentStage === "FOLLOW_UP_3") {
+        newStage = "FOLLOW_UP_3";
+      } else if (currentStage === "FOLLOW_UP_1") {
+        newStage = "FOLLOW_UP_2";
+      } else {
+        newStage = "FOLLOW_UP_1";
+      }
+      updateData = { lastContactedAt: now };
+      activityType = "STAGE_CHANGE";
+      activityNotes = notes || `Follow-up effettuato (${newStage})`;
+      break;
+    }
 
     case "LINKEDIN_SENT":
-      newStage = "FOLLOW_UP_LINKEDIN";
+      newStage = "LINKEDIN";
       updateData = { linkedinSentAt: now, lastContactedAt: now };
       activityType = "LINKEDIN_SENT";
-      activityNotes = notes || "Connessione/InMail LinkedIn inviata";
+      activityNotes = notes || "Outreach LinkedIn inviato";
       break;
 
-    case "RESPONSE_RECEIVED":
-      newStage = "RISPOSTO";
-      updateData = {
-        respondedAt: now,
-        respondedVia: respondedVia || null,
-      };
-      activityType = "RESPONSE_RECEIVED";
-      activityNotes = respondedVia
-        ? `Risposta ricevuta via ${respondedVia}${notes ? ` - ${notes}` : ""}`
-        : notes || "Risposta ricevuta";
+    case "TELEFONATA": {
+      // Progressive: TELEFONATA_1 → 2 → 3
+      const curStage = currentLead?.pipelineStage;
+      if (curStage === "TELEFONATA_2" || curStage === "TELEFONATA_3") {
+        newStage = "TELEFONATA_3";
+      } else if (curStage === "TELEFONATA_1") {
+        newStage = "TELEFONATA_2";
+      } else {
+        newStage = "TELEFONATA_1";
+      }
+      updateData = { lastContactedAt: now, callAttempts: { increment: 1 } };
+      activityType = "CALL";
+      activityNotes = notes || `Telefonata effettuata (${newStage})`;
       break;
+    }
 
     case "CALL_SCHEDULED":
       newStage = "CALL_FISSATA";
@@ -127,29 +147,23 @@ async function handleAction(leadId: string, body: any) {
         : notes || "Call conoscitiva fissata";
       break;
 
-    case "PROPOSAL_SENT":
-      newStage = "PROPOSTA_INVIATA";
-      updateData = { offerSentAt: now, lastContactedAt: now };
-      activityType = "PROPOSAL_SENT";
-      activityNotes = notes || "Proposta inviata";
+    case "IN_TRATTATIVA":
+      newStage = "IN_TRATTATIVA";
+      updateData = { lastContactedAt: now };
+      activityType = "STAGE_CHANGE";
+      activityNotes = notes || "Trattativa avviata";
       break;
 
-    case "MARK_6M": {
-      newStage = "DA_RICHIAMARE_6M";
+    case "MARK_ARCHIVED": {
+      newStage = "ARCHIVIATO";
       const months = recontactMonths || 6;
       const recontactDate = new Date();
       recontactDate.setMonth(recontactDate.getMonth() + months);
       updateData = { recontactAt: recontactDate };
       activityType = "STAGE_CHANGE";
-      activityNotes = `Messo in attesa, ricontattare tra ${months} mesi (${recontactDate.toLocaleDateString("it-IT")})`;
+      activityNotes = notes || `Archiviato, ricontattare tra ${months} mesi`;
       break;
     }
-
-    case "MARK_RECYCLED":
-      newStage = "RICICLATO";
-      activityType = "STAGE_CHANGE";
-      activityNotes = notes || "Riciclato come caso studio anonimizzato";
-      break;
 
     case "MARK_LOST":
       newStage = "PERSO";
@@ -162,26 +176,15 @@ async function handleAction(leadId: string, body: any) {
       break;
 
     case "MARK_WON":
-      newStage = "VINTO";
+      newStage = "CLIENTE";
       activityType = "STAGE_CHANGE";
       activityNotes = notes || "Cliente acquisito";
       break;
 
-    case "QUALIFY":
-      newStage = "QUALIFICATO";
-      updateData = {
-        qualifiedAt: now,
-        qualifiedBy: body.qualifiedBy || null,
-        danielaNotes: body.danielaNotes || null,
-        auditVerified: true,
-        auditVerifiedAt: now,
-        auditVerifiedBy: body.qualifiedBy || null,
-        auditVerificationChecks: body.verificationChecks || null,
-      };
-      activityType = "QUALIFICATION";
-      activityNotes = body.danielaNotes
-        ? `Qualificato da ${body.qualifiedBy || "Daniela"}: ${body.danielaNotes}`
-        : `Qualificato da ${body.qualifiedBy || "Daniela"}`;
+    case "MOVE_TO_VIDEO":
+      newStage = "FARE_VIDEO";
+      activityType = "STAGE_CHANGE";
+      activityNotes = notes || "Spostato a Fare Video";
       break;
   }
 
@@ -214,7 +217,7 @@ async function handleAction(leadId: string, body: any) {
 }
 
 /**
- * Legacy call logging (per la fase vendita: CALL_FISSATA, IN_CONVERSAZIONE)
+ * Legacy call logging (per la fase vendita: CALL_FISSATA, IN_TRATTATIVA)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleCallLog(leadId: string, body: any) {
@@ -246,16 +249,15 @@ async function handleCallLog(leadId: string, body: any) {
       newStage = "PERSO";
       break;
     case "CALLBACK":
-      newStage = "IN_CONVERSAZIONE";
+      newStage = "IN_TRATTATIVA";
       break;
     case "NO_ANSWER":
     case "BUSY":
-      // Non cambia stage, rimane dov'e'
-      newStage = "IN_CONVERSAZIONE";
+      newStage = "IN_TRATTATIVA";
       break;
     case "ANSWERED":
     default:
-      newStage = "IN_CONVERSAZIONE";
+      newStage = "IN_TRATTATIVA";
       break;
   }
 

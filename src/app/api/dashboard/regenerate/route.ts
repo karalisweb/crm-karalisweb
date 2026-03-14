@@ -2,39 +2,33 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 
-const MAX_VIDEO_DA_FARE = 5;
+const MAX_FARE_VIDEO = 5;
 
 /**
  * POST /api/dashboard/regenerate
  *
- * Auto-rigenerazione: riempie VIDEO_DA_FARE fino a 5
- * pescando dai QUALIFICATO con score più alto.
- *
- * Logica:
- * 1. Conta quanti lead sono in VIDEO_DA_FARE
- * 2. Se < 5, prende i top-scored QUALIFICATO
- * 3. Li sposta in VIDEO_DA_FARE
+ * Auto-rigenerazione: riempie FARE_VIDEO fino a 5
+ * pescando dai HOT_LEAD prima, poi WARM_LEAD.
  */
 export async function POST() {
   try {
-    // Quanti video da fare ci sono già?
     const currentCount = await db.lead.count({
-      where: { pipelineStage: "VIDEO_DA_FARE" },
+      where: { pipelineStage: "FARE_VIDEO" },
     });
 
-    const slotsToFill = MAX_VIDEO_DA_FARE - currentCount;
+    const slotsToFill = MAX_FARE_VIDEO - currentCount;
 
     if (slotsToFill <= 0) {
       return NextResponse.json({
         moved: 0,
-        message: `La lista è già piena (${currentCount}/${MAX_VIDEO_DA_FARE})`,
+        message: `La lista è già piena (${currentCount}/${MAX_FARE_VIDEO})`,
       });
     }
 
-    // Prendi i top-scored QUALIFICATO con analisi Gemini
-    const candidates = await db.lead.findMany({
+    // Prima prova HOT_LEAD
+    const hotCandidates = await db.lead.findMany({
       where: {
-        pipelineStage: "QUALIFICATO",
+        pipelineStage: "HOT_LEAD",
         geminiAnalysis: { not: Prisma.DbNull },
       },
       orderBy: { opportunityScore: "desc" },
@@ -42,83 +36,76 @@ export async function POST() {
       select: { id: true, name: true, opportunityScore: true },
     });
 
-    if (candidates.length === 0) {
-      // Fallback: prova con DA_QUALIFICARE che hanno analisi
-      const fallbackCandidates = await db.lead.findMany({
-        where: {
-          pipelineStage: "DA_QUALIFICARE",
-          geminiAnalysis: { not: Prisma.DbNull },
-          opportunityScore: { gte: 50 },
-        },
-        orderBy: { opportunityScore: "desc" },
-        take: slotsToFill,
-        select: { id: true, name: true, opportunityScore: true },
-      });
+    let moved = 0;
+    const allMoved: typeof hotCandidates = [];
 
-      if (fallbackCandidates.length === 0) {
-        return NextResponse.json({
-          moved: 0,
-          message: "Nessun lead qualificato disponibile da promuovere",
-        });
-      }
-
-      // Sposta fallback candidates
-      const ids = fallbackCandidates.map((c) => c.id);
+    if (hotCandidates.length > 0) {
+      const ids = hotCandidates.map((c) => c.id);
       await db.lead.updateMany({
         where: { id: { in: ids } },
-        data: { pipelineStage: "VIDEO_DA_FARE" },
+        data: { pipelineStage: "FARE_VIDEO" },
       });
-
-      // Log activities
-      for (const c of fallbackCandidates) {
+      for (const c of hotCandidates) {
         await db.activity.create({
           data: {
             leadId: c.id,
             type: "STAGE_CHANGE",
-            notes: `Auto-promosso a VIDEO_DA_FARE (score: ${c.opportunityScore})`,
+            notes: `Auto-promosso a FARE_VIDEO (score: ${c.opportunityScore})`,
           },
         });
       }
-
-      console.log(
-        `[REGENERATE] Promossi ${fallbackCandidates.length} lead da DA_QUALIFICARE a VIDEO_DA_FARE:`,
-        fallbackCandidates.map((c) => `${c.name} (${c.opportunityScore})`)
-      );
-
-      return NextResponse.json({
-        moved: fallbackCandidates.length,
-        from: "DA_QUALIFICARE",
-        leads: fallbackCandidates,
-      });
+      moved += hotCandidates.length;
+      allMoved.push(...hotCandidates);
     }
 
-    // Sposta candidates da QUALIFICATO a VIDEO_DA_FARE
-    const ids = candidates.map((c) => c.id);
-    await db.lead.updateMany({
-      where: { id: { in: ids } },
-      data: { pipelineStage: "VIDEO_DA_FARE" },
-    });
-
-    // Log activities
-    for (const c of candidates) {
-      await db.activity.create({
-        data: {
-          leadId: c.id,
-          type: "STAGE_CHANGE",
-          notes: `Auto-promosso a VIDEO_DA_FARE (score: ${c.opportunityScore})`,
+    // Se ancora slot disponibili, prova WARM_LEAD
+    const remainingSlots = slotsToFill - hotCandidates.length;
+    if (remainingSlots > 0) {
+      const warmCandidates = await db.lead.findMany({
+        where: {
+          pipelineStage: "WARM_LEAD",
+          geminiAnalysis: { not: Prisma.DbNull },
         },
+        orderBy: { opportunityScore: "desc" },
+        take: remainingSlots,
+        select: { id: true, name: true, opportunityScore: true },
+      });
+
+      if (warmCandidates.length > 0) {
+        const ids = warmCandidates.map((c) => c.id);
+        await db.lead.updateMany({
+          where: { id: { in: ids } },
+          data: { pipelineStage: "FARE_VIDEO" },
+        });
+        for (const c of warmCandidates) {
+          await db.activity.create({
+            data: {
+              leadId: c.id,
+              type: "STAGE_CHANGE",
+              notes: `Auto-promosso a FARE_VIDEO (score: ${c.opportunityScore})`,
+            },
+          });
+        }
+        moved += warmCandidates.length;
+        allMoved.push(...warmCandidates);
+      }
+    }
+
+    if (moved === 0) {
+      return NextResponse.json({
+        moved: 0,
+        message: "Nessun lead Hot/Warm disponibile da promuovere",
       });
     }
 
     console.log(
-      `[REGENERATE] Promossi ${candidates.length} lead da QUALIFICATO a VIDEO_DA_FARE:`,
-      candidates.map((c) => `${c.name} (${c.opportunityScore})`)
+      `[REGENERATE] Promossi ${moved} lead a FARE_VIDEO:`,
+      allMoved.map((c) => `${c.name} (${c.opportunityScore})`)
     );
 
     return NextResponse.json({
-      moved: candidates.length,
-      from: "QUALIFICATO",
-      leads: candidates,
+      moved,
+      leads: allMoved,
     });
   } catch (error) {
     console.error("[API] regenerate error:", error);

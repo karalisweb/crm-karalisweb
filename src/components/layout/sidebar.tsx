@@ -25,6 +25,10 @@ import {
   PanelLeftOpen,
   Target,
   ScanSearch,
+  Video,
+  Linkedin,
+  Phone,
+  Trophy,
 } from "lucide-react";
 
 // Badge types per colore
@@ -45,26 +49,34 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    title: "OGGI",
+    title: "ANALISI",
     items: [
-      { href: "/", label: "Missione di Oggi", icon: Target, badgeKey: "daRegistrare", badgeColor: "red" },
-      { href: "/follow-up", label: "Follow-up", icon: Repeat, badgeKey: "followUp", badgeColor: "yellow" },
-    ],
-  },
-  {
-    title: "PIPELINE",
-    items: [
-      { href: "/video-inviati", label: "Inviati", icon: Send, badgeKey: "inviati", badgeColor: "blue" },
-      { href: "/appuntamenti", label: "Appuntamenti", icon: CalendarCheck, badgeKey: "appuntamenti" },
-      { href: "/trattative", label: "In Chiusura", icon: Handshake, badgeKey: "inChiusura" },
-    ],
-  },
-  {
-    title: "DATABASE",
-    items: [
-      { href: "/da-qualificare", label: "Da Analizzare", icon: ScanSearch, badgeKey: "daAnalizzare", badgeColor: "default" },
+      { href: "/da-analizzare", label: "Da Analizzare", icon: ScanSearch, badgeKey: "daAnalizzare", badgeColor: "default" },
       { href: "/hot-leads", label: "Hot Leads", icon: Flame, badgeKey: "hotLeads", badgeColor: "red" },
       { href: "/warm-leads", label: "Warm Leads", icon: Sun, badgeKey: "warmLeads", badgeColor: "yellow" },
+    ],
+  },
+  {
+    title: "VIDEO",
+    items: [
+      { href: "/fare-video", label: "Fare Video", icon: Video, badgeKey: "fareVideo", badgeColor: "red" },
+      { href: "/video-inviati", label: "Video Inviati", icon: Send, badgeKey: "videoInviati", badgeColor: "blue" },
+    ],
+  },
+  {
+    title: "FOLLOW-UP",
+    items: [
+      { href: "/follow-up", label: "Follow-up", icon: Repeat, badgeKey: "followUp", badgeColor: "yellow" },
+      { href: "/linkedin", label: "LinkedIn", icon: Linkedin, badgeKey: "linkedin", badgeColor: "blue" },
+      { href: "/telefonate", label: "Telefonate", icon: Phone, badgeKey: "telefonate", badgeColor: "default" },
+    ],
+  },
+  {
+    title: "VENDITA",
+    items: [
+      { href: "/call-fissate", label: "Call Fissate", icon: CalendarCheck, badgeKey: "callFissate" },
+      { href: "/trattative", label: "In Trattativa", icon: Handshake, badgeKey: "inTrattativa" },
+      { href: "/clienti", label: "Clienti", icon: Trophy, badgeKey: "clienti", badgeColor: "green" },
     ],
   },
   {
@@ -77,7 +89,7 @@ const navSections: NavSection[] = [
   {
     title: "ALTRO",
     items: [
-      { href: "/dashboard", label: "Statistiche", icon: LayoutDashboard },
+      { href: "/leads", label: "Tutti i Lead", icon: LayoutDashboard },
       { href: "/archivio", label: "Archivio", icon: Archive },
     ],
   },

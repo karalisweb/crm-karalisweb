@@ -272,7 +272,7 @@ export default function VideoDaFarePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/leads?stage=VIDEO_DA_FARE&pageSize=50");
+      const res = await fetch("/api/leads?stage=FARE_VIDEO&pageSize=50");
       if (!res.ok) throw new Error("Errore nel caricamento");
       const json = await res.json();
       setLeads(json.leads || []);

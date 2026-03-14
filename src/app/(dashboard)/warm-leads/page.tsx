@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sun, ExternalLink, Globe } from "lucide-react";
@@ -15,9 +14,7 @@ interface GeminiAnalysis {
 export default async function WarmLeadsPage() {
   const leads = await db.lead.findMany({
     where: {
-      pipelineStage: { in: ["DA_QUALIFICARE", "QUALIFICATO", "VIDEO_DA_FARE"] },
-      geminiAnalysis: { not: Prisma.DbNull },
-      opportunityScore: { gte: 50, lt: 80 },
+      pipelineStage: "WARM_LEAD",
     },
     orderBy: { opportunityScore: "desc" },
     select: {

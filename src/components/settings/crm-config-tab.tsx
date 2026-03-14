@@ -256,7 +256,7 @@ export function CrmConfigTab() {
       if (res.ok) {
         const data = await res.json();
         toast.success(
-          `Ricalcolati ${data.results.total} lead: ${data.results.daQualificare ?? 0} DA_QUALIFICARE, ${data.results.nonTarget ?? 0} NON_TARGET`
+          `Ricalcolati ${data.results.total} lead: ${data.results.hotLeads ?? 0} HOT, ${data.results.warmLeads ?? 0} WARM, ${data.results.nonTarget ?? 0} NON_TARGET`
         );
         fetchAuditStats();
       } else {
@@ -382,7 +382,7 @@ export function CrmConfigTab() {
             <CardTitle>Mesi Ricontatto</CardTitle>
           </div>
           <CardDescription>
-            Dopo quanti mesi un lead in &quot;Da richiamare&quot; torna automaticamente in pipeline.
+            Dopo quanti mesi un lead &quot;Archiviato&quot; torna automaticamente in pipeline.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -617,7 +617,7 @@ export function CrmConfigTab() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Callable → DA_QUALIFICARE, Non target → NON_TARGET
+                Analizzati → HOT_LEAD / WARM_LEAD, Non target → NON_TARGET
               </div>
               <Button
                 onClick={recalculateStages}

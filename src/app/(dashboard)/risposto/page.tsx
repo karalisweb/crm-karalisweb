@@ -14,9 +14,6 @@ import {
   AlertTriangle,
   ChevronRight,
   Phone,
-  Mail,
-  Linkedin as LinkedinIcon,
-  Globe,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -31,16 +28,6 @@ interface Lead {
   opportunityScore: number | null;
   respondedAt: string | null;
   respondedVia: string | null;
-}
-
-function getChannelIcon(channel: string | null) {
-  switch (channel) {
-    case "email": return <Mail className="h-3.5 w-3.5" />;
-    case "telefono": return <Phone className="h-3.5 w-3.5" />;
-    case "linkedin": return <LinkedinIcon className="h-3.5 w-3.5" />;
-    case "whatsapp": return <MessagesSquare className="h-3.5 w-3.5" />;
-    default: return <MessageCircle className="h-3.5 w-3.5" />;
-  }
 }
 
 function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) {
@@ -75,16 +62,16 @@ function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) 
     }
   };
 
-  const handleInConversation = async () => {
-    setLoading("conversation");
+  const handleInTrattativa = async () => {
+    setLoading("trattativa");
     try {
-      const res = await fetch(`/api/leads/${lead.id}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/leads/${lead.id}/quick-log`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pipelineStage: "IN_CONVERSAZIONE" }),
+        body: JSON.stringify({ action: "IN_TRATTATIVA" }),
       });
       if (!res.ok) throw new Error("Errore");
-      toast.success(`${lead.name} spostato in Conversazione`);
+      toast.success(`${lead.name} spostato in Trattativa`);
       onAction();
     } catch {
       toast.error("Errore nello spostamento");
@@ -108,7 +95,7 @@ function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) 
             {lead.respondedAt && (
               <div className="flex items-center gap-2 mt-2">
                 <span className="flex items-center gap-1 text-xs text-green-500">
-                  {getChannelIcon(lead.respondedVia)}
+                  <MessageCircle className="h-3.5 w-3.5" />
                   Risposto {lead.respondedVia ? `via ${lead.respondedVia}` : ""}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -121,11 +108,10 @@ function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) 
             )}
           </div>
           <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
-            Risposto
+            Call fissata
           </Badge>
         </div>
 
-        {/* Date picker per call */}
         {showDatePicker && (
           <div className="mt-3 p-3 bg-muted/30 rounded-lg space-y-2">
             <p className="text-xs font-semibold text-muted-foreground">
@@ -148,7 +134,6 @@ function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) 
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-2 mt-3 pt-3 border-t">
           <Button
             onClick={handleCallScheduled}
@@ -164,17 +149,17 @@ function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) 
             Fissa Call
           </Button>
           <Button
-            onClick={handleInConversation}
+            onClick={handleInTrattativa}
             disabled={!!loading}
             variant="outline"
             size="sm"
           >
-            {loading === "conversation" ? (
+            {loading === "trattativa" ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
               <MessagesSquare className="h-4 w-4 mr-2" />
             )}
-            In Conversazione
+            In Trattativa
           </Button>
           <Button asChild variant="ghost" size="sm">
             <Link href={`/leads/${lead.id}`}>
@@ -197,7 +182,7 @@ export default function RispostoPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/leads?stage=RISPOSTO&pageSize=50");
+      const res = await fetch("/api/leads?stage=CALL_FISSATA&pageSize=50");
       if (!res.ok) throw new Error("Errore nel caricamento");
       const json = await res.json();
       setLeads(json.leads || []);
@@ -215,9 +200,9 @@ export default function RispostoPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Ha Risposto</h1>
+          <h1 className="text-2xl font-bold">Call Fissate</h1>
           <p className="text-sm text-muted-foreground">
-            Lead che hanno risposto ai touchpoint
+            Lead con appuntamento call fissato
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -247,10 +232,10 @@ export default function RispostoPage() {
       ) : leads.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Nessuna risposta ancora</h3>
+            <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Nessuna call fissata</h3>
             <p className="text-sm text-muted-foreground">
-              I lead che rispondono ai tuoi touchpoint appariranno qui.
+              Le call fissate appariranno qui.
             </p>
           </CardContent>
         </Card>

@@ -21,10 +21,10 @@ export async function GET() {
       _count: true,
     });
 
-    // 2. Lead in DA_QUALIFICARE che non sono callable
+    // 2. Lead in DA_ANALIZZARE che non sono callable
     const dachiamarNotCallable = await db.lead.findMany({
       where: {
-        pipelineStage: "DA_QUALIFICARE",
+        pipelineStage: "DA_ANALIZZARE",
         isCallable: false,
       },
       select: {
@@ -36,10 +36,10 @@ export async function GET() {
       },
     });
 
-    // 3. Verifica quanti dovrebbero essere callable (lead in DA_QUALIFICARE con isCallable=false)
+    // 3. Verifica quanti dovrebbero essere callable (lead in DA_ANALIZZARE con isCallable=false)
     const shouldBeCallable = await db.lead.count({
       where: {
-        pipelineStage: "DA_QUALIFICARE",
+        pipelineStage: "DA_ANALIZZARE",
         isCallable: false,
       },
     });
@@ -50,10 +50,10 @@ export async function GET() {
       _count: true,
     });
 
-    // 5. Dettaglio commercial signals per i lead in DA_QUALIFICARE
+    // 5. Dettaglio commercial signals per i lead in DA_ANALIZZARE
     const dachiamarDetails = await db.lead.findMany({
       where: {
-        pipelineStage: "DA_QUALIFICARE",
+        pipelineStage: "DA_ANALIZZARE",
       },
       select: {
         id: true,
@@ -104,10 +104,10 @@ export async function POST() {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
     }
 
-    // Fix 1: Lead in DA_QUALIFICARE devono essere callable
+    // Fix 1: Lead in DA_ANALIZZARE devono essere callable
     const fixedDaChiamare = await db.lead.updateMany({
       where: {
-        pipelineStage: "DA_QUALIFICARE",
+        pipelineStage: "DA_ANALIZZARE",
         isCallable: false,
       },
       data: {
@@ -130,7 +130,7 @@ export async function POST() {
       success: true,
       fixedDaChiamare: fixedDaChiamare.count,
       fixedNonTarget: fixedNonTarget.count,
-      message: `Aggiornati ${fixedDaChiamare.count} lead DA_QUALIFICARE come callable, ${fixedNonTarget.count} NON_TARGET come non callable`,
+      message: `Aggiornati ${fixedDaChiamare.count} lead DA_ANALIZZARE come callable, ${fixedNonTarget.count} NON_TARGET come non callable`,
     });
   } catch (error) {
     console.error("Error fixing callable status:", error);

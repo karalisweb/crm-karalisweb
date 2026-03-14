@@ -193,9 +193,8 @@ function QualificaCard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "QUALIFY",
-          danielaNotes: notes || null,
-          qualifiedBy: "Daniela",
+          action: "MOVE_TO_VIDEO",
+          notes: notes || null,
         }),
       });
       if (!res.ok) throw new Error("Errore nella qualificazione");
@@ -787,7 +786,7 @@ export default function DaQualificarePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/leads?stage=DA_QUALIFICARE&pageSize=50");
+      const res = await fetch("/api/leads?stage=DA_ANALIZZARE&pageSize=50");
       if (!res.ok) throw new Error("Errore nel caricamento");
       const json = await res.json();
       setLeads(json.leads || []);

@@ -85,43 +85,47 @@ interface ColumnData {
   [key: string]: Lead[];
 }
 
-// Stages per il CRM Video Outreach
+// Stages della pipeline
 const ACTIVE_STAGES = [
-  "NUOVO",
-  "DA_QUALIFICARE",
-  "QUALIFICATO",
-  "VIDEO_DA_FARE",
+  "DA_ANALIZZARE",
+  "HOT_LEAD",
+  "WARM_LEAD",
+  "FARE_VIDEO",
   "VIDEO_INVIATO",
-  "LETTERA_INVIATA",
-  "FOLLOW_UP_LINKEDIN",
-  "RISPOSTO",
+  "FOLLOW_UP_1",
+  "FOLLOW_UP_2",
+  "FOLLOW_UP_3",
+  "LINKEDIN",
+  "TELEFONATA_1",
+  "TELEFONATA_2",
+  "TELEFONATA_3",
   "CALL_FISSATA",
-  "IN_CONVERSAZIONE",
-  "PROPOSTA_INVIATA",
-  "VINTO",
+  "IN_TRATTATIVA",
+  "CLIENTE",
   "PERSO",
-  "DA_RICHIAMARE_6M",
-  "RICICLATO",
+  "ARCHIVIATO",
   "NON_TARGET",
   "SENZA_SITO",
 ];
 
 const stageOrder = [
-  "NUOVO",
-  "DA_QUALIFICARE",
-  "QUALIFICATO",
-  "VIDEO_DA_FARE",
+  "DA_ANALIZZARE",
+  "HOT_LEAD",
+  "WARM_LEAD",
+  "FARE_VIDEO",
   "VIDEO_INVIATO",
-  "LETTERA_INVIATA",
-  "FOLLOW_UP_LINKEDIN",
-  "RISPOSTO",
+  "FOLLOW_UP_1",
+  "FOLLOW_UP_2",
+  "FOLLOW_UP_3",
+  "LINKEDIN",
+  "TELEFONATA_1",
+  "TELEFONATA_2",
+  "TELEFONATA_3",
   "CALL_FISSATA",
-  "IN_CONVERSAZIONE",
-  "PROPOSTA_INVIATA",
-  "VINTO",
+  "IN_TRATTATIVA",
+  "CLIENTE",
   "PERSO",
-  "DA_RICHIAMARE_6M",
-  "RICICLATO",
+  "ARCHIVIATO",
   "NON_TARGET",
   "SENZA_SITO",
 ];
@@ -579,8 +583,8 @@ function LeadsPageContent() {
     if (stagesParam) {
       return stagesParam.split(",");
     }
-    // Default: DA_QUALIFICARE
-    return ["DA_QUALIFICARE"];
+    // Default: DA_ANALIZZARE
+    return ["DA_ANALIZZARE"];
   });
 
   // Fetch leads con paginazione

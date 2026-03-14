@@ -57,6 +57,8 @@ export interface AdsIntelligenceResult {
   // Landing Page
   landingPageUrl: string | null;
   landingPageText: string | null;
+  // Coherence check
+  adsCoherenceWarning: string | null;
   // Metadata
   errors: string[];
 }
@@ -350,6 +352,7 @@ export async function analyzeAdsForLead(
     metaAdsCopy: null,
     landingPageUrl: null,
     landingPageText: null,
+    adsCoherenceWarning: null,
     errors: [],
   };
 
@@ -394,6 +397,16 @@ export async function analyzeAdsForLead(
   // Se abbiamo trovato una LP, scrape il testo
   if (result.landingPageUrl) {
     result.landingPageText = await scrapeLandingPageText(result.landingPageUrl);
+
+    // URL Coherence check: confronta dominio LP con dominio lead
+    try {
+      const lpDomain = new URL(result.landingPageUrl).hostname.replace(/^www\./, "").toLowerCase();
+      if (lpDomain !== cleanDomain.toLowerCase()) {
+        result.adsCoherenceWarning = `Dominio LP (${lpDomain}) diverso dal sito (${cleanDomain}). L'annuncio potrebbe puntare a una pagina esterna.`;
+      }
+    } catch {
+      // URL non valido, ignora
+    }
   }
 
   // Salva risultati nel DB (mai throw)
@@ -428,6 +441,7 @@ async function saveAdsResultsToDB(
         metaAdsCopy: result.metaAdsCopy,
         landingPageUrl: result.landingPageUrl,
         landingPageText: result.landingPageText,
+        adsCoherenceWarning: result.adsCoherenceWarning,
         adsCheckedAt: new Date(),
       },
     });

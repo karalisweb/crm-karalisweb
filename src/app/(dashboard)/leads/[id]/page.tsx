@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { PipelineStageSelector } from "@/components/leads/pipeline-stage-selector";
 import { GeminiAnalysisCard } from "@/components/leads/gemini-analysis-card";
+import { AdsInvestigationButton } from "@/components/leads/ads-investigation-button";
+import { VideoTrackingSection } from "@/components/leads/video-tracking-section";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { timeAgo } from "@/lib/date-utils";
 
@@ -231,16 +233,43 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
               )}
             </CardContent>
           </Card>
+
+          {/* Video Tracking Section */}
+          <VideoTrackingSection
+            leadId={lead.id}
+            videoTrackingToken={lead.videoTrackingToken}
+            videoViewsCount={lead.videoViewsCount}
+            videoViewedAt={lead.videoViewedAt?.toISOString() ?? null}
+          />
         </TabsContent>
 
         {/* Analisi Strategica Tab (Teleprompter) */}
-        <TabsContent value="analisi-strategica">
+        <TabsContent value="analisi-strategica" className="space-y-6">
           <GeminiAnalysisCard
             leadId={lead.id}
             hasWebsite={!!lead.website}
             geminiAnalysis={lead.geminiAnalysis as Parameters<typeof GeminiAnalysisCard>[0]["geminiAnalysis"]}
             geminiAnalyzedAt={lead.geminiAnalyzedAt?.toISOString() ?? null}
+            adsCheckedAt={lead.adsCheckedAt?.toISOString() ?? null}
+            googleAdsCopy={lead.googleAdsCopy}
+            metaAdsCopy={lead.metaAdsCopy}
           />
+
+          {lead.website && (
+            <AdsInvestigationButton
+              leadId={lead.id}
+              leadName={lead.name}
+              website={lead.website}
+              hasActiveGoogleAds={lead.hasActiveGoogleAds}
+              hasActiveMetaAds={lead.hasActiveMetaAds}
+              adsCheckedAt={lead.adsCheckedAt?.toISOString() ?? null}
+              adsCoherenceWarning={lead.adsCoherenceWarning}
+              googleAdsCopy={lead.googleAdsCopy}
+              metaAdsCopy={lead.metaAdsCopy}
+              auditHasGoogleAdsTag={!!(lead.auditData as Record<string, unknown>)?.tracking && !!((lead.auditData as Record<string, Record<string, unknown>>)?.tracking?.hasGoogleAdsTag)}
+              auditHasFacebookPixel={!!(lead.auditData as Record<string, unknown>)?.tracking && !!((lead.auditData as Record<string, Record<string, unknown>>)?.tracking?.hasFacebookPixel)}
+            />
+          )}
         </TabsContent>
 
         {/* Activities Tab */}

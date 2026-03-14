@@ -11,7 +11,7 @@ export default function TrattativePage() {
       emptyIcon={<MessageCircle className="h-12 w-12" />}
       emptyTitle="Nessuna trattativa in corso"
       emptySubtitle="I lead che rispondono ai tuoi touchpoint appariranno qui"
-      stages={["RISPOSTO", "CALL_FISSATA", "IN_CONVERSAZIONE"]}
+      stages={["CALL_FISSATA", "IN_TRATTATIVA"]}
       showAppointment
     />
   );

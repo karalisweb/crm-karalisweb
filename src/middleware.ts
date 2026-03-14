@@ -31,6 +31,12 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // Allow public API endpoints (video tracking, etc.)
+  const isPublicRoute = pathname.startsWith("/api/public/");
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
   // In development, allow test routes without auth
   const isDevTestRoute = pathname.startsWith("/api/test");
   if (process.env.NODE_ENV === "development" && isDevTestRoute) {

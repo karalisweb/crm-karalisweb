@@ -39,20 +39,28 @@ import { PIPELINE_STAGES, LOST_REASONS } from "@/types";
 // Gruppi di stati per il menu dropdown
 const STAGE_GROUPS = [
   {
-    label: "Qualificazione",
-    stages: ["NUOVO", "DA_QUALIFICARE", "QUALIFICATO"],
+    label: "Analisi",
+    stages: ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD"],
   },
   {
-    label: "Outreach",
-    stages: ["VIDEO_DA_FARE", "VIDEO_INVIATO", "LETTERA_INVIATA", "FOLLOW_UP_LINKEDIN"],
+    label: "Video",
+    stages: ["FARE_VIDEO", "VIDEO_INVIATO"],
+  },
+  {
+    label: "Follow-up",
+    stages: ["FOLLOW_UP_1", "FOLLOW_UP_2", "FOLLOW_UP_3"],
+  },
+  {
+    label: "LinkedIn & Telefonate",
+    stages: ["LINKEDIN", "TELEFONATA_1", "TELEFONATA_2", "TELEFONATA_3"],
   },
   {
     label: "Vendita",
-    stages: ["RISPOSTO", "CALL_FISSATA", "IN_CONVERSAZIONE", "PROPOSTA_INVIATA", "VINTO", "PERSO"],
+    stages: ["CALL_FISSATA", "IN_TRATTATIVA", "CLIENTE", "PERSO"],
   },
   {
     label: "Archivio",
-    stages: ["DA_RICHIAMARE_6M", "RICICLATO", "NON_TARGET", "SENZA_SITO"],
+    stages: ["ARCHIVIATO", "NON_TARGET", "SENZA_SITO"],
   },
 ];
 
@@ -95,8 +103,8 @@ export function PipelineStageSelector({
         body.lostReasonNotes = notes;
       }
 
-      // For DA_RICHIAMARE_6M, set recontactAt to +6 months
-      if (newStage === "DA_RICHIAMARE_6M") {
+      // For ARCHIVIATO, set recontactAt to +6 months
+      if (newStage === "ARCHIVIATO") {
         const recontactDate = new Date();
         recontactDate.setMonth(recontactDate.getMonth() + 6);
         body.recontactAt = recontactDate.toISOString();

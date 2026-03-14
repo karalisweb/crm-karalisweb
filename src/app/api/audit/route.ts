@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         auditStatus: "COMPLETED",
         auditCompletedAt: new Date(),
         auditData: strategicData as unknown as Prisma.InputJsonValue,
-        pipelineStage: PipelineStage.DA_QUALIFICARE,
+        pipelineStage: PipelineStage.DA_ANALIZZARE,
       },
     });
 
@@ -255,7 +255,7 @@ export async function PUT(request: NextRequest) {
             auditStatus: "COMPLETED",
             auditCompletedAt: new Date(),
             auditData: strategicData as unknown as Prisma.InputJsonValue,
-            pipelineStage: PipelineStage.DA_QUALIFICARE,
+            pipelineStage: PipelineStage.DA_ANALIZZARE,
           },
         });
 

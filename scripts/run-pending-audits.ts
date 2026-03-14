@@ -251,9 +251,7 @@ async function runAuditForLead(lead: { id: string; name: string | null; website:
       // Pipeline MSD
       pipelineStage: tagResult.tag === "NON_TARGET"
         ? "NON_TARGET"
-        : tagResult.isCallable
-        ? "DA_QUALIFICARE"
-        : "DA_QUALIFICARE",
+        : "DA_ANALIZZARE",
     },
   });
 

@@ -98,7 +98,7 @@ async function processLeadAudit(lead: LeadForAudit): Promise<void> {
         auditStatus: "COMPLETED",
         auditCompletedAt: new Date(),
         auditData: strategicData as unknown as Prisma.InputJsonValue,
-        pipelineStage: PipelineStage.DA_QUALIFICARE,
+        pipelineStage: PipelineStage.DA_ANALIZZARE,
       },
     });
 

@@ -49,27 +49,24 @@ async function DashboardStats() {
     leadsThisWeek,
     leadsThisMonth,
     totalAuditCompleted,
-    totalVinto,
-    totalRisposto,
+    totalClienti,
+    totalInTrattativa,
     // Funnel data
-    countDaQualificare,
-    countQualificati,
-    countVideoDaFare,
+    countDaAnalizzare,
+    countHotLeads,
+    countWarmLeads,
+    countFareVideo,
     countVideoInviato,
     countFollowUp,
-    countRisposti,
+    countLinkedin,
+    countTelefonate,
     countCallFissata,
-    countInConversazione,
-    countProposta,
-    countVinto,
+    countInTrattativa,
+    countClienti,
     // Attività questa settimana
     auditThisWeek,
     geminiThisWeek,
     videoSentThisWeek,
-    letterSentThisWeek,
-    linkedinSentThisWeek,
-    respondedThisWeek,
-    qualifiedThisWeek,
     // Lead prioritari
     topLeads,
     // Ricerche recenti
@@ -80,41 +77,42 @@ async function DashboardStats() {
     db.lead.count({ where: { createdAt: { gte: startOfWeek } } }),
     db.lead.count({ where: { createdAt: { gte: startOfMonth } } }),
     db.lead.count({ where: { auditStatus: "COMPLETED" } }),
-    db.lead.count({ where: { pipelineStage: "VINTO" } }),
+    db.lead.count({ where: { pipelineStage: "CLIENTE" } }),
     db.lead.count({
       where: {
         pipelineStage: {
-          in: ["RISPOSTO", "CALL_FISSATA", "IN_CONVERSAZIONE", "PROPOSTA_INVIATA", "VINTO"],
+          in: ["CALL_FISSATA", "IN_TRATTATIVA", "CLIENTE"],
         },
       },
     }),
     // Funnel
-    db.lead.count({ where: { pipelineStage: "DA_QUALIFICARE" } }),
-    db.lead.count({ where: { pipelineStage: "QUALIFICATO" } }),
-    db.lead.count({ where: { pipelineStage: "VIDEO_DA_FARE" } }),
+    db.lead.count({ where: { pipelineStage: "DA_ANALIZZARE" } }),
+    db.lead.count({ where: { pipelineStage: "HOT_LEAD" } }),
+    db.lead.count({ where: { pipelineStage: "WARM_LEAD" } }),
+    db.lead.count({ where: { pipelineStage: "FARE_VIDEO" } }),
     db.lead.count({ where: { pipelineStage: "VIDEO_INVIATO" } }),
     db.lead.count({
       where: {
-        pipelineStage: { in: ["VIDEO_INVIATO", "LETTERA_INVIATA", "FOLLOW_UP_LINKEDIN"] },
+        pipelineStage: { in: ["FOLLOW_UP_1", "FOLLOW_UP_2", "FOLLOW_UP_3"] },
       },
     }),
-    db.lead.count({ where: { pipelineStage: "RISPOSTO" } }),
+    db.lead.count({ where: { pipelineStage: "LINKEDIN" } }),
+    db.lead.count({
+      where: {
+        pipelineStage: { in: ["TELEFONATA_1", "TELEFONATA_2", "TELEFONATA_3"] },
+      },
+    }),
     db.lead.count({ where: { pipelineStage: "CALL_FISSATA" } }),
-    db.lead.count({ where: { pipelineStage: "IN_CONVERSAZIONE" } }),
-    db.lead.count({ where: { pipelineStage: "PROPOSTA_INVIATA" } }),
-    db.lead.count({ where: { pipelineStage: "VINTO" } }),
+    db.lead.count({ where: { pipelineStage: "IN_TRATTATIVA" } }),
+    db.lead.count({ where: { pipelineStage: "CLIENTE" } }),
     // Attività settimana
     db.lead.count({ where: { auditCompletedAt: { gte: startOfWeek } } }),
     db.lead.count({ where: { geminiAnalyzedAt: { gte: startOfWeek } } }),
     db.lead.count({ where: { videoSentAt: { gte: startOfWeek } } }),
-    db.lead.count({ where: { letterSentAt: { gte: startOfWeek } } }),
-    db.lead.count({ where: { linkedinSentAt: { gte: startOfWeek } } }),
-    db.lead.count({ where: { respondedAt: { gte: startOfWeek } } }),
-    db.lead.count({ where: { qualifiedAt: { gte: startOfWeek } } }),
     // Top leads
     db.lead.findMany({
       where: {
-        pipelineStage: "DA_QUALIFICARE",
+        pipelineStage: { in: ["HOT_LEAD", "WARM_LEAD"] },
         opportunityScore: { not: null },
       },
       orderBy: { opportunityScore: "desc" },
@@ -137,19 +135,18 @@ async function DashboardStats() {
 
   // Calcoli derivati
   const conversionRate = totalAuditCompleted > 0
-    ? Math.round((totalRisposto / totalAuditCompleted) * 100)
+    ? Math.round((totalInTrattativa / totalAuditCompleted) * 100)
     : 0;
 
-  const touchpointsThisWeek = videoSentThisWeek + letterSentThisWeek + linkedinSentThisWeek;
-
   const funnelData = [
-    { name: "Qualifica", value: countDaQualificare, color: "#f59e0b" },
-    { name: "Qualificati", value: countQualificati, color: "#8b5cf6" },
-    { name: "Video", value: countVideoDaFare + countVideoInviato, color: "#a855f7" },
+    { name: "Da Analizzare", value: countDaAnalizzare, color: "#f59e0b" },
+    { name: "Hot / Warm", value: countHotLeads + countWarmLeads, color: "#ef4444" },
+    { name: "Video", value: countFareVideo + countVideoInviato, color: "#a855f7" },
     { name: "Follow-up", value: countFollowUp, color: "#06b6d4" },
-    { name: "Trattative", value: countRisposti + countCallFissata + countInConversazione, color: "#3b82f6" },
-    { name: "Proposte", value: countProposta, color: "#2d7d9a" },
-    { name: "Vinti", value: countVinto, color: "#22c55e" },
+    { name: "LinkedIn", value: countLinkedin, color: "#0077b5" },
+    { name: "Telefonate", value: countTelefonate, color: "#f97316" },
+    { name: "Trattative", value: countCallFissata + countInTrattativa, color: "#3b82f6" },
+    { name: "Clienti", value: countClienti, color: "#22c55e" },
   ];
 
   return (
@@ -206,12 +203,12 @@ async function DashboardStats() {
               </div>
               <div>
                 <span className="text-2xl font-bold">{conversionRate}%</span>
-                <p className="text-xs text-muted-foreground">Tasso risposta</p>
+                <p className="text-xs text-muted-foreground">Tasso trattativa</p>
               </div>
             </div>
             <div className="mt-2 flex items-center gap-1.5">
               <span className="text-xs text-muted-foreground">
-                {totalRisposto} risposte su {totalAuditCompleted} contattati
+                {totalInTrattativa} in trattativa su {totalAuditCompleted} analizzati
               </span>
             </div>
           </CardContent>
@@ -225,7 +222,7 @@ async function DashboardStats() {
               </div>
               <div>
                 <AnimatedCounter
-                  value={totalVinto}
+                  value={totalClienti}
                   className="text-2xl font-bold text-green-500"
                 />
                 <p className="text-xs text-muted-foreground">Clienti acquisiti</p>
@@ -265,11 +262,6 @@ async function DashboardStats() {
           </CardHeader>
           <CardContent className="space-y-2.5">
             <ActivityRow
-              icon={<ClipboardCheck className="h-4 w-4 text-amber-500" />}
-              label="Lead qualificati"
-              value={qualifiedThisWeek}
-            />
-            <ActivityRow
               icon={<CalendarCheck className="h-4 w-4 text-purple-500" />}
               label="Analisi Gemini"
               value={geminiThisWeek}
@@ -280,16 +272,9 @@ async function DashboardStats() {
               value={videoSentThisWeek}
             />
             <ActivityRow
-              icon={<Send className="h-4 w-4 text-blue-500" />}
-              label="Touchpoint totali"
-              value={touchpointsThisWeek}
-              sublabel={`${videoSentThisWeek}V + ${letterSentThisWeek}L + ${linkedinSentThisWeek}LI`}
-            />
-            <ActivityRow
-              icon={<MessageCircle className="h-4 w-4 text-green-500" />}
-              label="Risposte ricevute"
-              value={respondedThisWeek}
-              highlight
+              icon={<ClipboardCheck className="h-4 w-4 text-amber-500" />}
+              label="Audit completati"
+              value={auditThisWeek}
             />
           </CardContent>
         </Card>
@@ -304,7 +289,7 @@ async function DashboardStats() {
               Lead prioritari
             </h2>
             <Link
-              href="/da-qualificare"
+              href="/hot-leads"
               className="text-sm text-primary hover:underline flex items-center"
             >
               Vedi tutti

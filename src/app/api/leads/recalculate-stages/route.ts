@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { PipelineStage } from "@prisma/client";
+import { PipelineStage, Prisma } from "@prisma/client";
 
 /**
  * POST /api/leads/recalculate-stages
  * Ricalcola gli stati dei lead in base ai tag commerciali
- * Tutti i lead callable vanno a DA_QUALIFICARE (Daniela decide)
+ * Lead con analisi Gemini: score >=80 → HOT_LEAD, <80 → WARM_LEAD, no segnale → NON_TARGET
  */
 export async function POST(request: NextRequest) {
   try {
@@ -15,26 +15,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
     }
 
-    // Trova tutti i lead con audit completato ancora in NUOVO
+    // Trova tutti i lead DA_ANALIZZARE con analisi Gemini completata
     const leadsToUpdate = await db.lead.findMany({
       where: {
-        auditStatus: "COMPLETED",
-        pipelineStage: "NUOVO",
+        pipelineStage: "DA_ANALIZZARE",
+        geminiAnalysis: { not: Prisma.DbNull },
+        opportunityScore: { not: null },
       },
       select: {
         id: true,
         name: true,
         opportunityScore: true,
         commercialTag: true,
-        isCallable: true,
       },
     });
 
     const results = {
       total: leadsToUpdate.length,
-      daQualificare: 0,
+      hotLead: 0,
+      warmLead: 0,
       nonTarget: 0,
-      unchanged: 0,
     };
 
     for (const lead of leadsToUpdate) {
@@ -43,10 +43,12 @@ export async function POST(request: NextRequest) {
       if (lead.commercialTag === "NON_TARGET") {
         newStage = PipelineStage.NON_TARGET;
         results.nonTarget++;
+      } else if ((lead.opportunityScore ?? 0) >= 80) {
+        newStage = PipelineStage.HOT_LEAD;
+        results.hotLead++;
       } else {
-        // Tutti gli altri vanno a DA_QUALIFICARE (Daniela decide)
-        newStage = PipelineStage.DA_QUALIFICARE;
-        results.daQualificare++;
+        newStage = PipelineStage.WARM_LEAD;
+        results.warmLead++;
       }
 
       await db.lead.update({

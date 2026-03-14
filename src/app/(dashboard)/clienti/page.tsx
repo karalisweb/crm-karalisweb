@@ -11,7 +11,7 @@ export default function ClientiPage() {
       emptyIcon={<Trophy className="h-12 w-12" />}
       emptyTitle="Nessun cliente ancora"
       emptySubtitle="I clienti acquisiti appariranno qui"
-      stages={["VINTO"]}
+      stages={["CLIENTE"]}
     />
   );
 }

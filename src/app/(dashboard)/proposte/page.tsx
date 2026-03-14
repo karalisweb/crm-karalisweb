@@ -11,7 +11,7 @@ export default function PropostePage() {
       emptyIcon={<FileText className="h-12 w-12" />}
       emptyTitle="Nessuna proposta inviata"
       emptySubtitle="Le proposte inviate appariranno qui"
-      stages={["PROPOSTA_INVIATA"]}
+      stages={["IN_TRATTATIVA"]}
       showOfferSent
     />
   );

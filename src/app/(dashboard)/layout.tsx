@@ -6,6 +6,7 @@ import { MobileHeader } from "@/components/layout/mobile-header";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context";
 import { Toaster } from "@/components/ui/sonner";
+import { VideoViewPoller } from "@/components/notifications/video-view-poller";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 
@@ -52,6 +53,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       </div>
 
       <Toaster />
+      <VideoViewPoller />
     </div>
   );
 }

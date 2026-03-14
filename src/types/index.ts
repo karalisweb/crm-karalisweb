@@ -161,43 +161,54 @@ export interface GoogleMapsResult {
 // ==========================================
 
 export const PIPELINE_STAGES = {
-  // === SCOUTING ===
-  NUOVO: { label: "Nuovo", icon: "inbox", color: "gray", group: "scouting" },
+  // === ANALISI ===
+  DA_ANALIZZARE: { label: "Da Analizzare", icon: "scan-search", color: "amber", group: "analisi" },
+  HOT_LEAD: { label: "Hot Lead", icon: "flame", color: "red", group: "analisi" },
+  WARM_LEAD: { label: "Warm Lead", icon: "sun", color: "yellow", group: "analisi" },
 
-  // === QUALIFICAZIONE ===
-  DA_QUALIFICARE: { label: "Da qualificare", icon: "clipboard-check", color: "amber", group: "qualificazione" },
-  QUALIFICATO: { label: "Qualificato", icon: "user-check", color: "blue", group: "qualificazione" },
+  // === VIDEO ===
+  FARE_VIDEO: { label: "Fare Video", icon: "video", color: "purple", group: "video" },
+  VIDEO_INVIATO: { label: "Video Inviato", icon: "send", color: "indigo", group: "video" },
 
-  // === OUTREACH ===
-  VIDEO_DA_FARE: { label: "Video da fare", icon: "video", color: "purple", group: "outreach" },
-  VIDEO_INVIATO: { label: "Video inviato", icon: "send", color: "indigo", group: "outreach" },
-  LETTERA_INVIATA: { label: "Lettera inviata", icon: "mail", color: "cyan", group: "outreach" },
-  FOLLOW_UP_LINKEDIN: { label: "Follow-up LinkedIn", icon: "linkedin", color: "sky", group: "outreach" },
+  // === FOLLOW-UP ===
+  FOLLOW_UP_1: { label: "Follow-up 1", icon: "repeat", color: "cyan", group: "followup" },
+  FOLLOW_UP_2: { label: "Follow-up 2", icon: "repeat", color: "cyan", group: "followup" },
+  FOLLOW_UP_3: { label: "Follow-up 3", icon: "repeat", color: "cyan", group: "followup" },
+
+  // === LINKEDIN ===
+  LINKEDIN: { label: "LinkedIn", icon: "linkedin", color: "sky", group: "linkedin" },
+
+  // === TELEFONATE ===
+  TELEFONATA_1: { label: "Telefonata 1", icon: "phone", color: "teal", group: "telefonate" },
+  TELEFONATA_2: { label: "Telefonata 2", icon: "phone", color: "teal", group: "telefonate" },
+  TELEFONATA_3: { label: "Telefonata 3", icon: "phone", color: "teal", group: "telefonate" },
 
   // === VENDITA ===
-  RISPOSTO: { label: "Ha risposto", icon: "message-circle", color: "green", group: "vendita" },
-  CALL_FISSATA: { label: "Call fissata", icon: "calendar", color: "purple", group: "vendita" },
-  IN_CONVERSAZIONE: { label: "In conversazione", icon: "messages-square", color: "teal", group: "vendita" },
-  PROPOSTA_INVIATA: { label: "Proposta inviata", icon: "file-text", color: "yellow", group: "vendita" },
-  VINTO: { label: "Cliente", icon: "trophy", color: "emerald", group: "vendita" },
-  PERSO: { label: "Perso", icon: "x-circle", color: "red", group: "vendita" },
+  CALL_FISSATA: { label: "Call Fissata", icon: "calendar", color: "purple", group: "vendita" },
+  IN_TRATTATIVA: { label: "In Trattativa", icon: "handshake", color: "emerald", group: "vendita" },
+
+  // === CHIUSURA ===
+  CLIENTE: { label: "Cliente", icon: "trophy", color: "emerald", group: "chiusura" },
+  PERSO: { label: "Perso", icon: "x-circle", color: "red", group: "chiusura" },
 
   // === ARCHIVIO ===
-  DA_RICHIAMARE_6M: { label: "Richiamare tra 6 mesi", icon: "clock", color: "orange", group: "archivio" },
-  RICICLATO: { label: "Riciclato", icon: "recycle", color: "slate", group: "archivio" },
-  NON_TARGET: { label: "Non target", icon: "x", color: "slate", group: "archivio" },
-  SENZA_SITO: { label: "Senza sito", icon: "globe-off", color: "gray", group: "archivio" },
+  ARCHIVIATO: { label: "Archiviato", icon: "archive", color: "slate", group: "archivio" },
+  NON_TARGET: { label: "Non Target", icon: "x", color: "slate", group: "archivio" },
+  SENZA_SITO: { label: "Senza Sito", icon: "globe-off", color: "gray", group: "archivio" },
 } as const;
 
 export type PipelineStageKey = keyof typeof PIPELINE_STAGES;
 
 // Gruppi di stage per navigazione e filtri
 export const STAGE_GROUPS = {
-  scouting: ["NUOVO"] as PipelineStageKey[],
-  qualificazione: ["DA_QUALIFICARE", "QUALIFICATO"] as PipelineStageKey[],
-  outreach: ["VIDEO_DA_FARE", "VIDEO_INVIATO", "LETTERA_INVIATA", "FOLLOW_UP_LINKEDIN"] as PipelineStageKey[],
-  vendita: ["RISPOSTO", "CALL_FISSATA", "IN_CONVERSAZIONE", "PROPOSTA_INVIATA", "VINTO", "PERSO"] as PipelineStageKey[],
-  archivio: ["DA_RICHIAMARE_6M", "RICICLATO", "NON_TARGET", "SENZA_SITO"] as PipelineStageKey[],
+  analisi: ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD"] as PipelineStageKey[],
+  video: ["FARE_VIDEO", "VIDEO_INVIATO"] as PipelineStageKey[],
+  followup: ["FOLLOW_UP_1", "FOLLOW_UP_2", "FOLLOW_UP_3"] as PipelineStageKey[],
+  linkedin: ["LINKEDIN"] as PipelineStageKey[],
+  telefonate: ["TELEFONATA_1", "TELEFONATA_2", "TELEFONATA_3"] as PipelineStageKey[],
+  vendita: ["CALL_FISSATA", "IN_TRATTATIVA"] as PipelineStageKey[],
+  chiusura: ["CLIENTE", "PERSO"] as PipelineStageKey[],
+  archivio: ["ARCHIVIATO", "NON_TARGET", "SENZA_SITO"] as PipelineStageKey[],
 } as const;
 
 // ==========================================

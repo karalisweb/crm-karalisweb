@@ -11,7 +11,7 @@ export default function QualificatiPage() {
       emptyIcon={<UserCheck className="h-12 w-12" />}
       emptyTitle="Nessun lead qualificato"
       emptySubtitle="I lead qualificati appariranno qui"
-      stages={["QUALIFICATO"]}
+      stages={["HOT_LEAD", "WARM_LEAD"]}
     />
   );
 }
