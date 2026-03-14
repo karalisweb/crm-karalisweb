@@ -5,14 +5,18 @@ import { isGeminiConfigured } from "@/lib/gemini";
 import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { Prisma } from "@prisma/client";
 import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
+import { checkGoogleAds, isDataForSEOConfigured } from "@/lib/qualification/check-google-ads";
+import { checkMetaAds, isMetaAdsConfigured, buildAdLibraryUrl, buildGoogleAdsTransparencyUrl } from "@/lib/qualification/check-meta-ads";
 
 /**
  * POST /api/leads/[id]/gemini-analysis
  *
- * Esegue l'Analisi Strategica del Posizionamento:
+ * Esegue l'Analisi Strategica del Posizionamento v3:
  * 1. Scarica HTML del sito
  * 2. Deep scraping: home_text, about_text, services_text, has_active_ads
- * 3. Invia a Gemini per generare il copione teleprompter
+ * 3. Check Google Ads (DataForSEO) → landing page URL + text + ad copy
+ * 4. Check Meta Ads (Apify) → meta_ads_copy
+ * 5. Invia tutto a Gemini per generare il copione teleprompter
  */
 export async function POST(
   request: Request,
@@ -37,6 +41,7 @@ export async function POST(
         id: true,
         name: true,
         website: true,
+        category: true,
       },
     });
 
@@ -85,15 +90,12 @@ export async function POST(
     }
 
     const baseUrl = new URL(url).origin;
+    const cleanDomain = baseUrl.replace(/^https?:\/\//, "").replace(/^www\./, "");
 
-    // 2. Estrazione strategica
-    const strategicData = await extractStrategicData(
-      html,
-      baseUrl,
-      lead.name
-    );
+    // 2. Estrazione strategica (testo sito + ads detection on-page)
+    const strategicData = await extractStrategicData(html, baseUrl, lead.name);
 
-    // Se il testo della home è troppo corto, prova a usare about/services come fallback
+    // Se il testo della home è troppo corto, prova about/services come fallback
     const totalText = [
       strategicData.home_text,
       strategicData.about_text,
@@ -113,21 +115,54 @@ export async function POST(
       );
     }
 
-    // Se home_text è vuoto ma abbiamo about/services, usa quelli come home_text
     if (!strategicData.home_text || strategicData.home_text.trim().length < 10) {
       strategicData.home_text =
         strategicData.about_text || strategicData.services_text || "";
     }
 
-    // 3. Analisi Gemini
-    const analysis = await runGeminiAnalysis(strategicData);
+    // 3. Check Ads esterni (DataForSEO + Meta Ads) — in parallelo, non bloccanti
+    console.log(`[ANALYSIS] ${lead.name}: avvio check ads esterni...`);
 
-    // 4. Calcola score e salva risultato
-    const fullLead = await db.lead.findUnique({
-      where: { id },
-      select: { category: true },
-    });
-    const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, fullLead?.category ?? null);
+    const [googleAdsResult, metaAdsResult] = await Promise.allSettled([
+      isDataForSEOConfigured()
+        ? checkGoogleAds(cleanDomain)
+        : Promise.resolve(null),
+      isMetaAdsConfigured()
+        ? checkMetaAds(lead.name, cleanDomain)
+        : Promise.resolve(null),
+    ]);
+
+    const googleAds = googleAdsResult.status === "fulfilled" ? googleAdsResult.value : null;
+    const metaAds = metaAdsResult.status === "fulfilled" ? metaAdsResult.value : null;
+
+    console.log(
+      `[ANALYSIS] ${lead.name}: GoogleAds=${googleAds?.google_ads_attive ? "SI" : "no"} (LP: ${googleAds?.landing_page_url ?? "N/A"}), ` +
+      `MetaAds=${metaAds?.meta_ads_attive ? "SI" : "no"} (copy: ${metaAds?.meta_ads_copy?.length ?? 0})`
+    );
+
+    // 4. Prepara input Gemini con tutti i dati raccolti
+    const geminiInput = {
+      ...strategicData,
+      // Sovrascrive has_active_ads se le API esterne confermano (union con on-page detection)
+      has_active_ads: strategicData.has_active_ads ||
+        (googleAds?.google_ads_attive ?? false) ||
+        (metaAds?.meta_ads_attive ?? false),
+      // Nuovi campi Ads Intelligence
+      landing_page_text: googleAds?.landing_page_text ?? null,
+      landing_page_url: googleAds?.landing_page_url ?? null,
+      google_ad_copy: googleAds?.ad_copy ?? null,
+      meta_ads_copy: metaAds?.meta_ads_copy ?? [],
+    };
+
+    // 5. Analisi Gemini
+    const analysis = await runGeminiAnalysis(geminiInput);
+
+    // Aggiungi URL di fallback per ricerca manuale
+    analysis.ad_library_url = metaAds?.ad_library_url ?? buildAdLibraryUrl(lead.name);
+    analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);
+
+    // 6. Calcola score e salva risultato
+    const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null);
     const scoreResult = calculateLeadScore(scoreInput);
 
     await db.lead.update({

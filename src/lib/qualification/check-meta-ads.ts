@@ -3,17 +3,20 @@
  *
  * Verifica se l'azienda ha inserzioni pubblicitarie attive su Facebook/Instagram.
  *
- * Usa l'actor Apify "apify/facebook-ads-scraper" che scrapa la Meta Ad Library pubblica.
- * Non richiede token Meta — usa il token Apify già configurato.
+ * Strategia a 2 livelli:
+ * 1. Prova Apify actor "curious_coder/facebook-ads-library-scraper" (aggiornato 2024+)
+ * 2. Se Apify fallisce o non configurato, ritorna risultato vuoto con URL di fallback manuale
  *
- * Nota sui falsi positivi: la ricerca per nome può restituire aziende con nome simile.
- * Non è bloccante — Dani fa la verifica finale.
+ * Output: has_active_meta_ads, meta_ads_copy (primi 3 testi annunci)
  */
 
 import { ApifyClient } from "apify-client";
 import type { MetaAdsCheckResult } from "@/types/qualification";
 
-const META_ADS_ACTOR = "apify/facebook-ads-scraper";
+// Actor aggiornato per Meta Ad Library (sostituto del vecchio apify/facebook-ads-scraper)
+const META_ADS_ACTOR = "curious_coder/facebook-ads-library-scraper";
+// Fallback: actor originale Apify (in caso il primo non esista)
+const META_ADS_ACTOR_FALLBACK = "apify/facebook-ads-scraper";
 
 /**
  * Verifica se Apify è configurato (necessario per Meta Ads check)
@@ -23,9 +26,9 @@ export function isMetaAdsConfigured(): boolean {
 }
 
 /**
- * Costruisce l'URL di ricerca nella Meta Ad Library
+ * Costruisce l'URL pubblico della Meta Ad Library per ricerca manuale
  */
-function buildAdLibraryUrl(searchTerm: string): string {
+export function buildAdLibraryUrl(searchTerm: string): string {
   const params = new URLSearchParams({
     active_status: "active",
     ad_type: "all",
@@ -37,11 +40,23 @@ function buildAdLibraryUrl(searchTerm: string): string {
 }
 
 /**
- * Controlla se l'azienda ha Meta Ads attive tramite Apify
+ * Costruisce l'URL di Google Ads Transparency Center per ricerca manuale
+ */
+export function buildGoogleAdsTransparencyUrl(domain: string): string {
+  const cleanDomain = domain
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split("/")[0];
+  return `https://adstransparency.google.com/?domain=${encodeURIComponent(cleanDomain)}&region=IT`;
+}
+
+/**
+ * Controlla se l'azienda ha Meta Ads attive tramite Apify.
+ * Estrae has_active_meta_ads e meta_ads_copy (primi 3 testi).
  *
  * @param companyName - Nome azienda (stringa di ricerca)
- * @param domain - Dominio opzionale (non usato ma mantenuto per compatibilità interfaccia)
- * @returns Risultato con numero di ads attive e segnale
+ * @param domain - Dominio opzionale
+ * @returns Risultato con ads attive, copy degli annunci, e URL fallback
  */
 export async function checkMetaAds(
   companyName: string,
@@ -58,87 +73,116 @@ export async function checkMetaAds(
       numero_ads: 0,
       pagina_trovata: null,
       segnale: "nessuna ads Meta (Apify non configurato)",
+      meta_ads_copy: [],
+      ad_library_url: buildAdLibraryUrl(companyName),
     };
   }
 
   const startTime = Date.now();
 
-  try {
-    const client = new ApifyClient({ token: apifyToken });
+  // Prova prima l'actor aggiornato, poi fallback
+  for (const actorId of [META_ADS_ACTOR, META_ADS_ACTOR_FALLBACK]) {
+    try {
+      const client = new ApifyClient({ token: apifyToken });
+      const adLibraryUrl = buildAdLibraryUrl(companyName);
 
-    // Costruisci URL Ad Library con ricerca per nome azienda
-    const adLibraryUrl = buildAdLibraryUrl(companyName);
+      console.log(
+        `[META ADS] Provo actor "${actorId}" per "${companyName}"...`
+      );
 
-    console.log(
-      `[META ADS] Avvio Apify actor per "${companyName}" — URL: ${adLibraryUrl}`
-    );
+      const run = await client.actor(actorId).call(
+        {
+          startUrls: [{ url: adLibraryUrl }],
+          resultsLimit: 5,
+          activeStatus: "active",
+        },
+        {
+          timeout: 45, // 45 secondi (ridotto da 60)
+          memory: 512,
+        }
+      );
 
-    // Esegui l'actor con timeout di 60 secondi e limite di 5 risultati
-    const run = await client.actor(META_ADS_ACTOR).call(
-      {
-        startUrls: [{ url: adLibraryUrl }],
-        resultsLimit: 5,
-        activeStatus: "active",
-      },
-      {
-        timeout: 60, // 60 secondi
-        memory: 512, // MB
+      const latency = Date.now() - startTime;
+
+      // Recupera i risultati dal dataset
+      const { items } = await client
+        .dataset(run.defaultDatasetId)
+        .listItems({ limit: 5 });
+
+      const numeroAds = items.length;
+      const metaAdsAttive = numeroAds > 0;
+
+      // Estrai nome pagina e copy degli annunci
+      let paginaTrovata: string | null = null;
+      const metaAdsCopy: string[] = [];
+
+      for (const item of items.slice(0, 3)) {
+        const ad = item as Record<string, unknown>;
+
+        // Nome pagina
+        if (!paginaTrovata) {
+          paginaTrovata =
+            (ad.pageName as string) ||
+            (ad.page_name as string) ||
+            (ad.pageAlias as string) ||
+            null;
+        }
+
+        // Copy dell'annuncio
+        const adBody =
+          (ad.adCreativeBody as string) ||
+          (ad.ad_creative_body as string) ||
+          (ad.body as string) ||
+          (ad.text as string) ||
+          null;
+        if (adBody && adBody.length > 10) {
+          metaAdsCopy.push(adBody.length > 200 ? adBody.substring(0, 200) + "..." : adBody);
+        }
       }
-    );
 
-    const latency = Date.now() - startTime;
+      let segnale: string;
+      if (metaAdsAttive) {
+        segnale = `🔴 spende su Meta (${numeroAds} annunci attivi)`;
+      } else {
+        segnale = "nessuna ads Meta";
+      }
 
-    // Recupera i risultati dal dataset
-    const { items } = await client
-      .dataset(run.defaultDatasetId)
-      .listItems({ limit: 5 });
+      console.log(
+        `[META ADS] "${companyName}": ${numeroAds} ads, pagina: ${paginaTrovata || "N/A"}, ` +
+        `copy: ${metaAdsCopy.length} testi (${latency}ms) [actor: ${actorId}]`
+      );
 
-    const numeroAds = items.length;
-    const metaAdsAttive = numeroAds > 0;
-
-    // Estrai nome pagina dal primo risultato
-    let paginaTrovata: string | null = null;
-    if (items.length > 0) {
-      const first = items[0] as Record<string, unknown>;
-      paginaTrovata =
-        (first.pageName as string) ||
-        (first.page_name as string) ||
-        null;
+      return {
+        meta_ads_attive: metaAdsAttive,
+        numero_ads: numeroAds,
+        pagina_trovata: paginaTrovata,
+        segnale,
+        meta_ads_copy: metaAdsCopy,
+        ad_library_url: adLibraryUrl,
+      };
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "Errore sconosciuto";
+      console.warn(
+        `[META ADS] Actor "${actorId}" fallito per "${companyName}": ${errMsg}`
+      );
+      // Prova il prossimo actor
+      continue;
     }
-
-    let segnale: string;
-    if (metaAdsAttive) {
-      segnale = `🔴 spende su Meta (${numeroAds} annunci attivi)`;
-    } else {
-      segnale = "nessuna ads Meta";
-    }
-
-    console.log(
-      `[META ADS] "${companyName}": ${numeroAds} ads trovate, pagina: ${paginaTrovata || "N/A"} (${latency}ms)`
-    );
-
-    return {
-      meta_ads_attive: metaAdsAttive,
-      numero_ads: numeroAds,
-      pagina_trovata: paginaTrovata,
-      segnale,
-    };
-  } catch (error) {
-    const latency = Date.now() - startTime;
-    const errMsg =
-      error instanceof Error ? error.message : "Errore sconosciuto";
-
-    console.error(
-      `[META ADS] Errore per "${companyName}" (${latency}ms):`,
-      errMsg
-    );
-
-    return {
-      meta_ads_attive: false,
-      numero_ads: 0,
-      pagina_trovata: null,
-      segnale: "nessuna ads Meta",
-      errore: errMsg,
-    };
   }
+
+  // Se tutti gli actor falliscono, ritorna risultato vuoto con URL fallback
+  const latency = Date.now() - startTime;
+  console.error(
+    `[META ADS] Tutti gli actor falliti per "${companyName}" (${latency}ms)`
+  );
+
+  return {
+    meta_ads_attive: false,
+    numero_ads: 0,
+    pagina_trovata: null,
+    segnale: "nessuna ads Meta (errore API)",
+    errore: "Tutti gli actor Apify falliti",
+    meta_ads_copy: [],
+    ad_library_url: buildAdLibraryUrl(companyName),
+  };
 }

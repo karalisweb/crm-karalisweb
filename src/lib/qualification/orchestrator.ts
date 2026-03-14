@@ -84,6 +84,9 @@ export async function qualificaProspect(
           numero_ads: 0,
           segnale: "nessuna ads",
           errore: "Modulo fallito",
+          landing_page_url: null,
+          landing_page_text: null,
+          ad_copy: null,
         };
 
   if (googleAdsResult.status === "rejected") {
@@ -99,6 +102,8 @@ export async function qualificaProspect(
           pagina_trovata: null,
           segnale: "nessuna ads Meta",
           errore: "Modulo fallito",
+          meta_ads_copy: [],
+          ad_library_url: "",
         };
 
   if (metaAdsResult.status === "rejected") {

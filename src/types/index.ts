@@ -233,6 +233,14 @@ export interface StrategicAnalysisInput {
   services_text: string | null;
   has_active_ads: boolean;
   ads_networks_found?: string[];
+  /** Testo della landing page dell'annuncio Google Ads (se trovato da DataForSEO) */
+  landing_page_text?: string | null;
+  /** URL della landing page dell'annuncio */
+  landing_page_url?: string | null;
+  /** Copy degli annunci Meta Ads (se trovati da Apify) */
+  meta_ads_copy?: string[];
+  /** Copy dell'annuncio Google Ads */
+  google_ad_copy?: string | null;
 }
 
 export interface TeleprompterScript {
@@ -252,6 +260,14 @@ export interface GeminiAnalysisResult {
   generatedAt: string;
   model: string;
   analysisVersion?: string;
+  /** Dati Ads Intelligence (passthrough dal check) */
+  landing_page_url?: string | null;
+  landing_page_text?: string | null;
+  google_ad_copy?: string | null;
+  meta_ads_copy?: string[];
+  /** URL fallback per ricerca manuale */
+  ad_library_url?: string | null;
+  google_ads_transparency_url?: string | null;
 }
 
 // ==========================================

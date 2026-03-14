@@ -46,6 +46,13 @@ interface GeminiAnalysis {
   has_active_ads?: boolean;
   ads_networks_found?: string[];
   analysisVersion?: string;
+  // Ads Intelligence
+  landing_page_url?: string | null;
+  landing_page_text?: string | null;
+  google_ad_copy?: string | null;
+  meta_ads_copy?: string[];
+  ad_library_url?: string | null;
+  google_ads_transparency_url?: string | null;
 }
 
 interface Lead {
@@ -425,6 +432,73 @@ function QualificaCard({
                     </span>
                   )}
                 </div>
+
+                {/* Box Ads Intelligence (verde) — LP, Copy, Fallback manuali */}
+                {isAnalyzed && (
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+                      Ads Intelligence
+                    </p>
+
+                    {/* Landing Page trovata da DataForSEO */}
+                    {analysis?.landing_page_url && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Landing Page Annuncio</p>
+                        <a
+                          href={analysis.landing_page_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-emerald-400 hover:text-emerald-300 underline break-all"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {analysis.landing_page_url.replace(/^https?:\/\//, "").substring(0, 60)}
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Google Ad Copy */}
+                    {analysis?.google_ad_copy && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Google Ad Copy</p>
+                        <p className="text-sm italic text-gray-300">&ldquo;{analysis.google_ad_copy}&rdquo;</p>
+                      </div>
+                    )}
+
+                    {/* Meta Ads Copy */}
+                    {analysis?.meta_ads_copy && analysis.meta_ads_copy.length > 0 && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Meta Ads Copy</p>
+                        {analysis.meta_ads_copy.slice(0, 2).map((copy, i) => (
+                          <p key={i} className="text-sm italic text-gray-300 mb-1">&ldquo;{copy}&rdquo;</p>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Bottoni fallback manuali */}
+                    <div className="flex gap-2 pt-1">
+                      <a
+                        href={analysis?.ad_library_url || `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=IT&q=${encodeURIComponent(lead.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-2.5 py-1.5 rounded text-[11px] font-semibold bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Meta Ads Library
+                      </a>
+                      <a
+                        href={analysis?.google_ads_transparency_url || `https://adstransparency.google.com/?domain=${encodeURIComponent((lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])}&region=IT`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-2.5 py-1.5 rounded text-[11px] font-semibold bg-orange-600/20 text-orange-400 border border-orange-500/30 hover:bg-orange-600/30 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Google Ads Transparency
+                      </a>
+                    </div>
+                  </div>
+                )}
 
                 {/* Box Diagnosi AI — GANCIO DI VENDITA (Focus principale) */}
                 {isAnalyzed && analysis?.cliche_found && (

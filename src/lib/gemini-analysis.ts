@@ -26,7 +26,7 @@ STRUTTURA DEL COPIONE (Genera il testo in prima persona, come se parlasse Alessi
 
 [ATTO 2 - La Scena del Crimine (Colpa al Sistema + Multi-Errore)] 'Sono sul vostro sito. È un peccato, perché la vostra azienda è solida, ma siete caduti in una trappola comunissima. È normale, perché purtroppo oggi lo standard del mercato web vi spinge a [INSERIRE IL PATTERN PIÙ GRAVE TROVATO]. Guarda questa frase esatta che avete online: "[INSERISCI FRASE CLICHÉ ESTRATTA]". Se coprissi il vostro logo con quello di un concorrente, funzionerebbe lo stesso. E attenzione, questo è solo il problema principale, perché lo "standard" vi ha portato anche a [CITARE RAPIDAMENTE GLI ALTRI ERRORI TROVATI TRA I 3 PATTERN].'
 
-[ATTO 3 - I Soldi (Condizionale su has_active_ads)] SE has_active_ads è TRUE: 'Dato che state pagando Google/Meta per le Ads, mandare traffico su una pagina che vi fa percepire come gli altri significa letteralmente bruciare budget per far rimbalzare gli utenti e finanziare la guerra dei prezzi.' SE has_active_ads è FALSE: 'Anche se oggi non fate Ads, con queste fondamenta ogni euro che deciderete di investire in futuro per portarvi traffico andrà letteralmente bruciato.'
+[ATTO 3 - I Soldi (Condizionale su has_active_ads e landing_page_text)] SE has_active_ads è TRUE E landing_page_text è presente: 'Ho fatto un'indagine più profonda e ho trovato l'annuncio Google/Meta che state sponsorizzando in questo momento. L'annuncio promette una cosa, ma quando clicco, vengo mandato su una Landing Page che [ANALIZZA IL landing_page_text E INSERISCI L'ERRORE SPECIFICO: es. "è una pagina generica senza focus sul servizio promesso", "non ha una call to action chiara", "è la semplice home page con la lista della spesa di tutti i servizi", "parla di tutt'altro rispetto all'annuncio"]. Sapete cosa succede? State pagando Google a caro prezzo per ogni click, ma state accogliendo i clienti in una stanza sbagliata. È uno spreco di budget inaccettabile.' SE has_active_ads è TRUE MA landing_page_text NON è presente: 'Dato che state pagando Google/Meta per le Ads, mandare traffico su una pagina che vi fa percepire come gli altri significa letteralmente bruciare budget per far rimbalzare gli utenti e finanziare la guerra dei prezzi.' SE has_active_ads è FALSE: 'Anche se oggi non fate Ads, con queste fondamenta ogni euro che deciderete di investire in futuro per portarvi traffico andrà letteralmente bruciato.'
 
 [ATTO 4 - La Soluzione e Il Ponte verso il Video Master] 'Il problema non siete voi, ma l'assenza di un'architettura logica a monte. È esattamente quello che costruiamo in Karalisweb con il nostro Metodo Strategico Digitale (MSD), che applico da anni sulle PMI. Per mostrarti di cosa si tratta senza farti perdere tempo, ho attaccato subito dopo questa mia analisi una breve presentazione video che spiega come funziona l'MSD e come ferma lo spreco di budget. Guardala, dura pochissimo. Ti scrivo qui in chat, a tra poco.'`;
 
@@ -107,13 +107,17 @@ export async function runGeminiAnalysis(
     systemInstruction: SYSTEM_PROMPT,
   });
 
-  // Payload JSON con i testi estratti dal deep scraper
+  // Payload JSON con i testi estratti dal deep scraper + dati ads intelligence
   const userPrompt = JSON.stringify({
     company_name: input.company_name,
     home_text: input.home_text,
     about_text: input.about_text,
     services_text: input.services_text,
     has_active_ads: input.has_active_ads,
+    // Nuovi campi per Atto 3 potenziato (landing page + copy ads)
+    landing_page_text: input.landing_page_text || null,
+    meta_ads_copy: input.meta_ads_copy || [],
+    google_ad_copy: input.google_ad_copy || null,
   });
 
   const result = await model.generateContent(userPrompt);
@@ -165,6 +169,11 @@ export async function runGeminiAnalysis(
     ads_networks_found: input.ads_networks_found || [],
     generatedAt: new Date().toISOString(),
     model: modelName,
-    analysisVersion: "2.0",
+    analysisVersion: "3.0",
+    // Passthrough dati Ads Intelligence
+    landing_page_url: input.landing_page_url || null,
+    landing_page_text: input.landing_page_text || null,
+    google_ad_copy: input.google_ad_copy || null,
+    meta_ads_copy: input.meta_ads_copy || [],
   };
 }

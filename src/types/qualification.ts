@@ -33,6 +33,12 @@ export interface GoogleAdsCheckResult {
   numero_ads: number;
   segnale: string; // es. "🔴 spende in ads su base debole"
   errore?: string;
+  /** URL della landing page dell'annuncio (se trovato) */
+  landing_page_url: string | null;
+  /** Testo estratto dalla landing page via Cheerio */
+  landing_page_text: string | null;
+  /** Copy dell'annuncio (title + description) */
+  ad_copy: string | null;
 }
 
 /**
@@ -44,6 +50,10 @@ export interface MetaAdsCheckResult {
   pagina_trovata: string | null;
   segnale: string; // es. "🔴 spende su Meta"
   errore?: string;
+  /** Copy dei primi 3 annunci attivi */
+  meta_ads_copy: string[];
+  /** URL diretto alla Meta Ad Library per verifica manuale */
+  ad_library_url: string;
 }
 
 /**
