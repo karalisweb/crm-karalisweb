@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { runFullAudit } from "@/lib/audit";
-import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
-import { qualificaProspect } from "@/lib/qualification";
+import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { isSocialLink } from "@/lib/url-utils";
-import { Prisma, CommercialTag, PipelineStage } from "@prisma/client";
-import type { CommercialSignals, AdsEvidenceLevel } from "@/types/commercial";
+import { Prisma, PipelineStage } from "@prisma/client";
 
 /**
  * POST /api/audit
- * Avvia un audit SINCRONO per un lead specifico
- * Esegue audit tecnico + rilevamento segnali commerciali
+ * Esegue l'estrazione strategica per un lead:
+ * 1. Scarica HTML del sito
+ * 2. Estrae hero_text, about_us_text, has_active_ads
+ * 3. Salva i dati nel lead
  */
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +23,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Trova il lead
     const lead = await db.lead.findUnique({
       where: { id: leadId },
     });
@@ -69,212 +67,74 @@ export async function POST(request: NextRequest) {
       data: { auditStatus: "RUNNING" },
     });
 
-    // Variabili per raccogliere risultati parziali
-    let auditResult: Awaited<ReturnType<typeof runFullAudit>> | null = null;
-    let auditError: string | null = null;
-    let fetchError: string | null = null;
+    // Normalizza URL
+    let url = lead.website;
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
 
-    // 1. Prova audit tecnico (può fallire per timeout)
+    // 1. Fetch HTML
+    let html: string;
     try {
-      auditResult = await runFullAudit({
-        website: lead.website,
-        googleRating: lead.googleRating ? Number(lead.googleRating) : null,
-        googleReviewsCount: lead.googleReviewsCount,
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(15000),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+        },
       });
-    } catch (error) {
-      auditError = error instanceof Error ? error.message : "Unknown error";
-      console.error("[AUDIT] Errore audit tecnico:", auditError);
-    }
 
-    // 2. Analisi commerciale (anche se audit tecnico fallisce, proviamo a prendere HTML)
-    let commercialResult: {
-      signals: CommercialSignals;
-      tagResult: {
-        tag: CommercialTag;
-        tagReason: string;
-        isCallable: boolean;
-        priority: number;
-      };
-    } = {
-      signals: {
-        adsEvidence: "none" as AdsEvidenceLevel,
-        adsEvidenceReason: auditError ? `Sito non raggiungibile: ${auditError}` : "Analisi non completata",
-        trackingPresent: false,
-        consentModeV2: "uncertain",
-        ctaClear: false,
-        offerFocused: false,
-        analyzedAt: new Date().toISOString(),
-      },
-      tagResult: {
-        tag: "NON_TARGET" as CommercialTag,
-        tagReason: auditError ? `Sito non raggiungibile: ${auditError}` : "Analisi non completata",
-        isCallable: false,
-        priority: 4,
-      },
-    };
-
-    // Prova fetch HTML se non abbiamo già i dati
-    if (!auditResult) {
-      try {
-        let url = lead.website;
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-          url = "https://" + url;
-        }
-
-        const response = await fetch(url, {
-          signal: AbortSignal.timeout(20000), // Aumentato a 20s
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          },
-        });
-
-        if (response.ok) {
-          const html = await response.text();
-          const domain = new URL(url).hostname;
-
-          const signals = await detectCommercialSignals({
-            html,
-            domain,
-            brandName: lead.name || domain.split(".")[0],
-            skipSerp: true,
-          });
-
-          const tagResult = assignCommercialTag({ signals });
-          commercialResult = { signals, tagResult };
-        } else {
-          fetchError = `HTTP ${response.status}`;
-        }
-      } catch (error) {
-        fetchError = error instanceof Error ? error.message : "Fetch failed";
-        console.error("[AUDIT] Errore fetch HTML:", fetchError);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
-    } else {
-      // Audit tecnico OK, facciamo analisi commerciale
-      try {
-        let url = lead.website;
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-          url = "https://" + url;
-        }
 
-        const response = await fetch(url, {
-          signal: AbortSignal.timeout(15000),
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          },
-        });
+      html = await response.text();
+    } catch (fetchErr) {
+      const msg =
+        fetchErr instanceof Error ? fetchErr.message : "Errore sconosciuto";
 
-        if (response.ok) {
-          const html = await response.text();
-          const domain = new URL(url).hostname;
+      await db.lead.update({
+        where: { id: leadId },
+        data: {
+          auditStatus: "FAILED",
+          auditData: { error: `Sito non raggiungibile: ${msg}` },
+        },
+      });
 
-          const signals = await detectCommercialSignals({
-            html,
-            domain,
-            brandName: lead.name || domain.split(".")[0],
-            skipSerp: true,
-          });
-
-          const tagResult = assignCommercialTag({ signals });
-          commercialResult = { signals, tagResult };
-        }
-      } catch (commercialError) {
-        console.error("[AUDIT] Errore analisi commerciale:", commercialError);
-      }
+      return NextResponse.json({
+        success: false,
+        leadId,
+        error: `Sito non raggiungibile: ${msg}`,
+      });
     }
 
-    // 3. Qualifica automatica prospect (DataForSEO + Meta Ads + scoring)
-    let qualificationResult: Awaited<ReturnType<typeof qualificaProspect>> | null = null;
-    try {
-      // Estrai dominio pulito
-      let dominio = lead.website!;
-      if (dominio.startsWith("http://") || dominio.startsWith("https://")) {
-        dominio = new URL(dominio).hostname;
-      }
-      dominio = dominio.replace(/^www\./, "");
+    const baseUrl = new URL(url).origin;
 
-      qualificationResult = await qualificaProspect(lead.name, dominio);
-    } catch (qualError) {
-      console.error("[AUDIT] Errore qualifica prospect:", qualError);
-    }
+    // 2. Estrazione strategica
+    const strategicData = await extractStrategicData(
+      html,
+      baseUrl,
+      lead.name
+    );
 
-    // 4. Carica le impostazioni CRM per lo scoreThreshold
-    const settings = await db.settings.findUnique({
-      where: { id: "default" },
-    });
-    const scoreThreshold = settings?.scoreThreshold ?? 60;
-
-    // 5. Salva risultati - SEMPRE completa, mai FAILED per errori di fetch
-    const issues = auditResult?.issues || [];
-    if (auditError) {
-      issues.unshift(`⚠️ Sito lento/non raggiungibile: ${auditError}`);
-    }
-    if (fetchError && !auditError) {
-      issues.unshift(`⚠️ Errore caricamento: ${fetchError}`);
-    }
-
-    // Calcola opportunityScore
-    const finalScore = auditResult?.opportunityScore ?? 50;
-
-    // Determina il pipelineStage: Daniela decide, l'app pre-filtra solo NON_TARGET
-    let newPipelineStage: PipelineStage;
-    if (commercialResult.tagResult.tag === "NON_TARGET") {
-      newPipelineStage = PipelineStage.NON_TARGET;
-    } else if (commercialResult.tagResult.isCallable) {
-      newPipelineStage = PipelineStage.DA_QUALIFICARE;
-    } else {
-      newPipelineStage = PipelineStage.DA_QUALIFICARE;
-    }
-
+    // 3. Salva risultati
     await db.lead.update({
       where: { id: leadId },
       data: {
         auditStatus: "COMPLETED",
         auditCompletedAt: new Date(),
-        opportunityScore: finalScore,
-        auditData: (auditResult?.auditData ?? {
-          error: auditError || fetchError,
-          partial: true,
-        }) as unknown as Prisma.InputJsonValue,
-        talkingPoints: auditResult?.talkingPoints ?? issues,
-        // Segnali commerciali
-        commercialTag: commercialResult.tagResult.tag as CommercialTag,
-        commercialTagReason: commercialResult.tagResult.tagReason,
-        commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
-        commercialPriority: commercialResult.tagResult.priority,
-        isCallable: commercialResult.tagResult.isCallable,
-        // Pipeline MSD: routing in base a tag E score threshold
-        pipelineStage: newPipelineStage,
-        // Qualifica automatica prospect
-        ...(qualificationResult ? {
-          qualificationScore: qualificationResult.punteggio_qualifica,
-          qualificationPriority: qualificationResult.priorita,
-          angoloLoom: qualificationResult.angolo_loom,
-          googleAdsActive: qualificationResult.google_ads_attive,
-          googleAdsCount: qualificationResult.google_ads_numero,
-          metaAdsActive: qualificationResult.meta_ads_attive,
-          metaAdsCount: qualificationResult.meta_ads_numero,
-          metaPageName: qualificationResult.meta_pagina,
-          qualificationData: qualificationResult as unknown as Prisma.InputJsonValue,
-          qualificationErrors: qualificationResult.errori,
-          qualificationAt: new Date(),
-        } : {}),
+        auditData: strategicData as unknown as Prisma.InputJsonValue,
+        pipelineStage: PipelineStage.DA_QUALIFICARE,
       },
     });
 
     return NextResponse.json({
       success: true,
       leadId,
-      score: auditResult?.opportunityScore ?? 50,
-      issues,
-      commercialTag: commercialResult.tagResult.tag,
-      isCallable: commercialResult.tagResult.isCallable,
-      hadErrors: !!(auditError || fetchError),
-      // Qualifica prospect
-      qualificationScore: qualificationResult?.punteggio_qualifica ?? null,
-      qualificationPriority: qualificationResult?.priorita ?? null,
-      angoloLoom: qualificationResult?.angolo_loom ?? null,
-      googleAdsActive: qualificationResult?.google_ads_attive ?? false,
-      metaAdsActive: qualificationResult?.meta_ads_attive ?? false,
+      strategicData,
     });
   } catch (error) {
     console.error("Error starting audit:", error);
@@ -286,16 +146,14 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * PUT /api/audit/batch
- * Avvia audit SINCRONI per tutti i lead PENDING
- * Può filtrare per searchId opzionalmente
+ * PUT /api/audit
+ * Batch: esegue estrazione strategica per tutti i lead PENDING
  */
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const { searchId, limit = 50 } = body;
 
-    // Trova lead da processare
     const leads = await db.lead.findMany({
       where: {
         ...(searchId ? { searchId } : {}),
@@ -307,32 +165,27 @@ export async function PUT(request: NextRequest) {
         id: true,
         name: true,
         website: true,
-        googleRating: true,
-        googleReviewsCount: true,
       },
     });
 
     if (leads.length === 0) {
       return NextResponse.json({
         success: true,
-        message: "No leads to audit",
+        message: "No leads to process",
         processed: 0,
-        failed: 0,
         parked: 0,
       });
     }
 
-    // Carica le impostazioni CRM per lo scoreThreshold
-    const settings = await db.settings.findUnique({
-      where: { id: "default" },
-    });
-    const scoreThreshold = settings?.scoreThreshold ?? 60;
-
     let processed = 0;
-    let parked = 0; // Link social spostati
-    const results: Array<{ id: string; name: string; status: string; tag?: string; reason?: string; pipelineStage?: string }> = [];
+    let parked = 0;
+    const results: Array<{
+      id: string;
+      name: string;
+      status: string;
+      reason?: string;
+    }> = [];
 
-    // Processa ogni lead in sequenza
     for (const lead of leads) {
       // Controlla se è un link social
       if (lead.website && isSocialLink(lead.website)) {
@@ -340,6 +193,9 @@ export async function PUT(request: NextRequest) {
           where: { id: lead.id },
           data: {
             auditStatus: "NO_WEBSITE",
+            pipelineStage: "SENZA_SITO",
+            socialUrl: lead.website,
+            website: null,
             auditData: {
               error: "Link social - non è un sito web aziendale",
               originalUrl: lead.website,
@@ -362,156 +218,72 @@ export async function PUT(request: NextRequest) {
         data: { auditStatus: "RUNNING" },
       });
 
-      // Variabili per raccogliere risultati
-      let auditResult: Awaited<ReturnType<typeof runFullAudit>> | null = null;
-      let auditError: string | null = null;
-
-      // Esegui audit tecnico
-      try {
-        auditResult = await runFullAudit({
-          website: lead.website!,
-          googleRating: lead.googleRating ? Number(lead.googleRating) : null,
-          googleReviewsCount: lead.googleReviewsCount,
-        });
-      } catch (error) {
-        auditError = error instanceof Error ? error.message : "Unknown error";
-        console.error(`[AUDIT] Errore per ${lead.name}:`, auditError);
+      // Normalizza URL
+      let url = lead.website!;
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        url = "https://" + url;
       }
 
-      // Analisi commerciale
-      let commercialResult: {
-        signals: CommercialSignals;
-        tagResult: {
-          tag: CommercialTag;
-          tagReason: string;
-          isCallable: boolean;
-          priority: number;
-        };
-      } = {
-        signals: {
-          adsEvidence: "none" as AdsEvidenceLevel,
-          adsEvidenceReason: auditError ? `Sito non raggiungibile: ${auditError}` : "Analisi non completata",
-          trackingPresent: false,
-          consentModeV2: "uncertain",
-          ctaClear: false,
-          offerFocused: false,
-          analyzedAt: new Date().toISOString(),
-        },
-        tagResult: {
-          tag: "NON_TARGET" as CommercialTag,
-          tagReason: auditError ? `Sito non raggiungibile: ${auditError}` : "Analisi non completata",
-          isCallable: false,
-          priority: 4,
-        },
-      };
-
-      // Prova fetch HTML per analisi commerciale
       try {
-        let url = lead.website!;
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-          url = "https://" + url;
-        }
-
         const response = await fetch(url, {
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(15000),
           headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent":
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
           },
         });
 
-        if (response.ok) {
-          const html = await response.text();
-          const domain = new URL(url).hostname;
-
-          const signals = await detectCommercialSignals({
-            html,
-            domain,
-            brandName: lead.name || domain.split(".")[0],
-            skipSerp: true,
-          });
-
-          const tagResult = assignCommercialTag({ signals });
-          commercialResult = { signals, tagResult };
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
-      } catch {
-        // Ignora errori fetch, usa default
+
+        const html = await response.text();
+        const baseUrl = new URL(url).origin;
+
+        const strategicData = await extractStrategicData(
+          html,
+          baseUrl,
+          lead.name || ""
+        );
+
+        await db.lead.update({
+          where: { id: lead.id },
+          data: {
+            auditStatus: "COMPLETED",
+            auditCompletedAt: new Date(),
+            auditData: strategicData as unknown as Prisma.InputJsonValue,
+            pipelineStage: PipelineStage.DA_QUALIFICARE,
+          },
+        });
+
+        processed++;
+        results.push({
+          id: lead.id,
+          name: lead.name || "N/A",
+          status: "completed",
+        });
+      } catch (error) {
+        const msg =
+          error instanceof Error ? error.message : "Unknown error";
+
+        await db.lead.update({
+          where: { id: lead.id },
+          data: {
+            auditStatus: "FAILED",
+            auditData: { error: `Sito non raggiungibile: ${msg}` },
+          },
+        });
+
+        results.push({
+          id: lead.id,
+          name: lead.name || "N/A",
+          status: "failed",
+          reason: msg,
+        });
       }
-
-      // Qualifica automatica prospect
-      let qualificationResult: Awaited<ReturnType<typeof qualificaProspect>> | null = null;
-      try {
-        let dominio = lead.website!;
-        if (dominio.startsWith("http://") || dominio.startsWith("https://")) {
-          dominio = new URL(dominio).hostname;
-        }
-        dominio = dominio.replace(/^www\./, "");
-
-        qualificationResult = await qualificaProspect(lead.name || dominio, dominio);
-      } catch (qualError) {
-        console.error(`[AUDIT] Errore qualifica per ${lead.name}:`, qualError);
-      }
-
-      // Genera issues
-      const issues = auditResult?.issues || [];
-      if (auditError) {
-        issues.unshift(`⚠️ Sito lento/non raggiungibile: ${auditError}`);
-      }
-
-      // Calcola opportunityScore
-      const finalScore = auditResult?.opportunityScore ?? 50;
-
-      // Determina il pipelineStage: NON_TARGET scartato, il resto va a DA_QUALIFICARE
-      let newPipelineStage: PipelineStage;
-      if (commercialResult.tagResult.tag === "NON_TARGET") {
-        newPipelineStage = PipelineStage.NON_TARGET;
-      } else {
-        newPipelineStage = PipelineStage.DA_QUALIFICARE;
-      }
-
-      // Salva risultati - SEMPRE completa
-      await db.lead.update({
-        where: { id: lead.id },
-        data: {
-          auditStatus: "COMPLETED",
-          auditCompletedAt: new Date(),
-          opportunityScore: finalScore,
-          auditData: (auditResult?.auditData ?? {
-            error: auditError,
-            partial: true,
-          }) as unknown as Prisma.InputJsonValue,
-          talkingPoints: auditResult?.talkingPoints ?? issues,
-          commercialTag: commercialResult.tagResult.tag as CommercialTag,
-          commercialTagReason: commercialResult.tagResult.tagReason,
-          commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
-          commercialPriority: commercialResult.tagResult.priority,
-          isCallable: commercialResult.tagResult.isCallable,
-          // Pipeline MSD: routing in base a tag E score threshold
-          pipelineStage: newPipelineStage,
-          // Qualifica automatica prospect
-          ...(qualificationResult ? {
-            qualificationScore: qualificationResult.punteggio_qualifica,
-            qualificationPriority: qualificationResult.priorita,
-            angoloLoom: qualificationResult.angolo_loom,
-            googleAdsActive: qualificationResult.google_ads_attive,
-            googleAdsCount: qualificationResult.google_ads_numero,
-            metaAdsActive: qualificationResult.meta_ads_attive,
-            metaAdsCount: qualificationResult.meta_ads_numero,
-            metaPageName: qualificationResult.meta_pagina,
-            qualificationData: qualificationResult as unknown as Prisma.InputJsonValue,
-            qualificationErrors: qualificationResult.errori,
-            qualificationAt: new Date(),
-          } : {}),
-        },
-      });
-
-      processed++;
-      results.push({
-        id: lead.id,
-        name: lead.name || "N/A",
-        status: auditError ? "completed_with_errors" : "completed",
-        tag: commercialResult.tagResult.tag,
-        pipelineStage: newPipelineStage,
-      });
     }
 
     return NextResponse.json({

@@ -10,47 +10,45 @@ import {
   RefreshCw,
   Copy,
   Check,
-  AlertTriangle,
-  Target,
-  MessageSquare,
-  Lightbulb,
+  Megaphone,
+  MonitorPlay,
+  StickyNote,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+interface TeleprompterScript {
+  atto_1: string;
+  atto_2: string;
+  atto_3: string;
+  atto_4: string;
+}
+
 interface GeminiAnalysisResult {
-  marketingCoherence: {
-    summary: string;
-    targetAudience: string;
-    messagingIssues: string[];
-    score: "coerente" | "parzialmente_coerente" | "incoerente";
-  };
-  topErrors: Array<{
-    title: string;
-    description: string;
-    businessImpact: string;
-    suggestion: string;
-  }>;
-  heygenPrompt: string;
+  cliche_found: string;
+  teleprompter_script: TeleprompterScript;
+  strategic_note: string;
+  has_active_ads: boolean;
   generatedAt: string;
   model: string;
 }
 
 interface GeminiAnalysisCardProps {
   leadId: string;
-  auditStatus: string;
+  hasWebsite: boolean;
   geminiAnalysis: GeminiAnalysisResult | null;
   geminiAnalyzedAt: string | null;
 }
 
-const COHERENCE_LABELS = {
-  coerente: { label: "Coerente", color: "bg-green-100 text-green-800" },
-  parzialmente_coerente: { label: "Parzialmente coerente", color: "bg-yellow-100 text-yellow-800" },
-  incoerente: { label: "Incoerente", color: "bg-red-100 text-red-800" },
-};
+const ATTO_LABELS = [
+  { key: "atto_1" as const, label: "ATTO 1", subtitle: "Ghiaccio e Metafora" },
+  { key: "atto_2" as const, label: "ATTO 2", subtitle: "La Scena del Crimine" },
+  { key: "atto_3" as const, label: "ATTO 3", subtitle: "I Soldi" },
+  { key: "atto_4" as const, label: "ATTO 4", subtitle: "La Soluzione" },
+];
 
 export function GeminiAnalysisCard({
   leadId,
-  auditStatus,
+  hasWebsite,
   geminiAnalysis,
   geminiAnalyzedAt,
 }: GeminiAnalysisCardProps) {
@@ -82,15 +80,19 @@ export function GeminiAnalysisCard({
     }
   };
 
-  const copyHeygenPrompt = async (text: string) => {
+  const copyFullScript = async () => {
+    if (!geminiAnalysis) return;
+    const script = ATTO_LABELS.map(
+      (a) => `[${a.label} - ${a.subtitle}]\n${geminiAnalysis.teleprompter_script[a.key]}`
+    ).join("\n\n");
+
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(script);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback per browser senza clipboard API
       const textarea = document.createElement("textarea");
-      textarea.value = text;
+      textarea.value = script;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
@@ -100,13 +102,13 @@ export function GeminiAnalysisCard({
     }
   };
 
-  // Audit non completato
-  if (auditStatus !== "COMPLETED") {
+  // Nessun sito web
+  if (!hasWebsite) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
           <Sparkles className="h-8 w-8 mx-auto mb-3 opacity-30" />
-          <p>Completa prima l&apos;audit per poter generare l&apos;analisi AI.</p>
+          <p>Serve un sito web per generare l&apos;analisi strategica.</p>
         </CardContent>
       </Card>
     );
@@ -117,12 +119,12 @@ export function GeminiAnalysisCard({
     return (
       <Card>
         <CardContent className="py-8 text-center space-y-4">
-          <Sparkles className="h-8 w-8 mx-auto text-purple-500" />
+          <MonitorPlay className="h-8 w-8 mx-auto text-purple-500" />
           <div>
-            <p className="font-medium">Analisi AI non ancora generata</p>
+            <p className="font-medium">Analisi Strategica non ancora generata</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Gemini analizzera la coerenza marketing, identifichera 3 errori principali
-              e generera un prompt per il video HeyGen.
+              Gemini analizzerà il posizionamento del sito e genererà
+              un copione per il teleprompter in 4 atti.
             </p>
           </div>
           <Button onClick={runAnalysis} disabled={isLoading}>
@@ -134,7 +136,7 @@ export function GeminiAnalysisCard({
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Genera Analisi AI
+                Genera Analisi Strategica
               </>
             )}
           </Button>
@@ -144,137 +146,118 @@ export function GeminiAnalysisCard({
     );
   }
 
-  // Mostra risultati
-  const coherenceConfig = COHERENCE_LABELS[geminiAnalysis.marketingCoherence.score] ||
-    COHERENCE_LABELS.parzialmente_coerente;
-
+  // === TELEPROMPTER MODE ===
   return (
     <div className="space-y-4">
-      {/* Header con data e rigenera */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Generato {geminiAnalyzedAt ? new Date(geminiAnalyzedAt).toLocaleDateString("it-IT", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }) : ""}
-          {" "}con {geminiAnalysis.model}
-        </p>
-        <Button onClick={runAnalysis} variant="outline" size="sm" disabled={isLoading}>
-          {isLoading ? (
-            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+      {/* Header con badge Ads + data + rigenera */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          {/* Badge Ads */}
+          {geminiAnalysis.has_active_ads ? (
+            <Badge className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1">
+              <Megaphone className="mr-1.5 h-3.5 w-3.5" />
+              Fanno Ads!
+            </Badge>
           ) : (
-            <RefreshCw className="mr-2 h-3 w-3" />
+            <Badge variant="secondary" className="text-sm px-3 py-1">
+              <Megaphone className="mr-1.5 h-3.5 w-3.5 opacity-50" />
+              Niente Ads
+            </Badge>
           )}
-          Rigenera
-        </Button>
+          <p className="text-sm text-muted-foreground">
+            {geminiAnalyzedAt
+              ? new Date(geminiAnalyzedAt).toLocaleDateString("it-IT", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : ""}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={copyFullScript}
+            variant="outline"
+            size="sm"
+          >
+            {copied ? (
+              <>
+                <Check className="mr-2 h-3 w-3" />
+                Copiato!
+              </>
+            ) : (
+              <>
+                <Copy className="mr-2 h-3 w-3" />
+                Copia copione
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={runAnalysis}
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-3 w-3" />
+            )}
+            Rigenera
+          </Button>
+        </div>
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {/* 1. Coerenza Marketing */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Coerenza Marketing
-            </CardTitle>
-            <Badge className={coherenceConfig.color}>
-              {coherenceConfig.label}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm">{geminiAnalysis.marketingCoherence.summary}</p>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">TARGET AUDIENCE</p>
-            <p className="text-sm">{geminiAnalysis.marketingCoherence.targetAudience}</p>
-          </div>
-          {geminiAnalysis.marketingCoherence.messagingIssues.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">PROBLEMI DI COMUNICAZIONE</p>
-              <ul className="text-sm space-y-1">
-                {geminiAnalysis.marketingCoherence.messagingIssues.map((issue, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="text-yellow-500 mt-0.5">-</span>
-                    {issue}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {/* Frase Cliché trovata */}
+      <Card className="border-amber-500/30 bg-amber-500/5">
+        <CardContent className="pt-4 pb-3">
+          <p className="text-xs font-medium text-amber-400 mb-1 uppercase tracking-wide">
+            Frase Cliché Trovata
+          </p>
+          <p className="text-lg font-medium italic">
+            &ldquo;{geminiAnalysis.cliche_found}&rdquo;
+          </p>
         </CardContent>
       </Card>
 
-      {/* 2. I 3 Errori Principali */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            3 Errori Principali
+      {/* 4 Atti del Teleprompter - Font grande per lettura da schermo */}
+      {ATTO_LABELS.map((atto, index) => (
+        <Card key={atto.key}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                {index + 1}
+              </span>
+              {atto.label}
+              <span className="text-muted-foreground font-normal">
+                — {atto.subtitle}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl leading-relaxed font-light">
+              {geminiAnalysis.teleprompter_script[atto.key]}
+            </p>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Nota strategica interna (collassata, per Alessio) */}
+      <Card className="border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+            <StickyNote className="h-4 w-4" />
+            Nota Strategica (interna)
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {geminiAnalysis.topErrors.map((err, i) => (
-            <div key={i} className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-start gap-2">
-                <span className="text-lg font-bold text-destructive">{i + 1}</span>
-                <div className="flex-1">
-                  <p className="font-medium">{err.title}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{err.description}</p>
-                </div>
-              </div>
-              <div className="ml-6 space-y-1">
-                <div className="flex items-start gap-2">
-                  <MessageSquare className="h-3 w-3 mt-1 text-red-500 shrink-0" />
-                  <p className="text-sm"><span className="font-medium">Impatto:</span> {err.businessImpact}</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Lightbulb className="h-3 w-3 mt-1 text-green-500 shrink-0" />
-                  <p className="text-sm"><span className="font-medium">Soluzione:</span> {err.suggestion}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* 3. Prompt HeyGen */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Prompt Video HeyGen
-            </CardTitle>
-            <Button
-              onClick={() => copyHeygenPrompt(geminiAnalysis.heygenPrompt)}
-              variant="outline"
-              size="sm"
-            >
-              {copied ? (
-                <>
-                  <Check className="mr-2 h-3 w-3" />
-                  Copiato!
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-2 h-3 w-3" />
-                  Copia
-                </>
-              )}
-            </Button>
-          </div>
-        </CardHeader>
         <CardContent>
-          <div className="bg-muted rounded-lg p-4 text-sm whitespace-pre-wrap leading-relaxed">
-            {geminiAnalysis.heygenPrompt}
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {geminiAnalysis.strategic_note}
+          </p>
         </CardContent>
       </Card>
     </div>

@@ -223,23 +223,28 @@ export interface VideoScriptData {
 }
 
 // ==========================================
-// GEMINI AI ANALYSIS
+// ANALISI STRATEGICA (Teleprompter)
 // ==========================================
 
+export interface StrategicAnalysisInput {
+  company_name: string;
+  hero_text: string;
+  about_us_text: string | null;
+  has_active_ads: boolean;
+}
+
+export interface TeleprompterScript {
+  atto_1: string;
+  atto_2: string;
+  atto_3: string;
+  atto_4: string;
+}
+
 export interface GeminiAnalysisResult {
-  marketingCoherence: {
-    summary: string;
-    targetAudience: string;
-    messagingIssues: string[];
-    score: "coerente" | "parzialmente_coerente" | "incoerente";
-  };
-  topErrors: Array<{
-    title: string;
-    description: string;
-    businessImpact: string;
-    suggestion: string;
-  }>;
-  heygenPrompt: string;
+  cliche_found: string;
+  teleprompter_script: TeleprompterScript;
+  strategic_note: string;
+  has_active_ads: boolean;
   generatedAt: string;
   model: string;
 }

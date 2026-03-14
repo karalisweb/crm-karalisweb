@@ -1,12 +1,9 @@
 import PQueue from "p-queue";
 import { db } from "@/lib/db";
-import { runFullAudit } from "@/lib/audit";
-import { detectCommercialSignals, assignCommercialTag } from "@/lib/commercial";
-import { qualificaProspect } from "@/lib/qualification";
+import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { isGeminiConfigured } from "@/lib/gemini";
 import { runGeminiAnalysis } from "@/lib/gemini-analysis";
-import { Prisma, CommercialTag, PipelineStage } from "@prisma/client";
-import type { AuditData } from "@/types";
+import { Prisma, PipelineStage } from "@prisma/client";
 
 // Code singleton per concurrency control - sopravvivono nel processo Node
 const auditQueue = new PQueue({ concurrency: 10 });
@@ -16,13 +13,10 @@ interface LeadForAudit {
   id: string;
   name: string;
   website: string | null;
-  googleRating: Prisma.Decimal | null;
-  googleReviewsCount: number | null;
 }
 
 /**
- * Avvia audit in batch per tutti i lead di una ricerca (fire-and-forget).
- * Sostituisce runAuditBatchFunction di Inngest.
+ * Avvia estrazione strategica in batch per tutti i lead di una ricerca (fire-and-forget).
  */
 export async function processBatchAudits(searchId: string): Promise<void> {
   const leads = await db.lead.findMany({
@@ -35,17 +29,15 @@ export async function processBatchAudits(searchId: string): Promise<void> {
       id: true,
       name: true,
       website: true,
-      googleRating: true,
-      googleReviewsCount: true,
     },
   });
 
   if (leads.length === 0) {
-    console.log(`[BATCH AUDIT] Nessun lead da auditare per ricerca ${searchId}`);
+    console.log(`[BATCH] Nessun lead da processare per ricerca ${searchId}`);
     return;
   }
 
-  console.log(`[BATCH AUDIT] Accodati ${leads.length} lead per ricerca ${searchId}`);
+  console.log(`[BATCH] Accodati ${leads.length} lead per ricerca ${searchId}`);
 
   for (const lead of leads) {
     auditQueue.add(() => processLeadAudit(lead)).catch((err) => {
@@ -55,16 +47,12 @@ export async function processBatchAudits(searchId: string): Promise<void> {
 }
 
 /**
- * Esegue l'audit completo di un singolo lead.
- * Sostituisce runAuditFunction di Inngest.
+ * Esegue l'estrazione strategica di un singolo lead.
  */
 async function processLeadAudit(lead: LeadForAudit): Promise<void> {
   const { id: leadId, website, name: brandName } = lead;
 
   if (!website) return;
-
-  const googleRating = lead.googleRating ? Number(lead.googleRating) : null;
-  const googleReviewsCount = lead.googleReviewsCount;
 
   // 1. Marca come RUNNING
   await db.lead.update({
@@ -72,156 +60,72 @@ async function processLeadAudit(lead: LeadForAudit): Promise<void> {
     data: { auditStatus: "RUNNING" },
   });
 
-  // 2. Audit tecnico
-  let result;
-  try {
-    result = await runFullAudit({
-      website,
-      googleRating,
-      googleReviewsCount,
-    });
-  } catch (error) {
-    await db.lead.update({
-      where: { id: leadId },
-      data: {
-        auditStatus: "FAILED",
-        auditData: {
-          error: error instanceof Error ? error.message : "Unknown error",
-        },
-      },
-    });
-    console.error(`[AUDIT] Audit tecnico fallito per ${brandName}:`, error);
-    return;
+  // 2. Fetch HTML + estrazione strategica
+  let url = website;
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    url = "https://" + url;
   }
 
-  // 3. Segnali commerciali
-  let commercialResult;
   try {
-    let url = website;
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url;
-    }
-
     const response = await fetch(url, {
       signal: AbortSignal.timeout(15000),
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch: ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
     const html = await response.text();
-    const domain = new URL(url).hostname;
+    const baseUrl = new URL(url).origin;
 
-    const signals = await detectCommercialSignals({
+    const strategicData = await extractStrategicData(
       html,
-      domain,
-      brandName: brandName || domain.split(".")[0],
-      skipSerp: false,
+      baseUrl,
+      brandName || ""
+    );
+
+    // 3. Salva risultati
+    await db.lead.update({
+      where: { id: leadId },
+      data: {
+        auditStatus: "COMPLETED",
+        auditCompletedAt: new Date(),
+        auditData: strategicData as unknown as Prisma.InputJsonValue,
+        pipelineStage: PipelineStage.DA_QUALIFICARE,
+      },
     });
 
-    const tagResult = assignCommercialTag({ signals });
+    console.log(`[AUDIT] Completato: ${brandName}`);
 
-    commercialResult = { signals, tagResult };
-  } catch (error) {
-    console.error("[COMMERCIAL] Errore rilevamento segnali:", error);
-    commercialResult = {
-      signals: {
-        adsEvidence: "none" as const,
-        adsEvidenceReason: `Errore analisi: ${error instanceof Error ? error.message : "unknown"}`,
-        trackingPresent: false,
-        consentModeV2: "uncertain" as const,
-        ctaClear: false,
-        offerFocused: false,
-        analyzedAt: new Date().toISOString(),
-        errors: [error instanceof Error ? error.message : "unknown"],
-      },
-      tagResult: {
-        tag: "NON_TARGET" as const,
-        tagReason: `Analisi fallita: ${error instanceof Error ? error.message : "unknown"}`,
-        isCallable: false,
-        priority: 4 as const,
-      },
-    };
-  }
-
-  // 4. Qualifica prospect
-  let qualificationResult = null;
-  try {
-    let dominio = website;
-    if (dominio.startsWith("http://") || dominio.startsWith("https://")) {
-      dominio = new URL(dominio).hostname;
-    }
-    dominio = dominio.replace(/^www\./, "");
-    qualificationResult = await qualificaProspect(brandName || dominio, dominio);
-  } catch (error) {
-    console.error("[AUDIT] Errore qualifica prospect:", error);
-  }
-
-  // 5. Salva risultati
-  let newPipelineStage: PipelineStage;
-  if (commercialResult.tagResult.tag === "NON_TARGET") {
-    newPipelineStage = PipelineStage.NON_TARGET;
-  } else if (commercialResult.tagResult.isCallable) {
-    newPipelineStage = PipelineStage.DA_QUALIFICARE;
-  } else {
-    newPipelineStage = PipelineStage.DA_QUALIFICARE;
-  }
-
-  await db.lead.update({
-    where: { id: leadId },
-    data: {
-      auditStatus: "COMPLETED",
-      auditCompletedAt: new Date(),
-      opportunityScore: result.opportunityScore,
-      auditData: result.auditData as unknown as Prisma.InputJsonValue,
-      talkingPoints: result.talkingPoints,
-
-      commercialTag: commercialResult.tagResult.tag as CommercialTag,
-      commercialTagReason: commercialResult.tagResult.tagReason,
-      commercialSignals: commercialResult.signals as unknown as Prisma.InputJsonValue,
-      commercialPriority: commercialResult.tagResult.priority,
-      isCallable: commercialResult.tagResult.isCallable,
-
-      pipelineStage: newPipelineStage,
-
-      ...(qualificationResult
-        ? {
-            qualificationScore: qualificationResult.punteggio_qualifica,
-            qualificationPriority: qualificationResult.priorita,
-            angoloLoom: qualificationResult.angolo_loom,
-            googleAdsActive: qualificationResult.google_ads_attive,
-            googleAdsCount: qualificationResult.google_ads_numero,
-            metaAdsActive: qualificationResult.meta_ads_attive,
-            metaAdsCount: qualificationResult.meta_ads_numero,
-            metaPageName: qualificationResult.meta_pagina,
-            qualificationData: qualificationResult as unknown as Prisma.InputJsonValue,
-            qualificationErrors: qualificationResult.errori,
-            qualificationAt: new Date(),
-          }
-        : {}),
-    },
-  });
-
-  console.log(
-    `[AUDIT] Completato: ${brandName} | Score: ${result.opportunityScore} | Tag: ${commercialResult.tagResult.tag}`
-  );
-
-  // 6. Trigger Gemini se DA_QUALIFICARE
-  if (newPipelineStage === PipelineStage.DA_QUALIFICARE) {
+    // 4. Trigger Gemini automatico
     geminiQueue.add(() => processGeminiAnalysis(leadId)).catch((err) => {
       console.error(`[GEMINI] Errore per ${brandName}:`, err);
     });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+
+    await db.lead.update({
+      where: { id: leadId },
+      data: {
+        auditStatus: "FAILED",
+        auditData: { error: `Sito non raggiungibile: ${msg}` },
+      },
+    });
+
+    console.error(`[AUDIT] Fallito per ${brandName}: ${msg}`);
   }
 }
 
 /**
- * Esegue l'analisi Gemini per un lead.
- * Sostituisce runGeminiFunction di Inngest.
+ * Esegue l'analisi strategica Gemini per un lead.
+ * Scarica HTML, estrae dati strategici, genera copione teleprompter.
  */
 async function processGeminiAnalysis(leadId: string): Promise<void> {
   if (!isGeminiConfigured()) {
@@ -234,43 +138,39 @@ async function processGeminiAnalysis(leadId: string): Promise<void> {
       id: true,
       name: true,
       website: true,
-      category: true,
       auditStatus: true,
       auditData: true,
-      qualificationData: true,
-      opportunityScore: true,
-      commercialTag: true,
-      googleRating: true,
-      googleReviewsCount: true,
       geminiAnalysis: true,
     },
   });
 
   if (!lead) return;
-  if (lead.auditStatus !== "COMPLETED" || !lead.auditData || !lead.website) return;
-  if (lead.geminiAnalysis) return;
+  if (lead.auditStatus !== "COMPLETED" || !lead.website) return;
+  if (lead.geminiAnalysis) return; // Già analizzato
 
-  const auditData = lead.auditData as unknown as AuditData;
+  // Usa i dati strategici già estratti dall'audit
+  const auditData = lead.auditData as Record<string, unknown> | null;
+  if (
+    auditData &&
+    typeof auditData === "object" &&
+    "hero_text" in auditData &&
+    "company_name" in auditData
+  ) {
+    const analysis = await runGeminiAnalysis({
+      company_name: auditData.company_name as string,
+      hero_text: auditData.hero_text as string,
+      about_us_text: (auditData.about_us_text as string) || null,
+      has_active_ads: (auditData.has_active_ads as boolean) || false,
+    });
 
-  const analysis = await runGeminiAnalysis({
-    leadName: lead.name,
-    website: lead.website,
-    category: lead.category,
-    auditData,
-    qualificationData: lead.qualificationData as Record<string, unknown> | null,
-    opportunityScore: lead.opportunityScore,
-    commercialTag: lead.commercialTag,
-    googleRating: lead.googleRating ? Number(lead.googleRating) : null,
-    googleReviewsCount: lead.googleReviewsCount,
-  });
+    await db.lead.update({
+      where: { id: leadId },
+      data: {
+        geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
+        geminiAnalyzedAt: new Date(),
+      },
+    });
 
-  await db.lead.update({
-    where: { id: leadId },
-    data: {
-      geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
-      geminiAnalyzedAt: new Date(),
-    },
-  });
-
-  console.log(`[GEMINI] Analisi completata per ${lead.name}`);
+    console.log(`[GEMINI] Analisi strategica completata per ${lead.name}`);
+  }
 }

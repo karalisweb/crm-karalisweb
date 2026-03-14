@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { runGeminiAnalysis } from "@/lib/gemini-analysis";
 import { isGeminiConfigured } from "@/lib/gemini";
+import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { Prisma } from "@prisma/client";
-import type { AuditData } from "@/types";
 
 /**
  * POST /api/leads/[id]/gemini-analysis
  *
- * Genera (o rigenera) l'analisi AI Gemini per un lead.
- * Richiede: audit completato + Gemini API key configurata.
+ * Esegue l'Analisi Strategica del Posizionamento:
+ * 1. Scarica HTML del sito
+ * 2. Estrae hero_text, about_us_text, has_active_ads
+ * 3. Invia a Gemini per generare il copione teleprompter
  */
 export async function POST(
   request: Request,
@@ -20,7 +22,10 @@ export async function POST(
 
     if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: "Gemini API key non configurata. Vai in Impostazioni > API & Token." },
+        {
+          error:
+            "Gemini API key non configurata. Vai in Impostazioni > API & Token.",
+        },
         { status: 400 }
       );
     }
@@ -31,46 +36,76 @@ export async function POST(
         id: true,
         name: true,
         website: true,
-        category: true,
-        auditStatus: true,
-        auditData: true,
-        qualificationData: true,
-        opportunityScore: true,
-        commercialTag: true,
-        googleRating: true,
-        googleReviewsCount: true,
       },
     });
 
     if (!lead) {
-      return NextResponse.json(
-        { error: "Lead non trovato" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Lead non trovato" }, { status: 404 });
     }
 
-    if (lead.auditStatus !== "COMPLETED" || !lead.auditData || !lead.website) {
+    if (!lead.website) {
       return NextResponse.json(
-        { error: "Audit non completato o sito web mancante. Impossibile analizzare." },
+        { error: "Sito web mancante. Impossibile analizzare." },
         { status: 400 }
       );
     }
 
-    const auditData = lead.auditData as unknown as AuditData;
+    // 1. Fetch HTML del sito
+    let url = lead.website;
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
 
-    const analysis = await runGeminiAnalysis({
-      leadName: lead.name,
-      website: lead.website,
-      category: lead.category,
-      auditData,
-      qualificationData: lead.qualificationData as Record<string, unknown> | null,
-      opportunityScore: lead.opportunityScore,
-      commercialTag: lead.commercialTag,
-      googleRating: lead.googleRating ? Number(lead.googleRating) : null,
-      googleReviewsCount: lead.googleReviewsCount,
-    });
+    let html: string;
+    try {
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(15000),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+        },
+      });
 
-    // Salva risultato
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      html = await response.text();
+    } catch (fetchErr) {
+      const msg =
+        fetchErr instanceof Error ? fetchErr.message : "Errore sconosciuto";
+      return NextResponse.json(
+        { error: `Impossibile raggiungere il sito: ${msg}` },
+        { status: 400 }
+      );
+    }
+
+    const baseUrl = new URL(url).origin;
+
+    // 2. Estrazione strategica
+    const strategicData = await extractStrategicData(
+      html,
+      baseUrl,
+      lead.name
+    );
+
+    if (!strategicData.hero_text || strategicData.hero_text.trim().length < 10) {
+      return NextResponse.json(
+        {
+          error:
+            "Impossibile estrarre testo sufficiente dal sito. La homepage potrebbe essere vuota o protetta.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // 3. Analisi Gemini
+    const analysis = await runGeminiAnalysis(strategicData);
+
+    // 4. Salva risultato
     await db.lead.update({
       where: { id },
       data: {
@@ -85,10 +120,8 @@ export async function POST(
     });
   } catch (error) {
     console.error("[API] gemini-analysis error:", error);
-    const message = error instanceof Error ? error.message : "Errore nell'analisi AI";
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error ? error.message : "Errore nell'analisi AI";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

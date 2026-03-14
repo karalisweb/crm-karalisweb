@@ -1,214 +1,149 @@
 import { getGeminiClient } from "./gemini";
-import type { AuditData } from "@/types";
+import type { StrategicAnalysisInput, GeminiAnalysisResult } from "@/types";
+import { SchemaType, type Schema } from "@google/generative-ai";
 
 // ==========================================
 // TIPI
 // ==========================================
 
-export interface GeminiAnalysisInput {
-  leadName: string;
-  website: string;
-  category: string | null;
-  auditData: AuditData;
-  qualificationData: Record<string, unknown> | null;
-  opportunityScore: number | null;
-  commercialTag: string | null;
-  googleRating: number | null;
-  googleReviewsCount: number | null;
-}
-
-export interface GeminiAnalysisResult {
-  marketingCoherence: {
-    summary: string;
-    targetAudience: string;
-    messagingIssues: string[];
-    score: "coerente" | "parzialmente_coerente" | "incoerente";
-  };
-  topErrors: Array<{
-    title: string;
-    description: string;
-    businessImpact: string;
-    suggestion: string;
-  }>;
-  heygenPrompt: string;
-  generatedAt: string;
-  model: string;
-}
+export type { StrategicAnalysisInput, GeminiAnalysisResult };
 
 // ==========================================
-// PROMPT
+// SYSTEM PROMPT (Brand Strategist)
 // ==========================================
 
-function buildPrompt(input: GeminiAnalysisInput): string {
-  const auditSummary = summarizeAuditData(input.auditData);
+const SYSTEM_PROMPT = `Sei un Senior Brand Strategist. Analizza il testo fornito (hero_text e about_us_text). Il tuo obiettivo è trovare ALMENO UNA frase cliché, banale o priva di reale posizionamento (es. 'leader di settore', 'team giovane', 'servizio a 360 gradi').
 
-  return `Sei un consulente senior di marketing digitale italiano che analizza la presenza online di aziende.
+Devi restituire un copione per il teleprompter di Alessio, diviso in 4 atti e formattato ESATTAMENTE così:
 
-CONTESTO:
-- Azienda: "${input.leadName}"
-- Settore: ${input.category || "Non specificato"}
-- Sito web: ${input.website}
-- Rating Google: ${input.googleRating ?? "N/D"}/5 (${input.googleReviewsCount ?? 0} recensioni)
-- Opportunity Score: ${input.opportunityScore ?? "N/D"}/100
-- Tag commerciale: ${input.commercialTag || "Nessuno"}
+[ATTO 1 - Ghiaccio e Metafora] Ciao {company_name}, è un video di vendita ma non ti parlerò del tuo sito. Avete ingredienti ottimi ma cucinate senza ricetta (usa una metafora culinaria in base al loro settore).
 
-DATI AUDIT TECNICO:
-${auditSummary}
+[ATTO 2 - La Scena del Crimine] Siete sul web con un posizionamento invisibile. Guarda questa frase sulla vostra home: '[INSERISCI QUI LA FRASE CLICHÉ TROVATA]'. Se ci mettessi il logo del vostro competitor, sarebbe uguale.
 
-ISTRUZIONI:
-Analizza i dati forniti e produci un JSON con questa struttura esatta:
+[ATTO 3 - I Soldi] Se has_active_ads è TRUE: 'Dato che state pagando Google/Meta per le Ads, mandare traffico qui significa bruciare budget per far rimbalzare gli utenti.' Se has_active_ads è FALSE: 'Non state facendo Ads, ma anche se le faceste oggi, con questo messaggio brucereste solo budget.'
 
-{
-  "marketingCoherence": {
-    "summary": "2-3 frasi sulla coerenza complessiva del marketing online dell'azienda",
-    "targetAudience": "Chi sembra essere il target dell'azienda in base al sito",
-    "messagingIssues": ["Lista di problemi nel messaging/comunicazione identificati"],
-    "score": "coerente" | "parzialmente_coerente" | "incoerente"
+[ATTO 4 - La Soluzione] Non serve rifare il sito, serve prima il Metodo Strategico Digitale per creare l'architettura logica.`;
+
+// ==========================================
+// JSON SCHEMA per output strutturato
+// ==========================================
+
+const RESPONSE_SCHEMA: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    cliche_found: {
+      type: SchemaType.STRING,
+      description: "La frase banale estratta dal loro sito",
+    },
+    teleprompter_script: {
+      type: SchemaType.OBJECT,
+      properties: {
+        atto_1: {
+          type: SchemaType.STRING,
+          description: "Testo Atto 1 - Ghiaccio e Metafora",
+        },
+        atto_2: {
+          type: SchemaType.STRING,
+          description: "Testo Atto 2 - La Scena del Crimine",
+        },
+        atto_3: {
+          type: SchemaType.STRING,
+          description: "Testo Atto 3 - I Soldi",
+        },
+        atto_4: {
+          type: SchemaType.STRING,
+          description: "Testo Atto 4 - La Soluzione",
+        },
+      },
+      required: ["atto_1", "atto_2", "atto_3", "atto_4"],
+    },
+    strategic_note: {
+      type: SchemaType.STRING,
+      description:
+        "Nota interna per Alessio sul perché questa azienda non ha posizionamento",
+    },
   },
-  "topErrors": [
-    {
-      "title": "Titolo breve dell'errore",
-      "description": "Spiegazione dettagliata del problema",
-      "businessImpact": "Impatto concreto sul business (con dati se possibile)",
-      "suggestion": "Cosa dovrebbero fare per risolvere"
-    }
-  ],
-  "heygenPrompt": "Testo completo del prompt per generare un video personalizzato"
-}
-
-REGOLE:
-1. marketingCoherence: analizza se il sito comunica in modo coerente, se il target e chiaro, se l'offerta e ben presentata
-2. topErrors: ESATTAMENTE 3 errori di marketing/digitali (non puramente tecnici). Concentrati su errori che impattano il business: mancanza di tracking, assenza di CTA, comunicazione inefficace, mancanza di social proof, ecc.
-3. heygenPrompt: scrivi un testo in prima persona (come se fossi il consulente che parla al titolare). Il video deve:
-   - Durare 60-90 secondi quando letto ad alta voce
-   - Iniziare con un complimento sincero e specifico sull'azienda
-   - Menzionare 2-3 problemi specifici trovati nell'audit (con dati concreti)
-   - Chiudersi con una CTA morbida per una call conoscitiva gratuita di 15 minuti
-   - Tono: professionale ma amichevole, diretto ma non aggressivo
-   - NON menzionare "audit automatico" o "analisi automatizzata" — parla come se avessi analizzato personalmente il sito
-
-IMPORTANTE: Rispondi SOLO con il JSON, senza markdown, senza backtick, senza testo aggiuntivo.`;
-}
-
-function summarizeAuditData(audit: AuditData): string {
-  const lines: string[] = [];
-
-  // Website performance
-  if (audit.website) {
-    lines.push(`Performance: ${audit.website.performance ?? "N/D"}/100`);
-    lines.push(`Mobile-friendly: ${audit.website.mobile ? "Si" : "No"}`);
-    lines.push(`HTTPS: ${audit.website.https ? "Si" : "No"}`);
-    lines.push(`Form contatto: ${audit.website.hasContactForm ? "Si" : "No"}`);
-    lines.push(`WhatsApp: ${audit.website.hasWhatsApp ? "Si" : "No"}`);
-    lines.push(`Live chat: ${audit.website.hasLiveChat ? "Si" : "No"}`);
-  }
-
-  // SEO
-  if (audit.seo) {
-    lines.push(`Meta title: ${audit.seo.hasMetaTitle ? "Presente" : "ASSENTE"}`);
-    lines.push(`Meta description: ${audit.seo.hasMetaDescription ? "Presente" : "ASSENTE"}`);
-    lines.push(`H1: ${audit.seo.hasH1 ? "Presente" : "ASSENTE"}`);
-    lines.push(`Sitemap: ${audit.seo.hasSitemap ? "Si" : "No"}`);
-    lines.push(`Schema markup: ${audit.seo.hasSchemaMarkup ? "Si" : "No"}`);
-    lines.push(`Open Graph: ${audit.seo.hasOpenGraph ? "Si" : "No"}`);
-    if (audit.seo.imagesWithoutAlt != null) {
-      lines.push(`Immagini senza alt: ${audit.seo.imagesWithoutAlt}`);
-    }
-  }
-
-  // Tracking
-  if (audit.tracking) {
-    lines.push(`Google Analytics: ${audit.tracking.hasGA4 ? "GA4" : audit.tracking.hasGoogleAnalytics ? "Universal (obsoleto)" : "ASSENTE"}`);
-    lines.push(`GTM: ${audit.tracking.hasGTM ? "Si" : "No"}`);
-    lines.push(`Facebook Pixel: ${audit.tracking.hasFacebookPixel ? "Si" : "No"}`);
-    lines.push(`Google Ads tag: ${audit.tracking.hasGoogleAdsTag ? "Si" : "No"}`);
-    lines.push(`Hotjar/Clarity: ${audit.tracking.hasHotjar || audit.tracking.hasClarity ? "Si" : "No"}`);
-  }
-
-  // Social
-  if (audit.social) {
-    const socials = [];
-    if (audit.social.facebook?.linkedFromSite) socials.push("Facebook");
-    if (audit.social.instagram?.linkedFromSite) socials.push("Instagram");
-    if (audit.social.linkedin?.linkedFromSite) socials.push("LinkedIn");
-    if (audit.social.youtube?.linkedFromSite) socials.push("YouTube");
-    lines.push(`Social collegati al sito: ${socials.length > 0 ? socials.join(", ") : "NESSUNO"}`);
-  }
-
-  // Trust
-  if (audit.trust) {
-    lines.push(`Cookie banner GDPR: ${audit.trust.hasCookieBanner ? "Si" : "No"}`);
-    lines.push(`Privacy policy: ${audit.trust.hasPrivacyPolicy ? "Si" : "No"}`);
-    lines.push(`Testimonials: ${audit.trust.hasTestimonials ? "Si" : "No"}`);
-  }
-
-  // Blog/Content
-  if (audit.content) {
-    lines.push(`Blog: ${audit.content.hasBlog ? `Si (ultimo post: ${audit.content.daysSinceLastPost ?? "?"} giorni fa)` : "No"}`);
-  }
-
-  // Email Marketing
-  if (audit.emailMarketing) {
-    lines.push(`Newsletter form: ${audit.emailMarketing.hasNewsletterForm ? "Si" : "No"}`);
-    lines.push(`Lead magnet: ${audit.emailMarketing.hasLeadMagnet ? "Si" : "No"}`);
-  }
-
-  // Tech
-  if (audit.tech) {
-    lines.push(`CMS: ${audit.tech.cms || "Non rilevato"}`);
-    if (audit.tech.isOutdated) lines.push(`Stack tecnologico: OBSOLETO`);
-  }
-
-  return lines.join("\n");
-}
+  required: ["cliche_found", "teleprompter_script", "strategic_note"],
+};
 
 // ==========================================
 // ESECUZIONE ANALISI
 // ==========================================
 
-// Modello di default se non configurato dall'utente
 const DEFAULT_MODEL = "gemini-2.5-flash";
 
 export async function runGeminiAnalysis(
-  input: GeminiAnalysisInput
+  input: StrategicAnalysisInput
 ): Promise<GeminiAnalysisResult> {
   const client = getGeminiClient();
   if (!client) {
-    throw new Error("Gemini API key non configurata. Vai in Impostazioni > API & Token.");
-  }
-
-  // Usa il modello scelto dall'utente nelle impostazioni, o il default
-  const modelName = process.env.GEMINI_MODEL || DEFAULT_MODEL;
-  const model = client.getGenerativeModel({ model: modelName });
-  const prompt = buildPrompt(input);
-
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  const text = response.text();
-
-  // Pulisci il testo da eventuali backtick markdown
-  const cleanedText = text
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  let parsed: Omit<GeminiAnalysisResult, "generatedAt" | "model">;
-  try {
-    parsed = JSON.parse(cleanedText);
-  } catch {
     throw new Error(
-      `Risposta Gemini non e un JSON valido. Risposta: ${cleanedText.substring(0, 200)}...`
+      "Gemini API key non configurata. Vai in Impostazioni > API & Token."
     );
   }
 
-  // Validazione base
-  if (!parsed.marketingCoherence || !parsed.topErrors || !parsed.heygenPrompt) {
+  const modelName = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+  const model = client.getGenerativeModel({
+    model: modelName,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: RESPONSE_SCHEMA,
+    },
+    systemInstruction: SYSTEM_PROMPT,
+  });
+
+  // Payload JSON con le variabili estratte dallo scraper
+  const userPrompt = JSON.stringify({
+    company_name: input.company_name,
+    hero_text: input.hero_text,
+    about_us_text: input.about_us_text,
+    has_active_ads: input.has_active_ads,
+  });
+
+  const result = await model.generateContent(userPrompt);
+  const response = result.response;
+  const text = response.text();
+
+  let parsed: {
+    cliche_found: string;
+    teleprompter_script: {
+      atto_1: string;
+      atto_2: string;
+      atto_3: string;
+      atto_4: string;
+    };
+    strategic_note: string;
+  };
+
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(
+      `Risposta Gemini non è un JSON valido. Risposta: ${text.substring(0, 200)}...`
+    );
+  }
+
+  // Validazione
+  if (
+    !parsed.cliche_found ||
+    !parsed.teleprompter_script ||
+    !parsed.strategic_note
+  ) {
     throw new Error("Risposta Gemini incompleta: mancano campi obbligatori");
+  }
+
+  if (
+    !parsed.teleprompter_script.atto_1 ||
+    !parsed.teleprompter_script.atto_2 ||
+    !parsed.teleprompter_script.atto_3 ||
+    !parsed.teleprompter_script.atto_4
+  ) {
+    throw new Error("Risposta Gemini incompleta: mancano atti del teleprompter");
   }
 
   return {
     ...parsed,
+    has_active_ads: input.has_active_ads,
     generatedAt: new Date().toISOString(),
     model: modelName,
   };
