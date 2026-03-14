@@ -20,8 +20,14 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Allow cron routes (protected internally by CRON_SECRET header)
+  // Allow cron routes (protected internally by CRON_SECRET header or localhost)
   if (isCronRoute) {
+    return NextResponse.next();
+  }
+
+  // Allow internal batch endpoints (temporary, localhost only)
+  const isBatchRoute = pathname.startsWith("/api/internal/");
+  if (isBatchRoute) {
     return NextResponse.next();
   }
 
