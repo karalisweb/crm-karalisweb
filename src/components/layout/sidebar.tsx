@@ -63,8 +63,8 @@ const navSections: NavSection[] = [
     title: "DATABASE",
     items: [
       { href: "/da-qualificare", label: "Da Analizzare", icon: ScanSearch, badgeKey: "daAnalizzare", badgeColor: "default" },
-      { href: "/video-da-fare", label: "Hot Leads", icon: Flame, badgeKey: "hotLeads", badgeColor: "red" },
-      { href: "/leads", label: "Warm Leads", icon: Sun, badgeKey: "warmLeads", badgeColor: "yellow" },
+      { href: "/hot-leads", label: "Hot Leads", icon: Flame, badgeKey: "hotLeads", badgeColor: "red" },
+      { href: "/warm-leads", label: "Warm Leads", icon: Sun, badgeKey: "warmLeads", badgeColor: "yellow" },
     ],
   },
   {
