@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { PipelineStage, Prisma } from "@prisma/client";
 import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
 
 /**
  * POST /api/internal/recalc-scores
  *
- * Ricalcola opportunityScore per tutti i lead con geminiAnalysis.
- * Usa la nuova logica "Sanguinamento Finanziario".
+ * v3.2 — Ricalcola opportunityScore + auto-riclassifica pipeline.
+ * FIX: inietta tracking_tools da auditData nel geminiAnalysis
+ * prima del ricalcolo, risolvendo il bug ads_networks_found: [].
+ *
  * Richiede CRON_SECRET per autenticazione.
  */
 export async function POST(request: NextRequest) {
@@ -25,28 +28,81 @@ export async function POST(request: NextRequest) {
       name: true,
       category: true,
       geminiAnalysis: true,
+      auditData: true,
       opportunityScore: true,
+      pipelineStage: true,
     },
   });
 
-  console.log(`[RECALC] Ricalcolo score per ${leads.length} lead...`);
+  console.log(`[RECALC v3.2] Ricalcolo score per ${leads.length} lead...`);
 
-  const results: Array<{ name: string; oldScore: number | null; newScore: number; breakdown: string[] }> = [];
+  const results: Array<{
+    name: string;
+    oldScore: number | null;
+    newScore: number;
+    oldStage: string;
+    newStage: string;
+    breakdown: string[];
+  }> = [];
 
   for (const lead of leads) {
-    const scoreInput = extractScoreInputFromGeminiAnalysis(lead.geminiAnalysis, lead.category);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const analysis = lead.geminiAnalysis as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const audit = lead.auditData as any;
+
+    // FIX v3.2: Se ads_networks_found è vuoto ma auditData ha tracking_tools, inietta
+    if (
+      analysis &&
+      (!analysis.ads_networks_found || analysis.ads_networks_found.length === 0) &&
+      audit?.tracking_tools?.length > 0
+    ) {
+      analysis.ads_networks_found = audit.tracking_tools;
+      // Aggiorna anche nel DB per futuri recalc
+      await db.lead.update({
+        where: { id: lead.id },
+        data: {
+          geminiAnalysis: {
+            ...analysis,
+            ads_networks_found: audit.tracking_tools,
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category);
     const scoreResult = calculateLeadScore(scoreInput);
+
+    // Auto-classificazione (v3.2: HOT → FARE_VIDEO diretto)
+    let newStage: PipelineStage;
+    // Solo per lead in fasi iniziali (non toccare CONTATTATO, CLIENTE, etc.)
+    const classifiableStages: PipelineStage[] = [
+      PipelineStage.DA_ANALIZZARE,
+      PipelineStage.HOT_LEAD,
+      PipelineStage.WARM_LEAD,
+      PipelineStage.COLD_LEAD,
+      PipelineStage.FARE_VIDEO,
+    ];
+
+    if (classifiableStages.includes(lead.pipelineStage as PipelineStage)) {
+      if (scoreResult.score >= 80) newStage = PipelineStage.FARE_VIDEO;
+      else if (scoreResult.score >= 50) newStage = PipelineStage.WARM_LEAD;
+      else newStage = PipelineStage.COLD_LEAD;
+    } else {
+      newStage = lead.pipelineStage as PipelineStage;
+    }
 
     await db.lead.update({
       where: { id: lead.id },
       data: {
         opportunityScore: scoreResult.score,
+        pipelineStage: newStage,
         scoreBreakdown: {
           score: scoreResult.score,
           tier: scoreResult.tier,
           breakdown: scoreResult.breakdown,
           calculatedAt: new Date().toISOString(),
-        },
+        } as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -54,16 +110,28 @@ export async function POST(request: NextRequest) {
       name: lead.name,
       oldScore: lead.opportunityScore,
       newScore: scoreResult.score,
+      oldStage: lead.pipelineStage,
+      newStage,
       breakdown: scoreResult.breakdown,
     });
 
+    const emoji = newStage === "FARE_VIDEO" ? "🎬" : newStage === "WARM_LEAD" ? "👍" : "❄️";
     console.log(
-      `[RECALC] ${lead.name}: ${lead.opportunityScore ?? "null"} → ${scoreResult.score} (${scoreResult.breakdown.join(", ")})`
+      `[RECALC v3.2] ${emoji} ${lead.name}: ${lead.opportunityScore ?? "null"} → ${scoreResult.score} | ${lead.pipelineStage} → ${newStage} (${scoreResult.breakdown.join(", ")})`
     );
   }
 
+  const stageChanges = results.filter(r => r.oldStage !== r.newStage).length;
+  const scoreChanges = results.filter(r => r.oldScore !== r.newScore).length;
+
+  console.log(
+    `[RECALC v3.2] === DONE === ${leads.length} lead | ${scoreChanges} score cambiati | ${stageChanges} stage cambiati`
+  );
+
   return NextResponse.json({
     total: leads.length,
+    scoreChanges,
+    stageChanges,
     results,
   });
 }

@@ -177,6 +177,10 @@ export async function POST(request: NextRequest) {
         meta_ads_copy: lead.metaAdsCopy ? [lead.metaAdsCopy] : [],
       });
 
+      // FIX v3.2: Inietta tracking tools REALI dallo strategic-extractor
+      // Gemini ritorna ads_networks_found: [] (hardcoded) — usiamo dati reali dal DOM
+      analysis.ads_networks_found = strategicData.tracking_tools_found || [];
+
       const cleanDomain = (lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "");
       analysis.ad_library_url = buildMetaAdLibraryUrl(lead.name);
       analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);
@@ -185,9 +189,9 @@ export async function POST(request: NextRequest) {
       const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null);
       const scoreResult = calculateLeadScore(scoreInput);
 
-      // STEP 6: Auto-classificazione
+      // STEP 6: Auto-classificazione (v3.2: HOT → FARE_VIDEO diretto)
       let newStage: PipelineStage;
-      if (scoreResult.score >= 80) newStage = PipelineStage.HOT_LEAD;
+      if (scoreResult.score >= 80) newStage = PipelineStage.FARE_VIDEO;
       else if (scoreResult.score >= 50) newStage = PipelineStage.WARM_LEAD;
       else newStage = PipelineStage.COLD_LEAD;
 
@@ -218,7 +222,7 @@ export async function POST(request: NextRequest) {
       });
 
       results.push({ id: lead.id, name: lead.name, status: "ok", score: scoreResult.score, stage: newStage });
-      const emoji = newStage === "HOT_LEAD" ? "🔥" : newStage === "WARM_LEAD" ? "👍" : "📋";
+      const emoji = newStage === "FARE_VIDEO" ? "🎬" : newStage === "WARM_LEAD" ? "👍" : "❄️";
       console.log(`[BATCH v3.1] ${emoji} ${lead.name} — score=${scoreResult.score} → ${newStage}`);
 
       await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_CALLS_MS));
@@ -232,7 +236,7 @@ export async function POST(request: NextRequest) {
   const ok = results.filter((r) => r.status === "ok").length;
   const errors = results.filter((r) => r.status === "error").length;
   const unreachable = results.filter((r) => r.status === "unreachable").length;
-  const hotLeads = results.filter((r) => r.stage === "HOT_LEAD").length;
+  const hotLeads = results.filter((r) => r.stage === "FARE_VIDEO").length;
   const warmLeads = results.filter((r) => r.stage === "WARM_LEAD").length;
 
   console.log(

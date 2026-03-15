@@ -208,6 +208,10 @@ export async function POST(request: NextRequest) {
 
       const analysis = await runGeminiAnalysis(geminiInput);
 
+      // Inietta tracking tools REALI dallo strategic-extractor
+      // (Gemini ritorna ads_networks_found: [] — fix: usiamo dati reali)
+      analysis.ads_networks_found = strategicData.tracking_tools_found || [];
+
       // Aggiungi URL librerie ads
       const cleanDomain = (lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "");
       analysis.ad_library_url = buildMetaAdLibraryUrl(lead.name);
@@ -217,10 +221,10 @@ export async function POST(request: NextRequest) {
       const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null);
       const scoreResult = calculateLeadScore(scoreInput);
 
-      // === STEP 6: Auto-classificazione ===
+      // === STEP 6: Auto-classificazione (v3.2: HOT → FARE_VIDEO diretto) ===
       let newStage: PipelineStage;
       if (scoreResult.score >= 80) {
-        newStage = PipelineStage.HOT_LEAD;
+        newStage = PipelineStage.FARE_VIDEO;
       } else if (scoreResult.score >= 50) {
         newStage = PipelineStage.WARM_LEAD;
       } else {
@@ -262,7 +266,7 @@ export async function POST(request: NextRequest) {
         stage: newStage,
       });
 
-      const emoji = newStage === "HOT_LEAD" ? "🔥" : newStage === "WARM_LEAD" ? "👍" : "❄️";
+      const emoji = newStage === "FARE_VIDEO" ? "🎬" : newStage === "WARM_LEAD" ? "👍" : "❄️";
       console.log(
         `[BATCH v3.1] ${emoji} ${lead.name} — score=${scoreResult.score} → ${newStage} (${scoreResult.breakdown.join(", ")})`
       );
@@ -281,7 +285,7 @@ export async function POST(request: NextRequest) {
   const errors = results.filter((r) => r.status === "error").length;
   const unreachable = results.filter((r) => r.status === "unreachable").length;
   const skipped = results.filter((r) => r.status === "skip").length;
-  const hotLeads = results.filter((r) => r.stage === "HOT_LEAD").length;
+  const hotLeads = results.filter((r) => r.stage === "FARE_VIDEO").length;
   const warmLeads = results.filter((r) => r.stage === "WARM_LEAD").length;
 
   const summary = {
@@ -298,7 +302,7 @@ export async function POST(request: NextRequest) {
   console.log(
     `[BATCH v3.1] ======= COMPLETATO =======\n` +
     `  Processati: ${ok}/${leads.length}\n` +
-    `  🔥 HOT: ${hotLeads} | 👍 WARM: ${warmLeads}\n` +
+    `  🎬 FARE_VIDEO: ${hotLeads} | 👍 WARM: ${warmLeads}\n` +
     `  🔴 Non raggiungibili: ${unreachable}\n` +
     `  ❌ Errori: ${errors} | ⏭ Skip: ${skipped}`
   );

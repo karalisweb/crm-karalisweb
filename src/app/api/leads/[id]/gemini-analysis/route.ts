@@ -165,6 +165,9 @@ export async function POST(
 
     const analysis = await runGeminiAnalysis(geminiInput);
 
+    // Inietta tracking tools REALI dallo strategic-extractor
+    analysis.ads_networks_found = tracking_tools || [];
+
     const cleanDomain = (lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "");
     analysis.ad_library_url = buildMetaAdLibraryUrl(lead.name);
     analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);

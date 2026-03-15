@@ -4,6 +4,34 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.2.0] - 2026-03-15
+
+### Bug Fixes (CRITICAL)
+
+- **FIX: ads_networks_found sempre vuoto** — `gemini-analysis.ts` hardcodava `ads_networks_found: []`, rendendo `hasTrackingPixel` SEMPRE false nel calcolo score. Ogni lead con ads attive riceveva erroneamente +20 "Ads senza pixel". Fix: tutti e 3 gli endpoint di analisi (`batch-gemini-analysis`, `leads/[id]/gemini-analysis`, `internal/batch-analysis`) ora iniettano i tracking tools REALI rilevati dallo `strategic-extractor` (GA4, GTM, Google Ads Tag, Meta Pixel, etc.)
+- **FIX: recalc-scores corregge dati storici** — Il recalc ora controlla `auditData.tracking_tools` e inietta i dati mancanti in `geminiAnalysis.ads_networks_found` prima del ricalcolo, sanando i lead già analizzati con il bug
+
+### Features
+
+- **HOT → FARE_VIDEO automatico** — I lead con score ≥80 vanno direttamente in FARE_VIDEO (saltando HOT_LEAD), eliminando il passaggio manuale di revisione. Il workflow diventa: analisi → score ≥80 → script pronto → video da registrare
+- **Layout unificato tutte le pagine** — Tutte le pagine listing (da-analizzare, hot-leads, warm-leads, cold-leads, fare-video) usano `UnifiedLeadCard` con layout compatto ed espandibile. Nessuna navigazione a pagine dettaglio, tutto visibile a colpo d'occhio
+- **Score breakdown visibile** — Ogni card mostra il dettaglio di come è stato calcolato il punteggio (es. "Ads attive: +40", "Settore high-ticket: +20") con badge colorati
+- **Script Tella in modale** — Nella pagina fare-video, lo script si apre in un Dialog modale invece di navigare via
+- **Tab Scoring in Settings** — Nuova tab "Scoring" nelle impostazioni che documenta regole, pesi, soglie e classificazione settori
+
+### Changed
+
+- **Auto-classificazione v3.2**: score ≥80 → `FARE_VIDEO`, 50-79 → `WARM_LEAD`, <50 → `COLD_LEAD`
+- **Recalc-scores v3.2**: ricalcola score + riclassifica pipeline + corregge tracking tools mancanti
+- **Batch analysis logs**: emoji aggiornati (🎬 per FARE_VIDEO invece di 🔥 per HOT_LEAD)
+
+### New Files
+
+- `src/components/leads/unified-lead-card.tsx` — Componente card unificato con varianti (analisi/hot/warm/cold/video)
+- `src/components/settings/scoring-config-tab.tsx` — Tab informativa configurazione scoring
+
+---
+
 ## [3.1.1] - 2026-03-15
 
 ### Features
