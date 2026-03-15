@@ -1009,6 +1009,16 @@ export function UnifiedLeadCard({
                   </Button>
                 </div>
               )}
+
+              {/* Riga 4 (video): Badge script rigenerato */}
+              {variant === "video" && scriptRegenerated && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/25">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                  <span className="text-[10px] font-semibold text-emerald-400">
+                    Script Tella generato — pronto per registrare
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
