@@ -22,9 +22,9 @@ COPY . .
 # Genera Prisma client
 RUN npx prisma generate
 
-# Build Next.js
+# Build Next.js (rm -rf .next per evitare cache stale)
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN rm -rf .next && npm run build
 
 # Stage 3: Runner
 FROM node:20-slim AS runner

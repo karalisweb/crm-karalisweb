@@ -169,7 +169,7 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
 
         {/* Audit in corso/attesa */}
         {auditInProgress > 0 && (
-          <Link href="/audit">
+          <Link href="/da-analizzare">
             <Card className="card-hover cursor-pointer">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -233,7 +233,7 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
 
         {/* Parcheggiati (senza sito) */}
         {noWebsiteCount > 0 && (
-          <Link href="/parcheggiati">
+          <Link href="/senza-sito">
             <Card className="card-hover cursor-pointer">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -260,7 +260,7 @@ async function SearchDetailContent({ searchId }: { searchId: string }) {
 
         {/* Falliti */}
         {failedCount > 0 && (
-          <Link href="/audit">
+          <Link href="/da-analizzare">
             <Card className="card-hover cursor-pointer border-red-500/20">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">

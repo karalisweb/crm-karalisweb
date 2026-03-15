@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         data: {
           leadId: lead.id,
           type: "STAGE_CHANGE",
-          notes: `Ritornato in pipeline dopo periodo di attesa 6 mesi. Pronto per nuova qualificazione.`,
+          notes: `Ritornato in pipeline dopo periodo di attesa 6 mesi. Pronto per nuova analisi.`,
         },
       });
 

@@ -13,14 +13,10 @@ export async function GET() {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
     }
 
-    // Leggi le variabili d'ambiente correnti
     const config = {
       apifyToken: process.env.APIFY_TOKEN ? "••••" + (process.env.APIFY_TOKEN.slice(-4) || "") : "",
       apifyWebhookSecret: process.env.APIFY_WEBHOOK_SECRET ? "••••••••" : "",
       cronSecret: process.env.CRON_SECRET ? "••••" + (process.env.CRON_SECRET.slice(-4) || "") : "",
-      dataForSeoLogin: process.env.DATAFORSEO_LOGIN ? "••••" + (process.env.DATAFORSEO_LOGIN.slice(-4) || "") : "",
-      dataForSeoPassword: process.env.DATAFORSEO_PASSWORD ? "••••••••" : "",
-      pageSpeedApiKey: process.env.PAGESPEED_API_KEY ? "••••" + (process.env.PAGESPEED_API_KEY.slice(-4) || "") : "",
       geminiApiKey: process.env.GEMINI_API_KEY ? "••••" + (process.env.GEMINI_API_KEY.slice(-4) || "") : "",
       geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
     };
@@ -42,26 +38,20 @@ export async function PUT(request: NextRequest) {
 
     const {
       apifyToken, apifyWebhookSecret, cronSecret,
-      dataForSeoLogin, dataForSeoPassword, pageSpeedApiKey,
       geminiApiKey, geminiModel,
     } = await request.json();
 
-    // Leggi file .env esistente o crea nuovo
     let envContent = "";
     try {
       envContent = await readFile(CONFIG_FILE, "utf-8");
     } catch {
-      // File non esiste, crealo
       envContent = "";
     }
 
-    // Aggiorna file .env.local E process.env in memoria
     function updateEnvVar(content: string, key: string, value: string): string {
       if (!value || value.includes("••••")) {
-        // Non aggiornare se vuoto o mascherato
         return content;
       }
-      // Aggiorna process.env in memoria (effetto immediato senza restart)
       process.env[key] = value;
       const regex = new RegExp(`^${key}=.*$`, "m");
       if (regex.test(content)) {
@@ -73,9 +63,6 @@ export async function PUT(request: NextRequest) {
     envContent = updateEnvVar(envContent, "APIFY_TOKEN", apifyToken);
     envContent = updateEnvVar(envContent, "APIFY_WEBHOOK_SECRET", apifyWebhookSecret);
     envContent = updateEnvVar(envContent, "CRON_SECRET", cronSecret);
-    envContent = updateEnvVar(envContent, "DATAFORSEO_LOGIN", dataForSeoLogin);
-    envContent = updateEnvVar(envContent, "DATAFORSEO_PASSWORD", dataForSeoPassword);
-    envContent = updateEnvVar(envContent, "PAGESPEED_API_KEY", pageSpeedApiKey);
     envContent = updateEnvVar(envContent, "GEMINI_API_KEY", geminiApiKey);
     envContent = updateEnvVar(envContent, "GEMINI_MODEL", geminiModel);
 

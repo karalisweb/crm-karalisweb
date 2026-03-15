@@ -4,6 +4,7 @@ import type { TrustAudit, WebsiteAudit } from "@/types";
 interface TrustCheckResult extends TrustAudit {
   hasContactForm: boolean;
   hasWhatsApp: boolean;
+  whatsappNumber: string | null;
   hasLiveChat: boolean;
 }
 
@@ -68,8 +69,35 @@ export function checkTrust(html: string): TrustCheckResult {
       return /email|messaggio|message|contatt|nome|name/i.test(formHtml);
     }).length > 0;
 
-  // WhatsApp
+  // WhatsApp — rileva presenza E estrai numero
   const hasWhatsApp = /wa\.me|whatsapp|api\.whatsapp/i.test(html);
+  let whatsappNumber: string | null = null;
+
+  // Estrai numero da wa.me/NUMERO
+  const waLinks = $('a[href*="wa.me"], a[href*="whatsapp.com"]');
+  waLinks.each((_, el) => {
+    if (whatsappNumber) return; // gia trovato
+    const href = $(el).attr("href") || "";
+    // Pattern: wa.me/39XXXXXXXXXX o api.whatsapp.com/send?phone=39XXXXXXXXXX
+    const waMatch = href.match(/wa\.me\/(\d{10,15})/);
+    if (waMatch) {
+      whatsappNumber = waMatch[1];
+      return;
+    }
+    const apiMatch = href.match(/phone=(\d{10,15})/);
+    if (apiMatch) {
+      whatsappNumber = apiMatch[1];
+      return;
+    }
+  });
+
+  // Fallback: cerca nel testo HTML per pattern wa.me/NUMERO non in link
+  if (!whatsappNumber) {
+    const textMatch = html.match(/wa\.me\/(\d{10,15})/);
+    if (textMatch) {
+      whatsappNumber = textMatch[1];
+    }
+  }
 
   // Live chat (pattern comuni)
   const chatPatterns = [
@@ -96,6 +124,7 @@ export function checkTrust(html: string): TrustCheckResult {
     hasTrustBadges,
     hasContactForm,
     hasWhatsApp,
+    whatsappNumber,
     hasLiveChat,
   };
 }

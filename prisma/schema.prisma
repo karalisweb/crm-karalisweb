@@ -19,6 +19,8 @@ model Lead {
   name              String
   address           String?
   phone             String?
+  whatsappNumber    String?   @map("whatsapp_number")
+  whatsappSource    String?   @map("whatsapp_source") // "website" | "google_maps"
   website           String?
   socialUrl         String?   @map("social_url")
   category          String?

@@ -149,10 +149,10 @@ const ATTO_LABELS = [
 ];
 
 // ==========================================
-// QUALIFICA CARD COMPONENT
+// ANALISI CARD COMPONENT
 // ==========================================
 
-function QualificaCard({
+function AnalisiCard({
   lead,
   index,
   onAction,
@@ -186,8 +186,8 @@ function QualificaCard({
 
   // ---- Actions ----
 
-  const handleQualify = async () => {
-    setLoading("qualify");
+  const handleApprove = async () => {
+    setLoading("approve");
     try {
       const res = await fetch(`/api/leads/${lead.id}/quick-log`, {
         method: "POST",
@@ -197,11 +197,11 @@ function QualificaCard({
           notes: notes || null,
         }),
       });
-      if (!res.ok) throw new Error("Errore nella qualificazione");
-      toast.success(`${lead.name} qualificato!`);
+      if (!res.ok) throw new Error("Errore nello spostamento");
+      toast.success(`${lead.name} spostato in Fare Video!`);
       onAction();
     } catch {
-      toast.error("Errore nella qualificazione");
+      toast.error("Errore nello spostamento");
     } finally {
       setLoading(null);
     }
@@ -654,17 +654,17 @@ function QualificaCard({
                 {/* Bottoni operativi */}
                 <div className="flex gap-2">
                   <Button
-                    onClick={handleQualify}
+                    onClick={handleApprove}
                     disabled={!!loading}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                     size="sm"
                   >
-                    {loading === "qualify" ? (
+                    {loading === "approve" ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                     )}
-                    Qualifica
+                    Passa a Video
                   </Button>
                   <Button
                     onClick={handleNonTarget}
@@ -678,7 +678,7 @@ function QualificaCard({
                     ) : (
                       <XCircle className="h-4 w-4 mr-2" />
                     )}
-                    Squalifica
+                    Non Target
                   </Button>
                   <Button asChild variant="ghost" size="sm">
                     <Link href={`/leads/${lead.id}`}>
@@ -776,7 +776,7 @@ function QualificaCard({
 // PAGE COMPONENT
 // ==========================================
 
-export default function DaQualificarePage() {
+export default function DaAnalizzarePage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -804,9 +804,9 @@ export default function DaQualificarePage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Da Qualificare</h1>
+          <h1 className="text-2xl font-bold">Da Analizzare</h1>
           <p className="text-sm text-muted-foreground">
-            Workspace di Daniela — Revisione lead prima dell&apos;outreach
+            Lead in attesa di analisi Gemini — Revisione prima dell&apos;outreach
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -843,7 +843,7 @@ export default function DaQualificarePage() {
         <Card>
           <CardContent className="p-8 text-center">
             <ClipboardCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Nessun lead da qualificare</h3>
+            <h3 className="font-semibold text-lg mb-2">Nessun lead da analizzare</h3>
             <p className="text-sm text-muted-foreground mb-4">
               I lead appariranno qui per la revisione.
             </p>
@@ -853,7 +853,7 @@ export default function DaQualificarePage() {
       ) : (
         <div className="space-y-3">
           {leads.map((lead, index) => (
-            <QualificaCard key={lead.id} lead={lead} index={index} onAction={fetchData} />
+            <AnalisiCard key={lead.id} lead={lead} index={index} onAction={fetchData} />
           ))}
         </div>
       )}

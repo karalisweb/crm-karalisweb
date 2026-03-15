@@ -14,7 +14,6 @@ import { signOut } from "next-auth/react";
 
 const pageNames: Record<string, string> = {
   "/": "Dashboard",
-  "/oggi": "Oggi",
   "/da-analizzare": "Da Analizzare",
   "/hot-leads": "Hot Leads",
   "/warm-leads": "Warm Leads",

@@ -892,7 +892,7 @@ function LeadsPageContent() {
         <div>
           <h1 className="text-xl md:text-3xl font-bold">Da Chiamare</h1>
           <p className="text-sm text-muted-foreground">
-            {total} lead qualificati (sito + audit)
+            {total} lead analizzati (sito + audit)
           </p>
         </div>
         <Link

@@ -94,7 +94,7 @@ function LeadArchiveCard({
               className="h-8 px-2 border-green-500/50 text-green-500 hover:bg-green-500/10"
               onClick={restore}
               disabled={loading}
-              title="Ripristina in Da Qualificare"
+              title="Ripristina in Da Analizzare"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

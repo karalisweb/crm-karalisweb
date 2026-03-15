@@ -8,7 +8,6 @@ import { detectEmailMarketing } from "./email-detector";
 import { detectTech } from "./tech-detector";
 import { calculateOpportunityScore } from "./score-calculator";
 import { generateTalkingPoints, flattenTalkingPoints } from "./talking-points";
-import { runPageSpeedAnalysis, isPageSpeedConfigured } from "./pagespeed";
 
 interface AuditOptions {
   website: string;
@@ -71,15 +70,9 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
   const baseUrl = new URL(url).origin;
 
   // Esegui tutti i check in parallelo
-  // PageSpeed viene eseguito solo se configurato (ha la API key)
-  const pageSpeedPromise = isPageSpeedConfigured()
-    ? runPageSpeedAnalysis(url, "mobile")
-    : Promise.resolve(null);
-
-  const [seoResult, blogResult, pageSpeedResult] = await Promise.all([
+  const [seoResult, blogResult] = await Promise.all([
     checkSEO(html, baseUrl),
     checkBlog(html, baseUrl),
-    pageSpeedPromise,
   ]);
 
   const trackingResult = detectTracking(html);
@@ -88,17 +81,15 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
   const emailResult = detectEmailMarketing(html);
   const techResult = detectTech(html);
 
-  // Costruisci audit data
-  // Se PageSpeed e' disponibile, usa i dati reali, altrimenti usa check HTML
-  // Per mobile: usa PageSpeed se disponibile, altrimenti il nostro check HTML
-  const isMobileFriendly = pageSpeedResult?.mobile ?? seoResult.mobileFriendly ?? false;
+  // Costruisci audit data con valori default (PageSpeed rimosso)
+  const isMobileFriendly = seoResult.mobileFriendly ?? false;
 
   const websiteAudit: WebsiteAudit = {
-    performance: pageSpeedResult?.performance ?? 50,
-    accessibility: pageSpeedResult?.accessibility ?? 50,
-    bestPractices: pageSpeedResult?.bestPractices ?? 50,
-    seoScore: pageSpeedResult?.seo ?? 50,
-    loadTime: pageSpeedResult?.loadTime ?? 3.0,
+    performance: 50,
+    accessibility: 50,
+    bestPractices: 50,
+    seoScore: 50,
+    loadTime: 3.0,
     mobile: isMobileFriendly,
     https: url.startsWith("https://"),
     hasContactForm: trustResult.hasContactForm,
@@ -126,9 +117,9 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
     imagesWithoutAlt: seoResult.imagesWithoutAlt ?? 0,
     totalImages: seoResult.totalImages ?? 0,
     coreWebVitals: {
-      lcp: pageSpeedResult?.largestContentfulPaint ?? 2500,
-      fid: pageSpeedResult?.totalBlockingTime ?? 100, // TBT come proxy per FID
-      cls: pageSpeedResult?.cumulativeLayoutShift ?? 0.1,
+      lcp: 2500,
+      fid: 100,
+      cls: 0.1,
     },
   };
 

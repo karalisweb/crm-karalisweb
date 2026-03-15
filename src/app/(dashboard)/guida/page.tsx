@@ -6,13 +6,13 @@ import {
   ChevronDown,
   ChevronUp,
   BookOpen,
-  Chrome,
   Search,
-  Eye,
-  HelpCircle,
-  CheckCircle2,
+  Video,
+  Send,
+  BarChart3,
+  MessageCircle,
+  Zap,
   AlertTriangle,
-  ExternalLink,
 } from "lucide-react";
 
 function Section({
@@ -81,311 +81,272 @@ export default function GuidaPage() {
       <div>
         <h1 className="text-2xl font-bold">Guida</h1>
         <p className="text-sm text-muted-foreground">
-          Come verificare i lead prima di passarli ad Alessio
+          Workflow quotidiano e come usare il CRM
         </p>
       </div>
 
       <div className="space-y-3">
-        {/* SEZIONE 1: Come verificare un lead */}
-        <Section title="Come verificare un lead" icon={CheckCircle2} defaultOpen={true}>
+        {/* SEZIONE 1: Routine mattutina */}
+        <Section title="Routine mattutina (5 video/giorno)" icon={Video} defaultOpen={true}>
           <p>
-            Il sistema analizza automaticamente i siti web dei lead e trova problemi.
-            Per ogni voce della checklist vedrai un badge colorato:
-          </p>
-          <div className="flex gap-3 my-2">
-            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-emerald-500/15 text-emerald-500">
-              Sì
-            </span>
-            <span className="text-muted-foreground text-sm">= il sistema ha trovato questa cosa sul sito</span>
-          </div>
-          <div className="flex gap-3 my-2">
-            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-red-500/15 text-red-400">
-              No
-            </span>
-            <span className="text-muted-foreground text-sm">= il sistema NON ha trovato questa cosa sul sito</span>
-          </div>
-          <p>
-            Ma il sistema <strong>non è perfetto</strong>: a volte sbaglia.
-            Il tuo compito è <strong>controllare che i dati siano veri</strong> prima
-            di passare il lead ad Alessio.
+            Ogni mattina il CRM ha gia pronto il lavoro: i lead sono stati analizzati
+            durante la notte da Gemini AI. Ecco i passaggi:
           </p>
 
           <div className="space-y-3">
             <Step n={1}>
               <p>
-                <strong>Apri la pagina &quot;Da Chiamare&quot;</strong> dal menu a sinistra.
-                Vedrai i lead ordinati per punteggio (il più alto in cima).
+                <strong>Apri &quot;Hot Leads&quot;</strong> dalla sidebar. Qui trovi i lead con
+                score piu alto e analisi Gemini completa. Sono gia pronti per il video.
               </p>
             </Step>
 
             <Step n={2}>
               <p>
-                <strong>Clicca sul link del sito web</strong> (il rettangolo blu con il dominio,
-                tipo &quot;gegcostruzioni.it&quot;). Si apre il sito in una nuova scheda.
+                <strong>Clicca su un lead</strong> e vai al tab <strong>&quot;Analisi Strategica&quot;</strong>.
+                Trovi lo script video generato da Gemini: apertura, problemi specifici del sito,
+                proposta di valore. Leggilo come un teleprompter.
               </p>
             </Step>
 
             <Step n={3}>
               <p>
-                <strong>Controlla i punti della checklist</strong>. Ogni voce mostra{" "}
-                <strong>Sì</strong> o <strong>No</strong> (cosa ha rilevato il sistema) e
-                le istruzioni su come verificare manualmente.
+                <strong>Registra il video personalizzato</strong> per quel lead.
+                Lo script e basato su dati reali: coerenza sito, ads attive, problemi concreti.
               </p>
             </Step>
 
             <Step n={4}>
               <p>
-                <strong>Spunta le checkbox</strong> man mano che verifichi. Quando sono tutte
-                spuntate, il lead diventa &quot;Verificato&quot; e Alessio sa che può fidarsi
-                dei dati.
+                <strong>Carica il video</strong> sulla pagina Karalisweb dedicata al lead.
+                Copia il link della pagina video.
               </p>
             </Step>
 
             <Step n={5}>
               <p>
-                <strong>Usa il campo &quot;Note verifica&quot;</strong> per scrivere qualsiasi
-                osservazione utile. Ad esempio: &quot;sito in rifacimento&quot;,
-                &quot;GTM presente ma non trovo i tag&quot;, &quot;numero di telefono diverso da quello
-                su Google&quot;, ecc. Le note si salvano automaticamente e Alessio le leggerà
-                prima di chiamare.
+                <strong>Invia il link via WhatsApp</strong>. Il numero WhatsApp e gia estratto
+                dal sito o da Google Maps. Clicca il link verde nella scheda lead per aprire
+                la chat WhatsApp direttamente.
+              </p>
+            </Step>
+
+            <Step n={6}>
+              <p>
+                <strong>Sposta il lead in &quot;Video Inviato&quot;</strong> dalla pipeline.
+                Il sistema traccia automaticamente se il prospect apre il video.
               </p>
             </Step>
           </div>
 
           <Tip>
-            Se non sei sicura di un punto, <strong>NON spuntare</strong> la checkbox.
-            Scrivi il dubbio nel campo note e vai avanti. Meglio lasciare un lead
-            non verificato che confermarlo con dati sbagliati.
+            Obiettivo: 5 video al giorno, senza interruzioni. Se un lead non ha analisi
+            completa, saltalo e passa al prossimo.
           </Tip>
         </Section>
 
-        {/* SEZIONE 2: Estensioni Chrome */}
-        <Section title="Estensioni Chrome da installare" icon={Chrome}>
+        {/* SEZIONE 2: Pipeline */}
+        <Section title="Come funziona la Pipeline" icon={BarChart3}>
+          <p>La pipeline ha 18 stage. Ogni lead si muove in questo ordine:</p>
+
+          <div className="space-y-2 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="p-2 rounded bg-muted/50">
+                <strong>DA_ANALIZZARE</strong>
+                <p className="text-xs text-muted-foreground">Lead appena importati, in attesa di analisi Gemini</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>HOT_LEAD / WARM_LEAD</strong>
+                <p className="text-xs text-muted-foreground">Classificati da Gemini in base allo score</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>FARE_VIDEO</strong>
+                <p className="text-xs text-muted-foreground">Pronti per registrare il video personalizzato</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>VIDEO_INVIATO</strong>
+                <p className="text-xs text-muted-foreground">Video inviato, in attesa di reazione</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>FOLLOW_UP 1/2/3</strong>
+                <p className="text-xs text-muted-foreground">Follow-up progressivi se non rispondono</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>LINKEDIN</strong>
+                <p className="text-xs text-muted-foreground">Contatto via LinkedIn</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>TELEFONATA 1/2/3</strong>
+                <p className="text-xs text-muted-foreground">Chiamate progressive</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>CALL_FISSATA</strong>
+                <p className="text-xs text-muted-foreground">Appuntamento confermato</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>IN_TRATTATIVA</strong>
+                <p className="text-xs text-muted-foreground">Trattativa commerciale in corso</p>
+              </div>
+              <div className="p-2 rounded bg-muted/50">
+                <strong>CLIENTE</strong>
+                <p className="text-xs text-muted-foreground">Deal chiuso, cliente acquisito</p>
+              </div>
+            </div>
+
+            <p className="text-muted-foreground mt-2">
+              <strong>Stage di uscita:</strong> PERSO (non interessato), ARCHIVIATO (ricontattare dopo),
+              NON_TARGET (nessun segnale commerciale), SENZA_SITO (niente da analizzare)
+            </p>
+          </div>
+
+          <Tip>
+            La pipeline e SACRA. Gli stage non si modificano. Il flusso e:
+            Analisi Gemini → Score → HOT/WARM → Video → Follow-up → Trattativa → Cliente.
+          </Tip>
+        </Section>
+
+        {/* SEZIONE 3: Nuova ricerca */}
+        <Section title="Come avviare una nuova ricerca" icon={Search}>
+          <div className="space-y-3">
+            <Step n={1}>
+              <p>
+                Vai su <strong>&quot;Nuova Ricerca&quot;</strong> dalla sidebar.
+              </p>
+            </Step>
+            <Step n={2}>
+              <p>
+                Inserisci <strong>categoria</strong> (es. &quot;Ristoranti&quot;, &quot;Dentisti&quot;,
+                &quot;Imprese edili&quot;) e <strong>zona</strong> (es. &quot;Milano centro&quot;,
+                &quot;Roma EUR&quot;).
+              </p>
+            </Step>
+            <Step n={3}>
+              <p>
+                Clicca <strong>&quot;Cerca&quot;</strong>. Il sistema usa Apify per cercare su Google Maps
+                e importa automaticamente i lead trovati.
+              </p>
+            </Step>
+            <Step n={4}>
+              <p>
+                I lead con sito web vengono analizzati automaticamente: estrazione dati strategici,
+                WhatsApp, e poi analisi Gemini AI. Il tutto avviene in background.
+              </p>
+            </Step>
+          </div>
+        </Section>
+
+        {/* SEZIONE 4: Analisi Gemini */}
+        <Section title="Analisi Gemini AI" icon={Zap}>
           <p>
-            Queste estensioni ti aiutano a verificare velocemente cosa c'è su un sito.
-            Si installano una volta e poi funzionano sempre.
+            Gemini analizza ogni lead e produce uno <strong>script video personalizzato</strong> (teleprompter).
+            L'analisi si basa su dati reali estratti dal sito:
+          </p>
+          <ul className="list-disc list-inside text-muted-foreground space-y-1">
+            <li>Testo homepage, pagina &quot;chi siamo&quot;, pagina servizi</li>
+            <li>Coerenza tra cosa dice il sito e cosa fa l'azienda</li>
+            <li>Presenza/assenza di Google Ads e Meta Ads</li>
+            <li>Problemi specifici e concreti (non generici)</li>
+          </ul>
+
+          <p className="mt-2">
+            L'analisi viene eseguita automaticamente dopo l'audit del sito.
+            Puoi anche rilanciarla manualmente dal tab &quot;Analisi Strategica&quot; del lead.
           </p>
 
-          <Card className="bg-muted/50">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h4 className="font-semibold">Tag Assistant Legacy (by Google)</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Serve per verificare: Google Analytics, Google Tag Manager, Google Ads
-                  </p>
-                  <div className="mt-3 space-y-1">
-                    <p className="text-xs"><strong>Come si usa:</strong></p>
-                    <p className="text-xs text-muted-foreground">
-                      1. Installa l'estensione dal link sotto
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      2. Apri il sito del lead
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      3. Clicca sull'icona dell'estensione in alto a destra nel browser
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      4. Clicca &quot;Enable&quot; e ricarica la pagina
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      5. Guarda le icone colorate: <span className="text-green-500 font-semibold">Verde</span> = tag funzionante,{" "}
-                      <span className="text-red-500 font-semibold">Rosso</span> = errore,{" "}
-                      <strong>Niente</strong> = non c'è nessun tag
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <a
-                href="https://chromewebstore.google.com/detail/tag-assistant-legacy-by-g/kejbdjndbnbjgmefkgdddjlbokphdefk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                Installa Tag Assistant
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-muted/50">
-            <CardContent className="p-4">
-              <div>
-                <h4 className="font-semibold">Meta Pixel Helper (by Facebook)</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Serve per verificare: Facebook Pixel, Meta Pixel
-                </p>
-                <div className="mt-3 space-y-1">
-                  <p className="text-xs"><strong>Come si usa:</strong></p>
-                  <p className="text-xs text-muted-foreground">
-                    1. Installa l'estensione dal link sotto
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    2. Apri il sito del lead
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    3. Guarda l'icona dell'estensione in alto a destra:
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    - <span className="text-gray-400 font-semibold">Grigia</span> = NON c'è il pixel (confermato)
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    - <span className="text-blue-500 font-semibold">Blu con un numero</span> = il pixel C'È
-                  </p>
-                </div>
-              </div>
-              <a
-                href="https://chromewebstore.google.com/detail/meta-pixel-helper/fdgfkebogiimcoedlicjlajpkdmockpc"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                Installa Meta Pixel Helper
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </CardContent>
-          </Card>
+          <Tip>
+            L'analisi batch gira ogni notte alle 3:00. La mattina trovi tutto pronto.
+            Se serve analizzare un lead urgente, usa il bottone &quot;Analizza&quot; nella pagina del lead.
+          </Tip>
         </Section>
 
-        {/* SEZIONE 3: Come controllare caso per caso */}
-        <Section title="Come controllare caso per caso" icon={Search}>
-          {/* Analytics */}
+        {/* SEZIONE 5: WhatsApp e Video Tracking */}
+        <Section title="WhatsApp e Video Tracking" icon={MessageCircle}>
           <div>
-            <h4 className="font-semibold mb-2">Google Analytics (GA4)</h4>
-            <p className="text-muted-foreground mb-2">
-              <strong>Metodo facile</strong> (con estensione):
-              Apri il sito con Tag Assistant attivo. Se vedi un tag &quot;Google Analytics&quot; o
-              &quot;GA4&quot; con icona verde, c'è Analytics.
-            </p>
-            <p className="text-muted-foreground mb-2">
-              <strong>Metodo manuale:</strong>{" "}
-              Tasto destro sulla pagina → &quot;Visualizza sorgente pagina&quot; →
-              Cerca (Ctrl+F) queste parole: <code className="bg-muted px-1 rounded">gtag</code>,{" "}
-              <code className="bg-muted px-1 rounded">analytics</code>,{" "}
-              <code className="bg-muted px-1 rounded">G-</code>.
-              Se non trovi niente, non c'è Analytics.
-            </p>
-            <Tip>
-              <strong>Caso difficile:</strong> se nel sorgente trovi{" "}
-              <code className="bg-muted px-1 rounded">GTM-</code> ma NON trovi{" "}
-              <code className="bg-muted px-1 rounded">G-</code>, vuol dire che c'è Google Tag Manager
-              ma Analytics potrebbe essere configurato DENTRO Tag Manager. In questo caso
-              non puoi verificare facilmente - lascia la checkbox non spuntata e scrivi
-              una nota.
-            </Tip>
-          </div>
-
-          {/* Facebook Pixel */}
-          <div>
-            <h4 className="font-semibold mb-2">Facebook/Meta Pixel</h4>
-            <p className="text-muted-foreground mb-2">
-              <strong>Metodo facile</strong> (con estensione):
-              Apri il sito con Meta Pixel Helper installato. Guarda l'icona:
-              grigia = no pixel, blu = sì.
-            </p>
+            <h4 className="font-semibold mb-2">WhatsApp</h4>
             <p className="text-muted-foreground">
-              <strong>Metodo manuale:</strong>{" "}
-              Sorgente pagina → Cerca{" "}
-              <code className="bg-muted px-1 rounded">fbq</code> o{" "}
-              <code className="bg-muted px-1 rounded">facebook.net</code>.
-              Se non trovi niente, non c'è il pixel.
-            </p>
-          </div>
-
-          {/* Google Ads */}
-          <div>
-            <h4 className="font-semibold mb-2">Google Ads</h4>
-            <p className="text-muted-foreground mb-2">
-              Sorgente pagina → Cerca{" "}
-              <code className="bg-muted px-1 rounded">AW-</code> o{" "}
-              <code className="bg-muted px-1 rounded">googleads</code>.
-              Se non trovi niente, non hanno il tag Google Ads.
-            </p>
-            <Tip>
-              Come per Analytics: se c'è GTM, il tag Ads potrebbe essere dentro.
-              Se trovi solo GTM senza tag Ads visibile, lascia non spuntato.
-            </Tip>
-          </div>
-
-          {/* Cookie Banner */}
-          <div>
-            <h4 className="font-semibold mb-2">Cookie Banner (GDPR)</h4>
-            <p className="text-muted-foreground">
-              Apri il sito in una <strong>finestra anonima</strong> (Ctrl+Shift+N su Chrome).
-              Alla prima visita dovrebbe apparire un banner/popup che chiede di accettare i cookie.
-              Se non appare niente, non c'è il cookie banner. Semplice!
-            </p>
-          </div>
-
-          {/* Form Contatto */}
-          <div>
-            <h4 className="font-semibold mb-2">Form di Contatto</h4>
-            <p className="text-muted-foreground">
-              Naviga il sito: guarda la homepage e cerca una pagina &quot;Contatti&quot; o
-              &quot;Contattaci&quot;. Se non c'è nessun modulo da compilare (con campi tipo
-              nome, email, messaggio), allora non c'è form di contatto.
-            </p>
-          </div>
-
-          {/* Sito in generale */}
-          <div>
-            <h4 className="font-semibold mb-2">Controllo generale del sito</h4>
-            <p className="text-muted-foreground">
-              Quando apri il sito, chiediti:
+              Il sistema cerca attivamente il numero WhatsApp dell'azienda in due modi:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-1 mt-1">
-              <li>Il sito si carica? Funziona?</li>
-              <li>Il contenuto corrisponde alla categoria del lead? (es. se il CRM dice &quot;impresa edile&quot;, il sito parla di edilizia?)</li>
-              <li>Il sito sembra aggiornato o abbandonato?</li>
-              <li>Ha contenuti reali o è un template vuoto / pagina di parcheggio?</li>
-              <li>È un sito vero dell'azienda o un aggregatore / portale generico?</li>
+              <li><strong>Dal sito web</strong>: link wa.me o api.whatsapp.com (badge verde &quot;dal sito&quot;)</li>
+              <li><strong>Da Google Maps</strong>: usa il telefono trovato su Google Maps (badge giallo &quot;da Google Maps&quot;)</li>
+            </ul>
+            <p className="text-muted-foreground mt-2">
+              Se nessun WhatsApp viene trovato ma c'e un telefono, viene mostrato con badge grigio
+              &quot;da verificare&quot;.
+            </p>
+          </div>
+
+          <div className="mt-4">
+            <h4 className="font-semibold mb-2">Video Tracking</h4>
+            <p className="text-muted-foreground">
+              Quando invii il link della pagina video al prospect, il sistema traccia se lo aprono.
+              Nella scheda del lead vedrai:
+            </p>
+            <ul className="list-disc list-inside text-muted-foreground space-y-1 mt-1">
+              <li>Quante volte il video e stato visto</li>
+              <li>Quando e stato visto l'ultima volta</li>
+              <li>Badge &quot;VISTO&quot; appare automaticamente</li>
+              <li>Notifica toast in tempo reale quando il prospect apre il video</li>
             </ul>
           </div>
+
+          <Tip>
+            Il tracking funziona tramite uno snippet JavaScript nella pagina Karalisweb.
+            Lo snippet e gia configurato. Se un lead ha il badge &quot;VISTO&quot;, e il momento
+            giusto per il follow-up!
+          </Tip>
         </Section>
 
-        {/* SEZIONE 4: Casi dubbi */}
-        <Section title="Cosa fare nei casi dubbi" icon={HelpCircle}>
-          <div className="space-y-3">
-            <p>
-              <strong>Se non sei sicura di un punto della checklist:</strong>
-            </p>
-            <ul className="list-disc list-inside text-muted-foreground space-y-2">
-              <li>
-                <strong>NON spuntare</strong> la checkbox - meglio lasciare in sospeso che
-                confermare dati sbagliati
-              </li>
-              <li>
-                <strong>Scrivi nel campo &quot;Note verifica&quot;</strong> sotto la checklist.
-                Spiega il dubbio, ad esempio: &quot;GTM presente, tag potrebbero essere dentro&quot;
-                oppure &quot;sito lentissimo, non riesco a verificare&quot;
-              </li>
-              <li>
-                Se il sito ha <strong>Google Tag Manager (GTM)</strong> ma non vedi i tag
-                direttamente, scrivi nelle note: &quot;GTM presente, tag potrebbero essere dentro&quot;
-              </li>
-              <li>
-                Se il sito <strong>non si carica</strong> o dà errore, non spuntare niente e
-                scrivilo nelle note
-              </li>
-              <li>
-                Se noti qualcosa di <strong>interessante o utile</strong> (es. &quot;hanno un e-commerce
-                ma nessun tracking&quot;, &quot;il numero di telefono è diverso&quot;, &quot;sito in
-                manutenzione&quot;), <strong>scrivilo nelle note</strong> - Alessio lo apprezzerà
-              </li>
-              <li>
-                In caso di dubbio, <strong>chiedi ad Alessio</strong> - è meglio chiedere che
-                confermare qualcosa di sbagliato
-              </li>
-            </ul>
+        {/* SEZIONE 6: Servizi esterni */}
+        <Section title="Servizi esterni" icon={BookOpen}>
+          <p>Il CRM usa due servizi esterni:</p>
 
-            <Tip>
-              Ricorda: lo scopo della verifica è dare ad Alessio <strong>argomenti solidi</strong> per
-              la chiamata. Se dici &quot;confermato: non hanno Analytics&quot; e poi il cliente dice
-              &quot;veramente sì, ce l'abbiamo&quot;, Alessio fa una brutta figura. Meglio
-              essere prudenti! Le note sono il tuo strumento migliore per segnalare cose
-              che il sistema non può vedere.
-            </Tip>
+          <div className="space-y-3 mt-2">
+            <Card className="bg-muted/50">
+              <CardContent className="p-3">
+                <h4 className="font-semibold">Apify</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Scraping Google Maps per trovare aziende + Meta Ad Library per verificare ads attive.
+                  Configurabile in Impostazioni.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-3">
+                <h4 className="font-semibold">Gemini AI</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Analisi strategica delle aziende e generazione script video personalizzati.
+                  Configurabile in Impostazioni.
+                </p>
+              </CardContent>
+            </Card>
           </div>
+
+          <p className="text-muted-foreground mt-2">
+            Vai in <strong>Impostazioni</strong> per verificare lo stato di connessione di ogni servizio
+            e per aggiornare le API key.
+          </p>
+        </Section>
+
+        {/* SEZIONE 7: Ads Intelligence */}
+        <Section title="Ads Intelligence" icon={Send}>
+          <p>
+            Il sistema verifica se un'azienda ha campagne Google Ads o Meta Ads attive:
+          </p>
+          <ul className="list-disc list-inside text-muted-foreground space-y-1">
+            <li><strong>Google Ads</strong>: verificato tramite Apify Google Search Scraper</li>
+            <li><strong>Meta Ads</strong>: verificato tramite Apify Facebook Ads Library Scraper</li>
+            <li><strong>Landing Page</strong>: il testo della landing page viene estratto e confrontato con il sito</li>
+          </ul>
+          <p className="text-muted-foreground mt-2">
+            Se viene rilevata un'incoerenza tra annuncio e landing page, il sistema genera un
+            warning che puoi usare come argomento nel video.
+          </p>
+          <p className="text-muted-foreground mt-1">
+            Usa il bottone <strong>&quot;Check Ads&quot;</strong> nel tab Analisi Strategica per
+            verificare le ads di un lead specifico.
+          </p>
         </Section>
       </div>
     </div>

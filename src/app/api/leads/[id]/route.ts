@@ -94,12 +94,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           respondedAt: body.respondedAt ? new Date(body.respondedAt) : null,
         }),
         ...(body.respondedVia !== undefined && { respondedVia: body.respondedVia }),
-        // Qualificazione Daniela
+        // Note analisi
         ...(body.danielaNotes !== undefined && { danielaNotes: body.danielaNotes }),
-        ...(body.qualifiedAt !== undefined && {
-          qualifiedAt: body.qualifiedAt ? new Date(body.qualifiedAt) : null,
-        }),
-        ...(body.qualifiedBy !== undefined && { qualifiedBy: body.qualifiedBy }),
         // Recontact
         ...(body.recontactAt !== undefined && {
           recontactAt: body.recontactAt ? new Date(body.recontactAt) : null,

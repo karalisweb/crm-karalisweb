@@ -1,6 +1,7 @@
 import PQueue from "p-queue";
 import { db } from "@/lib/db";
 import { extractStrategicData } from "@/lib/audit/strategic-extractor";
+import { extractWhatsAppNumber, normalizePhoneForWhatsApp } from "@/lib/audit/whatsapp-extractor";
 import { isGeminiConfigured } from "@/lib/gemini";
 import { runGeminiAnalysis } from "@/lib/gemini-analysis";
 import { Prisma, PipelineStage } from "@prisma/client";
@@ -13,6 +14,7 @@ interface LeadForAudit {
   id: string;
   name: string;
   website: string | null;
+  phone: string | null;
 }
 
 /**
@@ -29,6 +31,7 @@ export async function processBatchAudits(searchId: string): Promise<void> {
       id: true,
       name: true,
       website: true,
+      phone: true,
     },
   });
 
@@ -50,7 +53,7 @@ export async function processBatchAudits(searchId: string): Promise<void> {
  * Esegue l'estrazione strategica di un singolo lead.
  */
 async function processLeadAudit(lead: LeadForAudit): Promise<void> {
-  const { id: leadId, website, name: brandName } = lead;
+  const { id: leadId, website, name: brandName, phone } = lead;
 
   if (!website) return;
 
@@ -91,7 +94,20 @@ async function processLeadAudit(lead: LeadForAudit): Promise<void> {
       brandName || ""
     );
 
-    // 3. Salva risultati
+    // 3. Estrai WhatsApp dal sito (ricerca tenace)
+    let whatsappNumber = extractWhatsAppNumber(html);
+    let whatsappSource: string | null = null;
+    if (whatsappNumber) {
+      whatsappSource = "website";
+    } else if (phone) {
+      // Fallback: usa il telefono da Google Maps
+      whatsappNumber = normalizePhoneForWhatsApp(phone);
+      if (whatsappNumber) {
+        whatsappSource = "google_maps";
+      }
+    }
+
+    // 4. Salva risultati
     await db.lead.update({
       where: { id: leadId },
       data: {
@@ -99,6 +115,7 @@ async function processLeadAudit(lead: LeadForAudit): Promise<void> {
         auditCompletedAt: new Date(),
         auditData: strategicData as unknown as Prisma.InputJsonValue,
         pipelineStage: PipelineStage.DA_ANALIZZARE,
+        ...(whatsappNumber && { whatsappNumber, whatsappSource }),
       },
     });
 

@@ -1,6 +1,6 @@
 /**
  * Commercial Module
- * Sistema semplificato per qualificare lead per 5 chiamate/giorno
+ * Sistema semplificato per analizzare lead per 5 video/giorno
  */
 
 // Detectors

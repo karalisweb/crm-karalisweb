@@ -334,9 +334,9 @@ export default function VideoDaFarePage() {
             <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-semibold text-lg mb-2">Nessun video da fare</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              I lead qualificati appariranno qui con lo script pronto.
+              I lead analizzati appariranno qui con lo script pronto.
             </p>
-            <Button asChild><Link href="/da-analizzare">Vai a Qualificare</Link></Button>
+            <Button asChild><Link href="/da-analizzare">Vai a Da Analizzare</Link></Button>
           </CardContent>
         </Card>
       ) : (

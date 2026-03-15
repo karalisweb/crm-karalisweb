@@ -14,6 +14,7 @@ import {
   MapPin,
   Star,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 import { PipelineStageSelector } from "@/components/leads/pipeline-stage-selector";
 import { GeminiAnalysisCard } from "@/components/leads/gemini-analysis-card";
@@ -161,6 +162,42 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
                       className="text-sm text-blue-400 hover:underline"
                     >
                       {lead.phone}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* WhatsApp */}
+              {(lead.whatsappNumber || lead.phone) && (
+                <div className="flex items-start gap-3">
+                  <MessageCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">
+                      WhatsApp
+                      {lead.whatsappSource === "website" && (
+                        <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1 text-green-500 border-green-500/30">
+                          dal sito
+                        </Badge>
+                      )}
+                      {lead.whatsappSource === "google_maps" && (
+                        <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1 text-yellow-500 border-yellow-500/30">
+                          da Google Maps
+                        </Badge>
+                      )}
+                      {!lead.whatsappNumber && lead.phone && (
+                        <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1 text-gray-400 border-gray-500/30">
+                          da verificare
+                        </Badge>
+                      )}
+                    </p>
+                    <a
+                      href={`https://wa.me/${lead.whatsappNumber || lead.phone?.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-green-400 hover:underline flex items-center gap-1"
+                    >
+                      +{lead.whatsappNumber || lead.phone?.replace(/\D/g, "")}
+                      <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                 </div>

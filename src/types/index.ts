@@ -355,5 +355,3 @@ export interface VerificationChecks {
 // Re-export commercial types
 export * from "./commercial";
 
-// Re-export qualification types
-export * from "./qualification";

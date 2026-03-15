@@ -289,7 +289,7 @@ export function CrmConfigTab() {
             <CardTitle>Soglia Score</CardTitle>
           </div>
           <CardDescription>
-            Soglia informativa per prioritizzare i lead. Daniela decide la qualificazione manualmente.
+            Soglia informativa per prioritizzare i lead. La classificazione avviene automaticamente dopo l&apos;analisi Gemini.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -306,7 +306,7 @@ export function CrmConfigTab() {
               />
             </div>
             <div className="pt-6 text-sm text-muted-foreground">
-              Score di riferimento per la qualificazione
+              Score di riferimento per la classificazione
             </div>
           </div>
         </CardContent>

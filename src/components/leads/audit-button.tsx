@@ -28,7 +28,6 @@ const AUDIT_STEPS: { id: string; label: string }[] = [
   { id: "trust", label: "Trust & compliance" },
   { id: "email", label: "Email marketing" },
   { id: "tech", label: "Tech stack" },
-  { id: "pagespeed", label: "PageSpeed Insights" },
   { id: "score", label: "Calcolo score" },
   { id: "save", label: "Salvataggio" },
 ];
