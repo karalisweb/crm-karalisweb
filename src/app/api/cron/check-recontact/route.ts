@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 
 /**
  * POST /api/cron/check-recontact
@@ -39,34 +38,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ moved: 0, message: "Nessun lead da ricontattare" });
     }
 
-    // Sposta ogni lead a DA_ANALIZZARE
-    let count = 0;
-    for (const lead of leadsToRecontact) {
-      await db.lead.update({
-        where: { id: lead.id },
+    // Batch: sposta tutti i lead a DA_ANALIZZARE preservando lo storico interazioni
+    const leadIds = leadsToRecontact.map((l) => l.id);
+
+    await db.$transaction([
+      db.lead.updateMany({
+        where: { id: { in: leadIds } },
         data: {
           pipelineStage: "DA_ANALIZZARE",
           recontactAt: null,
-          videoSentAt: null,
-          videoViewedAt: null,
-          letterSentAt: null,
-          linkedinSentAt: null,
-          respondedAt: null,
-          respondedVia: null,
-          videoScriptData: Prisma.DbNull,
         },
-      });
-
-      await db.activity.create({
-        data: {
-          leadId: lead.id,
+      }),
+      db.activity.createMany({
+        data: leadIds.map((id) => ({
+          leadId: id,
           type: "STAGE_CHANGE",
           notes: `Ritornato in pipeline dopo periodo di attesa 6 mesi. Pronto per nuova analisi.`,
-        },
-      });
+        })),
+      }),
+    ]);
 
-      count++;
-    }
+    const count = leadsToRecontact.length;
 
     console.log(
       `[RECONTACT] Spostati ${count} lead a DA_ANALIZZARE:`,

@@ -32,6 +32,7 @@ const FETCH_HEADERS = {
 };
 
 const MAX_TEXT_LENGTH = 3000;
+const MAX_HTML_SIZE = 5_000_000; // 5 MB
 
 // ==========================================
 // CLICHÉ DETECTOR (DETERMINISTICO)
@@ -291,6 +292,7 @@ async function fetchAndExtractPageText(url: string): Promise<string | null> {
     if (!response.ok) return null;
 
     const html = await response.text();
+    if (html.length > MAX_HTML_SIZE) return null;
     const $ = cheerio.load(html);
 
     $(
@@ -373,6 +375,10 @@ export async function extractStrategicData(
   baseUrl: string,
   companyName: string
 ): Promise<StrategicExtractionResult> {
+  if (html.length > MAX_HTML_SIZE) {
+    throw new Error(`HTML troppo grande (${(html.length / 1_000_000).toFixed(1)}MB, max ${MAX_HTML_SIZE / 1_000_000}MB)`);
+  }
+
   // 1. Tracking tools (solo informativo, MAI usato come "has_active_ads")
   const trackingTools = detectTrackingTools(html);
 
