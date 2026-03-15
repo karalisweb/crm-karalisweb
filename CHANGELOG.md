@@ -4,6 +4,43 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.4.0] - 2026-03-15
+
+### Scoring v3.1 "Segnali Digitali"
+
+- **RIMOSSO**: "Ads senza pixel/tracking" (+10) — non rilevante, le ads sono manuali
+- **NUOVO**: **Tracking attivo** (+10) — lead con GA4/GTM/Meta Pixel nel DOM investe nel digitale
+- **NUOVO**: **Recensioni forti** (+10) — lead con 50+ recensioni Google E rating > 4.0 = business solido
+- **Pesi aggiornati**: Errore strategico +50 | Ads attive +20 | Tracking attivo +10 | Recensioni forti +10 | Tier +20/+10/+5
+- Max teorico: 110 → cap 100
+
+### Tier Override Manuale
+
+- **NUOVO**: selettore **High-Ticket / Standard / Low-Ticket** nel breakdown score di ogni card
+- Click su un tier diverso → `PATCH /api/leads/[id]/tier-override` → salva, ricalcola score, riclassifica
+- Il tier override persiste e viene usato in tutti i ricalcoli futuri
+- Campo `tierOverride` aggiunto al DB (nullable, sovrascrive il calcolo automatico da keyword)
+
+### Recalc Score Per-Lead
+
+- **NUOVO**: bottone 🔄 nel breakdown score per ricalcolare lo score del singolo lead
+- `POST /api/leads/[id]/recalc-score` — prende tutti i dati dal DB e ricalcola
+- Utile dopo modifiche manuali (tier, ads, etc.) o per verificare il punteggio
+
+### Fix Card Collapse
+
+- Ads toggle SI/NO e tier change **non collassano più la card**
+- Il card mantiene lo stato `expanded` e aggiorna score/breakdown localmente
+- Eliminata la chiamata `onAction()` → `fetchData()` che causava il re-mount del componente
+
+### Script Tella Solo in Video
+
+- Lo script teleprompter **non appare più** nelle card analisi/hot/warm/cold
+- Appare **solo** nella variante `video` (FARE_VIDEO)
+- In FARE_VIDEO, se manca lo script, il bottone si chiama "Genera Testo Tella"
+
+---
+
 ## [3.3.0] - 2026-03-15
 
 ### Rework Ads — Verifica Manuale

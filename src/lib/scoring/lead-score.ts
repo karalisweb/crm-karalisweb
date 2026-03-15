@@ -8,7 +8,7 @@
  * - Errore strategico (disallineamento sito):  +50  (driver)
  * - Ads attive (verifica manuale):              +20  (aggravante)
  * - Tracking attivo (GA4/GTM/Pixel nel DOM):   +10  (segnale digitale)
- * - Recensioni forti (100+ e rating > 4.0):    +10  (business solido)
+ * - Recensioni forti (50+ e rating > 4.0):     +10  (business solido)
  * - Settore high-ticket:                        +20
  * - Settore standard:                           +10
  * - Settore low-ticket:                          +5
@@ -152,7 +152,7 @@ export function calculateLeadScore(input: LeadScoreInput): LeadScoreResult {
   }
 
   // 4. Recensioni forti = business solido (+10)
-  if (input.googleReviewsCount >= 100 && input.googleRating > 4.0) {
+  if (input.googleReviewsCount >= 50 && input.googleRating > 4.0) {
     score += 10;
     breakdown.push(`Recensioni forti (${input.googleReviewsCount} rec, ${input.googleRating}★): +10`);
   }
