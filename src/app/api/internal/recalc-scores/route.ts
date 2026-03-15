@@ -6,16 +6,22 @@ import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/s
 /**
  * POST /api/internal/recalc-scores
  *
- * v3.2 — Ricalcola opportunityScore + auto-riclassifica pipeline.
- * FIX: inietta tracking_tools da auditData nel geminiAnalysis
- * prima del ricalcolo, risolvendo il bug ads_networks_found: [].
+ * v3.4 — Ricalcola opportunityScore + auto-riclassifica pipeline.
+ * Usa scoring v3.1: tierOverride, tracking bonus, reviews bonus.
  *
  * Richiede CRON_SECRET per autenticazione.
  */
 export async function POST(request: NextRequest) {
+  // Auth: accetta sia header che x-cron-secret
   const authHeader = request.headers.get("authorization");
+  const cronHeader = request.headers.get("x-cron-secret");
   const expectedToken = process.env.CRON_SECRET;
-  if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+
+  const isAuthorized =
+    (expectedToken && authHeader === `Bearer ${expectedToken}`) ||
+    (expectedToken && cronHeader === expectedToken);
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -31,10 +37,13 @@ export async function POST(request: NextRequest) {
       auditData: true,
       opportunityScore: true,
       pipelineStage: true,
+      googleRating: true,
+      googleReviewsCount: true,
+      tierOverride: true,
     },
   });
 
-  console.log(`[RECALC v3.2] Ricalcolo score per ${leads.length} lead...`);
+  console.log(`[RECALC v3.4] Ricalcolo score per ${leads.length} lead (scoring v3.1)...`);
 
   const results: Array<{
     name: string;
@@ -51,14 +60,13 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const audit = lead.auditData as any;
 
-    // FIX v3.2: Se ads_networks_found è vuoto ma auditData ha tracking_tools, inietta
+    // Fix: Se ads_networks_found è vuoto ma auditData ha tracking_tools, inietta
     if (
       analysis &&
       (!analysis.ads_networks_found || analysis.ads_networks_found.length === 0) &&
       audit?.tracking_tools?.length > 0
     ) {
       analysis.ads_networks_found = audit.tracking_tools;
-      // Aggiorna anche nel DB per futuri recalc
       await db.lead.update({
         where: { id: lead.id },
         data: {
@@ -70,12 +78,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category);
+    const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category, {
+      googleReviewsCount: lead.googleReviewsCount,
+      googleRating: lead.googleRating,
+      tierOverride: lead.tierOverride,
+    });
     const scoreResult = calculateLeadScore(scoreInput);
 
-    // Auto-classificazione (v3.2: HOT → FARE_VIDEO diretto)
+    // Auto-classificazione
     let newStage: PipelineStage;
-    // Solo per lead in fasi iniziali (non toccare CONTATTATO, CLIENTE, etc.)
     const classifiableStages: PipelineStage[] = [
       PipelineStage.DA_ANALIZZARE,
       PipelineStage.HOT_LEAD,
@@ -117,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     const emoji = newStage === "FARE_VIDEO" ? "🎬" : newStage === "WARM_LEAD" ? "👍" : "❄️";
     console.log(
-      `[RECALC v3.2] ${emoji} ${lead.name}: ${lead.opportunityScore ?? "null"} → ${scoreResult.score} | ${lead.pipelineStage} → ${newStage} (${scoreResult.breakdown.join(", ")})`
+      `[RECALC v3.4] ${emoji} ${lead.name}: ${lead.opportunityScore ?? "null"} → ${scoreResult.score} | ${lead.pipelineStage} → ${newStage} (${scoreResult.breakdown.join(", ")})`
     );
   }
 
@@ -125,7 +136,7 @@ export async function POST(request: NextRequest) {
   const scoreChanges = results.filter(r => r.oldScore !== r.newScore).length;
 
   console.log(
-    `[RECALC v3.2] === DONE === ${leads.length} lead | ${scoreChanges} score cambiati | ${stageChanges} stage cambiati`
+    `[RECALC v3.4] === DONE === ${leads.length} lead | ${scoreChanges} score cambiati | ${stageChanges} stage cambiati`
   );
 
   return NextResponse.json({

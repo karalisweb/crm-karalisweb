@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Prisma, PipelineStage } from "@prisma/client";
-import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
+import { calculateLeadScore, extractScoreInputFromGeminiAnalysis, IndustryTier } from "@/lib/scoring/lead-score";
 
 /**
- * PATCH /api/leads/[id]/ads-override
+ * PATCH /api/leads/[id]/tier-override
  *
- * v3.4 — Verifica manuale separata Google Ads / Meta Ads.
- * Usa scoring v3.1 con tierOverride, tracking bonus, reviews bonus.
+ * Override manuale del tier settore.
  *
- * Body: { googleAds?: boolean | null, metaAds?: boolean | null }
+ * Body: { tier: "high_ticket" | "standard" | "low_ticket" }
+ *
+ * Salva tierOverride, ricalcola score e riclassifica pipeline.
  */
 export async function PATCH(
   request: Request,
@@ -18,11 +19,12 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { googleAds, metaAds } = body;
+    const { tier } = body;
 
-    if (googleAds === undefined && metaAds === undefined) {
+    const validTiers: IndustryTier[] = ["high_ticket", "standard", "low_ticket"];
+    if (!tier || !validTiers.includes(tier)) {
       return NextResponse.json(
-        { error: "Serve almeno googleAds o metaAds" },
+        { error: "Tier non valido. Valori: high_ticket, standard, low_ticket" },
         { status: 400 }
       );
     }
@@ -36,8 +38,6 @@ export async function PATCH(
         geminiAnalysis: true,
         pipelineStage: true,
         opportunityScore: true,
-        hasActiveGoogleAds: true,
-        hasActiveMetaAds: true,
         googleRating: true,
         googleReviewsCount: true,
         tierOverride: true,
@@ -51,24 +51,11 @@ export async function PATCH(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const analysis = (lead.geminiAnalysis || {}) as any;
 
-    // Determina nuovi valori
-    const newGoogle = googleAds !== undefined ? (googleAds === true) : lead.hasActiveGoogleAds;
-    const newMeta = metaAds !== undefined ? (metaAds === true) : lead.hasActiveMetaAds;
-    const hasActiveAds = newGoogle || newMeta;
-
-    // Aggiorna nella geminiAnalysis
-    analysis.has_active_ads = hasActiveAds;
-    analysis.ads_override = {
-      googleAds: googleAds !== undefined ? googleAds : (analysis.ads_override?.googleAds ?? null),
-      metaAds: metaAds !== undefined ? metaAds : (analysis.ads_override?.metaAds ?? null),
-      verifiedAt: new Date().toISOString(),
-    };
-
-    // Ricalcola score con v3.1 (include tierOverride, tracking, reviews)
+    // Ricalcola score con il nuovo tier
     const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category, {
       googleReviewsCount: lead.googleReviewsCount,
       googleRating: lead.googleRating,
-      tierOverride: lead.tierOverride,
+      tierOverride: tier,
     });
     const scoreResult = calculateLeadScore(scoreInput);
 
@@ -88,13 +75,11 @@ export async function PATCH(
       else newStage = PipelineStage.COLD_LEAD;
     }
 
-    // Salva tutto
+    // Salva
     await db.lead.update({
       where: { id },
       data: {
-        hasActiveGoogleAds: newGoogle,
-        hasActiveMetaAds: newMeta,
-        geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
+        tierOverride: tier,
         opportunityScore: scoreResult.score,
         pipelineStage: newStage,
         scoreBreakdown: {
@@ -107,22 +92,20 @@ export async function PATCH(
     });
 
     console.log(
-      `[ADS-OVERRIDE] ${lead.name}: google=${newGoogle}, meta=${newMeta}, score ${lead.opportunityScore} -> ${scoreResult.score}, stage ${lead.pipelineStage} -> ${newStage}`
+      `[TIER-OVERRIDE] ${lead.name}: tier=${tier}, score ${lead.opportunityScore} -> ${scoreResult.score}, stage ${lead.pipelineStage} -> ${newStage}`
     );
 
     return NextResponse.json({
       success: true,
-      googleAds: newGoogle,
-      metaAds: newMeta,
+      tier,
       oldScore: lead.opportunityScore,
       newScore: scoreResult.score,
       oldStage: lead.pipelineStage,
       newStage,
       breakdown: scoreResult.breakdown,
-      tier: scoreResult.tier,
     });
   } catch (error) {
-    console.error("[API] ads-override error:", error);
+    console.error("[API] tier-override error:", error);
     const message = error instanceof Error ? error.message : "Errore";
     return NextResponse.json({ error: message }, { status: 500 });
   }

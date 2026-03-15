@@ -105,6 +105,9 @@ export async function POST(request: NextRequest) {
       landingPageUrl: true,
       landingPageText: true,
       adsCheckedAt: true,
+      googleRating: true,
+      googleReviewsCount: true,
+      tierOverride: true,
     },
     take: maxLeads,
     orderBy: { createdAt: "desc" },
@@ -218,7 +221,11 @@ export async function POST(request: NextRequest) {
       analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);
 
       // === STEP 5: Calcolo score ===
-      const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null);
+      const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null, {
+        googleReviewsCount: lead.googleReviewsCount,
+        googleRating: lead.googleRating,
+        tierOverride: lead.tierOverride,
+      });
       const scoreResult = calculateLeadScore(scoreInput);
 
       // === STEP 6: Auto-classificazione (v3.2: HOT → FARE_VIDEO diretto) ===

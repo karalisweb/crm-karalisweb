@@ -21,6 +21,7 @@ import {
   MessageCircle,
   ArrowLeft,
   Search,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -108,6 +109,8 @@ export interface UnifiedLead {
   whatsappSource?: string | null;
   // Video
   videoScriptData?: unknown;
+  // Tier override
+  tierOverride?: string | null;
 }
 
 export type CardVariant = "analisi" | "hot" | "warm" | "cold" | "video";
@@ -225,20 +228,71 @@ const ATTO_LABELS = [
 ];
 
 // ==========================================
+// TIER SELECTOR COMPONENT
+// ==========================================
+
+const TIER_OPTIONS = [
+  { value: "high_ticket", label: "High-Ticket", color: "border-orange-500/50 bg-orange-500/10 text-orange-400" },
+  { value: "standard", label: "Standard", color: "border-yellow-500/50 bg-yellow-500/10 text-yellow-400" },
+  { value: "low_ticket", label: "Low-Ticket", color: "border-gray-500/50 bg-gray-500/10 text-gray-400" },
+] as const;
+
+function TierSelector({
+  currentTier,
+  onSelect,
+  disabled,
+}: {
+  currentTier: string;
+  onSelect: (tier: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-[9px] text-muted-foreground mr-1">Settore:</span>
+      {TIER_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={(e) => { e.stopPropagation(); onSelect(opt.value); }}
+          disabled={disabled}
+          className={cn(
+            "px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all",
+            currentTier === opt.value
+              ? opt.color
+              : "border-transparent text-muted-foreground/50 hover:text-muted-foreground hover:border-muted-foreground/30",
+            disabled && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ==========================================
 // SCORE BREAKDOWN COMPONENT
 // ==========================================
 
-function ScoreBreakdown({ data, score }: { data: ScoreBreakdownData | null; score: number | null }) {
+function ScoreBreakdown({
+  data,
+  score,
+  currentTier,
+  onTierSelect,
+  onRecalc,
+  tierLoading,
+  recalcLoading,
+}: {
+  data: ScoreBreakdownData | null;
+  score: number | null;
+  currentTier: string;
+  onTierSelect: (tier: string) => void;
+  onRecalc: () => void;
+  tierLoading: boolean;
+  recalcLoading: boolean;
+}) {
   if (!data && score === null) return null;
 
   const breakdown = data?.breakdown || [];
-  const tier = data?.tier || "standard";
-
-  const tierLabel: Record<string, string> = {
-    high_ticket: "High-Ticket",
-    low_ticket: "Low-Ticket",
-    standard: "Standard",
-  };
 
   const items = breakdown.map(item => {
     const match = item.match(/:\s*\+(\d+)$/);
@@ -248,28 +302,36 @@ function ScoreBreakdown({ data, score }: { data: ScoreBreakdownData | null; scor
   });
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {items.map((item, i) => (
-        <span
-          key={i}
-          className={cn(
-            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold",
-            item.points >= 40
-              ? "bg-red-500/15 text-red-400 border border-red-500/25"
-              : item.points >= 20
-              ? "bg-orange-500/15 text-orange-400 border border-orange-500/25"
-              : item.points >= 10
-              ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25"
-              : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
-          )}
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {items.map((item, i) => (
+          <span
+            key={i}
+            className={cn(
+              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold",
+              item.points >= 40
+                ? "bg-red-500/15 text-red-400 border border-red-500/25"
+                : item.points >= 20
+                ? "bg-orange-500/15 text-orange-400 border border-orange-500/25"
+                : item.points >= 10
+                ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25"
+                : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+            )}
+          >
+            {item.label}
+            <span className="font-black">+{item.points}</span>
+          </span>
+        ))}
+        <button
+          onClick={(e) => { e.stopPropagation(); onRecalc(); }}
+          disabled={recalcLoading}
+          className="inline-flex items-center px-1 py-0.5 rounded text-[10px] text-muted-foreground hover:text-primary transition-colors"
+          title="Ricalcola score"
         >
-          {item.label}
-          <span className="font-black">+{item.points}</span>
-        </span>
-      ))}
-      <span className="text-[9px] text-muted-foreground ml-1">
-        {tierLabel[tier] || tier}
-      </span>
+          <RefreshCw className={cn("h-3 w-3", recalcLoading && "animate-spin")} />
+        </button>
+      </div>
+      <TierSelector currentTier={currentTier} onSelect={onTierSelect} disabled={tierLoading} />
     </div>
   );
 }
@@ -298,13 +360,22 @@ export function UnifiedLeadCard({
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
   const [whatsappInput, setWhatsappInput] = useState(lead.whatsappNumber || "");
   const [savingWA, setSavingWA] = useState(false);
+  const [tierLoading, setTierLoading] = useState(false);
+  const [recalcLoading, setRecalcLoading] = useState(false);
+
+  // Local state per aggiornamenti in-place (no collapse)
+  const [localScore, setLocalScore] = useState<number | null>(lead.opportunityScore);
+  const [localBreakdown, setLocalBreakdown] = useState<ScoreBreakdownData | null>(lead.scoreBreakdown);
+  const [localTier, setLocalTier] = useState<string>(
+    lead.tierOverride || lead.scoreBreakdown?.tier || "standard"
+  );
+  const [localManualAds, setLocalManualAds] = useState(() => getManualAdsState(lead));
 
   const analysis = lead.geminiAnalysis;
   const isAnalyzed = hasAnalysis(lead);
   const pixelOk = hasTrackingPixel(lead);
   const errorPattern = analysis?.primary_error_pattern || null;
   const adsSignals = getAdsSignals(lead);
-  const manualAds = getManualAdsState(lead);
 
   // ---- Actions ----
 
@@ -403,6 +474,7 @@ export function UnifiedLeadCard({
     }
   };
 
+  // v3.4: Ads toggle — aggiorna localmente, NON chiama onAction()
   const handleAdsToggle = async (platform: "google" | "meta", value: boolean) => {
     setOverridingAds(true);
     try {
@@ -426,11 +498,94 @@ export function UnifiedLeadCard({
       if (data.oldStage !== data.newStage) {
         toast.info(`Spostato da ${data.oldStage} a ${data.newStage}`);
       }
-      onAction();
+      // Aggiorna stato locale (card resta aperta)
+      setLocalScore(data.newScore);
+      setLocalBreakdown({
+        score: data.newScore,
+        tier: data.tier || localTier,
+        breakdown: data.breakdown || [],
+        calculatedAt: new Date().toISOString(),
+      });
+      if (data.tier) setLocalTier(data.tier);
+      // Aggiorna manual ads state
+      setLocalManualAds(prev => ({
+        ...prev,
+        ...(platform === "google" ? { googleVerified: true, googleAds: value } : {}),
+        ...(platform === "meta" ? { metaVerified: true, metaAds: value } : {}),
+      }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore override Ads");
     } finally {
       setOverridingAds(false);
+    }
+  };
+
+  // v3.4: Tier override — aggiorna localmente
+  const handleTierOverride = async (tier: string) => {
+    if (tier === localTier) return; // Stesso tier, skip
+    setTierLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/tier-override`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Errore");
+      }
+      const data = await res.json();
+      toast.success(
+        `${lead.name}: Settore → ${tier.replace("_", "-")}, score ${data.oldScore} -> ${data.newScore}`
+      );
+      if (data.oldStage !== data.newStage) {
+        toast.info(`Spostato da ${data.oldStage} a ${data.newStage}`);
+      }
+      setLocalScore(data.newScore);
+      setLocalTier(data.tier);
+      setLocalBreakdown({
+        score: data.newScore,
+        tier: data.tier,
+        breakdown: data.breakdown || [],
+        calculatedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore cambio tier");
+    } finally {
+      setTierLoading(false);
+    }
+  };
+
+  // v3.4: Recalc score — aggiorna localmente
+  const handleRecalcScore = async () => {
+    setRecalcLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/recalc-score`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Errore");
+      }
+      const data = await res.json();
+      toast.success(
+        `${lead.name}: score ${data.oldScore} -> ${data.newScore}`
+      );
+      if (data.oldStage !== data.newStage) {
+        toast.info(`Spostato da ${data.oldStage} a ${data.newStage}`);
+      }
+      setLocalScore(data.newScore);
+      setLocalTier(data.tier || localTier);
+      setLocalBreakdown({
+        score: data.newScore,
+        tier: data.tier || localTier,
+        breakdown: data.breakdown || [],
+        calculatedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore recalc");
+    } finally {
+      setRecalcLoading(false);
     }
   };
 
@@ -585,6 +740,21 @@ export function UnifiedLeadCard({
                   Script Tella
                 </Button>
               )}
+              {!isAnalyzed && (
+                <Button
+                  onClick={handleGenerateAI}
+                  disabled={generatingAI || !lead.website}
+                  size="sm"
+                  className="flex-1 bg-violet-600 hover:bg-violet-700"
+                >
+                  {generatingAI ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  Genera Testo Tella
+                </Button>
+              )}
               <Button
                 onClick={handleVideoSent}
                 disabled={!!loading}
@@ -665,13 +835,13 @@ export function UnifiedLeadCard({
           <div
             className={cn(
               "px-4 py-3 flex items-center justify-between cursor-pointer text-white",
-              getScoreHeaderColor(lead.opportunityScore)
+              getScoreHeaderColor(localScore)
             )}
             onClick={() => setExpanded(!expanded)}
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <span className="text-2xl font-black tabular-nums w-10 text-center flex-shrink-0">
-                {lead.opportunityScore ?? "?"}
+                {localScore ?? "?"}
               </span>
               <div className="min-w-0">
                 <p className="font-semibold text-sm truncate">{lead.name}</p>
@@ -689,8 +859,8 @@ export function UnifiedLeadCard({
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Badge className={cn("text-xs font-bold px-2 py-0.5", getScoreBadgeColor(lead.opportunityScore))}>
-                {getScoreLabel(lead.opportunityScore)}
+              <Badge className={cn("text-xs font-bold px-2 py-0.5", getScoreBadgeColor(localScore))}>
+                {getScoreLabel(localScore)}
               </Badge>
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </div>
@@ -711,26 +881,26 @@ export function UnifiedLeadCard({
                   )}
 
                   {/* Verifica manuale Google */}
-                  {manualAds.googleVerified && (
+                  {localManualAds.googleVerified && (
                     <span className={cn(
                       "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
-                      manualAds.googleAds
+                      localManualAds.googleAds
                         ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
                         : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
                     )}>
-                      Google: {manualAds.googleAds ? "SI" : "NO"}
+                      Google: {localManualAds.googleAds ? "SI" : "NO"}
                     </span>
                   )}
 
                   {/* Verifica manuale Meta */}
-                  {manualAds.metaVerified && (
+                  {localManualAds.metaVerified && (
                     <span className={cn(
                       "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
-                      manualAds.metaAds
+                      localManualAds.metaAds
                         ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
                         : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
                     )}>
-                      Meta: {manualAds.metaAds ? "SI" : "NO"}
+                      Meta: {localManualAds.metaAds ? "SI" : "NO"}
                     </span>
                   )}
 
@@ -753,7 +923,7 @@ export function UnifiedLeadCard({
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {!isAnalyzed ? (
+                  {!isAnalyzed && variant !== "video" ? (
                     <Button
                       onClick={(e) => { e.stopPropagation(); handleGenerateAI(); }}
                       disabled={generatingAI}
@@ -782,28 +952,55 @@ export function UnifiedLeadCard({
                 </div>
               </div>
 
-              {/* Riga 2: Score Breakdown */}
-              <ScoreBreakdown data={lead.scoreBreakdown} score={lead.opportunityScore} />
+              {/* Riga 2: Score Breakdown + Tier Selector */}
+              <ScoreBreakdown
+                data={localBreakdown}
+                score={localScore}
+                currentTier={localTier}
+                onTierSelect={handleTierOverride}
+                onRecalc={handleRecalcScore}
+                tierLoading={tierLoading}
+                recalcLoading={recalcLoading}
+              />
             </div>
           )}
 
           {/* ==========================================
-              EXPANDED VIEW — 2 colonne
+              EXPANDED VIEW
               ========================================== */}
           {expanded && (
             <div className="p-4">
-              {/* Score Breakdown anche in expanded */}
+              {/* Score Breakdown + Tier Selector anche in expanded */}
               <div className="mb-3 pb-3 border-b border-border/50">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
                   Composizione Score
                 </p>
-                <ScoreBreakdown data={lead.scoreBreakdown} score={lead.opportunityScore} />
+                <ScoreBreakdown
+                  data={localBreakdown}
+                  score={localScore}
+                  currentTier={localTier}
+                  onTierSelect={handleTierOverride}
+                  onRecalc={handleRecalcScore}
+                  tierLoading={tierLoading}
+                  recalcLoading={recalcLoading}
+                />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Layout: 2 colonne solo per video con script, altrimenti 1 colonna */}
+              <div className={cn(
+                "grid gap-4",
+                variant === "video" && isAnalyzed && analysis?.teleprompter_script
+                  ? "grid-cols-1 lg:grid-cols-12"
+                  : "grid-cols-1"
+              )}>
 
                 {/* ---- COLONNA SINISTRA: Dati + Gancio di Vendita ---- */}
-                <div className="lg:col-span-7 space-y-4">
+                <div className={cn(
+                  variant === "video" && isAnalyzed && analysis?.teleprompter_script
+                    ? "lg:col-span-7"
+                    : "",
+                  "space-y-4"
+                )}>
 
                   {/* Dati base + WhatsApp */}
                   <div className="space-y-2">
@@ -937,14 +1134,14 @@ export function UnifiedLeadCard({
                     <div className="flex items-center justify-between py-2 border-t border-amber-500/20">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-300">Google Ads</span>
-                        {manualAds.googleVerified ? (
+                        {localManualAds.googleVerified ? (
                           <span className={cn(
                             "text-[10px] px-1.5 py-0.5 rounded font-bold",
-                            manualAds.googleAds
+                            localManualAds.googleAds
                               ? "bg-emerald-500/20 text-emerald-400"
                               : "bg-gray-500/20 text-gray-400"
                           )}>
-                            {manualAds.googleAds ? "SI" : "NO"}
+                            {localManualAds.googleAds ? "SI" : "NO"}
                           </span>
                         ) : (
                           <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-500/10 text-gray-500">
@@ -960,7 +1157,7 @@ export function UnifiedLeadCard({
                           variant="outline"
                           className={cn(
                             "h-6 px-2.5 text-[10px]",
-                            manualAds.googleVerified && manualAds.googleAds
+                            localManualAds.googleVerified && localManualAds.googleAds
                               ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
                               : "border-gray-500/30 text-gray-400 hover:border-emerald-500/50 hover:text-emerald-400"
                           )}
@@ -974,7 +1171,7 @@ export function UnifiedLeadCard({
                           variant="outline"
                           className={cn(
                             "h-6 px-2.5 text-[10px]",
-                            manualAds.googleVerified && !manualAds.googleAds
+                            localManualAds.googleVerified && !localManualAds.googleAds
                               ? "border-red-500/50 bg-red-500/10 text-red-400"
                               : "border-gray-500/30 text-gray-400 hover:border-red-500/50 hover:text-red-400"
                           )}
@@ -999,14 +1196,14 @@ export function UnifiedLeadCard({
                     <div className="flex items-center justify-between py-2 border-t border-amber-500/20">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-300">Meta Ads</span>
-                        {manualAds.metaVerified ? (
+                        {localManualAds.metaVerified ? (
                           <span className={cn(
                             "text-[10px] px-1.5 py-0.5 rounded font-bold",
-                            manualAds.metaAds
+                            localManualAds.metaAds
                               ? "bg-emerald-500/20 text-emerald-400"
                               : "bg-gray-500/20 text-gray-400"
                           )}>
-                            {manualAds.metaAds ? "SI" : "NO"}
+                            {localManualAds.metaAds ? "SI" : "NO"}
                           </span>
                         ) : (
                           <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-500/10 text-gray-500">
@@ -1022,7 +1219,7 @@ export function UnifiedLeadCard({
                           variant="outline"
                           className={cn(
                             "h-6 px-2.5 text-[10px]",
-                            manualAds.metaVerified && manualAds.metaAds
+                            localManualAds.metaVerified && localManualAds.metaAds
                               ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
                               : "border-gray-500/30 text-gray-400 hover:border-emerald-500/50 hover:text-emerald-400"
                           )}
@@ -1036,7 +1233,7 @@ export function UnifiedLeadCard({
                           variant="outline"
                           className={cn(
                             "h-6 px-2.5 text-[10px]",
-                            manualAds.metaVerified && !manualAds.metaAds
+                            localManualAds.metaVerified && !localManualAds.metaAds
                               ? "border-red-500/50 bg-red-500/10 text-red-400"
                               : "border-gray-500/30 text-gray-400 hover:border-red-500/50 hover:text-red-400"
                           )}
@@ -1131,9 +1328,9 @@ export function UnifiedLeadCard({
                   {getActionButtons()}
                 </div>
 
-                {/* ---- COLONNA DESTRA: Teleprompter ---- */}
-                <div className="lg:col-span-5">
-                  {isAnalyzed && analysis?.teleprompter_script ? (
+                {/* ---- COLONNA DESTRA: Script Tella (SOLO in variante video) ---- */}
+                {variant === "video" && isAnalyzed && analysis?.teleprompter_script && (
+                  <div className="lg:col-span-5">
                     <div className="bg-gray-900 text-white rounded-lg shadow-inner relative">
                       <div className="flex items-center justify-between p-4 pb-3 border-b border-gray-700/50">
                         <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -1176,11 +1373,16 @@ export function UnifiedLeadCard({
                         ))}
                       </div>
                     </div>
-                  ) : (
+                  </div>
+                )}
+
+                {/* Per variante video senza script: bottone genera */}
+                {variant === "video" && !isAnalyzed && (
+                  <div className="lg:col-span-5">
                     <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/20 rounded-lg border border-dashed border-muted-foreground/20">
                       <Sparkles className="h-10 w-10 text-muted-foreground/30 mb-4" />
                       <p className="font-medium text-muted-foreground mb-2">
-                        Analisi non ancora generata
+                        Script non ancora generato
                       </p>
                       <Button
                         onClick={handleGenerateAI}
@@ -1195,13 +1397,13 @@ export function UnifiedLeadCard({
                         ) : (
                           <>
                             <Sparkles className="h-4 w-4 mr-2" />
-                            Genera Analisi AI
+                            Genera Testo Tella
                           </>
                         )}
                       </Button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

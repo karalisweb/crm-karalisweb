@@ -1,18 +1,19 @@
 /**
- * Lead Score Calculator v3.0 — "Disallineamento Strategico"
+ * Lead Score Calculator v3.1 — "Segnali Digitali"
  *
  * PRIORITÀ: il disallineamento nel sito è il driver principale.
- * Le ads sono un'aggravante, non il motore dello score.
+ * Le ads sono un'aggravante, il tracking e le recensioni segnalano maturità digitale.
  *
- * Pesi v3.0:
+ * Pesi v3.1:
  * - Errore strategico (disallineamento sito):  +50  (driver)
- * - Ads attive:                                 +20  (aggravante)
- * - Ads senza tracking:                         +10  (aggravante)
+ * - Ads attive (verifica manuale):              +20  (aggravante)
+ * - Tracking attivo (GA4/GTM/Pixel nel DOM):   +10  (segnale digitale)
+ * - Recensioni forti (100+ e rating > 4.0):    +10  (business solido)
  * - Settore high-ticket:                        +20
  * - Settore standard:                           +10
  * - Settore low-ticket:                          +5
  *
- * Max teorico: 50 + 20 + 10 + 20 = 100
+ * Max teorico: 50 + 20 + 10 + 10 + 20 = 110 → cap 100
  *
  * Output: 0-100
  *   >= 80 → FARE_VIDEO
@@ -81,14 +82,20 @@ export function classifyIndustryTier(category: string | null): IndustryTier {
 // ==========================================
 
 export interface LeadScoreInput {
-  /** Ads attive rilevate dallo strategic extractor */
+  /** Ads attive verificate manualmente */
   hasActiveAds: boolean;
-  /** Ha pixel/tracking (Facebook Pixel, Google Ads tag, GTM) — dalla Gemini analysis */
-  hasTrackingPixel: boolean;
+  /** Ha tracking tools nel DOM (GA4, GTM, Meta Pixel, etc.) */
+  hasTrackingTools: boolean;
   /** Categoria Google Maps */
   category: string | null;
   /** Errore strategico trovato da Gemini (es. "Lista della Spesa") */
   strategicErrorFound: string | null;
+  /** Numero recensioni Google */
+  googleReviewsCount: number;
+  /** Rating Google (es. 4.5) */
+  googleRating: number;
+  /** Override manuale del tier (se presente, sovrascrive il calcolo automatico) */
+  tierOverride?: IndustryTier | null;
 }
 
 export interface LeadScoreResult {
@@ -104,12 +111,13 @@ export interface LeadScoreResult {
 /**
  * Calcola il lead score (0-100) basato sul "Disallineamento Strategico".
  *
- * v3.0 — Il disallineamento è il driver, le ads sono aggravanti.
+ * v3.1 — "Segnali Digitali"
  *
  * Pesi:
  * - strategic_error_found !== null:             +50  (DRIVER)
  * - has_active_ads === true:                    +20  (aggravante)
- * - has_active_ads && !has_tracking_pixel:       +10  (aggravante)
+ * - has_tracking_tools === true:                +10  (segnale digitale)
+ * - reviews >= 100 && rating > 4.0:            +10  (business solido)
  * - industry_tier === 'high_ticket':            +20
  * - industry_tier === 'low_ticket':              +5
  * - industry_tier === 'standard':               +10
@@ -119,7 +127,11 @@ export interface LeadScoreResult {
 export function calculateLeadScore(input: LeadScoreInput): LeadScoreResult {
   let score = 0;
   const breakdown: string[] = [];
-  const tier = classifyIndustryTier(input.category);
+
+  // Tier: usa override se presente, altrimenti calcolo automatico
+  const tier: IndustryTier = (input.tierOverride && ["high_ticket", "standard", "low_ticket"].includes(input.tierOverride))
+    ? input.tierOverride
+    : classifyIndustryTier(input.category);
 
   // 1. Errore strategico = DRIVER PRINCIPALE (+50)
   if (input.strategicErrorFound) {
@@ -133,13 +145,19 @@ export function calculateLeadScore(input: LeadScoreInput): LeadScoreResult {
     breakdown.push("Ads attive: +20");
   }
 
-  // 3. Ads attive MA nessun pixel = bruciano soldi al buio (+10)
-  if (input.hasActiveAds && !input.hasTrackingPixel) {
+  // 3. Tracking tools attivi = investe nel digitale (+10)
+  if (input.hasTrackingTools) {
     score += 10;
-    breakdown.push("Ads senza pixel/tracking: +10");
+    breakdown.push("Tracking attivo: +10");
   }
 
-  // 4. Margine settore
+  // 4. Recensioni forti = business solido (+10)
+  if (input.googleReviewsCount >= 100 && input.googleRating > 4.0) {
+    score += 10;
+    breakdown.push(`Recensioni forti (${input.googleReviewsCount} rec, ${input.googleRating}★): +10`);
+  }
+
+  // 5. Margine settore
   if (tier === "high_ticket") {
     score += 20;
     breakdown.push("Settore high-ticket: +20");
@@ -166,41 +184,47 @@ export function calculateLeadScore(input: LeadScoreInput): LeadScoreResult {
 
 /**
  * Estrae i dati necessari per lo scoring dal JSON geminiAnalysis salvato nel DB.
+ *
+ * v3.1: aggiunge tracking bonus, reviews bonus, tierOverride.
  */
 export function extractScoreInputFromGeminiAnalysis(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   geminiAnalysis: any,
-  category: string | null
+  category: string | null,
+  extra?: {
+    googleReviewsCount?: number | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    googleRating?: any; // Accepts Decimal, number, string, null
+    tierOverride?: string | null;
+  }
 ): LeadScoreInput {
   if (!geminiAnalysis || typeof geminiAnalysis !== "object") {
     return {
       hasActiveAds: false,
-      hasTrackingPixel: false,
+      hasTrackingTools: false,
       category,
       strategicErrorFound: null,
+      googleReviewsCount: extra?.googleReviewsCount ?? 0,
+      googleRating: Number(extra?.googleRating) || 0,
+      tierOverride: (extra?.tierOverride as IndustryTier) || null,
     };
   }
 
   const hasActiveAds = geminiAnalysis.has_active_ads === true;
 
-  // Determina se hanno tracking pixel
-  // Cerchiamo nei networks trovati se c'è Facebook Pixel, Google Analytics, GTM
+  // Tracking tools presenti nel DOM
   const networks: string[] = geminiAnalysis.ads_networks_found || [];
-  const trackingNetworks = [
-    "Meta Pixel", "Google Analytics", "Google Tag Manager",
-    "Google Ads", "LinkedIn Insight", "TikTok Pixel",
-    "Microsoft Clarity", "Hotjar",
-  ];
-  const hasTrackingPixel = networks.some(n =>
-    trackingNetworks.some(t => n.toLowerCase().includes(t.toLowerCase()))
-  );
+  const hasTrackingTools = networks.length > 0;
 
   const strategicErrorFound = geminiAnalysis.primary_error_pattern || null;
 
   return {
     hasActiveAds,
-    hasTrackingPixel,
+    hasTrackingTools,
     category,
     strategicErrorFound,
+    googleReviewsCount: extra?.googleReviewsCount ?? 0,
+    googleRating: Number(extra?.googleRating) || 0,
+    tierOverride: (extra?.tierOverride as IndustryTier) || null,
   };
 }

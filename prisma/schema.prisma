@@ -101,6 +101,9 @@ model Lead {
   // Score breakdown (dettaglio punteggio per categoria)
   scoreBreakdown    Json?         @map("score_breakdown")
 
+  // Override manuale del tier settore ("high_ticket" | "standard" | "low_ticket")
+  tierOverride      String?       @map("tier_override")
+
   // ==========================================
   // ADS INTELLIGENCE (Apify)
   // ==========================================

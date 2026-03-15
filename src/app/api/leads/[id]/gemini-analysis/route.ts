@@ -61,6 +61,9 @@ export async function POST(
         landingPageUrl: true,
         landingPageText: true,
         adsCheckedAt: true,
+        googleRating: true,
+        googleReviewsCount: true,
+        tierOverride: true,
       },
     });
 
@@ -172,7 +175,11 @@ export async function POST(
     analysis.ad_library_url = buildMetaAdLibraryUrl(lead.name);
     analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);
 
-    const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null);
+    const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null, {
+      googleReviewsCount: lead.googleReviewsCount,
+      googleRating: lead.googleRating,
+      tierOverride: lead.tierOverride,
+    });
     const scoreResult = calculateLeadScore(scoreInput);
 
     await db.lead.update({

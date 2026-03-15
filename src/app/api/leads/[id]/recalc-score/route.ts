@@ -4,28 +4,18 @@ import { Prisma, PipelineStage } from "@prisma/client";
 import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
 
 /**
- * PATCH /api/leads/[id]/ads-override
+ * POST /api/leads/[id]/recalc-score
  *
- * v3.4 — Verifica manuale separata Google Ads / Meta Ads.
- * Usa scoring v3.1 con tierOverride, tracking bonus, reviews bonus.
- *
- * Body: { googleAds?: boolean | null, metaAds?: boolean | null }
+ * Ricalcola lo score di un singolo lead dai dati esistenti nel DB.
+ * Usa: geminiAnalysis, category, tierOverride, googleRating, googleReviewsCount.
+ * Riclassifica pipeline stage se necessario.
  */
-export async function PATCH(
-  request: Request,
+export async function POST(
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
-    const { googleAds, metaAds } = body;
-
-    if (googleAds === undefined && metaAds === undefined) {
-      return NextResponse.json(
-        { error: "Serve almeno googleAds o metaAds" },
-        { status: 400 }
-      );
-    }
 
     const lead = await db.lead.findUnique({
       where: { id },
@@ -34,10 +24,9 @@ export async function PATCH(
         name: true,
         category: true,
         geminiAnalysis: true,
+        auditData: true,
         pipelineStage: true,
         opportunityScore: true,
-        hasActiveGoogleAds: true,
-        hasActiveMetaAds: true,
         googleRating: true,
         googleReviewsCount: true,
         tierOverride: true,
@@ -50,21 +39,28 @@ export async function PATCH(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const analysis = (lead.geminiAnalysis || {}) as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const audit = lead.auditData as any;
 
-    // Determina nuovi valori
-    const newGoogle = googleAds !== undefined ? (googleAds === true) : lead.hasActiveGoogleAds;
-    const newMeta = metaAds !== undefined ? (metaAds === true) : lead.hasActiveMetaAds;
-    const hasActiveAds = newGoogle || newMeta;
+    // Fix: inietta tracking tools da auditData se ads_networks_found è vuoto
+    if (
+      analysis &&
+      (!analysis.ads_networks_found || analysis.ads_networks_found.length === 0) &&
+      audit?.tracking_tools?.length > 0
+    ) {
+      analysis.ads_networks_found = audit.tracking_tools;
+      // Aggiorna anche nel DB
+      await db.lead.update({
+        where: { id },
+        data: {
+          geminiAnalysis: {
+            ...analysis,
+            ads_networks_found: audit.tracking_tools,
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
 
-    // Aggiorna nella geminiAnalysis
-    analysis.has_active_ads = hasActiveAds;
-    analysis.ads_override = {
-      googleAds: googleAds !== undefined ? googleAds : (analysis.ads_override?.googleAds ?? null),
-      metaAds: metaAds !== undefined ? metaAds : (analysis.ads_override?.metaAds ?? null),
-      verifiedAt: new Date().toISOString(),
-    };
-
-    // Ricalcola score con v3.1 (include tierOverride, tracking, reviews)
     const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category, {
       googleReviewsCount: lead.googleReviewsCount,
       googleRating: lead.googleRating,
@@ -88,13 +84,9 @@ export async function PATCH(
       else newStage = PipelineStage.COLD_LEAD;
     }
 
-    // Salva tutto
     await db.lead.update({
       where: { id },
       data: {
-        hasActiveGoogleAds: newGoogle,
-        hasActiveMetaAds: newMeta,
-        geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
         opportunityScore: scoreResult.score,
         pipelineStage: newStage,
         scoreBreakdown: {
@@ -107,13 +99,11 @@ export async function PATCH(
     });
 
     console.log(
-      `[ADS-OVERRIDE] ${lead.name}: google=${newGoogle}, meta=${newMeta}, score ${lead.opportunityScore} -> ${scoreResult.score}, stage ${lead.pipelineStage} -> ${newStage}`
+      `[RECALC-SINGLE] ${lead.name}: score ${lead.opportunityScore} -> ${scoreResult.score}, stage ${lead.pipelineStage} -> ${newStage}`
     );
 
     return NextResponse.json({
       success: true,
-      googleAds: newGoogle,
-      metaAds: newMeta,
       oldScore: lead.opportunityScore,
       newScore: scoreResult.score,
       oldStage: lead.pipelineStage,
@@ -122,7 +112,7 @@ export async function PATCH(
       tier: scoreResult.tier,
     });
   } catch (error) {
-    console.error("[API] ads-override error:", error);
+    console.error("[API] recalc-score error:", error);
     const message = error instanceof Error ? error.message : "Errore";
     return NextResponse.json({ error: message }, { status: 500 });
   }
