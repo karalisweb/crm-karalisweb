@@ -1,49 +1,82 @@
-import { db } from "@/lib/db";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sun, ExternalLink, Globe } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Sun, RefreshCw, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { UnifiedLeadCard } from "@/components/leads/unified-lead-card";
+import type { UnifiedLead } from "@/components/leads/unified-lead-card";
 
-export const dynamic = "force-dynamic";
+export default function WarmLeadsPage() {
+  const [leads, setLeads] = useState<UnifiedLead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
 
-interface GeminiAnalysis {
-  cliche_found?: string;
-  primary_error_pattern?: string;
-}
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/leads?stage=WARM_LEAD&pageSize=50");
+      if (!res.ok) throw new Error("Errore nel caricamento");
+      const json = await res.json();
+      setLeads(json.leads || []);
+      setTotal(json.total || 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-export default async function WarmLeadsPage() {
-  const leads = await db.lead.findMany({
-    where: {
-      pipelineStage: "WARM_LEAD",
-    },
-    orderBy: { opportunityScore: "desc" },
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      website: true,
-      opportunityScore: true,
-      geminiAnalysis: true,
-      pipelineStage: true,
-      phone: true,
-      googleRating: true,
-      googleReviewsCount: true,
-    },
-  });
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Sun className="h-7 w-7 text-amber-500" />
-          Warm Leads
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {leads.length} lead con score 50-79 e analisi completata
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Sun className="h-6 w-6 text-amber-500" />
+            Warm Leads
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Lead con score 50-79 — buon potenziale
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-yellow-600">{total} lead</Badge>
+          <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+            Aggiorna
+          </Button>
+        </div>
       </div>
 
-      {leads.length === 0 ? (
+      {error && (
+        <Card className="border-red-500">
+          <CardContent className="p-4 text-center text-red-500">
+            <AlertTriangle className="h-5 w-5 inline mr-2" />
+            {error}
+          </CardContent>
+        </Card>
+      )}
+
+      {loading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}><CardContent className="p-0">
+              <Skeleton className="h-14 w-full" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-8 w-full" />
+              </div>
+            </CardContent></Card>
+          ))}
+        </div>
+      ) : leads.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="p-8 text-center">
             <Sun className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
@@ -53,51 +86,10 @@ export default async function WarmLeadsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {leads.map((lead) => {
-            const analysis = lead.geminiAnalysis as unknown as GeminiAnalysis | null;
-            const cliche = analysis?.cliche_found;
-            const errorPattern = analysis?.primary_error_pattern;
-
-            return (
-              <Link key={lead.id} href={`/leads/${lead.id}`}>
-                <Card className="hover:border-amber-500/40 transition-colors">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{lead.name}</span>
-                          <Badge variant="default" className="text-xs">
-                            {lead.opportunityScore}
-                          </Badge>
-                          {errorPattern && (
-                            <Badge variant="outline" className="text-[10px]">
-                              {errorPattern}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                          <span>{lead.category || "—"}</span>
-                          {lead.website && (
-                            <span className="flex items-center gap-0.5 text-blue-400">
-                              <Globe className="h-3 w-3" />
-                              {lead.website.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}
-                              <ExternalLink className="h-2.5 w-2.5" />
-                            </span>
-                          )}
-                          {cliche && (
-                            <span className="text-amber-400 truncate max-w-[300px]">
-                              &ldquo;{cliche}&rdquo;
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+        <div className="space-y-3">
+          {leads.map((lead) => (
+            <UnifiedLeadCard key={lead.id} lead={lead} variant="warm" onAction={fetchData} />
+          ))}
         </div>
       )}
     </div>

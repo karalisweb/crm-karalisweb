@@ -39,7 +39,15 @@ export async function POST(request: NextRequest) {
 
     await db.lead.update({
       where: { id: lead.id },
-      data: { opportunityScore: scoreResult.score },
+      data: {
+        opportunityScore: scoreResult.score,
+        scoreBreakdown: {
+          score: scoreResult.score,
+          tier: scoreResult.tier,
+          breakdown: scoreResult.breakdown,
+          calculatedAt: new Date().toISOString(),
+        },
+      },
     });
 
     results.push({

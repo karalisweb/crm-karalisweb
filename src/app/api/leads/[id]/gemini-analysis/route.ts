@@ -178,6 +178,12 @@ export async function POST(
         geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
         geminiAnalyzedAt: new Date(),
         opportunityScore: scoreResult.score,
+        scoreBreakdown: {
+          score: scoreResult.score,
+          tier: scoreResult.tier,
+          breakdown: scoreResult.breakdown,
+          calculatedAt: new Date().toISOString(),
+        } as unknown as Prisma.InputJsonValue,
       },
     });
 

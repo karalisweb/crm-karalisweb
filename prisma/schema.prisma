@@ -98,6 +98,9 @@ model Lead {
   geminiAnalysis    Json?         @map("gemini_analysis")
   geminiAnalyzedAt  DateTime?     @map("gemini_analyzed_at")
 
+  // Score breakdown (dettaglio punteggio per categoria)
+  scoreBreakdown    Json?         @map("score_breakdown")
+
   // ==========================================
   // ADS INTELLIGENCE (Apify)
   // ==========================================

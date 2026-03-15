@@ -26,10 +26,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3 } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
 import { CrmConfigTab } from "@/components/settings/crm-config-tab";
 import { ScheduledSearchesTab } from "@/components/settings/scheduled-searches-tab";
+import { ScoringConfigTab } from "@/components/settings/scoring-config-tab";
 
 interface User {
   id: string;
@@ -262,6 +263,10 @@ export default function SettingsPage() {
           <TabsTrigger value="scheduled" className="gap-2">
             <Clock className="h-4 w-4" />
             Programmate
+          </TabsTrigger>
+          <TabsTrigger value="scoring" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Scoring
           </TabsTrigger>
           <TabsTrigger value="general" className="gap-2">
             <Settings className="h-4 w-4" />
@@ -583,6 +588,11 @@ export default function SettingsPage() {
         {/* TAB RICERCHE PROGRAMMATE */}
         <TabsContent value="scheduled" className="space-y-4">
           <ScheduledSearchesTab />
+        </TabsContent>
+
+        {/* TAB SCORING */}
+        <TabsContent value="scoring" className="space-y-4">
+          <ScoringConfigTab />
         </TabsContent>
 
         {/* TAB GENERALE */}
