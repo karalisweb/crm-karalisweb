@@ -55,6 +55,11 @@ interface GeminiAnalysis {
   meta_ads_copy?: string[];
   ad_library_url?: string | null;
   google_ads_transparency_url?: string | null;
+  ads_override?: {
+    overriddenAt: string;
+    overriddenTo: boolean;
+    reason: string;
+  } | null;
 }
 
 interface ScoreBreakdownData {
@@ -234,6 +239,7 @@ export function UnifiedLeadCard({
   const [copied, setCopied] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [checkingAds, setCheckingAds] = useState(false);
+  const [overridingAds, setOverridingAds] = useState(false);
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
   const [adsData, setAdsData] = useState({
     hasGoogle: lead.hasActiveGoogleAds,
@@ -355,6 +361,34 @@ export function UnifiedLeadCard({
       toast.error(err instanceof Error ? err.message : "Errore check Ads");
     } finally {
       setCheckingAds(false);
+    }
+  };
+
+  const handleAdsOverride = async (hasActiveAds: boolean) => {
+    setOverridingAds(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/ads-override`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hasActiveAds }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Errore");
+      }
+      const data = await res.json();
+      toast.success(
+        `${lead.name}: Ads → ${hasActiveAds ? "SI" : "NO"}, score ${data.oldScore} → ${data.newScore}`
+      );
+      // Se lo stage è cambiato, ricarica la lista
+      if (data.oldStage !== data.newStage) {
+        toast.info(`Spostato da ${data.oldStage} a ${data.newStage}`);
+      }
+      onAction(); // Refresh lista
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore override Ads");
+    } finally {
+      setOverridingAds(false);
     }
   };
 
@@ -763,7 +797,7 @@ export function UnifiedLeadCard({
                     )}
 
                     {adsData.checkedAt && !checkingAds && (
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <span className={cn(
                           "text-[10px] px-2 py-0.5 rounded font-semibold",
                           adsData.hasGoogle
@@ -780,6 +814,49 @@ export function UnifiedLeadCard({
                         )}>
                           Meta Ads: {adsData.hasMeta ? "SI" : "NO"}
                         </span>
+                      </div>
+                    )}
+
+                    {/* Override manuale Ads — per correggere dati automatici */}
+                    {adsOn && (
+                      <div className="pt-1 pb-1">
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handleAdsOverride(false); }}
+                          disabled={overridingAds}
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-3 text-[11px] border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                        >
+                          {overridingAds ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              Ricalcolo...
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Ho verificato: nessuna Ad trovata
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Se override è stato applicato (ads disattivate manualmente) */}
+                    {!adsOn && analysis?.ads_override && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                          Ads corrette manualmente
+                        </span>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handleAdsOverride(true); }}
+                          disabled={overridingAds}
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-2 text-[10px] text-muted-foreground hover:text-amber-400"
+                        >
+                          Ripristina
+                        </Button>
                       </div>
                     )}
 
