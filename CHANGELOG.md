@@ -4,6 +4,49 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.6.0] - 2026-03-15
+
+### Ads — Solo Verifica Manuale (Breaking Change)
+
+- **RIMOSSO completamente**: check automatico Ads via Apify (`ads-intelligence.ts` → `saveAdsResultsToDB` disabilitato)
+- **NUOVO campo DB**: `adsVerifiedManually` (Boolean) — unica fonte di verità per le ads
+- **Regola**: Solo i click manuali SI/NO determinano se le ads esistono. Nessun suggerimento automatico, nessun fallback da JSON
+- **Score +20 Ads**: assegnato SOLO se `adsVerifiedManually = true` E almeno un canale attivo
+- **Tutti e 7 gli endpoint scoring** aggiornati per usare `adsVerifiedManually` invece di `adsCheckedAt`
+- **"Passa a Video"** bloccato finché Google Ads E Meta Ads non sono verificati manualmente (SI o NO)
+- **Reset globale**: eseguito `UPDATE leads SET ads_verified_manually = false` + recalc (37 score cambiati, 29 stage cambiati)
+
+### Script Tella Tracking
+
+- **NUOVO campo DB**: `scriptRegeneratedAt` (DateTime) — timestamp di quando lo script viene rigenerato in FARE_VIDEO
+- **Badge verde** "Script Tella generato" visibile sia a card aperta che chiusa nella variante video
+- **API**: `POST /api/leads/[id]/gemini-analysis` setta `scriptRegeneratedAt` quando il lead è in FARE_VIDEO
+
+### Sidebar Badge X/Y per Fare Video
+
+- **NUOVO**: il badge di Fare Video nella sidebar mostra **X/Y** (X = script Tella generati, Y = totale video da fare)
+- **API**: `GET /api/dashboard/mission` ritorna anche `fareVideoReady` (count lead FARE_VIDEO con scriptRegeneratedAt)
+- **Sidebar speciale**: per `fareVideo` il badge mostra `${fareVideoReady}/${fareVideo}` invece del semplice conteggio
+
+### Aggiornamento Badge Sidebar in Tempo Reale
+
+- **NUOVO**: i badge sidebar si aggiornano istantaneamente senza ricaricare la pagina
+- **Architettura**: badges spostati da stato locale `Sidebar` al `SidebarContext` (provider globale)
+- **`refreshBadges()`** esposto nel context e chiamato automaticamente su:
+  - Rigenerazione script Tella
+  - "Passa a Video"
+  - "Video Inviato"
+  - "Non Target"
+- Polling ogni 60s come backup
+
+### Card Layout Migliorato
+
+- **Card chiusa** mostra 4 righe: dati (Segnali/Google/Meta/Sindrome/Pixel), score pills, tier selector, "Passa a Video" o badge script
+- **"Passa a Video"** visibile anche a card chiusa quando il lead è completamente verificato
+- **`ScoreBreakdownPills`** e **`TierSelector`** separati per layout flessibile
+
+---
+
 ## [3.5.0] - 2026-03-15
 
 ### Pipeline Flow v3.5 — "Tu decidi se fare il video"

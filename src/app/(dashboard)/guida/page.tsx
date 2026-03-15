@@ -97,51 +97,50 @@ export default function GuidaPage() {
             <Step n={1}>
               <p>
                 <strong>Apri &quot;Hot Leads&quot;</strong> dalla sidebar. Qui trovi i lead con
-                score piu alto e analisi Gemini completa. Sono gia pronti per il video.
+                score &ge;80 e analisi Gemini completa.
               </p>
             </Step>
 
             <Step n={2}>
               <p>
-                <strong>Clicca su un lead</strong> e vai al tab <strong>&quot;Analisi Strategica&quot;</strong>.
-                Trovi lo script video generato da Gemini: apertura, problemi specifici del sito,
-                proposta di valore. Leggilo come un teleprompter.
+                <strong>Verifica le Ads</strong>: per ogni lead clicca i link a Google Ads Transparency
+                e Meta Ad Library. Poi torna nel CRM e clicca SI o NO per ogni canale.
               </p>
             </Step>
 
             <Step n={3}>
               <p>
-                <strong>Registra il video personalizzato</strong> per quel lead.
-                Lo script e basato su dati reali: coerenza sito, ads attive, problemi concreti.
+                <strong>Clicca &quot;Passa a Video&quot;</strong> (appare solo se entrambe le Ads sono verificate).
+                Il lead si sposta in Fare Video.
               </p>
             </Step>
 
             <Step n={4}>
               <p>
-                <strong>Carica il video</strong> sulla pagina Karalisweb dedicata al lead.
-                Copia il link della pagina video.
+                <strong>Vai in &quot;Fare Video&quot;</strong>. Clicca &quot;Rigenera Testo Tella&quot;
+                per generare lo script definitivo con i dati ads verificati. Appare il badge verde
+                &quot;Script Tella generato&quot;. Il counter nella sidebar mostra X/Y.
               </p>
             </Step>
 
             <Step n={5}>
               <p>
-                <strong>Invia il link via WhatsApp</strong>. Il numero WhatsApp e gia estratto
-                dal sito o da Google Maps. Clicca il link verde nella scheda lead per aprire
-                la chat WhatsApp direttamente.
+                <strong>Registra il video</strong> leggendo lo script come teleprompter.
+                Carica su Karalisweb e copia il link.
               </p>
             </Step>
 
             <Step n={6}>
               <p>
-                <strong>Sposta il lead in &quot;Video Inviato&quot;</strong> dalla pipeline.
-                Il sistema traccia automaticamente se il prospect apre il video.
+                <strong>Invia il link via WhatsApp</strong> e clicca &quot;Video Inviato&quot;.
+                Il sistema traccia se il prospect apre il video.
               </p>
             </Step>
           </div>
 
           <Tip>
-            Obiettivo: 5 video al giorno, senza interruzioni. Se un lead non ha analisi
-            completa, saltalo e passa al prossimo.
+            Obiettivo: 5 video al giorno. I badge nella sidebar si aggiornano in tempo reale
+            ad ogni azione — non serve ricaricare la pagina.
           </Tip>
         </Section>
 
@@ -200,8 +199,8 @@ export default function GuidaPage() {
           </div>
 
           <Tip>
-            La pipeline e SACRA. Gli stage non si modificano. Il flusso e:
-            Analisi Gemini → Score → HOT/WARM → Video → Follow-up → Trattativa → Cliente.
+            Il flusso e: Analisi Gemini → Score → HOT/WARM/COLD → Verifica Ads manuale →
+            Passa a Video → Rigenera Script Tella → Registra video → Video Inviato → Follow-up → Cliente.
           </Tip>
         </Section>
 
@@ -329,24 +328,39 @@ export default function GuidaPage() {
           </p>
         </Section>
 
-        {/* SEZIONE 7: Ads Intelligence */}
-        <Section title="Ads Intelligence" icon={Send}>
+        {/* SEZIONE 7: Verifica Ads Manuale */}
+        <Section title="Verifica Ads (Solo Manuale)" icon={Send}>
           <p>
-            Il sistema verifica se un'azienda ha campagne Google Ads o Meta Ads attive:
+            La verifica delle Ads e <strong>100% manuale</strong>. Solo tu puoi determinare
+            se un lead ha Google Ads o Meta Ads attive.
           </p>
-          <ul className="list-disc list-inside text-muted-foreground space-y-1">
-            <li><strong>Google Ads</strong>: verificato tramite Apify Google Search Scraper</li>
-            <li><strong>Meta Ads</strong>: verificato tramite Apify Facebook Ads Library Scraper</li>
-            <li><strong>Landing Page</strong>: il testo della landing page viene estratto e confrontato con il sito</li>
-          </ul>
-          <p className="text-muted-foreground mt-2">
-            Se viene rilevata un'incoerenza tra annuncio e landing page, il sistema genera un
-            warning che puoi usare come argomento nel video.
-          </p>
-          <p className="text-muted-foreground mt-1">
-            Usa il bottone <strong>&quot;Check Ads&quot;</strong> nel tab Analisi Strategica per
-            verificare le ads di un lead specifico.
-          </p>
+
+          <div className="space-y-3 mt-2">
+            <Step n={1}>
+              <p>
+                Nella card del lead, trovi i bottoni <strong>SI / NO</strong> separati
+                per Google Ads e Meta Ads. Di default sono &quot;da verificare&quot;.
+              </p>
+            </Step>
+            <Step n={2}>
+              <p>
+                Clicca il link <strong>Google Ads Transparency</strong> o <strong>Meta Ad Library</strong>
+                per verificare manualmente se l&apos;azienda ha campagne attive.
+              </p>
+            </Step>
+            <Step n={3}>
+              <p>
+                Torna nel CRM e clicca <strong>SI</strong> o <strong>NO</strong>.
+                Lo score si ricalcola automaticamente (+20 se almeno un canale attivo).
+              </p>
+            </Step>
+          </div>
+
+          <Tip>
+            Il pulsante &quot;Passa a Video&quot; e bloccato finche non hai verificato
+            ENTRAMBI i canali (Google Ads E Meta Ads). Non serve che siano attive,
+            basta che tu abbia controllato e cliccato SI o NO.
+          </Tip>
         </Section>
       </div>
     </div>
