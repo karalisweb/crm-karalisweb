@@ -4,6 +4,42 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.1.0] - 2026-03-15
+
+### Security (CRITICAL)
+
+- **SSRF protection**: tutti i fetch di URL esterni validano che l'IP non sia privato (127.x, 10.x, 172.16-31.x, 192.168.x, 169.254.x, localhost). Nuovo file `url-validator.ts`
+- **Auth endpoint interni**: `/api/internal/batch-analysis` e `/api/internal/recalc-scores` ora richiedono `CRON_SECRET`
+- **Debug endpoint protetto**: `/api/debug/reset-data` accessibile solo in `NODE_ENV=development` + ruolo `ADMIN`. In produzione ritorna 404
+- **Gemini timeout 30s**: `generateContent()` wrappato in `Promise.race` per evitare hang infiniti
+- **.env sanitizzato**: rimosse API key di servizi dismessi, creato `.env.example` con placeholder
+
+### Infrastructure
+
+- **Health check**: nuovo `GET /api/health` per monitoring e Docker healthcheck
+- **Recovery job bloccati**: nuovo `POST /api/cron/recover-stuck-jobs` resetta job RUNNING da 30+ min
+- **Security headers**: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`
+- **Node engines**: `package.json` richiede Node >= 20.0.0
+- **Backup script**: `scripts/backup-db.sh` con rotazione (ultimi 30 backup)
+
+### Bug Fixes
+
+- **Recontact preserva storico**: il cron recontact non resetta piu videoSentAt, videoViewedAt, letterSentAt, linkedinSentAt, respondedAt. Lo storico interazioni rimane intatto
+- **Recontact batch**: convertito da loop N+1 a `updateMany` + `createMany` in transaction
+- **WhatsApp URL decoding**: `extractWhatsAppNumber()` decodifica URL-encoded HTML prima dei regex
+
+### Improvements
+
+- **Zod validation**: POST `/api/leads` e POST `/api/scheduled-searches` validano input con schema Zod
+- **DB transactions**: PATCH `/api/leads/[id]` usa `$transaction` per activity + update atomici
+- **pageSize cap**: GET `/api/leads` limita pageSize a 1-200
+- **Rate limiting IP**: POST `/api/public/video-view` rate limit per IP (1 req/10s) oltre al rate limit per token
+- **HTML size limit**: `extractStrategicData()` rifiuta HTML > 5MB
+- **Gemini cost logging**: ogni chiamata logga token usage (prompt, candidates, total)
+- **Error boundaries**: `error.tsx` globale e dashboard con bottone "Riprova"
+
+---
+
 ## [3.0.0] - 2026-03-15
 
 ### Pulizia e semplificazione
