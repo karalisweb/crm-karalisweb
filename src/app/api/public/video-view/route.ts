@@ -9,6 +9,27 @@ const CORS_HEADERS = {
 
 const RATE_LIMIT_MS = 5 * 60 * 1000; // 5 minuti
 
+// Rate limiting per IP — in-memory, max 1 req/10s per IP
+const ipLastRequest = new Map<string, number>();
+const IP_RATE_LIMIT_MS = 10_000; // 10 secondi
+
+function isIpRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const last = ipLastRequest.get(ip);
+  if (last && now - last < IP_RATE_LIMIT_MS) {
+    return true;
+  }
+  ipLastRequest.set(ip, now);
+  // Pulizia periodica per evitare memory leak
+  if (ipLastRequest.size > 1000) {
+    const cutoff = now - IP_RATE_LIMIT_MS;
+    for (const [key, ts] of ipLastRequest) {
+      if (ts < cutoff) ipLastRequest.delete(key);
+    }
+  }
+  return false;
+}
+
 /**
  * OPTIONS /api/public/video-view — CORS preflight
  */
@@ -23,6 +44,16 @@ export async function OPTIONS() {
  */
 export async function POST(request: Request) {
   try {
+    // Rate limit per IP
+    const forwarded = request.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() || "unknown";
+    if (isIpRateLimited(ip)) {
+      return NextResponse.json(
+        { ok: true, skipped: true },
+        { status: 200, headers: CORS_HEADERS }
+      );
+    }
+
     const body = await request.json();
     const { token } = body;
 

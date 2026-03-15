@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "20");
+    const pageSize = Math.min(Math.max(parseInt(searchParams.get("pageSize") || "20"), 1), 200);
     const stage = searchParams.get("stage");
     const stages = searchParams.get("stages"); // Supporta multipli stage separati da virgola
     const auditStatus = searchParams.get("auditStatus") || searchParams.get("audit");
