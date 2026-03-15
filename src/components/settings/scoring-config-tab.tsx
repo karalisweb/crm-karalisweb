@@ -4,31 +4,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 
 /**
- * Tab Scoring — visualizza come funziona il punteggio lead.
- * I pesi sono definiti in lead-score.ts e qui vengono documentati per l'utente.
+ * Tab Scoring v3.0 — "Disallineamento Strategico"
+ * Il disallineamento è il driver principale, le ads sono aggravanti.
+ * Pesi definiti in lead-score.ts e documentati qui per l'utente.
  */
 export function ScoringConfigTab() {
   const scoringRules = [
     {
-      category: "Ads Attive",
-      description: "Il lead sta spendendo soldi in pubblicita",
-      points: 40,
-      color: "bg-red-500/15 text-red-400 border-red-500/25",
-      logic: "Se vengono rilevate ads attive (Google Ads o Meta Ads) dal sito o da Apify",
-    },
-    {
-      category: "Ads Senza Pixel",
-      description: "Spendono in ads ma non tracciano le conversioni",
-      points: 20,
-      color: "bg-orange-500/15 text-orange-400 border-orange-500/25",
-      logic: "Se hanno ads attive MA non hanno pixel di tracking (Meta Pixel, Google Analytics, GTM, ecc.)",
-    },
-    {
       category: "Errore Strategico",
-      description: "L'AI ha trovato un errore nel loro marketing",
+      description: "L'AI ha trovato un disallineamento nel sito (DRIVER PRINCIPALE)",
+      points: 50,
+      color: "bg-red-500/15 text-red-400 border-red-500/25",
+      logic: 'Gemini rileva pattern come "Lista della Spesa", "Sindrome dell\'Ego", "Target Fantasma", ecc. Questo e il segnale piu forte: il sito comunica male.',
+    },
+    {
+      category: "Ads Attive",
+      description: "Stanno spendendo soldi in pubblicita (aggravante)",
       points: 20,
       color: "bg-orange-500/15 text-orange-400 border-orange-500/25",
-      logic: 'Gemini rileva pattern come "Lista della Spesa", "Ego Trip", "Cliche Factory", ecc.',
+      logic: "Se vengono rilevate ads attive (Google Ads o Meta Ads). Aggravante: se il sito ha un errore strategico E spendono in ads, stanno bruciando budget.",
+    },
+    {
+      category: "Ads Senza Tracking",
+      description: "Spendono in ads ma non tracciano le conversioni",
+      points: 10,
+      color: "bg-orange-500/15 text-orange-400 border-orange-500/25",
+      logic: "Se hanno ads attive MA non hanno pixel di tracking (Meta Pixel, Google Analytics, GTM, ecc.). Aggravante ulteriore.",
     },
     {
       category: "Settore High-Ticket",
@@ -54,25 +55,40 @@ export function ScoringConfigTab() {
   ];
 
   const thresholds = [
-    { label: "HOT", range: "80-100", color: "bg-red-600 text-white", description: "Massimo potenziale: ads attive + senza tracking + errore strategico + high-ticket" },
-    { label: "WARM", range: "50-79", color: "bg-yellow-600 text-white", description: "Buon potenziale: combinazione di 2-3 fattori positivi" },
-    { label: "COLD", range: "0-49", color: "bg-blue-600 text-white", description: "Basso potenziale: pochi segnali commerciali rilevati" },
+    { label: "FARE VIDEO", range: "80-100", color: "bg-red-600 text-white", description: "Massimo potenziale: errore strategico + ads + senza tracking + high-ticket = 100" },
+    { label: "WARM", range: "50-79", color: "bg-yellow-600 text-white", description: "Buon potenziale: errore strategico + settore high-ticket (70) o errore + ads (70)" },
+    { label: "COLD", range: "0-49", color: "bg-blue-600 text-white", description: "Basso potenziale: solo ads senza errore strategico, o solo settore" },
   ];
 
   const examples = [
     {
-      name: "Esempio HOT (100 punti)",
-      items: ["Ads attive: +40", "Ads senza pixel: +20", "Errore strategico: +20", "Settore high-ticket: +20"],
+      name: "FARE VIDEO (100 punti)",
+      items: ["Errore strategico: +50", "Ads attive: +20", "Ads senza tracking: +10", "Settore high-ticket: +20"],
       total: 100,
     },
     {
-      name: "Esempio WARM (60 punti)",
-      items: ["Ads attive: +40", "Settore high-ticket: +20"],
+      name: "FARE VIDEO (90 punti)",
+      items: ["Errore strategico: +50", "Ads attive: +20", "Settore high-ticket: +20"],
+      total: 90,
+    },
+    {
+      name: "WARM (70 punti)",
+      items: ["Errore strategico: +50", "Settore high-ticket: +20"],
+      total: 70,
+    },
+    {
+      name: "WARM (60 punti)",
+      items: ["Errore strategico: +50", "Settore standard: +10"],
       total: 60,
     },
     {
-      name: "Esempio COLD (30 punti)",
-      items: ["Settore standard: +10", "Errore strategico: +20"],
+      name: "COLD (40 punti)",
+      items: ["Ads attive: +20", "Settore high-ticket: +20"],
+      total: 40,
+    },
+    {
+      name: "COLD (30 punti)",
+      items: ["Ads attive: +20", "Settore standard: +10"],
       total: 30,
     },
   ];
@@ -82,9 +98,9 @@ export function ScoringConfigTab() {
       {/* Regole di Scoring */}
       <Card>
         <CardHeader>
-          <CardTitle>Regole di Scoring</CardTitle>
+          <CardTitle>Regole di Scoring v3.0</CardTitle>
           <CardDescription>
-            Come viene calcolato il punteggio di ogni lead (0-100). Basato sul concetto di &quot;Sanguinamento Finanziario&quot;: piu soldi sprecano, piu alto il potenziale.
+            Come viene calcolato il punteggio di ogni lead (0-100). Il driver principale e il &quot;Disallineamento Strategico&quot;: se il sito comunica male, e il segnale piu forte. Le ads sono un&apos;aggravante.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -104,7 +120,7 @@ export function ScoringConfigTab() {
           </div>
           <div className="mt-4 p-3 bg-muted/30 rounded-lg">
             <p className="text-xs text-muted-foreground">
-              <strong>Nota:</strong> Il punteggio massimo e 100. I fattori sono cumulativi: Ads attive (40) + Ads senza pixel (20) + Errore strategico (20) + High-ticket (20) = 100 punti.
+              <strong>Nota:</strong> Il punteggio massimo e 100. Formula: Errore strategico (50) + Ads attive (20) + Ads senza tracking (10) + High-ticket (20) = 100. Senza errore strategico, il max e 50 (sempre COLD).
             </p>
           </div>
         </CardContent>
@@ -132,6 +148,11 @@ export function ScoringConfigTab() {
               </div>
             ))}
           </div>
+          <div className="mt-4 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+            <p className="text-xs text-amber-400">
+              <strong>Implicazione chiave:</strong> Un lead con solo ads attive ma senza errore strategico non puo superare 50 punti → resta sempre COLD. Per essere WARM o FARE VIDEO serve almeno un errore strategico rilevato.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -155,7 +176,7 @@ export function ScoringConfigTab() {
                     return (
                       <div key={i} className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">{item.split(":")[0]}</span>
-                        <span className={`font-bold ${pts >= 40 ? "text-red-400" : pts >= 20 ? "text-orange-400" : "text-yellow-400"}`}>
+                        <span className={`font-bold ${pts >= 50 ? "text-red-400" : pts >= 20 ? "text-orange-400" : "text-yellow-400"}`}>
                           +{pts}
                         </span>
                       </div>

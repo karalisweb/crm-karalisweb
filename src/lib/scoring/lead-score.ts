@@ -1,15 +1,23 @@
 /**
- * Lead Score Calculator v2.0 — "Sanguinamento Finanziario"
+ * Lead Score Calculator v3.0 — "Disallineamento Strategico"
  *
- * Lo score NON si basa più su SEO/tecnica, ma su:
- * - Budget sprecato (ads attive senza tracking = soldi bruciati)
- * - Margine del settore (high-ticket vs low-ticket)
- * - Errore strategico rilevato dall'AI
+ * PRIORITÀ: il disallineamento nel sito è il driver principale.
+ * Le ads sono un'aggravante, non il motore dello score.
  *
- * Output: 0-100, compatibile con getScoreCategory()
- *   >= 80 → HOT (rosso)
- *   50-79 → WARM (giallo)
- *   < 50  → COLD (grigio)
+ * Pesi v3.0:
+ * - Errore strategico (disallineamento sito):  +50  (driver)
+ * - Ads attive:                                 +20  (aggravante)
+ * - Ads senza tracking:                         +10  (aggravante)
+ * - Settore high-ticket:                        +20
+ * - Settore standard:                           +10
+ * - Settore low-ticket:                          +5
+ *
+ * Max teorico: 50 + 20 + 10 + 20 = 100
+ *
+ * Output: 0-100
+ *   >= 80 → FARE_VIDEO
+ *   50-79 → WARM
+ *   < 50  → COLD
  */
 
 // ==========================================
@@ -94,15 +102,17 @@ export interface LeadScoreResult {
 // ==========================================
 
 /**
- * Calcola il lead score (0-100) basato sul "Sanguinamento Finanziario".
+ * Calcola il lead score (0-100) basato sul "Disallineamento Strategico".
  *
- * Logica:
- * - has_active_ads === true:                    +40
- * - has_active_ads && !has_tracking_pixel:       +20
+ * v3.0 — Il disallineamento è il driver, le ads sono aggravanti.
+ *
+ * Pesi:
+ * - strategic_error_found !== null:             +50  (DRIVER)
+ * - has_active_ads === true:                    +20  (aggravante)
+ * - has_active_ads && !has_tracking_pixel:       +10  (aggravante)
  * - industry_tier === 'high_ticket':            +20
  * - industry_tier === 'low_ticket':              +5
  * - industry_tier === 'standard':               +10
- * - strategic_error_found !== null:             +20
  *
  * Cap: 100
  */
@@ -111,19 +121,25 @@ export function calculateLeadScore(input: LeadScoreInput): LeadScoreResult {
   const breakdown: string[] = [];
   const tier = classifyIndustryTier(input.category);
 
-  // 1. Ads attive = hanno budget (+40)
+  // 1. Errore strategico = DRIVER PRINCIPALE (+50)
+  if (input.strategicErrorFound) {
+    score += 50;
+    breakdown.push(`Errore strategico (${input.strategicErrorFound}): +50`);
+  }
+
+  // 2. Ads attive = aggravante, hanno budget (+20)
   if (input.hasActiveAds) {
-    score += 40;
-    breakdown.push("Ads attive: +40");
-  }
-
-  // 2. Ads attive MA nessun pixel = bruciano soldi al buio (+20)
-  if (input.hasActiveAds && !input.hasTrackingPixel) {
     score += 20;
-    breakdown.push("Ads senza pixel/tracking: +20");
+    breakdown.push("Ads attive: +20");
   }
 
-  // 3. Margine settore
+  // 3. Ads attive MA nessun pixel = bruciano soldi al buio (+10)
+  if (input.hasActiveAds && !input.hasTrackingPixel) {
+    score += 10;
+    breakdown.push("Ads senza pixel/tracking: +10");
+  }
+
+  // 4. Margine settore
   if (tier === "high_ticket") {
     score += 20;
     breakdown.push("Settore high-ticket: +20");
@@ -133,12 +149,6 @@ export function calculateLeadScore(input: LeadScoreInput): LeadScoreResult {
   } else {
     score += 10;
     breakdown.push("Settore standard: +10");
-  }
-
-  // 4. Errore strategico trovato dall'AI (+20)
-  if (input.strategicErrorFound) {
-    score += 20;
-    breakdown.push(`Errore strategico (${input.strategicErrorFound}): +20`);
   }
 
   const finalScore = Math.min(score, 100);

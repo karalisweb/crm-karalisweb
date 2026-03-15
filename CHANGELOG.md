@@ -4,6 +4,20 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.2.1] - 2026-03-15
+
+### Changed
+
+- **Scoring v3.0 "Disallineamento Strategico"** — Ricalibrazione completa dei pesi:
+  - Errore strategico: +20 → **+50** (driver principale)
+  - Ads attive: +40 → **+20** (aggravante)
+  - Ads senza tracking: +20 → **+10** (aggravante)
+  - Settori invariati (high-ticket +20, standard +10, low-ticket +5)
+- **Implicazione**: senza errore strategico il max score è 50 → sempre COLD. Per essere WARM/FARE_VIDEO serve almeno un disallineamento rilevato dall'AI
+- **Tab Scoring aggiornata** con nuovi pesi, nuovi esempi e nota sull'implicazione chiave
+
+---
+
 ## [3.2.0] - 2026-03-15
 
 ### Bug Fixes (CRITICAL)
