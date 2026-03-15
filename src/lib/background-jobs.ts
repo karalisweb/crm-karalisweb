@@ -195,3 +195,27 @@ async function processGeminiAnalysis(leadId: string): Promise<void> {
     console.log(`[GEMINI] Analisi strategica completata per ${lead.name}`);
   }
 }
+
+/**
+ * Recupera job bloccati in stato RUNNING da più di 30 minuti.
+ * Resetta a PENDING per consentire un nuovo tentativo.
+ */
+export async function recoverStuckJobs(): Promise<number> {
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+  const result = await db.lead.updateMany({
+    where: {
+      auditStatus: "RUNNING",
+      updatedAt: { lt: thirtyMinutesAgo },
+    },
+    data: {
+      auditStatus: "PENDING",
+    },
+  });
+
+  if (result.count > 0) {
+    console.log(`[RECOVERY] Recuperati ${result.count} job bloccati in RUNNING`);
+  }
+
+  return result.count;
+}

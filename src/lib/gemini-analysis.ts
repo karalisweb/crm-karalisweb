@@ -115,8 +115,23 @@ export async function runGeminiAnalysis(
     landing_page_text: input.landing_page_text || null,
   });
 
-  const result = await model.generateContent(userPrompt);
+  const result = await Promise.race([
+    model.generateContent(userPrompt),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Gemini timeout: nessuna risposta in 30 secondi")), 30_000)
+    ),
+  ]);
   const response = result.response;
+
+  // Log usage per monitoraggio costi
+  if (response.usageMetadata) {
+    console.log(
+      `[GEMINI] ${input.company_name} — tokens: prompt=${response.usageMetadata.promptTokenCount}, ` +
+      `candidates=${response.usageMetadata.candidatesTokenCount}, ` +
+      `total=${response.usageMetadata.totalTokenCount}`
+    );
+  }
+
   const text = response.text();
 
   let parsed: {
