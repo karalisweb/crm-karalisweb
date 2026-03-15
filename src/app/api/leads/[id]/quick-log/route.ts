@@ -23,6 +23,8 @@ type ActionType =
   | "MARK_LOST"
   | "MARK_WON"
   | "MOVE_TO_VIDEO"
+  | "MOVE_TO_WARM"
+  | "MOVE_TO_COLD"
   | "CALL_LOGGED";
 
 export async function POST(
@@ -63,7 +65,8 @@ async function handleAction(leadId: string, body: any) {
   const validActions: ActionType[] = [
     "VIDEO_SENT", "FOLLOW_UP", "LINKEDIN_SENT", "TELEFONATA",
     "CALL_SCHEDULED", "IN_TRATTATIVA", "MARK_ARCHIVED",
-    "MARK_LOST", "MARK_WON", "MOVE_TO_VIDEO", "CALL_LOGGED",
+    "MARK_LOST", "MARK_WON", "MOVE_TO_VIDEO", "MOVE_TO_WARM",
+    "MOVE_TO_COLD", "CALL_LOGGED",
   ];
 
   if (!validActions.includes(action)) {
@@ -185,6 +188,18 @@ async function handleAction(leadId: string, body: any) {
       newStage = "FARE_VIDEO";
       activityType = "STAGE_CHANGE";
       activityNotes = notes || "Spostato a Fare Video";
+      break;
+
+    case "MOVE_TO_WARM":
+      newStage = "WARM_LEAD";
+      activityType = "STAGE_CHANGE";
+      activityNotes = notes || "Spostato da Fare Video a Warm Lead";
+      break;
+
+    case "MOVE_TO_COLD":
+      newStage = "COLD_LEAD";
+      activityType = "STAGE_CHANGE";
+      activityNotes = notes || "Spostato da Fare Video a Cold Lead";
       break;
   }
 

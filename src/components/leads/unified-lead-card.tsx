@@ -17,8 +17,10 @@ import {
   Check,
   Phone,
   Star,
-  RefreshCw,
   Info,
+  MessageCircle,
+  ArrowLeft,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -41,6 +43,16 @@ interface TeleprompterScript {
   atto_4: string;
 }
 
+interface AdsOverride {
+  googleAds?: boolean | null;
+  metaAds?: boolean | null;
+  verifiedAt?: string;
+  // Legacy
+  overriddenAt?: string;
+  overriddenTo?: boolean;
+  reason?: string;
+}
+
 interface GeminiAnalysis {
   cliche_found?: string;
   primary_error_pattern?: string;
@@ -55,11 +67,7 @@ interface GeminiAnalysis {
   meta_ads_copy?: string[];
   ad_library_url?: string | null;
   google_ads_transparency_url?: string | null;
-  ads_override?: {
-    overriddenAt: string;
-    overriddenTo: boolean;
-    reason: string;
-  } | null;
+  ads_override?: AdsOverride | null;
 }
 
 interface ScoreBreakdownData {
@@ -87,7 +95,7 @@ export interface UnifiedLead {
   geminiAnalysis: GeminiAnalysis | null;
   geminiAnalyzedAt: string | null;
   scoreBreakdown: ScoreBreakdownData | null;
-  // Ads Intelligence (DB)
+  // Ads (DB)
   hasActiveGoogleAds: boolean;
   hasActiveMetaAds: boolean;
   googleAdsCopy: string | null;
@@ -95,6 +103,9 @@ export interface UnifiedLead {
   landingPageUrl: string | null;
   landingPageText: string | null;
   adsCheckedAt: string | null;
+  // WhatsApp
+  whatsappNumber?: string | null;
+  whatsappSource?: string | null;
   // Video
   videoScriptData?: unknown;
 }
@@ -156,6 +167,52 @@ function hasTrackingPixel(lead: UnifiedLead): boolean {
   );
 }
 
+/** Segnali Ads: tool di tracking trovati nel DOM che suggeriscono attivita ads */
+function getAdsSignals(lead: UnifiedLead): string[] {
+  const networks = getAdsNetworks(lead);
+  const adsRelated = [
+    "meta pixel", "google ads", "google tag manager",
+    "linkedin insight", "tiktok pixel",
+  ];
+  return networks.filter(n =>
+    adsRelated.some(t => n.toLowerCase().includes(t))
+  );
+}
+
+/** Stato verifica manuale ads dall'override */
+function getManualAdsState(lead: UnifiedLead): {
+  googleVerified: boolean;
+  metaVerified: boolean;
+  googleAds: boolean;
+  metaAds: boolean;
+} {
+  const override = lead.geminiAnalysis?.ads_override;
+  if (!override) {
+    return {
+      googleVerified: false,
+      metaVerified: false,
+      googleAds: lead.hasActiveGoogleAds,
+      metaAds: lead.hasActiveMetaAds,
+    };
+  }
+  // v3.3 format
+  if ("googleAds" in override || "metaAds" in override) {
+    return {
+      googleVerified: override.googleAds !== null && override.googleAds !== undefined,
+      metaVerified: override.metaAds !== null && override.metaAds !== undefined,
+      googleAds: override.googleAds === true,
+      metaAds: override.metaAds === true,
+    };
+  }
+  // Legacy format
+  return {
+    googleVerified: false,
+    metaVerified: false,
+    googleAds: lead.hasActiveGoogleAds,
+    metaAds: lead.hasActiveMetaAds,
+  };
+}
+
 // ==========================================
 // ATTO LABELS for Teleprompter
 // ==========================================
@@ -183,7 +240,6 @@ function ScoreBreakdown({ data, score }: { data: ScoreBreakdownData | null; scor
     standard: "Standard",
   };
 
-  // Parse breakdown items to get individual scores
   const items = breakdown.map(item => {
     const match = item.match(/:\s*\+(\d+)$/);
     const points = match ? parseInt(match[1]) : 0;
@@ -238,24 +294,17 @@ export function UnifiedLeadCard({
   const [loading, setLoading] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
-  const [checkingAds, setCheckingAds] = useState(false);
   const [overridingAds, setOverridingAds] = useState(false);
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
-  const [adsData, setAdsData] = useState({
-    hasGoogle: lead.hasActiveGoogleAds,
-    hasMeta: lead.hasActiveMetaAds,
-    googleCopy: lead.googleAdsCopy,
-    metaCopy: lead.metaAdsCopy,
-    lpUrl: lead.landingPageUrl,
-    lpText: lead.landingPageText,
-    checkedAt: lead.adsCheckedAt,
-  });
+  const [whatsappInput, setWhatsappInput] = useState(lead.whatsappNumber || "");
+  const [savingWA, setSavingWA] = useState(false);
 
   const analysis = lead.geminiAnalysis;
   const isAnalyzed = hasAnalysis(lead);
-  const adsOn = analysis?.has_active_ads === true || adsData.hasGoogle || adsData.hasMeta;
   const pixelOk = hasTrackingPixel(lead);
   const errorPattern = analysis?.primary_error_pattern || null;
+  const adsSignals = getAdsSignals(lead);
+  const manualAds = getManualAdsState(lead);
 
   // ---- Actions ----
 
@@ -290,6 +339,25 @@ export function UnifiedLeadCard({
       });
       if (!res.ok) throw new Error("Errore");
       toast.success(`${lead.name} spostato in Non Target`);
+      onAction();
+    } catch {
+      toast.error("Errore nello spostamento");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleMoveBack = async (action: "MOVE_TO_WARM" | "MOVE_TO_COLD") => {
+    const label = action === "MOVE_TO_WARM" ? "Warm" : "Cold";
+    setLoading(action.toLowerCase());
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/quick-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) throw new Error("Errore");
+      toast.success(`${lead.name} spostato a ${label}`);
       onAction();
     } catch {
       toast.error("Errore nello spostamento");
@@ -335,60 +403,54 @@ export function UnifiedLeadCard({
     }
   };
 
-  const handleCheckAds = async () => {
-    setCheckingAds(true);
-    try {
-      const res = await fetch(`/api/leads/${lead.id}/ads-check`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Errore");
-      }
-      const { data } = await res.json();
-      setAdsData({
-        hasGoogle: data.hasActiveGoogleAds,
-        hasMeta: data.hasActiveMetaAds,
-        googleCopy: data.googleAdsCopy,
-        metaCopy: data.metaAdsCopy,
-        lpUrl: data.landingPageUrl,
-        lpText: data.landingPageText,
-        checkedAt: new Date().toISOString(),
-      });
-      const found = data.hasActiveGoogleAds || data.hasActiveMetaAds;
-      toast.success(found ? `Ads trovate per ${lead.name}!` : `Nessuna ad trovata per ${lead.name}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore check Ads");
-    } finally {
-      setCheckingAds(false);
-    }
-  };
-
-  const handleAdsOverride = async (hasActiveAds: boolean) => {
+  const handleAdsToggle = async (platform: "google" | "meta", value: boolean) => {
     setOverridingAds(true);
     try {
+      const body = platform === "google"
+        ? { googleAds: value }
+        : { metaAds: value };
       const res = await fetch(`/api/leads/${lead.id}/ads-override`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hasActiveAds }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Errore");
       }
       const data = await res.json();
+      const label = platform === "google" ? "Google Ads" : "Meta Ads";
       toast.success(
-        `${lead.name}: Ads → ${hasActiveAds ? "SI" : "NO"}, score ${data.oldScore} → ${data.newScore}`
+        `${lead.name}: ${label} = ${value ? "SI" : "NO"}, score ${data.oldScore} -> ${data.newScore}`
       );
-      // Se lo stage è cambiato, ricarica la lista
       if (data.oldStage !== data.newStage) {
         toast.info(`Spostato da ${data.oldStage} a ${data.newStage}`);
       }
-      onAction(); // Refresh lista
+      onAction();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore override Ads");
     } finally {
       setOverridingAds(false);
+    }
+  };
+
+  const handleSaveWhatsApp = async () => {
+    setSavingWA(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          whatsappNumber: whatsappInput.trim() || null,
+          whatsappSource: whatsappInput.trim() ? "manual" : null,
+        }),
+      });
+      if (!res.ok) throw new Error("Errore");
+      toast.success(`WhatsApp salvato per ${lead.name}`);
+    } catch {
+      toast.error("Errore nel salvataggio WhatsApp");
+    } finally {
+      setSavingWA(false);
     }
   };
 
@@ -413,6 +475,11 @@ export function UnifiedLeadCard({
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  // Format whatsapp number for wa.me link
+  const waLink = whatsappInput.trim()
+    ? `https://wa.me/${whatsappInput.trim().replace(/[^0-9]/g, "")}`
+    : null;
 
   // ---- Variant-specific actions ----
   const getActionButtons = () => {
@@ -504,36 +571,84 @@ export function UnifiedLeadCard({
         );
       case "video":
         return (
-          <div className="flex gap-2">
-            {isAnalyzed && analysis?.teleprompter_script && (
+          <div className="space-y-2">
+            {/* Riga 1: Script + Video Inviato + Info */}
+            <div className="flex gap-2">
+              {isAnalyzed && analysis?.teleprompter_script && (
+                <Button
+                  onClick={() => setScriptModalOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Script Tella
+                </Button>
+              )}
               <Button
-                onClick={() => setScriptModalOpen(true)}
+                onClick={handleVideoSent}
+                disabled={!!loading}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                size="sm"
+              >
+                {loading === "video_sent" ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                )}
+                Video Inviato
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href={`/leads/${lead.id}`}>
+                  <Info className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            {/* Riga 2: Sposta indietro */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleMoveBack("MOVE_TO_WARM")}
+                disabled={!!loading}
                 variant="outline"
                 size="sm"
-                className="flex-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                className="flex-1 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 text-xs"
               >
-                <Copy className="h-4 w-4 mr-2" />
-                Script Tella
+                {loading === "move_to_warm" ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <ArrowLeft className="h-3 w-3 mr-1" />
+                )}
+                Warm
               </Button>
-            )}
-            <Button
-              onClick={handleVideoSent}
-              disabled={!!loading}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-              size="sm"
-            >
-              {loading === "video_sent" ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-              )}
-              Video Inviato
-            </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/leads/${lead.id}`}>
-                <Info className="h-4 w-4" />
-              </Link>
-            </Button>
+              <Button
+                onClick={() => handleMoveBack("MOVE_TO_COLD")}
+                disabled={!!loading}
+                variant="outline"
+                size="sm"
+                className="flex-1 border-blue-500/40 text-blue-400 hover:bg-blue-500/10 text-xs"
+              >
+                {loading === "move_to_cold" ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <ArrowLeft className="h-3 w-3 mr-1" />
+                )}
+                Cold
+              </Button>
+              <Button
+                onClick={handleNonTarget}
+                disabled={!!loading}
+                variant="outline"
+                size="sm"
+                className="flex-1 border-gray-500/40 text-gray-400 hover:bg-gray-500/10 text-xs"
+              >
+                {loading === "non_target" ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <XCircle className="h-3 w-3 mr-1" />
+                )}
+                Non Target
+              </Button>
+            </div>
           </div>
         );
     }
@@ -587,14 +702,37 @@ export function UnifiedLeadCard({
               {/* Riga 1: Tag strategici */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 flex-wrap flex-1">
-                  <span className={cn(
-                    "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
-                    adsOn
-                      ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                      : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
-                  )}>
-                    Ads: {adsOn ? "ON" : "OFF"}
-                  </span>
+                  {/* Segnali Ads */}
+                  {adsSignals.length > 0 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                      <Search className="h-2.5 w-2.5 mr-1" />
+                      Segnali: {adsSignals.join(", ")}
+                    </span>
+                  )}
+
+                  {/* Verifica manuale Google */}
+                  {manualAds.googleVerified && (
+                    <span className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
+                      manualAds.googleAds
+                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                        : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+                    )}>
+                      Google: {manualAds.googleAds ? "SI" : "NO"}
+                    </span>
+                  )}
+
+                  {/* Verifica manuale Meta */}
+                  {manualAds.metaVerified && (
+                    <span className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
+                      manualAds.metaAds
+                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                        : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+                    )}>
+                      Meta: {manualAds.metaAds ? "SI" : "NO"}
+                    </span>
+                  )}
 
                   {isAnalyzed && (
                     <span className={cn(
@@ -667,7 +805,7 @@ export function UnifiedLeadCard({
                 {/* ---- COLONNA SINISTRA: Dati + Gancio di Vendita ---- */}
                 <div className="lg:col-span-7 space-y-4">
 
-                  {/* Dati base */}
+                  {/* Dati base + WhatsApp */}
                   <div className="space-y-2">
                     {lead.website && (
                       <a
@@ -692,23 +830,49 @@ export function UnifiedLeadCard({
                         <span>{lead.phone}</span>
                       </a>
                     )}
+
+                    {/* WhatsApp editabile */}
+                    <div
+                      className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MessageCircle className="h-4 w-4 flex-shrink-0 text-green-400" />
+                      <input
+                        type="text"
+                        value={whatsappInput}
+                        onChange={(e) => setWhatsappInput(e.target.value)}
+                        placeholder="Numero WhatsApp (es. 393401234567)"
+                        className="flex-1 bg-transparent text-sm text-green-400 placeholder:text-green-400/40 focus:outline-none"
+                      />
+                      {whatsappInput.trim() && waLink && (
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-green-400 hover:text-green-300"
+                          title="Apri WhatsApp"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      <Button
+                        onClick={handleSaveWhatsApp}
+                        disabled={savingWA}
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-[10px] text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                      >
+                        {savingWA ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Check className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Tag Strategici */}
                   <div className="flex flex-wrap gap-1.5">
-                    <span className={cn(
-                      "inline-flex items-center px-2 py-1 rounded text-xs font-semibold",
-                      adsOn
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                        : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
-                    )}>
-                      Ads: {adsOn ? "ON" : "OFF"}
-                      {adsOn && analysis?.ads_networks_found && analysis.ads_networks_found.length > 0 && (
-                        <span className="ml-1 opacity-70 font-normal">
-                          ({analysis.ads_networks_found.join(", ")})
-                        </span>
-                      )}
-                    </span>
                     {isAnalyzed && (
                       <span className={cn(
                         "inline-flex items-center px-2 py-1 rounded text-xs font-semibold",
@@ -726,162 +890,179 @@ export function UnifiedLeadCard({
                     )}
                   </div>
 
-                  {/* Box Ads Intelligence */}
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-                        Ads Intelligence
+                  {/* ============================================
+                      BOX SEGNALI ADS + VERIFICA MANUALE
+                      ============================================ */}
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-4 space-y-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
+                      Segnali Ads & Verifica Manuale
+                    </p>
+
+                    {/* Segnali trovati nel DOM */}
+                    {adsSignals.length > 0 ? (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                          Tool trovati nel sito (possibili segnali ads)
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {adsSignals.map((signal, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/25"
+                            >
+                              {signal}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        Nessun segnale ads trovato nel sito (no Meta Pixel, no Google Ads Tag, etc.)
                       </p>
+                    )}
+
+                    {/* Tutti i tracking tools */}
+                    {getAdsNetworks(lead).length > 0 && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                          Tutti i tracking tools
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {getAdsNetworks(lead).join(" · ")}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Verifica Manuale Google Ads */}
+                    <div className="flex items-center justify-between py-2 border-t border-amber-500/20">
                       <div className="flex items-center gap-2">
-                        {adsData.checkedAt && (
-                          <span className="text-[9px] text-muted-foreground">
-                            {new Date(adsData.checkedAt).toLocaleDateString("it-IT")}
+                        <span className="text-xs font-semibold text-gray-300">Google Ads</span>
+                        {manualAds.googleVerified ? (
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded font-bold",
+                            manualAds.googleAds
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-gray-500/20 text-gray-400"
+                          )}>
+                            {manualAds.googleAds ? "SI" : "NO"}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-500/10 text-gray-500">
+                            Da verificare
                           </span>
                         )}
+                      </div>
+                      <div className="flex items-center gap-1">
                         <Button
-                          onClick={(e) => { e.stopPropagation(); handleCheckAds(); }}
-                          disabled={checkingAds || !lead.website}
+                          onClick={(e) => { e.stopPropagation(); handleAdsToggle("google", true); }}
+                          disabled={overridingAds}
                           size="sm"
                           variant="outline"
-                          className="h-6 px-2 text-[10px] border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                        >
-                          {checkingAds ? (
-                            <>
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                              Analisi Ads...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                              Check Ads
-                            </>
+                          className={cn(
+                            "h-6 px-2.5 text-[10px]",
+                            manualAds.googleVerified && manualAds.googleAds
+                              ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+                              : "border-gray-500/30 text-gray-400 hover:border-emerald-500/50 hover:text-emerald-400"
                           )}
+                        >
+                          SI
                         </Button>
-                      </div>
-                    </div>
-
-                    {checkingAds && (
-                      <div className="flex items-center gap-2 py-3 justify-center">
-                        <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-                        <span className="text-sm text-emerald-400/80">Analisi Ads in corso via Apify...</span>
-                      </div>
-                    )}
-
-                    {adsData.lpUrl && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Landing Page</p>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handleAdsToggle("google", false); }}
+                          disabled={overridingAds}
+                          size="sm"
+                          variant="outline"
+                          className={cn(
+                            "h-6 px-2.5 text-[10px]",
+                            manualAds.googleVerified && !manualAds.googleAds
+                              ? "border-red-500/50 bg-red-500/10 text-red-400"
+                              : "border-gray-500/30 text-gray-400 hover:border-red-500/50 hover:text-red-400"
+                          )}
+                        >
+                          NO
+                        </Button>
                         <a
-                          href={adsData.lpUrl}
+                          href={`https://adstransparency.google.com/?domain=${encodeURIComponent((lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])}&region=IT`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-emerald-400 hover:text-emerald-300 underline break-all"
+                          className="inline-flex items-center h-6 px-2 rounded text-[10px] font-semibold bg-orange-600/20 text-orange-400 border border-orange-500/30 hover:bg-orange-600/30 transition-colors ml-1"
                           onClick={(e) => e.stopPropagation()}
+                          title="Verifica su Google Ads Transparency"
                         >
-                          {adsData.lpUrl.replace(/^https?:\/\//, "").substring(0, 60)}
+                          <ExternalLink className="h-2.5 w-2.5 mr-1" />
+                          Verifica
                         </a>
                       </div>
-                    )}
+                    </div>
 
-                    {adsData.googleCopy && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Google Ad Copy</p>
-                        <p className="text-sm italic text-gray-300">&ldquo;{adsData.googleCopy}&rdquo;</p>
-                      </div>
-                    )}
-
-                    {adsData.metaCopy && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Meta Ads Copy</p>
-                        <p className="text-sm italic text-gray-300">&ldquo;{adsData.metaCopy}&rdquo;</p>
-                      </div>
-                    )}
-
-                    {adsData.checkedAt && !checkingAds && (
+                    {/* Verifica Manuale Meta Ads */}
+                    <div className="flex items-center justify-between py-2 border-t border-amber-500/20">
                       <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "text-[10px] px-2 py-0.5 rounded font-semibold",
-                          adsData.hasGoogle
-                            ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                            : "bg-gray-500/10 text-gray-500 border border-gray-500/20"
-                        )}>
-                          Google Ads: {adsData.hasGoogle ? "SI" : "NO"}
-                        </span>
-                        <span className={cn(
-                          "text-[10px] px-2 py-0.5 rounded font-semibold",
-                          adsData.hasMeta
-                            ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                            : "bg-gray-500/10 text-gray-500 border border-gray-500/20"
-                        )}>
-                          Meta Ads: {adsData.hasMeta ? "SI" : "NO"}
-                        </span>
+                        <span className="text-xs font-semibold text-gray-300">Meta Ads</span>
+                        {manualAds.metaVerified ? (
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded font-bold",
+                            manualAds.metaAds
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-gray-500/20 text-gray-400"
+                          )}>
+                            {manualAds.metaAds ? "SI" : "NO"}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-500/10 text-gray-500">
+                            Da verificare
+                          </span>
+                        )}
                       </div>
-                    )}
-
-                    {/* Override manuale Ads — per correggere dati automatici */}
-                    {adsOn && (
-                      <div className="pt-1 pb-1">
+                      <div className="flex items-center gap-1">
                         <Button
-                          onClick={(e) => { e.stopPropagation(); handleAdsOverride(false); }}
+                          onClick={(e) => { e.stopPropagation(); handleAdsToggle("meta", true); }}
                           disabled={overridingAds}
                           size="sm"
                           variant="outline"
-                          className="h-7 px-3 text-[11px] border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
-                        >
-                          {overridingAds ? (
-                            <>
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                              Ricalcolo...
-                            </>
-                          ) : (
-                            <>
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Ho verificato: nessuna Ad trovata
-                            </>
+                          className={cn(
+                            "h-6 px-2.5 text-[10px]",
+                            manualAds.metaVerified && manualAds.metaAds
+                              ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+                              : "border-gray-500/30 text-gray-400 hover:border-emerald-500/50 hover:text-emerald-400"
                           )}
+                        >
+                          SI
                         </Button>
-                      </div>
-                    )}
-
-                    {/* Se override è stato applicato (ads disattivate manualmente) */}
-                    {!adsOn && analysis?.ads_override && (
-                      <div className="flex items-center gap-2 pt-1">
-                        <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/25">
-                          Ads corrette manualmente
-                        </span>
                         <Button
-                          onClick={(e) => { e.stopPropagation(); handleAdsOverride(true); }}
+                          onClick={(e) => { e.stopPropagation(); handleAdsToggle("meta", false); }}
                           disabled={overridingAds}
                           size="sm"
-                          variant="ghost"
-                          className="h-6 px-2 text-[10px] text-muted-foreground hover:text-amber-400"
+                          variant="outline"
+                          className={cn(
+                            "h-6 px-2.5 text-[10px]",
+                            manualAds.metaVerified && !manualAds.metaAds
+                              ? "border-red-500/50 bg-red-500/10 text-red-400"
+                              : "border-gray-500/30 text-gray-400 hover:border-red-500/50 hover:text-red-400"
+                          )}
                         >
-                          Ripristina
+                          NO
                         </Button>
+                        <a
+                          href={`https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=IT&q=${encodeURIComponent(lead.name)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center h-6 px-2 rounded text-[10px] font-semibold bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-colors ml-1"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Verifica su Meta Ad Library"
+                        >
+                          <ExternalLink className="h-2.5 w-2.5 mr-1" />
+                          Verifica
+                        </a>
+                      </div>
+                    </div>
+
+                    {overridingAds && (
+                      <div className="flex items-center gap-2 justify-center py-1">
+                        <Loader2 className="h-3 w-3 animate-spin text-amber-400" />
+                        <span className="text-[10px] text-amber-400">Ricalcolo score...</span>
                       </div>
                     )}
-
-                    <div className="flex gap-2 pt-1">
-                      <a
-                        href={`https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=IT&q=${encodeURIComponent(lead.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-2.5 py-1.5 rounded text-[11px] font-semibold bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Meta Ads Library
-                      </a>
-                      <a
-                        href={`https://adstransparency.google.com/?domain=${encodeURIComponent((lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])}&region=IT`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-2.5 py-1.5 rounded text-[11px] font-semibold bg-orange-600/20 text-orange-400 border border-orange-500/30 hover:bg-orange-600/30 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Google Ads Transparency
-                      </a>
-                    </div>
                   </div>
 
                   {/* Box Gancio di Vendita */}

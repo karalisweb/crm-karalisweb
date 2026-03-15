@@ -6,15 +6,17 @@ import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/s
 /**
  * PATCH /api/leads/[id]/ads-override
  *
- * Override manuale dello stato Ads di un lead.
- * Usato quando l'utente verifica manualmente su Meta Ad Library / Google Ads Transparency
- * e trova che le ads rilevate non sono corrette.
+ * v3.3 — Verifica manuale separata Google Ads / Meta Ads.
  *
- * Body: { hasActiveAds: boolean }
+ * Body: { googleAds?: boolean | null, metaAds?: boolean | null }
  *
- * Dopo l'override:
- * 1. Aggiorna i campi ads nel DB
- * 2. Aggiorna has_active_ads nella geminiAnalysis
+ * - null = "non ancora verificato" (reset)
+ * - true = "verificato: ads attive"
+ * - false = "verificato: nessuna ad"
+ *
+ * Dopo la verifica:
+ * 1. Aggiorna hasActiveGoogleAds / hasActiveMetaAds nel DB
+ * 2. Aggiorna has_active_ads nella geminiAnalysis (googleAds || metaAds)
  * 3. Ricalcola score con i nuovi dati
  * 4. Riclassifica pipeline stage
  */
@@ -25,11 +27,12 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { hasActiveAds } = body;
+    const { googleAds, metaAds } = body;
 
-    if (typeof hasActiveAds !== "boolean") {
+    // Almeno uno dei due deve essere presente
+    if (googleAds === undefined && metaAds === undefined) {
       return NextResponse.json(
-        { error: "hasActiveAds deve essere un booleano" },
+        { error: "Serve almeno googleAds o metaAds" },
         { status: 400 }
       );
     }
@@ -43,6 +46,8 @@ export async function PATCH(
         geminiAnalysis: true,
         pipelineStage: true,
         opportunityScore: true,
+        hasActiveGoogleAds: true,
+        hasActiveMetaAds: true,
       },
     });
 
@@ -53,19 +58,24 @@ export async function PATCH(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const analysis = (lead.geminiAnalysis || {}) as any;
 
-    // 1. Aggiorna has_active_ads nella geminiAnalysis
+    // Determina nuovi valori (mantieni vecchio se non passato)
+    const newGoogle = googleAds !== undefined ? (googleAds === true) : lead.hasActiveGoogleAds;
+    const newMeta = metaAds !== undefined ? (metaAds === true) : lead.hasActiveMetaAds;
+    const hasActiveAds = newGoogle || newMeta;
+
+    // Aggiorna nella geminiAnalysis
     analysis.has_active_ads = hasActiveAds;
     analysis.ads_override = {
-      overriddenAt: new Date().toISOString(),
-      overriddenTo: hasActiveAds,
-      reason: hasActiveAds ? "Verificato: ads attive" : "Verificato: nessuna ad trovata",
+      googleAds: googleAds !== undefined ? googleAds : (analysis.ads_override?.googleAds ?? null),
+      metaAds: metaAds !== undefined ? metaAds : (analysis.ads_override?.metaAds ?? null),
+      verifiedAt: new Date().toISOString(),
     };
 
-    // 2. Ricalcola score
+    // Ricalcola score
     const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category);
     const scoreResult = calculateLeadScore(scoreInput);
 
-    // 3. Riclassifica (solo se in fasi iniziali)
+    // Riclassifica (solo se in fasi iniziali)
     const classifiableStages: PipelineStage[] = [
       PipelineStage.DA_ANALIZZARE,
       PipelineStage.HOT_LEAD,
@@ -81,21 +91,12 @@ export async function PATCH(
       else newStage = PipelineStage.COLD_LEAD;
     }
 
-    // 4. Salva tutto
+    // Salva tutto
     await db.lead.update({
       where: { id },
       data: {
-        hasActiveGoogleAds: hasActiveAds ? lead.pipelineStage === lead.pipelineStage : false, // reset
-        hasActiveMetaAds: false,
-        // Se override a false, pulisci anche i dati ads
-        ...(!hasActiveAds && {
-          hasActiveGoogleAds: false,
-          hasActiveMetaAds: false,
-          googleAdsCopy: null,
-          metaAdsCopy: null,
-          landingPageUrl: null,
-          landingPageText: null,
-        }),
+        hasActiveGoogleAds: newGoogle,
+        hasActiveMetaAds: newMeta,
         geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
         opportunityScore: scoreResult.score,
         pipelineStage: newStage,
@@ -109,11 +110,13 @@ export async function PATCH(
     });
 
     console.log(
-      `[ADS-OVERRIDE] ${lead.name}: ads=${hasActiveAds}, score ${lead.opportunityScore} → ${scoreResult.score}, stage ${lead.pipelineStage} → ${newStage}`
+      `[ADS-OVERRIDE] ${lead.name}: google=${newGoogle}, meta=${newMeta}, score ${lead.opportunityScore} -> ${scoreResult.score}, stage ${lead.pipelineStage} -> ${newStage}`
     );
 
     return NextResponse.json({
       success: true,
+      googleAds: newGoogle,
+      metaAds: newMeta,
       oldScore: lead.opportunityScore,
       newScore: scoreResult.score,
       oldStage: lead.pipelineStage,

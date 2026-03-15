@@ -4,6 +4,32 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.3.0] - 2026-03-15
+
+### Rework Ads — Verifica Manuale
+
+- **Rimosso**: check automatico Ads via Apify (inaffidabile — Google Ads mai trovate, Meta Ads trova aziende sbagliate)
+- **Nuovo**: sezione "Segnali Ads & Verifica Manuale" nella card lead:
+  - Mostra **segnali ads** dal DOM (Meta Pixel, Google Ads Tag, GTM, etc.)
+  - Toggle **SI/NO separato** per Google Ads e Meta Ads con ricalcolo score immediato
+  - Link diretto a **Google Ads Transparency** e **Meta Ad Library** per verifica manuale
+- **Score**: usa SOLO dati verificati manualmente. Se non verificato, ads = false (conservativo)
+- **API**: `PATCH /api/leads/[id]/ads-override` ora accetta `{ googleAds?: boolean, metaAds?: boolean }` separatamente
+
+### Move Back da FARE_VIDEO
+
+- **Nuovo**: pulsanti "Warm", "Cold", "Non Target" nella card video per riportare indietro lead classificati erroneamente
+- **API**: aggiunte azioni `MOVE_TO_WARM` e `MOVE_TO_COLD` in `quick-log`
+
+### WhatsApp Manuale
+
+- **Nuovo**: campo WhatsApp editabile nella card lead (tutte le varianti)
+  - Input numero, salvataggio immediato, link wa.me per apertura chat
+  - Source salvato come "manual" nel DB
+- **API**: `PATCH /api/leads/[id]` ora accetta `whatsappNumber` e `whatsappSource`
+
+---
+
 ## [3.2.1] - 2026-03-15
 
 ### Changed

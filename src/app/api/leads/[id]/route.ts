@@ -88,6 +88,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       ...(body.recontactAt !== undefined && {
         recontactAt: body.recontactAt ? new Date(body.recontactAt) : null,
       }),
+      // WhatsApp manuale
+      ...(body.whatsappNumber !== undefined && { whatsappNumber: body.whatsappNumber || null }),
+      ...(body.whatsappSource !== undefined && { whatsappSource: body.whatsappSource || null }),
     };
 
     // Use transaction to ensure activity + update are atomic
