@@ -5,6 +5,7 @@ import { extractWhatsAppNumber, normalizePhoneForWhatsApp } from "@/lib/audit/wh
 import { isGeminiConfigured } from "@/lib/gemini";
 import { runGeminiAnalysis } from "@/lib/gemini-analysis";
 import { Prisma, PipelineStage } from "@prisma/client";
+import { validatePublicUrl } from "@/lib/url-validator";
 
 // Code singleton per concurrency control - sopravvivono nel processo Node
 const auditQueue = new PQueue({ concurrency: 10 });
@@ -70,6 +71,8 @@ async function processLeadAudit(lead: LeadForAudit): Promise<void> {
   }
 
   try {
+    validatePublicUrl(url);
+
     const response = await fetch(url, {
       signal: AbortSignal.timeout(15000),
       headers: {

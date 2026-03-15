@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { isSocialLink } from "@/lib/url-utils";
 import { Prisma, PipelineStage } from "@prisma/client";
+import { validatePublicUrl } from "@/lib/url-validator";
 
 /**
  * POST /api/audit
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
     // 1. Fetch HTML
     let html: string;
     try {
+      validatePublicUrl(url);
       const response = await fetch(url, {
         signal: AbortSignal.timeout(15000),
         headers: {
@@ -225,6 +227,7 @@ export async function PUT(request: NextRequest) {
       }
 
       try {
+        validatePublicUrl(url);
         const response = await fetch(url, {
           signal: AbortSignal.timeout(15000),
           headers: {
