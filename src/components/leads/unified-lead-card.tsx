@@ -418,17 +418,23 @@ export function UnifiedLeadCard({
     }
   };
 
-  const handleMoveBack = async (action: "MOVE_TO_WARM" | "MOVE_TO_COLD") => {
-    const label = action === "MOVE_TO_WARM" ? "Warm" : "Cold";
-    setLoading(action.toLowerCase());
+  const handleMoveBack = async () => {
+    setLoading("move_back");
     try {
       const res = await fetch(`/api/leads/${lead.id}/quick-log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action: "MOVE_BACK" }),
       });
       if (!res.ok) throw new Error("Errore");
-      toast.success(`${lead.name} spostato a ${label}`);
+      const data = await res.json();
+      const stageLabels: Record<string, string> = {
+        HOT_LEAD: "Hot Lead",
+        WARM_LEAD: "Warm Lead",
+        COLD_LEAD: "Cold Lead",
+      };
+      const label = stageLabels[data.lead?.pipelineStage] || data.lead?.pipelineStage;
+      toast.success(`${lead.name} → ${label}`);
       onAction();
     } catch {
       toast.error("Errore nello spostamento");
@@ -774,35 +780,21 @@ export function UnifiedLeadCard({
                 </Link>
               </Button>
             </div>
-            {/* Riga 2: Sposta indietro */}
+            {/* Riga 2: Rimanda indietro + Non Target */}
             <div className="flex gap-2">
               <Button
-                onClick={() => handleMoveBack("MOVE_TO_WARM")}
+                onClick={handleMoveBack}
                 disabled={!!loading}
                 variant="outline"
                 size="sm"
-                className="flex-1 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 text-xs"
+                className="flex-1 border-gray-500/40 text-gray-300 hover:bg-gray-500/10 text-xs"
               >
-                {loading === "move_to_warm" ? (
+                {loading === "move_back" ? (
                   <Loader2 className="h-3 w-3 animate-spin mr-1" />
                 ) : (
                   <ArrowLeft className="h-3 w-3 mr-1" />
                 )}
-                Warm
-              </Button>
-              <Button
-                onClick={() => handleMoveBack("MOVE_TO_COLD")}
-                disabled={!!loading}
-                variant="outline"
-                size="sm"
-                className="flex-1 border-blue-500/40 text-blue-400 hover:bg-blue-500/10 text-xs"
-              >
-                {loading === "move_to_cold" ? (
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                ) : (
-                  <ArrowLeft className="h-3 w-3 mr-1" />
-                )}
-                Cold
+                Rimanda indietro
               </Button>
               <Button
                 onClick={handleNonTarget}

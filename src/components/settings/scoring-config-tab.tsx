@@ -63,24 +63,24 @@ export function ScoringConfigTab() {
   ];
 
   const thresholds = [
-    { label: "FARE VIDEO", range: "80-100", color: "bg-red-600 text-white", description: "Massimo potenziale: errore strategico (50) + ads (20) + tracking (10) + high-ticket (20) = 100" },
+    { label: "HOT LEAD", range: "80-100", color: "bg-red-600 text-white", description: "Massimo potenziale: errore strategico (50) + ads (20) + tracking (10) + high-ticket (20) = 100. Tu decidi se fare il video." },
     { label: "WARM", range: "50-79", color: "bg-yellow-600 text-white", description: "Buon potenziale: errore strategico + high-ticket (70) o errore + ads (70)" },
     { label: "COLD", range: "0-49", color: "bg-blue-600 text-white", description: "Basso potenziale: senza errore strategico il max e 40 (ads + high-ticket)" },
   ];
 
   const examples = [
     {
-      name: "FARE VIDEO (100 punti)",
+      name: "HOT LEAD (100 punti)",
       items: ["Errore strategico: +50", "Ads attive: +20", "Tracking attivo: +10", "Settore high-ticket: +20"],
       total: 100,
     },
     {
-      name: "FARE VIDEO (90 punti)",
+      name: "HOT LEAD (90 punti)",
       items: ["Errore strategico: +50", "Ads attive: +20", "Settore high-ticket: +20"],
       total: 90,
     },
     {
-      name: "FARE VIDEO (80 punti)",
+      name: "HOT LEAD (80 punti)",
       items: ["Errore strategico: +50", "Tracking attivo: +10", "Settore high-ticket: +20"],
       total: 80,
     },
@@ -128,7 +128,7 @@ export function ScoringConfigTab() {
           </div>
           <div className="mt-4 p-3 bg-muted/30 rounded-lg">
             <p className="text-xs text-muted-foreground">
-              <strong>Nota:</strong> Il punteggio massimo e 100 (cap). Formula massima: Errore strategico (50) + Ads attive (20) + Tracking attivo (10) + Recensioni forti (10) + High-ticket (20) = 110 → cap a 100. Senza errore strategico, il max e 40-50 (sempre COLD).
+              <strong>Nota:</strong> Il punteggio massimo e 100 (cap). Formula massima: Errore strategico (50) + Ads attive (20) + Tracking attivo (10) + Recensioni forti (10) + High-ticket (20) = 110 → cap a 100. Senza errore strategico, il max e 40-50 (sempre COLD). Score ≥80 → HOT LEAD (sei tu a decidere se fare il video).
             </p>
           </div>
         </CardContent>
@@ -158,7 +158,7 @@ export function ScoringConfigTab() {
           </div>
           <div className="mt-4 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
             <p className="text-xs text-amber-400">
-              <strong>Implicazione chiave:</strong> Un lead con solo ads attive ma senza errore strategico non puo superare 50 punti → resta sempre COLD. Per essere WARM o FARE VIDEO serve almeno un errore strategico rilevato.
+              <strong>Implicazione chiave:</strong> Un lead con solo ads attive ma senza errore strategico non puo superare 50 punti → resta sempre COLD. Per essere WARM o HOT LEAD serve almeno un errore strategico rilevato. Da HOT LEAD sei tu a decidere se fare il video.
             </p>
           </div>
           <div className="mt-3 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">

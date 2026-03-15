@@ -16,7 +16,7 @@
  * Max teorico: 50 + 20 + 10 + 10 + 20 = 110 → cap 100
  *
  * Output: 0-100
- *   >= 80 → FARE_VIDEO
+ *   >= 80 → HOT_LEAD (decisione manuale se fare video)
  *   50-79 → WARM
  *   < 50  → COLD
  */

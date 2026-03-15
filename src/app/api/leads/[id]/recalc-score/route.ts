@@ -79,7 +79,7 @@ export async function POST(
 
     let newStage = lead.pipelineStage;
     if (classifiableStages.includes(lead.pipelineStage as PipelineStage)) {
-      if (scoreResult.score >= 80) newStage = PipelineStage.FARE_VIDEO;
+      if (scoreResult.score >= 80) newStage = PipelineStage.HOT_LEAD;
       else if (scoreResult.score >= 50) newStage = PipelineStage.WARM_LEAD;
       else newStage = PipelineStage.COLD_LEAD;
     }

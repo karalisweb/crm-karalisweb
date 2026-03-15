@@ -25,6 +25,7 @@ type ActionType =
   | "MOVE_TO_VIDEO"
   | "MOVE_TO_WARM"
   | "MOVE_TO_COLD"
+  | "MOVE_BACK"
   | "CALL_LOGGED";
 
 export async function POST(
@@ -66,7 +67,7 @@ async function handleAction(leadId: string, body: any) {
     "VIDEO_SENT", "FOLLOW_UP", "LINKEDIN_SENT", "TELEFONATA",
     "CALL_SCHEDULED", "IN_TRATTATIVA", "MARK_ARCHIVED",
     "MARK_LOST", "MARK_WON", "MOVE_TO_VIDEO", "MOVE_TO_WARM",
-    "MOVE_TO_COLD", "CALL_LOGGED",
+    "MOVE_TO_COLD", "MOVE_BACK", "CALL_LOGGED",
   ];
 
   if (!validActions.includes(action)) {
@@ -201,6 +202,25 @@ async function handleAction(leadId: string, body: any) {
       activityType = "STAGE_CHANGE";
       activityNotes = notes || "Spostato da Fare Video a Cold Lead";
       break;
+
+    case "MOVE_BACK": {
+      // Rimanda indietro da FARE_VIDEO: il sistema piazza in base allo score
+      const leadForScore = await db.lead.findUnique({
+        where: { id: leadId },
+        select: { opportunityScore: true },
+      });
+      const score = leadForScore?.opportunityScore ?? 0;
+      if (score >= 80) {
+        newStage = "HOT_LEAD";
+      } else if (score >= 50) {
+        newStage = "WARM_LEAD";
+      } else {
+        newStage = "COLD_LEAD";
+      }
+      activityType = "STAGE_CHANGE";
+      activityNotes = notes || `Rimandato indietro da Fare Video → ${newStage} (score: ${score})`;
+      break;
+    }
   }
 
   // Applica aggiornamento lead

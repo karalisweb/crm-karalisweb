@@ -35,7 +35,7 @@ const DELAY_BETWEEN_CALLS_MS = 3000;
  * 3. Legge ads_status dal DB (se già verificato)
  * 4. Chiama Gemini → genera script 4 atti
  * 5. Calcola score (0-100)
- * 6. Auto-classifica: HOT_LEAD (≥80) / WARM_LEAD (50-79) / resta DA_ANALIZZARE (<50)
+ * 6. Auto-classifica: HOT_LEAD (≥80) / WARM_LEAD (50-79) / COLD_LEAD (<50)
  * 7. Se sito non raggiungibile → DA_VERIFICARE
  *
  * Query params:
@@ -228,10 +228,10 @@ export async function POST(request: NextRequest) {
       });
       const scoreResult = calculateLeadScore(scoreInput);
 
-      // === STEP 6: Auto-classificazione (v3.2: HOT → FARE_VIDEO diretto) ===
+      // === STEP 6: Auto-classificazione (v3.5: ≥80 → HOT_LEAD, tu decidi se fare video) ===
       let newStage: PipelineStage;
       if (scoreResult.score >= 80) {
-        newStage = PipelineStage.FARE_VIDEO;
+        newStage = PipelineStage.HOT_LEAD;
       } else if (scoreResult.score >= 50) {
         newStage = PipelineStage.WARM_LEAD;
       } else {
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
         stage: newStage,
       });
 
-      const emoji = newStage === "FARE_VIDEO" ? "🎬" : newStage === "WARM_LEAD" ? "👍" : "❄️";
+      const emoji = newStage === "HOT_LEAD" ? "🔥" : newStage === "WARM_LEAD" ? "👍" : "❄️";
       console.log(
         `[BATCH v3.1] ${emoji} ${lead.name} — score=${scoreResult.score} → ${newStage} (${scoreResult.breakdown.join(", ")})`
       );
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
   const errors = results.filter((r) => r.status === "error").length;
   const unreachable = results.filter((r) => r.status === "unreachable").length;
   const skipped = results.filter((r) => r.status === "skip").length;
-  const hotLeads = results.filter((r) => r.stage === "FARE_VIDEO").length;
+  const hotLeads = results.filter((r) => r.stage === "HOT_LEAD").length;
   const warmLeads = results.filter((r) => r.stage === "WARM_LEAD").length;
 
   const summary = {
@@ -309,7 +309,7 @@ export async function POST(request: NextRequest) {
   console.log(
     `[BATCH v3.1] ======= COMPLETATO =======\n` +
     `  Processati: ${ok}/${leads.length}\n` +
-    `  🎬 FARE_VIDEO: ${hotLeads} | 👍 WARM: ${warmLeads}\n` +
+    `  🔥 HOT_LEAD: ${hotLeads} | 👍 WARM: ${warmLeads}\n` +
     `  🔴 Non raggiungibili: ${unreachable}\n` +
     `  ❌ Errori: ${errors} | ⏭ Skip: ${skipped}`
   );

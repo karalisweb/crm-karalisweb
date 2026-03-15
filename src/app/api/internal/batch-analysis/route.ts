@@ -196,9 +196,9 @@ export async function POST(request: NextRequest) {
       });
       const scoreResult = calculateLeadScore(scoreInput);
 
-      // STEP 6: Auto-classificazione (v3.2: HOT → FARE_VIDEO diretto)
+      // STEP 6: Auto-classificazione (v3.5: ≥80 → HOT_LEAD, tu decidi se fare video)
       let newStage: PipelineStage;
-      if (scoreResult.score >= 80) newStage = PipelineStage.FARE_VIDEO;
+      if (scoreResult.score >= 80) newStage = PipelineStage.HOT_LEAD;
       else if (scoreResult.score >= 50) newStage = PipelineStage.WARM_LEAD;
       else newStage = PipelineStage.COLD_LEAD;
 
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
       });
 
       results.push({ id: lead.id, name: lead.name, status: "ok", score: scoreResult.score, stage: newStage });
-      const emoji = newStage === "FARE_VIDEO" ? "🎬" : newStage === "WARM_LEAD" ? "👍" : "❄️";
+      const emoji = newStage === "HOT_LEAD" ? "🔥" : newStage === "WARM_LEAD" ? "👍" : "❄️";
       console.log(`[BATCH v3.1] ${emoji} ${lead.name} — score=${scoreResult.score} → ${newStage}`);
 
       await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_CALLS_MS));
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
   const ok = results.filter((r) => r.status === "ok").length;
   const errors = results.filter((r) => r.status === "error").length;
   const unreachable = results.filter((r) => r.status === "unreachable").length;
-  const hotLeads = results.filter((r) => r.stage === "FARE_VIDEO").length;
+  const hotLeads = results.filter((r) => r.stage === "HOT_LEAD").length;
   const warmLeads = results.filter((r) => r.stage === "WARM_LEAD").length;
 
   console.log(

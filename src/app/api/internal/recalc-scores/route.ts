@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     ];
 
     if (classifiableStages.includes(lead.pipelineStage as PipelineStage)) {
-      if (scoreResult.score >= 80) newStage = PipelineStage.FARE_VIDEO;
+      if (scoreResult.score >= 80) newStage = PipelineStage.HOT_LEAD;
       else if (scoreResult.score >= 50) newStage = PipelineStage.WARM_LEAD;
       else newStage = PipelineStage.COLD_LEAD;
     } else {
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       breakdown: scoreResult.breakdown,
     });
 
-    const emoji = newStage === "FARE_VIDEO" ? "🎬" : newStage === "WARM_LEAD" ? "👍" : "❄️";
+    const emoji = newStage === "HOT_LEAD" ? "🔥" : newStage === "WARM_LEAD" ? "👍" : "❄️";
     console.log(
       `[RECALC v3.4] ${emoji} ${lead.name}: ${lead.opportunityScore ?? "null"} → ${scoreResult.score} | ${lead.pipelineStage} → ${newStage} (${scoreResult.breakdown.join(", ")})`
     );

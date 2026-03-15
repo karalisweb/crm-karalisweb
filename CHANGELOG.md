@@ -4,6 +4,21 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.5.0] - 2026-03-15
+
+### Pipeline Flow v3.5 — "Tu decidi se fare il video"
+
+- **CAMBIATO**: Score ≥80 ora classifica come **HOT_LEAD** (prima andava direttamente a FARE_VIDEO)
+- **NUOVO flusso**: HOT_LEAD → tu decidi manualmente "Passa a Video" → FARE_VIDEO → fai il video → Video Inviato
+- **NUOVO**: bottone **"← Rimanda indietro"** nella card FARE_VIDEO — sostituisce i 2 bottoni (Warm/Cold)
+- Il sistema legge lo score del lead e lo piazza automaticamente: ≥80 → HOT_LEAD, 50-79 → WARM_LEAD, <50 → COLD_LEAD
+- **NUOVO**: action `MOVE_BACK` in `POST /api/leads/[id]/quick-log`
+- Aggiornati **6 endpoint** di auto-classificazione: recalc-score, ads-override, tier-override, recalc-scores, batch-analysis, batch-gemini-analysis
+- Aggiornati emoji log: 🔥 per HOT_LEAD (prima 🎬 per FARE_VIDEO)
+- Tab Scoring aggiornata: soglia ≥80 = HOT LEAD, esempi aggiornati
+
+---
+
 ## [3.4.0] - 2026-03-15
 
 ### Scoring v3.1 "Segnali Digitali"
