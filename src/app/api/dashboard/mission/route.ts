@@ -17,6 +17,7 @@ export async function GET() {
       countWarmLeads,
       countColdLeads,
       countFareVideo,
+      countFareVideoReady,
       countVideoInviati,
       countFollowUp,
       countLinkedin,
@@ -30,6 +31,7 @@ export async function GET() {
       db.lead.count({ where: { pipelineStage: "WARM_LEAD" } }),
       db.lead.count({ where: { pipelineStage: "COLD_LEAD" } }),
       db.lead.count({ where: { pipelineStage: "FARE_VIDEO" } }),
+      db.lead.count({ where: { pipelineStage: "FARE_VIDEO", scriptRegeneratedAt: { not: null } } }),
       db.lead.count({ where: { pipelineStage: "VIDEO_INVIATO" } }),
       db.lead.count({
         where: {
@@ -54,6 +56,7 @@ export async function GET() {
         warmLeads: countWarmLeads,
         coldLeads: countColdLeads,
         fareVideo: countFareVideo,
+        fareVideoReady: countFareVideoReady,
         videoInviati: countVideoInviati,
         followUp: countFollowUp,
         linkedin: countLinkedin,

@@ -246,7 +246,9 @@ export function Sidebar() {
                             "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center",
                             badgeColorClasses[badgeColor]
                           )}>
-                            {count}
+                            {item.badgeKey === "fareVideo"
+                              ? `${badges["fareVideoReady"] || 0}/${count}`
+                              : count}
                           </span>
                         )}
                       </>
