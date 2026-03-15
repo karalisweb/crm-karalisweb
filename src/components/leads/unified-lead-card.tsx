@@ -26,6 +26,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "@/components/layout/sidebar-context";
 import {
   Dialog,
   DialogContent,
@@ -334,6 +335,7 @@ export function UnifiedLeadCard({
   onAction: () => void;
   defaultExpanded?: boolean;
 }) {
+  const { refreshBadges } = useSidebar();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [notes, setNotes] = useState(lead.danielaNotes || "");
   const [loading, setLoading] = useState<string | null>(null);
@@ -378,6 +380,7 @@ export function UnifiedLeadCard({
       });
       if (!res.ok) throw new Error("Errore nello spostamento");
       toast.success(`${lead.name} spostato in Fare Video!`);
+      refreshBadges();
       onAction();
     } catch {
       toast.error("Errore nello spostamento");
@@ -396,6 +399,7 @@ export function UnifiedLeadCard({
       });
       if (!res.ok) throw new Error("Errore");
       toast.success(`${lead.name} spostato in Non Target`);
+      refreshBadges();
       onAction();
     } catch {
       toast.error("Errore nello spostamento");
@@ -439,6 +443,7 @@ export function UnifiedLeadCard({
       });
       if (!res.ok) throw new Error("Errore");
       toast.success(`Video per ${lead.name} marcato come inviato!`);
+      refreshBadges();
       onAction();
     } catch {
       toast.error("Errore nel salvataggio");
@@ -465,6 +470,7 @@ export function UnifiedLeadCard({
       // In variante video: segna che lo script è stato rigenerato con dati verificati
       if (variant === "video") {
         setScriptRegenerated(true);
+        refreshBadges(); // Aggiorna X/Y nella sidebar
       }
       toast.success(variant === "video"
         ? `Script rigenerato per ${lead.name}`

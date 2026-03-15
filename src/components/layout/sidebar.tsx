@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./sidebar-context";
 import {
@@ -121,30 +120,9 @@ const dotColorClasses: Record<BadgeColor, string> = {
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { collapsed, toggle } = useSidebar();
+  const { collapsed, toggle, badges } = useSidebar();
   const userRole = (session?.user as { role?: string })?.role;
   const isAdmin = userRole === "ADMIN";
-  const [badges, setBadges] = useState<Record<string, number>>({});
-
-  const fetchMissionBadges = useCallback(async () => {
-    try {
-      const res = await fetch("/api/dashboard/mission");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.badges) {
-          setBadges(data.badges);
-        }
-      }
-    } catch {
-      // silently fail
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchMissionBadges();
-    const interval = setInterval(fetchMissionBadges, 60000);
-    return () => clearInterval(interval);
-  }, [fetchMissionBadges]);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
