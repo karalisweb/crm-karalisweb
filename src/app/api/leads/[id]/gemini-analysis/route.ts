@@ -66,6 +66,7 @@ export async function POST(
         googleReviewsCount: true,
         tierOverride: true,
         geminiAnalysis: true,
+        pipelineStage: true,
       },
     });
 
@@ -211,6 +212,8 @@ export async function POST(
           breakdown: scoreResult.breakdown,
           calculatedAt: new Date().toISOString(),
         } as unknown as Prisma.InputJsonValue,
+        // Se in FARE_VIDEO, segna che lo script è stato rigenerato con dati verificati
+        ...(lead.pipelineStage === "FARE_VIDEO" ? { scriptRegeneratedAt: new Date() } : {}),
       },
     });
 

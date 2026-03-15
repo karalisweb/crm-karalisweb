@@ -45,7 +45,9 @@ export default function VideoDaFarePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">{total} video</Badge>
+          <Badge variant="secondary">
+            {leads.filter(l => l.scriptRegeneratedAt).length}/{total} video
+          </Badge>
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
             Aggiorna

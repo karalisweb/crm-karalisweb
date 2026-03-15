@@ -118,8 +118,9 @@ model Lead {
   adsCoherenceWarning   String?     @map("ads_coherence_warning")
 
   // ==========================================
-  // VIDEO TRACKING (sales page esterna)
+  // VIDEO / SCRIPT TELLA
   // ==========================================
+  scriptRegeneratedAt DateTime?   @map("script_regenerated_at")
   videoViewsCount     Int         @default(0) @map("video_views_count")
   videoTrackingToken  String?     @unique @map("video_tracking_token")
 

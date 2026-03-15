@@ -110,6 +110,7 @@ export interface UnifiedLead {
   whatsappSource?: string | null;
   // Video
   videoScriptData?: unknown;
+  scriptRegeneratedAt?: string | null;
   // Tier override
   tierOverride?: string | null;
 }
@@ -354,7 +355,7 @@ export function UnifiedLeadCard({
   const [localManualAds, setLocalManualAds] = useState(() => getManualAdsState(lead));
   const [localAnalysis, setLocalAnalysis] = useState<GeminiAnalysis | null>(lead.geminiAnalysis);
 
-  const [scriptRegenerated, setScriptRegenerated] = useState(false);
+  const [scriptRegenerated, setScriptRegenerated] = useState(!!lead.scriptRegeneratedAt);
 
   const analysis = localAnalysis;
   const isAnalyzed = !!(analysis?.teleprompter_script && analysis?.primary_error_pattern);
