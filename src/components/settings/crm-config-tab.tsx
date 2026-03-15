@@ -617,7 +617,7 @@ export function CrmConfigTab() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Analizzati → HOT_LEAD / WARM_LEAD, Non target → NON_TARGET
+                Analizzati → HOT_LEAD / WARM_LEAD / COLD_LEAD, Non target → NON_TARGET
               </div>
               <Button
                 onClick={recalculateStages}

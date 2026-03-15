@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.1.0** | Ultimo aggiornamento: 2026-03-15
+Versione: **3.1.1** | Ultimo aggiornamento: 2026-03-15
 
 ---
 
@@ -70,7 +70,8 @@ sales-app/
 │   │   │   ├── error.tsx      # Error boundary dashboard
 │   │   │   ├── da-analizzare/ # Lead da analizzare
 │   │   │   ├── hot-leads/     # Lead HOT (score 80+)
-│   │   │   ├── warm-leads/    # Lead WARM (score 60-79)
+│   │   │   ├── warm-leads/    # Lead WARM (score 50-79)
+│   │   │   ├── cold-leads/    # Lead COLD (score <50)
 │   │   │   ├── fare-video/    # Lead pronti per video
 │   │   │   ├── video-inviati/ # Video inviati + tracking
 │   │   │   ├── follow-up/     # Follow-up (lettera, LinkedIn)
@@ -339,7 +340,8 @@ sales-app/
 | `/` | Dashboard principale (KPI, pipeline, report) |
 | `/da-analizzare` | Lead da analizzare con Gemini |
 | `/hot-leads` | Lead HOT (score 80+) |
-| `/warm-leads` | Lead WARM (score 60-79) |
+| `/warm-leads` | Lead WARM (score 50-79) |
+| `/cold-leads` | Lead COLD (score <50) |
 | `/fare-video` | Lead pronti per video |
 | `/video-inviati` | Video inviati + tracking |
 | `/follow-up` | Follow-up (lettera, LinkedIn) |

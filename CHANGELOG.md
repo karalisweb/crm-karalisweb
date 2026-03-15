@@ -4,6 +4,21 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.1.1] - 2026-03-15
+
+### Features
+
+- **COLD_LEAD stage**: nuovo stage pipeline per lead con score <50 (basso potenziale). Separa i lead analizzati a basso punteggio dai lead ancora in attesa di analisi (DA_ANALIZZARE). Nuova pagina `/cold-leads` nella sidebar con icona snowflake.
+
+### Changed
+
+- Batch Gemini analysis: score <50 ora classifica come `COLD_LEAD` invece di `DA_ANALIZZARE`
+- Recalculate stages: aggiunto supporto COLD_LEAD (score <50)
+- Pipeline stage selector: aggiunto COLD_LEAD nel gruppo Analisi
+- Dashboard mission API: aggiunto conteggio badge per Cold Leads
+
+---
+
 ## [3.1.0] - 2026-03-15
 
 ### Security (CRITICAL)

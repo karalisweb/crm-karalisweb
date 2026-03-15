@@ -375,6 +375,7 @@ enum PipelineStage {
   DA_ANALIZZARE       // Importato, serve analisi Gemini
   HOT_LEAD            // Score ≥80, analizzato
   WARM_LEAD           // Score 50-79, analizzato
+  COLD_LEAD           // Score <50, basso potenziale
 
   // === VIDEO ===
   FARE_VIDEO          // Video da registrare

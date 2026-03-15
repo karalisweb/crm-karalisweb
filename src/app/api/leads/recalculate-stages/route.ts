@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       total: leadsToUpdate.length,
       hotLead: 0,
       warmLead: 0,
+      coldLead: 0,
       nonTarget: 0,
     };
 
@@ -46,9 +47,12 @@ export async function POST(request: NextRequest) {
       } else if ((lead.opportunityScore ?? 0) >= 80) {
         newStage = PipelineStage.HOT_LEAD;
         results.hotLead++;
-      } else {
+      } else if ((lead.opportunityScore ?? 0) >= 50) {
         newStage = PipelineStage.WARM_LEAD;
         results.warmLead++;
+      } else {
+        newStage = PipelineStage.COLD_LEAD;
+        results.coldLead++;
       }
 
       await db.lead.update({

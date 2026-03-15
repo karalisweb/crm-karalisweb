@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Deploy
 
-Versione attuale: **3.1.0**
+Versione attuale: **3.1.1**
 
 ---
 

@@ -40,7 +40,7 @@ import { PIPELINE_STAGES, LOST_REASONS } from "@/types";
 const STAGE_GROUPS = [
   {
     label: "Analisi",
-    stages: ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD"],
+    stages: ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD", "COLD_LEAD"],
   },
   {
     label: "Video",

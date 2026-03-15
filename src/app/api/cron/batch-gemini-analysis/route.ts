@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
           PipelineStage.DA_ANALIZZARE,
           PipelineStage.HOT_LEAD,
           PipelineStage.WARM_LEAD,
+          PipelineStage.COLD_LEAD,
         ],
       },
       ...(force
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
       } else if (scoreResult.score >= 50) {
         newStage = PipelineStage.WARM_LEAD;
       } else {
-        newStage = PipelineStage.DA_ANALIZZARE;
+        newStage = PipelineStage.COLD_LEAD;
       }
 
       // === STEP 7: Salva tutto ===
@@ -255,7 +256,7 @@ export async function POST(request: NextRequest) {
         stage: newStage,
       });
 
-      const emoji = newStage === "HOT_LEAD" ? "🔥" : newStage === "WARM_LEAD" ? "👍" : "📋";
+      const emoji = newStage === "HOT_LEAD" ? "🔥" : newStage === "WARM_LEAD" ? "👍" : "❄️";
       console.log(
         `[BATCH v3.1] ${emoji} ${lead.name} — score=${scoreResult.score} → ${newStage} (${scoreResult.breakdown.join(", ")})`
       );

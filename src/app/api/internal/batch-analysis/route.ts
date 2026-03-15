@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
           PipelineStage.DA_ANALIZZARE,
           PipelineStage.HOT_LEAD,
           PipelineStage.WARM_LEAD,
+          PipelineStage.COLD_LEAD,
         ],
       },
       ...(force
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
       let newStage: PipelineStage;
       if (scoreResult.score >= 80) newStage = PipelineStage.HOT_LEAD;
       else if (scoreResult.score >= 50) newStage = PipelineStage.WARM_LEAD;
-      else newStage = PipelineStage.DA_ANALIZZARE;
+      else newStage = PipelineStage.COLD_LEAD;
 
       // STEP 7: Salva
       await db.lead.update({

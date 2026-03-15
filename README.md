@@ -1,6 +1,6 @@
 # KW Sales CRM
 
-Versione: **3.1.0** | [Changelog](CHANGELOG.md) | [Guida Utente](GUIDA_UTENTE.md) | [Docs Tecniche](TECHNICAL-DOCS.md) | [Deploy](DEPLOY.md)
+Versione: **3.1.1** | [Changelog](CHANGELOG.md) | [Guida Utente](GUIDA_UTENTE.md) | [Docs Tecniche](TECHNICAL-DOCS.md) | [Deploy](DEPLOY.md)
 
 CRM per il supporto commerciale di un'agenzia di web marketing. Consente di cercare lead su Google Maps, analizzare i loro siti web con AI (Gemini), e gestire il ciclo di vendita.
 

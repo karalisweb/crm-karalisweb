@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.1.0** | Ultimo aggiornamento: 2026-03-15
+Versione: **3.1.1** | Ultimo aggiornamento: 2026-03-15
 
 > Questa guida spiega come utilizzare il CRM per gestire i lead e il processo commerciale.
 
@@ -43,7 +43,8 @@ La sidebar a sinistra contiene tutte le sezioni del CRM:
 | **Dashboard** | Riepilogo generale con statistiche e KPI |
 | **Da Analizzare** | Lead appena importati, in attesa di analisi Gemini |
 | **Hot Leads** | Lead con score alto (80+), massima priorita |
-| **Warm Leads** | Lead con buon potenziale (60-79) |
+| **Warm Leads** | Lead con buon potenziale (50-79) |
+| **Cold Leads** | Lead con basso potenziale (score <50) |
 | **Fare Video** | Lead pronti per registrare il video personalizzato |
 | **Video Inviati** | Lead a cui e stato inviato il video |
 | **Follow-up** | Lead in attesa di follow-up (lettera, LinkedIn, ecc.) |
@@ -229,11 +230,12 @@ Lead appena importati che devono essere analizzati dall'AI Gemini. Il sistema an
 - Errori marketing principali
 - Script video personalizzato
 
-### Hot Leads / Warm Leads
+### Hot Leads / Warm Leads / Cold Leads
 
 Lead con analisi completata, ordinati per score:
 - **Hot (80+)**: Lead con molte opportunita, massima priorita
-- **Warm (60-79)**: Lead con buon potenziale
+- **Warm (50-79)**: Lead con buon potenziale
+- **Cold (<50)**: Lead con basso potenziale, da consultare raramente
 
 Ogni lead mostra:
 - Nome, categoria, score
@@ -349,4 +351,4 @@ R: Il sistema cerca il numero WhatsApp in due modi: prima nel sito web del prosp
 
 ---
 
-*Documento aggiornato il 2026-03-15 | KW Sales CRM v3.1.0*
+*Documento aggiornato il 2026-03-15 | KW Sales CRM v3.1.1*

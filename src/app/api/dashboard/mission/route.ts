@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
  * GET /api/dashboard/mission
  *
  * Ritorna i conteggi per sidebar badges.
- * Pipeline: DA_ANALIZZARE → HOT/WARM → FARE_VIDEO → VIDEO_INVIATO
+ * Pipeline: DA_ANALIZZARE → HOT/WARM/COLD → FARE_VIDEO → VIDEO_INVIATO
  * → FOLLOW_UP 1/2/3 → LINKEDIN → TELEFONATA 1/2/3
  * → CALL_FISSATA → IN_TRATTATIVA → CLIENTE/PERSO/ARCHIVIATO
  */
@@ -15,6 +15,7 @@ export async function GET() {
       countDaAnalizzare,
       countHotLeads,
       countWarmLeads,
+      countColdLeads,
       countFareVideo,
       countVideoInviati,
       countFollowUp,
@@ -27,6 +28,7 @@ export async function GET() {
       db.lead.count({ where: { pipelineStage: "DA_ANALIZZARE" } }),
       db.lead.count({ where: { pipelineStage: "HOT_LEAD" } }),
       db.lead.count({ where: { pipelineStage: "WARM_LEAD" } }),
+      db.lead.count({ where: { pipelineStage: "COLD_LEAD" } }),
       db.lead.count({ where: { pipelineStage: "FARE_VIDEO" } }),
       db.lead.count({ where: { pipelineStage: "VIDEO_INVIATO" } }),
       db.lead.count({
@@ -50,6 +52,7 @@ export async function GET() {
         daAnalizzare: countDaAnalizzare,
         hotLeads: countHotLeads,
         warmLeads: countWarmLeads,
+        coldLeads: countColdLeads,
         fareVideo: countFareVideo,
         videoInviati: countVideoInviati,
         followUp: countFollowUp,

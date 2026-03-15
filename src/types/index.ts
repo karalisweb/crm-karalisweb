@@ -165,6 +165,7 @@ export const PIPELINE_STAGES = {
   DA_ANALIZZARE: { label: "Da Analizzare", icon: "scan-search", color: "amber", group: "analisi" },
   HOT_LEAD: { label: "Hot Lead", icon: "flame", color: "red", group: "analisi" },
   WARM_LEAD: { label: "Warm Lead", icon: "sun", color: "yellow", group: "analisi" },
+  COLD_LEAD: { label: "Cold Lead", icon: "snowflake", color: "blue", group: "analisi" },
 
   // === VIDEO ===
   FARE_VIDEO: { label: "Fare Video", icon: "video", color: "purple", group: "video" },
@@ -201,7 +202,7 @@ export type PipelineStageKey = keyof typeof PIPELINE_STAGES;
 
 // Gruppi di stage per navigazione e filtri
 export const STAGE_GROUPS = {
-  analisi: ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD"] as PipelineStageKey[],
+  analisi: ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD", "COLD_LEAD"] as PipelineStageKey[],
   video: ["FARE_VIDEO", "VIDEO_INVIATO"] as PipelineStageKey[],
   followup: ["FOLLOW_UP_1", "FOLLOW_UP_2", "FOLLOW_UP_3"] as PipelineStageKey[],
   linkedin: ["LINKEDIN"] as PipelineStageKey[],
