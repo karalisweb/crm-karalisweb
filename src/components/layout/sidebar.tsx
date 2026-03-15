@@ -6,7 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./sidebar-context";
 import {
-  LayoutDashboard,
+  Home,
   Search,
   LogOut,
   FolderSearch,
@@ -48,6 +48,12 @@ interface NavSection {
 }
 
 const navSections: NavSection[] = [
+  {
+    title: "",
+    items: [
+      { href: "/", label: "Home", icon: Home },
+    ],
+  },
   {
     title: "ANALISI",
     items: [
@@ -156,19 +162,13 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto scrollbar-hide">
         {navSections.map((section, idx) => (
-          <div key={section.title}>
-            {!collapsed && (
+          <div key={section.title || `section-${idx}`}>
+            {!collapsed && section.title && (
               <div
                 className={cn(
                   "px-6 mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.05em]",
                   idx === 0 ? "mt-0" : "mt-4",
-                  section.title === "OGGI"
-                    ? "text-red-400/80"
-                    : section.title === "PIPELINE"
-                    ? "text-blue-400/80"
-                    : section.title === "DATABASE"
-                    ? "text-[#71717a]"
-                    : "text-[#71717a]"
+                  "text-[#71717a]"
                 )}
               >
                 {section.title}
