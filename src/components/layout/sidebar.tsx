@@ -90,7 +90,6 @@ const navSections: NavSection[] = [
   {
     title: "ALTRO",
     items: [
-      { href: "/leads", label: "Tutti i Lead", icon: LayoutDashboard },
       { href: "/archivio", label: "Archivio", icon: Archive },
     ],
   },
