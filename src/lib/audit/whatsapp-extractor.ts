@@ -3,6 +3,13 @@
  * Cerca link wa.me/NUMERO e api.whatsapp.com/send?phone=NUMERO.
  */
 export function extractWhatsAppNumber(html: string): string | null {
+  // Decode URL-encoded entities (es. %2F → /, %3A → :)
+  try {
+    html = decodeURIComponent(html);
+  } catch {
+    // Se fallisce il decode, usa l'HTML originale
+  }
+
   // Pattern 1: wa.me/NUMERO
   const waMatch = html.match(/wa\.me\/(\d{10,15})/);
   if (waMatch) return waMatch[1];
