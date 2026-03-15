@@ -736,15 +736,31 @@ export function UnifiedLeadCard({
             {/* Riga 1: Script + Video Inviato + Info */}
             <div className="flex gap-2">
               {isAnalyzed && analysis?.teleprompter_script && (
-                <Button
-                  onClick={() => setScriptModalOpen(true)}
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Script Tella
-                </Button>
+                <>
+                  <Button
+                    onClick={() => setScriptModalOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Script Tella
+                  </Button>
+                  <Button
+                    onClick={handleGenerateAI}
+                    disabled={generatingAI || !lead.website}
+                    variant="outline"
+                    size="sm"
+                    className="border-violet-500/50 text-violet-400 hover:bg-violet-500/10"
+                    title="Rigenera lo script con i dati validati"
+                  >
+                    {generatingAI ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                  </Button>
+                </>
               )}
               {!isAnalyzed && (
                 <Button
