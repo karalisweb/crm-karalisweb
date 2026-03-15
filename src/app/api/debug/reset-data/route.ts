@@ -5,13 +5,21 @@ import { auth } from "@/lib/auth";
 /**
  * POST /api/debug/reset-data
  * Elimina tutti i lead e le ricerche per ripartire da zero
- * ATTENZIONE: operazione distruttiva!
+ * ATTENZIONE: operazione distruttiva! Solo in development + ADMIN.
  */
 export async function POST() {
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   try {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+    }
+    const userRole = (session.user as { role?: string }).role;
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Solo ADMIN può resettare i dati" }, { status: 403 });
     }
 
     // Conta prima di eliminare
@@ -50,12 +58,21 @@ export async function POST() {
 /**
  * GET /api/debug/reset-data
  * Mostra cosa verrebbe eliminato (dry run)
+ * Solo in development + ADMIN.
  */
 export async function GET() {
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   try {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+    }
+    const userRole = (session.user as { role?: string }).role;
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Solo ADMIN può accedere" }, { status: 403 });
     }
 
     const leadCount = await db.lead.count();

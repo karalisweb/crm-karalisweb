@@ -35,6 +35,13 @@ const DELAY_BETWEEN_CALLS_MS = 3000;
  * - limit=N → max lead (default 20)
  */
 export async function POST(request: NextRequest) {
+  // Auth: CRON_SECRET richiesto
+  const authHeader = request.headers.get("authorization");
+  const expectedToken = process.env.CRON_SECRET;
+  if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!isGeminiConfigured()) {
     return NextResponse.json(
       { error: "Gemini API key non configurata" },

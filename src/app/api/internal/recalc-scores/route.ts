@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
 
@@ -7,8 +7,15 @@ import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/s
  *
  * Ricalcola opportunityScore per tutti i lead con geminiAnalysis.
  * Usa la nuova logica "Sanguinamento Finanziario".
+ * Richiede CRON_SECRET per autenticazione.
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  const expectedToken = process.env.CRON_SECRET;
+  if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const leads = await db.lead.findMany({
     where: {
       geminiAnalysis: { not: { equals: null } },
