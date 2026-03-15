@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **2.2.0** | Ultimo aggiornamento: 2026-02-22
+Versione: **3.1.0** | Ultimo aggiornamento: 2026-03-15
 
 ---
 
@@ -12,15 +12,14 @@ Versione: **2.2.0** | Ultimo aggiornamento: 2026-02-22
 4. [API Routes](#api-routes)
 5. [Pagine Dashboard](#pagine-dashboard)
 6. [Moduli Audit](#moduli-audit)
-7. [Sistema Commerciale](#sistema-commerciale)
-8. [Job Asincroni (Inngest)](#job-asincroni)
+7. [Analisi AI (Gemini)](#analisi-ai-gemini)
+8. [Protezioni e Security](#protezioni-e-security)
 9. [Componenti UI](#componenti-ui)
 10. [Tipi e Interfacce](#tipi-e-interfacce)
 11. [Configurazione](#configurazione)
 12. [Variabili d'Ambiente](#variabili-dambiente)
 13. [Docker e Deploy](#docker-e-deploy)
 14. [Troubleshooting](#troubleshooting)
-15. [Changelog Recente](#changelog-recente)
 
 ---
 
@@ -36,7 +35,8 @@ Versione: **2.2.0** | Ultimo aggiornamento: 2026-02-22
 | **Database** | PostgreSQL | 16 |
 | **ORM** | Prisma | 7.2.0 |
 | **Auth** | NextAuth.js (beta) | 5.0.0-beta.30 |
-| **Job Queue** | Inngest | 3.49.1 |
+| **AI** | Google Gemini | 2.5 Flash/Pro |
+| **Job Queue** | p-queue (in-process) | — |
 | **Scraping** | Apify Client | 2.21.0 |
 | **HTML Parsing** | Cheerio | 1.1.2 |
 | **Email** | Nodemailer | 7.0.12 |
@@ -66,22 +66,31 @@ sales-app/
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/            # Pagine auth (login, forgot, reset)
-│   │   ├── (dashboard)/       # Pagine app protette
-│   │   │   ├── page.tsx       # Dashboard principale
+│   │   ├── (dashboard)/       # Pagine app protette (21 viste)
+│   │   │   ├── error.tsx      # Error boundary dashboard
+│   │   │   ├── da-analizzare/ # Lead da analizzare
+│   │   │   ├── hot-leads/     # Lead HOT (score 80+)
+│   │   │   ├── warm-leads/    # Lead WARM (score 60-79)
+│   │   │   ├── fare-video/    # Lead pronti per video
+│   │   │   ├── video-inviati/ # Video inviati + tracking
+│   │   │   ├── follow-up/     # Follow-up (lettera, LinkedIn)
+│   │   │   ├── telefonate/    # Telefonate
+│   │   │   ├── call-fissate/  # Call fissate
+│   │   │   ├── trattative/    # Trattative/offerte
+│   │   │   ├── clienti/       # Clienti acquisiti
+│   │   │   ├── linkedin/      # Contatti LinkedIn
 │   │   │   ├── leads/         # Lista e dettaglio lead
-│   │   │   ├── da-chiamare/   # Vista "Da Chiamare"
-│   │   │   ├── da-verificare/ # Vista "Da Verificare"
-│   │   │   ├── appuntamenti/  # Appuntamenti
-│   │   │   ├── offerte/       # Offerte inviate
-│   │   │   ├── clienti-msd/   # Clienti acquisiti
 │   │   │   ├── search/        # Nuova ricerca
 │   │   │   ├── searches/      # Storico ricerche
-│   │   │   ├── audit/         # Gestione audit
+│   │   │   ├── non-target/    # Non in target
+│   │   │   ├── senza-sito/    # Senza sito web
+│   │   │   ├── persi/         # Lead persi
+│   │   │   ├── archivio/      # Archivio
 │   │   │   ├── settings/      # Impostazioni
 │   │   │   ├── profile/       # Profilo utente
-│   │   │   ├── guida/         # Guida utente
-│   │   │   └── ...            # Altre viste pipeline
+│   │   │   └── guida/         # Guida utente
 │   │   ├── api/               # API Routes (vedi sotto)
+│   │   ├── error.tsx          # Error boundary globale
 │   │   └── layout.tsx         # Root layout
 │   ├── components/
 │   │   ├── ui/                # Shadcn/ui components
@@ -92,18 +101,22 @@ sales-app/
 │   │   ├── db.ts              # Prisma client singleton
 │   │   ├── apify.ts           # Integrazione Apify
 │   │   ├── apify-mock.ts      # Mock data per sviluppo
+│   │   ├── gemini-analysis.ts # Integrazione Gemini AI (timeout 30s)
+│   │   ├── background-jobs.ts # Job queue con p-queue + recovery
+│   │   ├── url-validator.ts   # Protezione SSRF
 │   │   ├── audit/             # Moduli audit (12 file)
-│   │   ├── commercial/        # Sistema tagging commerciale
+│   │   │   ├── whatsapp-extractor.ts  # Estrazione WhatsApp
+│   │   │   ├── strategic-extractor.ts # Analisi strategica (limite 5MB)
+│   │   │   └── ...
 │   │   └── utils.ts           # Utility condivise
-│   ├── inngest/               # Job asincroni
-│   │   ├── client.ts
-│   │   └── functions/
 │   └── types/                 # TypeScript interfaces
 │       ├── index.ts
 │       └── commercial.ts
+├── scripts/
+│   └── backup-db.sh           # Backup DB con rotazione 30 giorni
 ├── docker-compose.yml
 ├── Dockerfile
-├── deploy.sh                  # Script deploy automatico
+├── deploy.sh                  # Script deploy automatico (9 step)
 ├── DEPLOY.md                  # Guida deploy
 ├── TECHNICAL-DOCS.md          # Questa documentazione
 └── CLAUDE.md                  # Istruzioni AI per sviluppo
@@ -114,10 +127,12 @@ sales-app/
 - **Server Components**: Next.js App Router con approccio server-first
 - **API Routes**: Handler REST in `src/app/api/`
 - **Middleware**: Protezione route con NextAuth JWT (`src/middleware.ts`)
-- **Background Jobs**: Inngest per audit e ricerche pesanti
+- **Background Jobs**: p-queue per concorrenza controllata (max 2 job paralleli)
 - **Database Access**: Prisma ORM con singleton pattern (`src/lib/db.ts`)
-- **Type Safety**: Full TypeScript, validazione con Zod
+- **Type Safety**: Full TypeScript, validazione input con Zod
 - **State Management**: React useState + server-side data fetching
+- **SSRF Protection**: Validazione URL prima di ogni fetch esterno
+- **Error Boundaries**: error.tsx globale e per dashboard
 
 ---
 
@@ -140,29 +155,37 @@ sales-app/
 | `googleReviewsCount` | Int? | Numero recensioni |
 | `googleMapsUrl` | String? | Link Google Maps |
 | `placeId` | String? | Unique, per deduplicazione |
+| **WhatsApp** | | |
+| `whatsappNumber` | String? | Numero WhatsApp estratto |
+| `whatsappSource` | String? | "website" / "google_maps" |
 | **Audit** | | |
 | `auditStatus` | AuditStatus | PENDING/RUNNING/COMPLETED/FAILED/NO_WEBSITE/TIMEOUT |
 | `auditCompletedAt` | DateTime? | |
 | `opportunityScore` | Int? | 0-100 |
 | `auditData` | Json? | Risultati audit completi |
 | `talkingPoints` | String[] | Punti commerciali |
-| **Sistema Commerciale** | | |
-| `commercialTag` | CommercialTag? | Tag automatico |
-| `commercialSignals` | Json? | 5 segnali commerciali |
-| `commercialPriority` | Int? | 1-4 (1 = massima) |
-| `isCallable` | Boolean | Pronto per chiamata |
+| **Gemini AI** | | |
+| `geminiAnalysis` | Json? | Analisi strategica AI |
+| `videoScriptData` | Json? | Script video generato |
 | **Pipeline CRM** | | |
-| `pipelineStage` | PipelineStage | 12 stadi possibili |
-| `callAttempts` | Int | Tentativi chiamata |
-| `lastCallOutcome` | CallOutcome? | Ultimo esito |
-| `mainObjection` | Objection? | Obiezione principale |
-| `appointmentAt` | DateTime? | Data appuntamento |
-| `offerSentAt` | DateTime? | Data invio offerta |
-| **Verifica Audit** | | |
-| `auditVerified` | Boolean | Verificato da Daniela |
-| `auditVerifiedAt` | DateTime? | |
-| `auditVerifiedBy` | String? | |
-| `auditVerificationChecks` | Json? | Checklist + note |
+| `pipelineStage` | PipelineStage | Stage corrente |
+| **Video Outreach** | | |
+| `videoSentAt` | DateTime? | Data invio video |
+| `videoViewedAt` | DateTime? | Data visualizzazione |
+| `trackingToken` | String? | Token unico per tracking |
+| **Follow-up** | | |
+| `letterSentAt` | DateTime? | Data invio lettera |
+| `linkedinSentAt` | DateTime? | Data contatto LinkedIn |
+| `respondedAt` | DateTime? | Data risposta |
+| `respondedVia` | String? | Canale risposta |
+| **Recontact** | | |
+| `recontactAt` | DateTime? | Data programmata recontact |
+| **Ads Intelligence** | | |
+| `hasActiveGoogleAds` | Boolean? | |
+| `hasActiveMetaAds` | Boolean? | |
+| `googleAdsCopy` | String? | Testo annuncio Google |
+| `metaAdsCopy` | String? | Testo annuncio Meta |
+| `adsCheckedAt` | DateTime? | |
 
 #### Activity
 
@@ -173,7 +196,6 @@ sales-app/
 | `type` | ActivityType | CALL, NOTE, EMAIL_SENT, MEETING, PROPOSAL_SENT, STAGE_CHANGE |
 | `outcome` | CallOutcome? | Solo per CALL |
 | `notes` | String? | |
-| `createdBy` | String? | |
 | `createdAt` | DateTime | |
 
 #### Search
@@ -198,20 +220,6 @@ sales-app/
 | `name` | String? | |
 | `role` | UserRole | ADMIN / USER |
 | `twoFactorEnabled` | Boolean | |
-
-### Enum Pipeline Stages
-
-```
-NEW → DA_VERIFICARE → DA_CHIAMARE → NON_RISPONDE → RICHIAMARE
-→ CALL_FISSATA → NON_PRESENTATO → OFFERTA_INVIATA → VINTO / PERSO
-(laterali: NON_TARGET, SENZA_SITO)
-```
-
-### Enum Commerciali
-
-**CommercialTag**: `ADS_ATTIVE_CONTROLLO_ASSENTE` | `TRAFFICO_SENZA_DIREZIONE` | `STRUTTURA_OK_NON_PRIORITIZZATA` | `DA_APPROFONDIRE` | `NON_TARGET`
-
-**Priorita**: 1 (massima) - 4 (minima)
 
 ---
 
@@ -242,21 +250,26 @@ NEW → DA_VERIFICARE → DA_CHIAMARE → NON_RISPONDE → RICHIAMARE
 
 | Metodo | Route | Descrizione |
 |--------|-------|-------------|
-| GET/POST | `/api/leads` | Lista / crea lead |
-| GET/PATCH/DELETE | `/api/leads/[id]` | CRUD lead |
+| GET/POST | `/api/leads` | Lista (pageSize max 200) / crea (Zod validation) |
+| GET/PATCH/DELETE | `/api/leads/[id]` | CRUD lead (PATCH con transaction) |
 | POST | `/api/leads/[id]/quick-log` | Log rapido chiamata |
-| POST | `/api/leads/[id]/verify` | Verifica audit (checklist + note) |
+| POST | `/api/leads/[id]/verify` | Verifica audit |
+| POST | `/api/leads/[id]/gemini-analysis` | Avvia analisi Gemini |
+| POST | `/api/leads/[id]/gemini-precision` | Analisi Gemini di precisione |
+| POST | `/api/leads/[id]/ads-check` | Check Google Ads + Meta Ads |
+| GET | `/api/leads/[id]/tracking-token` | Token tracking video |
 | GET | `/api/leads/stats` | Statistiche lead |
 | GET | `/api/leads/recalculate-stages` | Ricalcola pipeline |
-| GET | `/api/da-chiamare` | Lead da chiamare oggi |
-| GET | `/api/callable-today` | Lead chiamabili oggi |
+| POST | `/api/leads/filter-social` | Filtra URL social |
 
 ### Ricerche
 
 | Metodo | Route | Descrizione |
 |--------|-------|-------------|
 | GET/POST | `/api/searches` | Gestione ricerche |
-| GET | `/api/searches/[id]` | Dettaglio ricerca |
+| GET/POST | `/api/scheduled-searches` | Ricerche programmate (Zod, max 50) |
+| GET/PATCH/DELETE | `/api/scheduled-searches/[id]` | CRUD ricerca programmata |
+| POST | `/api/scheduled-searches/seed` | Seed ricerche predefinite |
 
 ### Audit
 
@@ -264,7 +277,47 @@ NEW → DA_VERIFICARE → DA_CHIAMARE → NON_RISPONDE → RICHIAMARE
 |--------|-------|-------------|
 | POST | `/api/audit` | Avvia audit sito |
 | GET | `/api/audit/status` | Stato audit |
-| GET | `/api/audit/stream` | Stream progresso |
+
+### Cron (protetti con CRON_SECRET)
+
+| Metodo | Route | Descrizione |
+|--------|-------|-------------|
+| POST | `/api/cron/scheduled-searches` | Esegui ricerche programmate |
+| POST | `/api/cron/batch-gemini-analysis` | Batch analisi Gemini |
+| POST | `/api/cron/check-recontact` | Gestione recontact |
+| POST | `/api/cron/recover-stuck-jobs` | Recovery job bloccati (30+ min) |
+
+### Interni (protetti con CRON_SECRET)
+
+| Metodo | Route | Descrizione |
+|--------|-------|-------------|
+| POST | `/api/internal/batch-analysis` | Batch analysis |
+| POST | `/api/internal/recalc-scores` | Ricalcola score |
+
+### Pubblici
+
+| Metodo | Route | Descrizione |
+|--------|-------|-------------|
+| POST | `/api/public/video-view` | Tracking video (rate limit IP: 1/10s) |
+| GET | `/api/health` | Health check (DB ping) |
+
+### Dashboard e Altro
+
+| Metodo | Route | Descrizione |
+|--------|-------|-------------|
+| GET | `/api/dashboard/mission` | Missione giornaliera |
+| POST | `/api/dashboard/regenerate` | Rigenera dashboard |
+| GET | `/api/notifications/video-views` | Notifiche video views |
+| POST | `/api/ads-canary` | Canary test ads |
+| GET | `/api/callable-today` | Lead chiamabili oggi |
+
+### Debug (solo sviluppo)
+
+| Metodo | Route | Descrizione |
+|--------|-------|-------------|
+| POST/GET | `/api/debug/reset-data` | Reset dati (dev + ADMIN only, 404 in prod) |
+| GET | `/api/debug/callable-status` | Debug stato callable |
+| * | `/api/test` | Test API (solo dev) |
 
 ### Impostazioni
 
@@ -274,40 +327,38 @@ NEW → DA_VERIFICARE → DA_CHIAMARE → NON_RISPONDE → RICHIAMARE
 | GET/POST | `/api/settings/search-config` | Config ricerche |
 | GET/POST | `/api/settings/api-config` | Config API |
 | POST | `/api/settings/test-apify` | Test connessione Apify |
-
-### Inngest
-
-| Metodo | Route | Descrizione |
-|--------|-------|-------------|
-| POST | `/api/inngest` | Webhook handler Inngest |
+| POST | `/api/settings/test-gemini` | Test connessione Gemini |
+| POST | `/api/settings/test-meta` | Test Meta Ads |
 
 ---
 
 ## Pagine Dashboard
 
-| Path | Descrizione | File |
-|------|-------------|------|
-| `/` | Dashboard principale | `(dashboard)/page.tsx` |
-| `/leads` | Lista lead | `(dashboard)/leads/page.tsx` |
-| `/leads/[id]` | Dettaglio lead | `(dashboard)/leads/[id]/page.tsx` |
-| `/da-chiamare` | Lead da chiamare | `(dashboard)/da-chiamare/page.tsx` |
-| `/da-verificare` | Lead da verificare | `(dashboard)/da-verificare/page.tsx` |
-| `/appuntamenti` | Appuntamenti | `(dashboard)/appuntamenti/page.tsx` |
-| `/offerte` | Offerte inviate | `(dashboard)/offerte/page.tsx` |
-| `/clienti-msd` | Clienti acquisiti | `(dashboard)/clienti-msd/page.tsx` |
-| `/search` | Nuova ricerca | `(dashboard)/search/page.tsx` |
-| `/searches` | Storico ricerche | `(dashboard)/searches/page.tsx` |
-| `/searches/[id]` | Dettaglio ricerca | `(dashboard)/searches/[id]/page.tsx` |
-| `/audit` | Gestione audit | `(dashboard)/audit/page.tsx` |
-| `/oggi` | Riepilogo giornaliero | `(dashboard)/oggi/page.tsx` |
-| `/non-target` | Non in target | `(dashboard)/non-target/page.tsx` |
-| `/senza-sito` | Senza sito web | `(dashboard)/senza-sito/page.tsx` |
-| `/persi` | Lead persi | `(dashboard)/persi/page.tsx` |
-| `/parcheggiati` | Lead parcheggiati | `(dashboard)/parcheggiati/page.tsx` |
-| `/archivio` | Archivio | `(dashboard)/archivio/page.tsx` |
-| `/settings` | Impostazioni | `(dashboard)/settings/page.tsx` |
-| `/profile` | Profilo utente | `(dashboard)/profile/page.tsx` |
-| `/guida` | Guida per Daniela | `(dashboard)/guida/page.tsx` |
+| Path | Descrizione |
+|------|-------------|
+| `/` | Dashboard principale (KPI, pipeline, report) |
+| `/da-analizzare` | Lead da analizzare con Gemini |
+| `/hot-leads` | Lead HOT (score 80+) |
+| `/warm-leads` | Lead WARM (score 60-79) |
+| `/fare-video` | Lead pronti per video |
+| `/video-inviati` | Video inviati + tracking |
+| `/follow-up` | Follow-up (lettera, LinkedIn) |
+| `/telefonate` | Gestione telefonate |
+| `/call-fissate` | Call/meeting fissati |
+| `/trattative` | Trattative e offerte |
+| `/clienti` | Clienti acquisiti |
+| `/linkedin` | Contatti LinkedIn |
+| `/leads` | Lista tutti i lead |
+| `/leads/[id]` | Dettaglio lead |
+| `/search` | Nuova ricerca Google Maps |
+| `/searches` | Storico ricerche |
+| `/senza-sito` | Lead senza sito web |
+| `/non-target` | Non in target |
+| `/persi` | Lead persi |
+| `/archivio` | Archivio |
+| `/settings` | Impostazioni CRM |
+| `/profile` | Profilo utente |
+| `/guida` | Guida utente interattiva |
 
 ---
 
@@ -325,68 +376,86 @@ Tutti in `src/lib/audit/`:
 | `blog-detector.ts` | `checkBlog()` | Blog URL, ultimo post, frequenza, numero articoli |
 | `email-detector.ts` | `detectEmailMarketing()` | Newsletter form, popup, lead magnet, provider email |
 | `tech-detector.ts` | `detectTech()` | CMS, versione PHP, framework JS, stack obsoleto |
-| `pagespeed.ts` | `getPageSpeedData()` | Performance, accessibility, Core Web Vitals (via Google API) |
 | `score-calculator.ts` | `calculateOpportunityScore()` | Calcola score 0-100 pesato su tutte le aree |
 | `talking-points.ts` | `generateTalkingPoints()` | Genera frasi commerciali per area di servizio |
-| `verification-checklist.ts` | `generateVerificationChecklist()` | Checklist verifica con Sì/No e note |
+| `strategic-extractor.ts` | `extractStrategicData()` | Estrazione dati strategici (limite 5MB HTML) |
+| `whatsapp-extractor.ts` | `extractWhatsAppNumber()` | Estrae numeri WhatsApp da wa.me e api.whatsapp.com |
 
-### Flusso Audit
+### Flusso Analisi
 
 ```
-1. Utente clicca "Avvia Audit"
-2. API /api/audit riceve richiesta
-3. Inngest job "run-audit" viene accodato
-4. Job scarica HTML homepage (timeout 10s)
-5. Esegue tutti i check in parallelo (~5-15s)
-6. Calcola Opportunity Score (0-100)
-7. Genera Talking Points per servizio
-8. Assegna Commercial Tag automatico
-9. Salva tutto in auditData (JSON)
-10. Aggiorna auditStatus = COMPLETED
+1. Lead importato da Google Maps
+2. Background job avvia analisi (p-queue, max 2 concorrenti)
+3. Fetch HTML homepage (timeout 10s, SSRF check)
+4. Rifiuta HTML > 5MB
+5. Esegue check in parallelo (~5-15s)
+6. Gemini AI analizza strategicamente il sito (timeout 30s)
+7. Calcola Opportunity Score (0-100)
+8. Genera script video personalizzato
+9. Estrae numero WhatsApp
+10. Salva tutto in DB
 ```
 
 ---
 
-## Sistema Commerciale
+## Analisi AI (Gemini)
 
-File in `src/lib/commercial/`:
+File: `src/lib/gemini-analysis.ts`
 
-| File | Funzione |
-|------|----------|
-| `commercial-tagger.ts` | Assegna tag commerciali ai lead |
-| `ads-evidence-detector.ts` | Rileva evidenze di advertising |
-| `commercial-signals-detector.ts` | Analizza 5 segnali chiave |
-| `index.ts` | Aggregatore |
+### Caratteristiche
 
-### I 5 Segnali Commerciali
+- **Timeout 30s**: `generateContent()` wrappato in `Promise.race` per evitare hang
+- **Cost logging**: Ogni chiamata logga token usage (prompt, candidates, total)
+- **Modelli supportati**: Gemini 2.5 Flash (default), Pro, Flash Lite
+- **Output**: Analisi coerenza marketing, 3 errori principali, script video
 
-1. **Ads Evidence** - Evidenze di advertising attivo (strong/medium/weak/none)
-2. **Tracking Presence** - Presenza di tracking sul sito
-3. **Consent Mode V2** - Conformita Consent Mode
-4. **CTA Clarity** - Chiarezza delle call-to-action
-5. **Offer Focus** - Focus dell'offerta commerciale
+### Configurazione
 
-### I 5 Tag Commerciali
-
-| Tag | Priorita | Significato |
-|-----|----------|-------------|
-| `ADS_ATTIVE_CONTROLLO_ASSENTE` | 1 | Fanno ads ma senza tracking → massima opportunita |
-| `TRAFFICO_SENZA_DIREZIONE` | 2 | Hanno traffico ma nessuna strategia |
-| `STRUTTURA_OK_NON_PRIORITIZZATA` | 3 | Sito ok ma margini di miglioramento |
-| `DA_APPROFONDIRE` | 4 | Servono piu dati per valutare |
-| `NON_TARGET` | - | Non in target, da archiviare |
+```env
+GEMINI_API_KEY="your-key"
+GEMINI_MODEL="gemini-2.5-flash"  # o gemini-2.5-pro, gemini-2.5-flash-lite
+```
 
 ---
 
-## Job Asincroni
+## Protezioni e Security
 
-### Inngest Functions (`src/inngest/functions/`)
+### SSRF Protection (v3.1.0)
 
-**run-audit.ts** - Esecuzione audit completo
-- Concorrenza: max 5 audit simultanei
-- Retry: 2 tentativi
-- Timeout: 90 secondi per sito
-- Steps: fetch HTML → SEO check → tracking → social → trust → blog → email → tech → pagespeed → score → talking points → save
+File: `src/lib/url-validator.ts`
+
+Tutti i fetch di URL esterni passano per `validatePublicUrl()` che blocca:
+- `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
+- `169.254.169.254` (metadata cloud)
+- `localhost`, `::1`, `0.0.0.0`
+
+### Auth Endpoint Interni
+
+- `/api/internal/*` e `/api/cron/*` richiedono header `Authorization: Bearer CRON_SECRET`
+- `/api/debug/reset-data` accessibile solo in `NODE_ENV=development` + ruolo `ADMIN`. In produzione ritorna 404.
+
+### Security Headers
+
+Configurati in `next.config.ts`:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+
+### Rate Limiting
+
+- `/api/public/video-view`: 1 request/10s per IP (in-memory Map)
+
+### Limiti Input
+
+- pageSize GET `/api/leads`: cap 1-200
+- HTML: rifiutato se > 5MB in `extractStrategicData()` e `fetchAndExtractPageText()`
+- POST `/api/leads`: validazione Zod (name required, max lengths)
+- POST `/api/scheduled-searches`: validazione Zod (max 50 items, query/location max 255)
+
+### Recovery
+
+- `POST /api/cron/recover-stuck-jobs`: resetta job RUNNING da 30+ min a PENDING
 
 ---
 
@@ -419,16 +488,6 @@ File in `src/lib/commercial/`:
 |------|-----------|
 | `dashboard/funnel-chart.tsx` | Funnel chart pipeline con Recharts |
 
-### Calendar
-| File | Componente |
-|------|-----------|
-| `calendar/weekly-calendar.tsx` | Calendario settimanale navigabile |
-
-### UI generici
-| File | Componente |
-|------|-----------|
-| `ui/animated-counter.tsx` | Contatore numerico animato (framer-motion) |
-
 ### Shadcn/ui (`components/ui/`)
 button, card, dialog, input, textarea, table, tabs, select, dropdown-menu, switch, badge, label, separator, input-otp, sonner, skeleton
 
@@ -440,40 +499,14 @@ button, card, dialog, input, textarea, table, tabs, select, dropdown-menu, switc
 
 ```typescript
 interface AuditData {
-  website?: WebsiteAudit;     // Performance, mobile, HTTPS, form
-  seo?: SEOAudit;             // Meta, H1, sitemap, schema
-  tracking?: TrackingAudit;   // GA, pixel, GTM, ads
-  social?: SocialAudit;       // Link social
-  content?: ContentAudit;     // Blog, ultimo post
+  website?: WebsiteAudit;
+  seo?: SEOAudit;
+  tracking?: TrackingAudit;
+  social?: SocialAudit;
+  content?: ContentAudit;
   emailMarketing?: EmailMarketingAudit;
-  trust?: TrustAudit;         // GDPR, privacy, trust
-  tech?: TechStackAudit;      // CMS, framework
-}
-
-interface VerificationItem {
-  key: string;
-  label: string;
-  hint: string;
-  detectedValue: boolean | null;  // Sì/No badge
-  checked: boolean;
-  checkedAt?: string;
-}
-
-interface VerificationChecks {
-  items: VerificationItem[];
-  notes?: string;                  // Note di Daniela
-}
-```
-
-### Tipi Commerciali (`src/types/commercial.ts`)
-
-```typescript
-interface CommercialSignals {
-  adsEvidence: { level: AdsEvidenceLevel; details: string[] };
-  trackingPresence: { hasTracking: boolean; details: string[] };
-  consentModeV2: { hasConsentMode: boolean; details: string[] };
-  ctaClarity: { isClean: boolean; details: string[] };
-  offerFocus: { hasOffer: boolean; details: string[] };
+  trust?: TrustAudit;
+  tech?: TechStackAudit;
 }
 ```
 
@@ -485,12 +518,23 @@ interface CommercialSignals {
 
 ```typescript
 {
-  output: "standalone",         // Build per Docker/PM2
-  poweredByHeader: false,       // Nascondi header Server
+  output: "standalone",
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" }
     ]
+  },
+  async headers() {
+    return [{
+      source: "/(.*)",
+      headers: [
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-Frame-Options", value: "DENY" },
+        { key: "X-XSS-Protection", value: "1; mode=block" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      ]
+    }]
   }
 }
 ```
@@ -499,7 +543,7 @@ interface CommercialSignals {
 
 - Protezione JWT su tutte le route
 - Route pubbliche: `/login`, `/forgot-password`, `/reset-password`
-- Route API pubblica: `/api/auth`, `/api/test` (solo dev)
+- Route API pubblica: `/api/auth`, `/api/public/*`, `/api/health`
 
 ### Credenziali Test
 
@@ -528,12 +572,12 @@ NEXTAUTH_URL="http://localhost:3000"     # o https://crm.karalisdemo.it
 APIFY_TOKEN=""
 APIFY_WEBHOOK_SECRET=""
 
-# Inngest
-INNGEST_EVENT_KEY=""
-INNGEST_SIGNING_KEY=""
+# Gemini AI
+GEMINI_API_KEY=""
+GEMINI_MODEL="gemini-2.5-flash"
 
-# PageSpeed Insights (25k req/giorno gratis)
-PAGESPEED_API_KEY=""
+# Cron Secret (per endpoint interni e cron)
+CRON_SECRET=""
 
 # SMTP per email
 SMTP_HOST="mail.karalisweb.net"
@@ -567,15 +611,17 @@ SMTP_FROM="noreply@karalisweb.net"
 Il deploy usa PM2 (non Docker) sul VPS Contabo:
 
 ```bash
-# Deploy automatico:
+# Deploy automatico (auto-patch bump):
 ./deploy.sh "descrizione modifiche"
 
-# Con bump versione:
-./deploy.sh --bump patch "fix bug"
+# Con bump versione esplicito:
 ./deploy.sh --bump minor "nuova feature"
+
+# Senza bump:
+./deploy.sh --no-bump "hotfix veloce"
 ```
 
-Lo script esegue: commit → push → pull VPS → npm install → prisma generate → build → pm2 restart
+Lo script esegue 9 step: versioning → verifica CHANGELOG → verifica Git → build locale → commit → push → pull VPS → npm install + Prisma → build server → restart PM2 + health check
 
 Vedi `DEPLOY.md` per tutti i dettagli.
 
@@ -593,8 +639,8 @@ Vedi `DEPLOY.md` per tutti i dettagli.
 | Prisma errore | `ssh root@185.192.97.108 'cd /opt/sales-app && npx prisma generate'` |
 | Porta occupata | `ssh root@185.192.97.108 'lsof -i :3003'` |
 | Nginx errore | `ssh root@185.192.97.108 'nginx -t && systemctl reload nginx'` |
-| Audit fallisce | Controlla log audit in `pm2 logs`, spesso timeout rete |
-| Lead duplicati | Deduplicazione su `placeId` - controllare se manca |
+| Job bloccati | `curl -X POST .../api/cron/recover-stuck-jobs -H "Authorization: Bearer CRON_SECRET"` |
+| Health check | `curl http://localhost:3000/api/health` → `{"status":"ok"}` o 503 |
 
 ### Comandi Debug Utili
 
@@ -614,39 +660,10 @@ npm run db:seed
 # Rigenera Prisma client
 npx prisma generate
 
-# Esegui migrazioni
-npx prisma migrate deploy
+# Backup database
+./scripts/backup-db.sh
 ```
 
 ---
 
-## Changelog Recente
-
-> Per lo storico completo vedi [CHANGELOG.md](CHANGELOG.md)
-
-### 2026-02-16 (v2.1.0)
-
-**Documentazione e Versioning**
-- Creato `CHANGELOG.md` con storico completo di tutte le versioni
-- Creato `GUIDA_UTENTE.md` - guida utente stampabile/esportabile
-- Aggiornato `README.md` con porta corretta (3003), link a tutti i documenti e stack aggiornato
-- Versione bumped a 2.1.0 in tutti i file (package.json, deploy.sh, DEPLOY.md, TECHNICAL-DOCS.md, sidebar UI)
-
-### 2026-02-10 (v2.0.0)
-
-**Verifica Audit - Miglioramenti UX**
-- Checklist verifica ora mostra **badge Sì/No** per ogni voce (Analytics, Pixel, Google Ads, Cookie Banner, Form, Blog) invece di mostrare solo le voci negative
-- Aggiunto **campo "Note verifica"** con salvataggio automatico (debounce 1s) per consentire a Daniela di scrivere osservazioni
-- Le note vengono salvate nel DB in `auditVerificationChecks.notes` e incluse nell'activity log
-- Aggiornata la **Guida Utente** (`/guida`) con istruzioni sui nuovi badge Sì/No e sul campo note
-
-**File modificati:**
-- `src/lib/audit/verification-checklist.ts` - Nuova logica con `detectedValue` per tutte le voci
-- `src/types/index.ts` - Aggiunto `detectedValue` a `VerificationItem`, `notes` a `VerificationChecks`
-- `src/app/(dashboard)/da-chiamare/page.tsx` - Badge Sì/No, textarea note, debounce save
-- `src/app/api/leads/[id]/verify/route.ts` - Salvataggio note nella verifica
-- `src/app/(dashboard)/guida/page.tsx` - Istruzioni aggiornate
-
----
-
-*Documentazione generata automaticamente. Per aggiornare, modificare questo file e committare.*
+*Documentazione aggiornata il 2026-03-15 | KW Sales CRM v3.1.0*

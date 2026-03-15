@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Deploy
 
-Versione attuale: **2.7.0**
+Versione attuale: **3.1.0**
 
 ---
 
@@ -36,34 +36,55 @@ Versione attuale: **2.7.0**
 ### Deploy con aggiornamento versione
 
 ```bash
-# Bug fix (2.0.0 > 2.0.1)
+# Bug fix (3.1.0 > 3.1.1)
 ./deploy.sh --bump patch "fix calcolo opportunity score"
 
-# Nuova funzionalita (2.0.0 > 2.1.0)
+# Nuova funzionalita (3.1.0 > 3.2.0)
 ./deploy.sh --bump minor "aggiunto audit email marketing"
 
-# Breaking change (2.0.0 > 3.0.0)
+# Breaking change (3.1.0 > 4.0.0)
 ./deploy.sh --bump major "redesign pipeline completo"
+```
+
+### Deploy senza bump versione
+
+```bash
+./deploy.sh --no-bump "hotfix veloce"
+```
+
+### Deploy non-interattivo (per automazione/Claude Code)
+
+```bash
+./deploy.sh --ci "messaggio commit"
+./deploy.sh --ci --bump minor "messaggio"
 ```
 
 Il flag `--bump` aggiorna automaticamente la versione in:
 - `package.json`
-- `deploy.sh` (header + variabile APP_VERSION)
 - `DEPLOY.md` (questo file)
+- `sidebar.tsx` (versione in UI)
+- `settings/page.tsx` (versione in UI)
+- `README.md` (versione in header)
+- `TECHNICAL-DOCS.md` (versione in header)
+- `CHANGELOG.md` (auto-entry)
+- `GUIDA_UTENTE.md` (versione + data)
 
 ---
 
-## Cosa fa deploy.sh (6 step)
+## Cosa fa deploy.sh (9 step)
 
 | Step | Azione | Dettaglio |
 |------|--------|-----------|
 | 0 | **Versioning** (opzionale) | Se `--bump`, aggiorna versione in tutti i file |
-| 1 | **Verifica Git** | Controlla modifiche locali |
-| 2 | **Commit** | `git add .` + `git commit -m "messaggio"` |
-| 3 | **Push** | `git push origin main` |
-| 4 | **Pull + Install** | Sul VPS: `git pull` + `npm install` |
-| 5 | **Build** | Sul VPS: `npm run build` (Next.js) |
-| 6 | **Restart** | `pm2 restart sales-crm --update-env` |
+| 1 | **Verifica CHANGELOG** | Controlla che CHANGELOG contenga la versione corrente |
+| 2 | **Verifica Git** | Controlla modifiche locali |
+| 3 | **Build locale** | Type-check + build di verifica |
+| 4 | **Commit** | `git add .` + `git commit -m "messaggio"` |
+| 5 | **Push** | `git push origin main` |
+| 6 | **Pull VPS** | Con git stash automatico |
+| 7 | **Dipendenze** | npm install (solo se package.json cambiato) + Prisma generate + db push |
+| 8 | **Build server** | `npm run build` sul VPS |
+| 9 | **Restart** | `pm2 restart sales-crm` + health check su /login |
 
 ---
 
@@ -102,6 +123,13 @@ ssh root@185.192.97.108 'pm2 logs sales-crm --lines 20 --nostream'
 ssh root@185.192.97.108 'pm2 show sales-crm'
 ```
 
+### Health Check
+
+```bash
+ssh root@185.192.97.108 'curl -s http://localhost:3003/api/health'
+# Ritorna {"status":"ok"} se tutto funziona
+```
+
 ### Verifica Nginx
 
 ```bash
@@ -112,11 +140,10 @@ ssh root@185.192.97.108 'nginx -t && systemctl reload nginx'
 
 ## Regole per deploy.sh
 
-Lo script `deploy.sh` deve sempre contenere nella sezione CONFIGURAZIONE:
+Lo script `deploy.sh` legge la versione dinamicamente da `package.json` e contiene nella sezione CONFIGURAZIONE:
 
 ```bash
 APP_NAME="KW Sales CRM"            # Nome app
-APP_VERSION="X.Y.Z"                # Versione corrente (semantic versioning)
 VPS_HOST="root@185.192.97.108"     # Accesso VPS
 VPS_PATH="/opt/sales-app"          # Path sul server
 BRANCH="main"                      # Branch Git
@@ -124,10 +151,7 @@ PM2_PROCESS="sales-crm"            # Nome processo PM2
 LOCAL_PORT=3003                     # Porta in sviluppo locale
 SERVER_PORT=3003                    # Porta sul server
 PUBLIC_URL="https://crm.karalisdemo.it"  # URL pubblico
-NGINX_CONFIG="/etc/nginx/sites-available/crm.karalisdemo.it"  # Config Nginx
 ```
-
-L'header ASCII dello script deve riportare tutte queste informazioni come riferimento rapido.
 
 ---
 
@@ -141,12 +165,16 @@ Formato: **Semantic Versioning** `vMAJOR.MINOR.PATCH`
 
 La versione va tenuta sincronizzata in:
 
-| File | Campo | Esempio |
-|------|-------|---------|
-| `package.json` | `"version"` | `"2.2.0"` |
-| `deploy.sh` | `APP_VERSION` + header | `APP_VERSION="2.2.0"` |
-| `DEPLOY.md` | Intestazione | `Versione attuale: **2.7.0**` |
-| **Sidebar UI** | Sotto il nome app | `v2.2.0` |
+| File | Campo |
+|------|-------|
+| `package.json` | `"version"` |
+| `DEPLOY.md` | Intestazione |
+| `README.md` | Intestazione |
+| `TECHNICAL-DOCS.md` | Intestazione |
+| `GUIDA_UTENTE.md` | Intestazione + footer |
+| `CHANGELOG.md` | Entry per versione |
+| **Sidebar UI** | Sotto il nome app |
+| **Settings page** | Box versione |
 
 Per aggiornare tutto in automatico usare `--bump`:
 ```bash
@@ -168,7 +196,7 @@ Per aggiornare tutto in automatico usare `--bump`:
 
 ## Note Importanti
 
-1. **Build obbligatoria**: Sales CRM usa Next.js, quindi dopo ogni pull serve `npm run build` prima di riavviare PM2. Lo script lo fa automaticamente (step 5).
+1. **Build obbligatoria**: Sales CRM usa Next.js, quindi dopo ogni pull serve `npm run build` prima di riavviare PM2. Lo script lo fa automaticamente (step 8).
 
 2. **Database PostgreSQL**: Il database di produzione e separato. Le migrazioni vanno eseguite manualmente se lo schema cambia:
    ```bash
@@ -184,7 +212,9 @@ Per aggiornare tutto in automatico usare `--bump`:
 
 5. **PM2 fallback**: Se il processo non esiste ancora, lo script lo crea automaticamente con `pm2 start npm --name 'sales-crm' -- start`.
 
-6. **Inngest**: I job asincroni (audit, ricerche) sono gestiti da Inngest. Verificare che l'endpoint Inngest sia configurato correttamente in produzione.
+6. **Endpoint protetti**: Gli endpoint `/api/internal/*` e `/api/cron/*` richiedono `CRON_SECRET`. Configurare nel `.env` del server.
+
+7. **Backup DB**: Usare `./scripts/backup-db.sh` per backup con rotazione (ultimi 30 backup).
 
 ---
 
@@ -225,9 +255,10 @@ ssh root@185.192.97.108 'nginx -t && systemctl reload nginx'
 ssh root@185.192.97.108 'cd /opt/sales-app && npx prisma migrate deploy'
 ```
 
-### Seed dati iniziali
+### Recovery job bloccati
 ```bash
-ssh root@185.192.97.108 'cd /opt/sales-app && npx tsx prisma/seed.ts'
+curl -X POST https://crm.karalisdemo.it/api/cron/recover-stuck-jobs \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
 ---
@@ -244,4 +275,4 @@ Questo script esegue: clone repo, npm install, build, configurazione Nginx, cert
 
 ---
 
-*Ultimo aggiornamento: 2026-02-16*
+*Ultimo aggiornamento: 2026-03-15*

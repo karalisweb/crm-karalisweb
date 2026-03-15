@@ -32,7 +32,7 @@
 #
 # Il deploy esegue in ordine:
 # 0. Versioning (auto-patch di default, --bump per minor/major)
-#    → Aggiorna: package.json, DEPLOY.md, sidebar.tsx, settings/page.tsx
+#    → Aggiorna: package.json, DEPLOY.md, sidebar.tsx, settings/page.tsx, README.md, TECHNICAL-DOCS.md
 #    → Auto-genera entry in CHANGELOG.md dal commit message
 #    → Auto-aggiorna versione e data in GUIDA_UTENTE.md
 # 1. Verifica coerenza versione e CHANGELOG
@@ -160,6 +160,19 @@ update_version_in_files() {
     if [ -f "$SETTINGS_FILE" ]; then
         sed -i '' "s/v${old_version}/v${new_version}/g" "$SETTINGS_FILE"
         print_success "settings/page.tsx → v${new_version}"
+    fi
+
+    # 5. README.md
+    if [ -f "${SCRIPT_DIR}/README.md" ]; then
+        sed -i '' "s/Versione: \*\*${old_version}\*\*/Versione: **${new_version}**/" "${SCRIPT_DIR}/README.md"
+        print_success "README.md → v${new_version}"
+    fi
+
+    # 6. TECHNICAL-DOCS.md
+    if [ -f "${SCRIPT_DIR}/TECHNICAL-DOCS.md" ]; then
+        sed -i '' "s/Versione: \*\*${old_version}\*\*/Versione: **${new_version}**/" "${SCRIPT_DIR}/TECHNICAL-DOCS.md"
+        sed -i '' "s/Ultimo aggiornamento: [0-9]*-[0-9]*-[0-9]*/Ultimo aggiornamento: $(date '+%Y-%m-%d')/" "${SCRIPT_DIR}/TECHNICAL-DOCS.md"
+        print_success "TECHNICAL-DOCS.md → v${new_version}"
     fi
 }
 

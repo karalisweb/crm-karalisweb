@@ -1,8 +1,8 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **2.7.0** | Ultimo aggiornamento: 2026-03-14
+Versione: **3.1.0** | Ultimo aggiornamento: 2026-03-15
 
-> Questa guida spiega come utilizzare il CRM per verificare i lead prima di passarli al commerciale.
+> Questa guida spiega come utilizzare il CRM per gestire i lead e il processo commerciale.
 
 ---
 
@@ -10,7 +10,7 @@ Versione: **2.7.0** | Ultimo aggiornamento: 2026-03-14
 
 1. [Accesso al CRM](#1-accesso-al-crm)
 2. [Panoramica dell'interfaccia](#2-panoramica-dellinterfaccia)
-3. [Come verificare un lead](#3-come-verificare-un-lead)
+3. [Il flusso di lavoro](#3-il-flusso-di-lavoro)
 4. [Estensioni Chrome da installare](#4-estensioni-chrome-da-installare)
 5. [Come controllare caso per caso](#5-come-controllare-caso-per-caso)
 6. [Cosa fare nei casi dubbi](#6-cosa-fare-nei-casi-dubbi)
@@ -40,15 +40,24 @@ La sidebar a sinistra contiene tutte le sezioni del CRM:
 
 | Sezione | Cosa trovi |
 |---------|-----------|
-| **Dashboard** | Riepilogo generale con statistiche |
-| **Da Verificare** | Lead con audit completato, da controllare manualmente |
-| **Da Chiamare** | Lead verificati e pronti per la chiamata commerciale |
-| **Appuntamenti** | Lead con appuntamento fissato |
-| **Offerte** | Lead a cui e stata inviata un'offerta |
+| **Dashboard** | Riepilogo generale con statistiche e KPI |
+| **Da Analizzare** | Lead appena importati, in attesa di analisi Gemini |
+| **Hot Leads** | Lead con score alto (80+), massima priorita |
+| **Warm Leads** | Lead con buon potenziale (60-79) |
+| **Fare Video** | Lead pronti per registrare il video personalizzato |
+| **Video Inviati** | Lead a cui e stato inviato il video |
+| **Follow-up** | Lead in attesa di follow-up (lettera, LinkedIn, ecc.) |
+| **Telefonate** | Lead da chiamare o gia chiamati |
+| **Call Fissate** | Lead con appuntamento fissato |
+| **Trattative** | Lead in fase di trattativa/offerta |
 | **Clienti** | Lead convertiti in clienti |
+| **LinkedIn** | Lead da contattare su LinkedIn |
 | **Nuova Ricerca** | Avvia una nuova ricerca su Google Maps |
 | **Storico Ricerche** | Tutte le ricerche effettuate |
-| **Audit** | Gestione e monitoraggio degli audit |
+| **Senza Sito** | Lead senza sito web (o con URL social) |
+| **Non Target** | Lead non in target, archiviati |
+| **Persi** | Lead persi |
+| **Archivio** | Archivio generale |
 | **Guida** | Questa guida, versione interattiva |
 | **Impostazioni** | Configurazione CRM (solo admin) |
 
@@ -58,34 +67,19 @@ Su smartphone, la sidebar si trasforma in una barra di navigazione in basso con 
 
 ---
 
-## 3. Come verificare un lead
+## 3. Il flusso di lavoro
 
-Il sistema analizza automaticamente i siti web dei lead e trova problemi. Per ogni voce della checklist vedrai un badge colorato:
+Il flusso del CRM segue questi passaggi:
 
-- **Si** (verde) = il sistema ha trovato questa cosa sul sito
-- **No** (rosso) = il sistema NON ha trovato questa cosa sul sito
+1. **Ricerca** → Si cercano lead su Google Maps per categoria e citta
+2. **Analisi Gemini** → L'AI analizza il sito del lead e genera score, errori, e script video
+3. **Score** → I lead vengono ordinati per opportunita (HOT 80+ / WARM 60-79)
+4. **Video** → Si registra un video personalizzato per il lead
+5. **Invio** → Si invia il video via WhatsApp/email
+6. **Follow-up** → Lettera, LinkedIn, telefonate di follow-up
+7. **Trattativa** → Call conoscitiva, offerta, chiusura
 
-> **Importante:** Il sistema non e perfetto e a volte sbaglia. Il tuo compito e controllare che i dati siano veri prima di passare il lead al commerciale.
-
-### Procedura passo-passo
-
-**Step 1:** Apri la pagina **"Da Verificare"** dal menu a sinistra. Vedrai i lead ordinati per punteggio (il piu alto in cima).
-
-**Step 2:** Clicca sul **link del sito web** (il rettangolo blu con il dominio, tipo "esempio.it"). Si apre il sito in una nuova scheda del browser.
-
-**Step 3:** Controlla i **punti della checklist**. Ogni voce mostra Si o No (cosa ha rilevato il sistema) e le istruzioni su come verificare manualmente.
-
-**Step 4:** Spunta le **checkbox** man mano che verifichi ogni punto. Quando sono tutte spuntate, il lead diventa "Verificato" e il commerciale sa che puo fidarsi dei dati.
-
-**Step 5:** Usa il campo **"Note verifica"** per scrivere qualsiasi osservazione utile. Esempi:
-- "Sito in rifacimento"
-- "GTM presente ma non trovo i tag"
-- "Numero di telefono diverso da quello su Google"
-- "E-commerce senza tracking"
-
-Le note si salvano automaticamente e il commerciale le leggera prima di chiamare.
-
-> **Regola d'oro:** Se non sei sicura di un punto, NON spuntare la checkbox. Scrivi il dubbio nel campo note e vai avanti. Meglio lasciare un lead non verificato che confermarlo con dati sbagliati.
+> **Nota:** Il vecchio concetto di "qualifica" e stato rimosso. Ora il flusso e: Analisi Gemini → Score → HOT/WARM.
 
 ---
 
@@ -198,7 +192,7 @@ Quando apri il sito, chiediti:
 
 1. **NON spuntare** la checkbox - meglio lasciare in sospeso che confermare dati sbagliati
 
-2. **Scrivi nel campo "Note verifica"** sotto la checklist. Spiega il dubbio, ad esempio:
+2. **Scrivi nel campo "Note"** sotto la checklist. Spiega il dubbio, ad esempio:
    - "GTM presente, tag potrebbero essere dentro"
    - "Sito lentissimo, non riesco a verificare"
    - "Il sito mostra una pagina di manutenzione"
@@ -211,7 +205,7 @@ Quando apri il sito, chiediti:
 
 6. In caso di dubbio, **chiedi al responsabile** - e meglio chiedere che confermare qualcosa di sbagliato
 
-> **Ricorda:** Lo scopo della verifica e dare al commerciale argomenti solidi per la chiamata. Se confermi "non hanno Analytics" e poi il cliente dice "veramente si, ce l'abbiamo", il commerciale fa una brutta figura. Meglio essere prudenti! Le note sono il tuo strumento migliore per segnalare cose che il sistema non puo vedere.
+> **Ricorda:** Lo scopo e dare al commerciale argomenti solidi per la chiamata. Se confermi "non hanno Analytics" e poi il cliente dice "veramente si, ce l'abbiamo", il commerciale fa una brutta figura. Meglio essere prudenti! Le note sono il tuo strumento migliore per segnalare cose che il sistema non puo vedere.
 
 ---
 
@@ -220,39 +214,43 @@ Quando apri il sito, chiediti:
 ### Dashboard
 
 La pagina iniziale mostra un riepilogo con:
-- Contatori animati: lead totali, da verificare, da chiamare, appuntamenti
-- **Funnel chart**: Grafico visuale della pipeline con i numeri per ogni stadio
-- **"Oggi devi..."**: Follow-up urgenti e appuntamenti del giorno
+- KPI aggregati: lead totali, da analizzare, hot, warm
+- **Funnel pipeline**: Grafico visuale della pipeline con i numeri per ogni stadio
+- **Attivita settimanale**: Riepilogo delle attivita recenti
+- **Report commerciale**: Statistiche per il commerciale
 - Azioni rapide per le operazioni piu frequenti
 
-> **Novita v2.2:** Usa **Cmd+K** (o Ctrl+K) in qualsiasi pagina per cercare velocemente un lead o navigare alle sezioni del CRM.
+> Usa **Cmd+K** (o Ctrl+K) in qualsiasi pagina per cercare velocemente un lead o navigare alle sezioni del CRM.
 
-### Da Verificare
+### Da Analizzare
 
-Qui trovi i lead con audit completato che devono essere verificati manualmente. Ogni lead mostra:
-- Nome dell'azienda e categoria
-- **Anello score** colorato (rosso = hot, ambra = buono, verde = medio, blu = basso)
-- Link al sito web
-- Checklist di verifica con **semafori colorati** (verde/rosso/ambra)
-- **Grafico radar** che mostra la panoramica delle 6 aree audit
+Lead appena importati che devono essere analizzati dall'AI Gemini. Il sistema analizza il sito e genera automaticamente:
+- Score (punteggio 0-100)
+- Errori marketing principali
+- Script video personalizzato
 
-### Da Chiamare
+### Hot Leads / Warm Leads
 
-Lead verificati e pronti per la chiamata. Mostra:
-- **Talking points raggruppati per servizio** (Web Design, SEO, Google Ads, ecc.) con accordion espandibili
-- Storico attivita (chiamate precedenti, note)
-- Bottoni per registrare l'esito della chiamata
-- **Bordo colorato** su ogni card per indicare la priorita del lead
-- **Filtri rapidi**: Hot (80+), Buono (60+), Tutti
-- **Vista Kanban** con drag & drop e modalita compatta
-- **Scarica Report PDF**: Bottone per generare un PDF dell'audit da inviare al prospect
+Lead con analisi completata, ordinati per score:
+- **Hot (80+)**: Lead con molte opportunita, massima priorita
+- **Warm (60-79)**: Lead con buon potenziale
 
-### Appuntamenti
+Ogni lead mostra:
+- Nome, categoria, score
+- Numero WhatsApp (se disponibile) con link diretto per aprire chat
+- Informazioni Ads (Google Ads e Meta Ads attive)
+- Link al dettaglio completo
 
-Pagina dedicata alla gestione degli appuntamenti con:
-- **Vista calendario settimanale** navigabile (avanti/indietro)
-- **Vista lista** per una panoramica rapida
-- Toggle tra le due modalita
+### Fare Video
+
+Lead pronti per la registrazione del video personalizzato. Lo script video e stato generato dall'AI Gemini e puo essere copiato per la registrazione.
+
+### Video Inviati
+
+Lead a cui e stato inviato il video. Il sistema traccia:
+- Data invio video
+- Se il video e stato visualizzato (badge VISTO)
+- Data visualizzazione
 
 ### Nuova Ricerca
 
@@ -262,7 +260,7 @@ Per avviare una nuova ricerca di lead:
 3. Imposta il **numero massimo** di risultati
 4. Clicca "Avvia Ricerca"
 
-Il sistema cerca su Google Maps e importa automaticamente i risultati. L'audit dei siti web parte in automatico.
+Il sistema cerca su Google Maps e importa automaticamente i risultati. L'analisi AI parte in automatico per i lead con sito web.
 
 ### Storico Ricerche
 
@@ -275,26 +273,22 @@ Tutte le ricerche effettuate con:
 
 ## 8. Analisi AI (Gemini)
 
-> **Novita v2.3:** Ogni lead con audit completato puo essere analizzato dall'intelligenza artificiale.
-
 ### Come funziona
 
-1. Apri la scheda di un lead con audit completato
+1. Apri la scheda di un lead con sito web
 2. Vai al tab **"Analisi AI"**
 3. Clicca **"Genera Analisi AI"**
 4. L'AI analizza il sito e genera:
    - **Coerenza marketing**: Quanto e coerente la comunicazione del prospect
    - **3 errori principali**: I problemi piu gravi con impatto sul business
-   - **Prompt HeyGen**: Testo pronto per registrare un video personalizzato
+   - **Script video**: Testo pronto per registrare un video personalizzato (60-90 secondi)
 
-### Prompt HeyGen
+### Script Video
 
-Il prompt generato e pensato per essere copiato e incollato in HeyGen (strumento esterno). Il video dura 60-90 secondi e include:
+Lo script generato include:
 - Un complimento iniziale al prospect
 - I problemi trovati sul sito
 - Una CTA morbida per una call conoscitiva
-
-> **Nota:** HeyGen e un servizio esterno. Il CRM genera solo il testo, la registrazione avviene fuori dall'app.
 
 ### Configurazione
 
@@ -307,19 +301,17 @@ La API key di Gemini si configura in **Impostazioni → API & Token → Google G
 
 ## 9. Ricerche Programmate
 
-> **Novita v2.3:** Le ricerche Google Maps possono essere automatizzate e eseguite durante la notte.
-
 ### Come funziona
 
 1. Vai in **Impostazioni → Programmate**
 2. Vedrai la coda delle ricerche pianificate
 3. Il sistema esegue **2 ricerche per notte** alle ore 02:00
 4. Ogni ricerca importa fino a 50 lead da Google Maps
-5. L'audit parte automaticamente per i lead con sito web
+5. L'analisi AI parte automaticamente per i lead con sito web
 
 ### Gestire la coda
 
-- **Carica Lista Predefinita**: Carica le 39 ricerche predefinite
+- **Carica Lista Predefinita**: Carica le ricerche predefinite
 - **Aggiungi manualmente**: Inserisci categoria + citta e clicca "Aggiungi"
 - **Re-queue**: Rimetti in coda una ricerca completata o fallita
 - **Elimina**: Rimuovi una ricerca dalla coda
@@ -337,24 +329,24 @@ La API key di Gemini si configura in **Impostazioni → API & Token → Google G
 
 ## 10. FAQ - Domande frequenti
 
-**D: Quanto tempo ci vuole per verificare un lead?**
-R: In media 2-3 minuti per lead, una volta presa la mano con le estensioni Chrome.
+**D: Quanto tempo ci vuole per analizzare un lead?**
+R: L'analisi AI richiede circa 10-30 secondi per lead. Il sistema li processa automaticamente in background.
 
-**D: Posso verificare i lead dal telefono?**
-R: Si, ma e molto piu comodo e veloce da computer perche servono le estensioni Chrome per i controlli tecnici.
+**D: Posso usare il CRM dal telefono?**
+R: Si, l'interfaccia e responsive. La sidebar si trasforma in una barra di navigazione in basso.
 
 **D: Cosa succede se il sito del lead non si apre?**
-R: Non spuntare nessuna checkbox. Scrivi nelle note "Sito non raggiungibile" e passa al lead successivo.
-
-**D: Quanti lead devo verificare al giorno?**
-R: L'obiettivo e verificare abbastanza lead da permettere 5 chiamate al giorno. In genere servono circa 8-10 lead verificati per averne 5 buoni da chiamare.
+R: Il lead viene spostato in "Senza Sito" o l'analisi fallisce con un messaggio di errore specifico.
 
 **D: Il punteggio del lead e affidabile?**
-R: Il punteggio e calcolato automaticamente e indica quante opportunita di miglioramento ha il prospect. Piu alto il punteggio, piu problemi ha il sito = piu argomenti per la chiamata. Ma va sempre confermato con la verifica manuale.
+R: Il punteggio e calcolato dall'AI analizzando il sito. Piu alto il punteggio, piu problemi ha il sito = piu argomenti per la chiamata. Va sempre verificato con un controllo manuale.
 
-**D: Posso cambiare qualcosa dopo aver verificato un lead?**
-R: Si, puoi sempre tornare sulla scheda del lead e modificare la verifica o aggiungere note.
+**D: Come funziona il tracking video?**
+R: Ogni lead ha un token unico. Quando il prospect apre il video, il sistema riceve una notifica e aggiorna il badge "VISTO" sulla scheda del lead.
+
+**D: Cosa significa il badge WhatsApp "dal sito" / "da Google Maps"?**
+R: Il sistema cerca il numero WhatsApp in due modi: prima nel sito web del prospect (wa.me, api.whatsapp.com), poi come fallback usa il telefono da Google Maps con normalizzazione italiana (+39).
 
 ---
 
-*Documento aggiornato il 2026-03-14 | KW Sales CRM v2.7.0*
+*Documento aggiornato il 2026-03-15 | KW Sales CRM v3.1.0*
