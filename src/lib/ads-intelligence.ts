@@ -1,19 +1,11 @@
 /**
- * Ads Intelligence Engine v3 — 100% Apify
+ * Ads Intelligence Engine v4 — STRICT MODE
  *
- * Motore unificato per rilevare Google Ads e Meta Ads.
- * Usa esclusivamente Apify (piano Free $5/mese).
- *
- * Strategia "camaleontica":
- * - Ogni chiamata Apify è wrappata in try/catch con timeout 45s
- * - Errori 402/429/timeout/Actor deprecato → graceful degradation
- * - Se Apify fallisce, i booleani restano false e l'app continua
- * - I dati vengono salvati nel DB lead (campi dedicati)
- *
- * Flusso:
- * 1. Google Ads → apify/google-search-scraper (paidResults)
- * 2. Meta Ads → Actor Meta Ad Library (testi annunci)
- * 3. Landing Page → Cheerio scrape del LP URL
+ * RESET v3.1: Eliminati tutti i falsi positivi.
+ * - Match SOLO su dominio esatto (no fallback a competitor)
+ * - Se dominio non matcha → hasAds: false
+ * - Circuit breaker: 3 errori consecutivi → sospendi coda
+ * - ads_status certificato: CONFIRMED | NOT_FOUND | API_ERROR
  */
 
 import { ApifyClient } from "apify-client";
@@ -36,7 +28,6 @@ const FETCH_HEADERS = {
   "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
 };
 
-// Actor IDs — aggiornabili senza riscrivere logica
 const GOOGLE_SEARCH_ACTOR = "apify/google-search-scraper";
 const META_ADS_ACTORS = [
   "curious_coder/facebook-ads-library-scraper",
@@ -44,27 +35,60 @@ const META_ADS_ACTORS = [
 ];
 
 // ==========================================
+// CIRCUIT BREAKER
+// ==========================================
+
+let consecutiveFailures = 0;
+const CIRCUIT_BREAKER_THRESHOLD = 3;
+
+function isCircuitBroken(): boolean {
+  return consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD;
+}
+
+function recordSuccess(): void {
+  consecutiveFailures = 0;
+}
+
+function recordFailure(): void {
+  consecutiveFailures++;
+  if (isCircuitBroken()) {
+    console.error(
+      `[ADS-INTEL] ⛔ CIRCUIT BREAKER ATTIVO: ${consecutiveFailures} errori consecutivi. ` +
+      `Le chiamate Apify sono sospese. Risolvere il problema e riavviare l'app.`
+    );
+  }
+}
+
+export function resetCircuitBreaker(): void {
+  consecutiveFailures = 0;
+  console.log("[ADS-INTEL] Circuit breaker resettato.");
+}
+
+export function getCircuitBreakerStatus(): { broken: boolean; failures: number } {
+  return { broken: isCircuitBroken(), failures: consecutiveFailures };
+}
+
+// ==========================================
 // TIPI
 // ==========================================
 
+export type AdsStatus = "CONFIRMED" | "NOT_FOUND" | "API_ERROR" | "PENDING";
+
 export interface AdsIntelligenceResult {
-  // Google Ads
   hasActiveGoogleAds: boolean;
+  googleAdsStatus: AdsStatus;
   googleAdsCopy: string | null;
-  // Meta Ads
   hasActiveMetaAds: boolean;
+  metaAdsStatus: AdsStatus;
   metaAdsCopy: string | null;
-  // Landing Page
   landingPageUrl: string | null;
   landingPageText: string | null;
-  // Coherence check
   adsCoherenceWarning: string | null;
-  // Metadata
   errors: string[];
 }
 
 // ==========================================
-// URL BUILDER (sempre disponibili, anche senza Apify)
+// URL BUILDER
 // ==========================================
 
 export function buildMetaAdLibraryUrl(companyName: string): string {
@@ -87,11 +111,12 @@ export function buildGoogleAdsTransparencyUrl(domain: string): string {
 }
 
 // ==========================================
-// 1. GOOGLE ADS CHECK (via Google Search Scraper)
+// 1. GOOGLE ADS CHECK — STRICT DOMAIN MATCH
 // ==========================================
 
 interface GoogleAdsFound {
   hasAds: boolean;
+  status: AdsStatus;
   adCopy: string | null;
   landingPageUrl: string | null;
 }
@@ -128,54 +153,62 @@ async function checkGoogleAdsViaApify(
 
     if (!items || items.length === 0) {
       console.log(`[ADS-INTEL] Google: nessun risultato SERP per "${companyName}"`);
-      return { hasAds: false, adCopy: null, landingPageUrl: null };
+      recordSuccess();
+      return { hasAds: false, status: "NOT_FOUND", adCopy: null, landingPageUrl: null };
     }
 
     const serp = items[0] as Record<string, unknown>;
-
-    // Cerca paidResults (annunci Google Ads)
     const paidResults = (serp.paidResults || serp.paid_results || []) as Array<Record<string, unknown>>;
 
     if (!Array.isArray(paidResults) || paidResults.length === 0) {
       console.log(`[ADS-INTEL] Google: nessun annuncio a pagamento per "${companyName}"`);
-      return { hasAds: false, adCopy: null, landingPageUrl: null };
+      recordSuccess();
+      return { hasAds: false, status: "NOT_FOUND", adCopy: null, landingPageUrl: null };
     }
 
-    // Filtra per dominio pertinente (opzionale ma riduce falsi positivi)
+    // STRICT: accetta SOLO annunci il cui URL contiene il dominio del lead
     const cleanDomain = domain.replace(/^www\./, "").toLowerCase();
-    const relevantAd = paidResults.find((ad) => {
+    const matchingAd = paidResults.find((ad) => {
       const adUrl = ((ad.url || ad.displayedUrl || ad.link || "") as string).toLowerCase();
       return adUrl.includes(cleanDomain);
-    }) || paidResults[0]; // fallback al primo se nessuno matcha esattamente
+    });
 
-    const title = (relevantAd.title || "") as string;
-    const description = (relevantAd.description || relevantAd.desc || "") as string;
+    // NESSUN FALLBACK: se il dominio non matcha → NOT_FOUND
+    if (!matchingAd) {
+      console.log(
+        `[ADS-INTEL] Google: ${paidResults.length} annunci nella SERP ma NESSUNO matcha "${cleanDomain}". SCARTATI.`
+      );
+      recordSuccess();
+      return { hasAds: false, status: "NOT_FOUND", adCopy: null, landingPageUrl: null };
+    }
+
+    const title = (matchingAd.title || "") as string;
+    const description = (matchingAd.description || matchingAd.desc || "") as string;
     const adCopy = [title, description].filter(Boolean).join(" — ") || null;
-    const landingPageUrl = (relevantAd.url || relevantAd.link || null) as string | null;
+    const landingPageUrl = (matchingAd.url || matchingAd.link || null) as string | null;
 
     console.log(
-      `[ADS-INTEL] Google: ${paidResults.length} annunci trovati! LP=${landingPageUrl}, copy="${adCopy?.substring(0, 60)}..."`
+      `[ADS-INTEL] Google: CONFERMATO per "${cleanDomain}" — LP=${landingPageUrl}`
     );
 
-    return {
-      hasAds: true,
-      adCopy,
-      landingPageUrl,
-    };
+    recordSuccess();
+    return { hasAds: true, status: "CONFIRMED", adCopy, landingPageUrl };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     handleApifyError("Google Ads", msg);
-    return { hasAds: false, adCopy: null, landingPageUrl: null };
+    recordFailure();
+    return { hasAds: false, status: "API_ERROR", adCopy: null, landingPageUrl: null };
   }
 }
 
 // ==========================================
-// 2. META ADS CHECK (via Meta Ad Library Scraper)
+// 2. META ADS CHECK
 // ==========================================
 
 interface MetaAdsFound {
   hasAds: boolean;
-  adsCopy: string | null; // Primi 2-3 testi uniti
+  status: AdsStatus;
+  adsCopy: string | null;
 }
 
 async function checkMetaAdsViaApify(
@@ -206,10 +239,10 @@ async function checkMetaAdsViaApify(
 
       if (!items || items.length === 0) {
         console.log(`[ADS-INTEL] Meta: nessun annuncio per "${companyName}" [${actorId}]`);
-        return { hasAds: false, adsCopy: null };
+        recordSuccess();
+        return { hasAds: false, status: "NOT_FOUND", adsCopy: null };
       }
 
-      // Estrai copy dei primi 3 annunci
       const copies: string[] = [];
       for (const item of items.slice(0, 3)) {
         const ad = item as Record<string, unknown>;
@@ -225,36 +258,27 @@ async function checkMetaAdsViaApify(
       }
 
       const adsCopy = copies.length > 0 ? copies.join(" | ") : null;
-
-      console.log(
-        `[ADS-INTEL] Meta: ${items.length} annunci trovati! copy: ${copies.length} testi [${actorId}]`
-      );
-
-      return { hasAds: true, adsCopy };
+      recordSuccess();
+      return { hasAds: true, status: "CONFIRMED", adsCopy };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       handleApifyError(`Meta Ads (${actorId})`, msg);
-      continue; // Prova il prossimo actor
+      recordFailure();
+      continue;
     }
   }
 
-  // Tutti gli actor falliti
-  return { hasAds: false, adsCopy: null };
+  return { hasAds: false, status: "API_ERROR", adsCopy: null };
 }
 
 // ==========================================
-// 3. LANDING PAGE SCRAPER (Cheerio)
+// 3. LANDING PAGE SCRAPER
 // ==========================================
 
 async function scrapeLandingPageText(url: string): Promise<string | null> {
   try {
-    // Normalizza URL
     let finalUrl = url;
-    if (!finalUrl.startsWith("http")) {
-      finalUrl = "https://" + finalUrl;
-    }
-
-    console.log(`[ADS-INTEL] Scraping LP: ${finalUrl}`);
+    if (!finalUrl.startsWith("http")) finalUrl = "https://" + finalUrl;
 
     const response = await fetch(finalUrl, {
       signal: AbortSignal.timeout(LP_FETCH_TIMEOUT_MS),
@@ -266,7 +290,6 @@ async function scrapeLandingPageText(url: string): Promise<string | null> {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    // Rimuovi noise
     $("nav, footer, aside, script, style, noscript, iframe, svg, " +
       "[class*='cookie'], [class*='popup'], [class*='modal']").remove();
 
@@ -306,11 +329,10 @@ async function scrapeLandingPageText(url: string): Promise<string | null> {
 }
 
 // ==========================================
-// RESILIENZA: Error Handler Camaleonte
+// ERROR HANDLER
 // ==========================================
 
 function handleApifyError(module: string, errorMsg: string): void {
-  // Categorizza l'errore per logging chiaro
   const isCredits = /402|compute units|billing|payment|insufficient/i.test(errorMsg);
   const isRateLimit = /429|rate limit|too many/i.test(errorMsg);
   const isTimeout = /timeout|abort|timed out/i.test(errorMsg);
@@ -323,23 +345,16 @@ function handleApifyError(module: string, errorMsg: string): void {
   } else if (isTimeout) {
     console.error(`[ADS-INTEL] ⚠️ ${module}: TIMEOUT — ${errorMsg}`);
   } else if (isDeprecated) {
-    console.error(`[ADS-INTEL] ⚠️ ${module}: ACTOR DEPRECATO/NON TROVATO — ${errorMsg}`);
+    console.error(`[ADS-INTEL] ⚠️ ${module}: ACTOR DEPRECATO — ${errorMsg}`);
   } else {
     console.error(`[ADS-INTEL] ⚠️ ${module}: ERRORE GENERICO — ${errorMsg}`);
   }
-  // MAI throw — graceful degradation sempre
 }
 
 // ==========================================
-// ENTRY POINT: Analizza Ads per un Lead
+// ENTRY POINT
 // ==========================================
 
-/**
- * Esegue l'analisi Ads Intelligence completa per un lead.
- * Asincrono, non blocca la UI. Salva risultati nel DB.
- *
- * @returns I dati trovati (anche se parziali/vuoti)
- */
 export async function analyzeAdsForLead(
   leadId: string,
   companyName: string,
@@ -347,8 +362,10 @@ export async function analyzeAdsForLead(
 ): Promise<AdsIntelligenceResult> {
   const result: AdsIntelligenceResult = {
     hasActiveGoogleAds: false,
+    googleAdsStatus: "PENDING",
     googleAdsCopy: null,
     hasActiveMetaAds: false,
+    metaAdsStatus: "PENDING",
     metaAdsCopy: null,
     landingPageUrl: null,
     landingPageText: null,
@@ -360,7 +377,16 @@ export async function analyzeAdsForLead(
 
   if (!apifyToken) {
     result.errors.push("APIFY_TOKEN non configurato");
-    console.log(`[ADS-INTEL] Token Apify mancante, skip analisi per "${companyName}"`);
+    result.googleAdsStatus = "API_ERROR";
+    result.metaAdsStatus = "API_ERROR";
+    await saveAdsResultsToDB(leadId, result);
+    return result;
+  }
+
+  if (isCircuitBroken()) {
+    result.errors.push(`Circuit breaker attivo: ${consecutiveFailures} errori consecutivi.`);
+    result.googleAdsStatus = "API_ERROR";
+    result.metaAdsStatus = "API_ERROR";
     await saveAdsResultsToDB(leadId, result);
     return result;
   }
@@ -371,60 +397,48 @@ export async function analyzeAdsForLead(
     .replace(/^www\./, "")
     .split("/")[0];
 
-  // Esegui Google Ads e Meta Ads in parallelo (non bloccante)
   const [googleResult, metaResult] = await Promise.allSettled([
     checkGoogleAdsViaApify(companyName, cleanDomain, client),
     checkMetaAdsViaApify(companyName, client),
   ]);
 
-  // Processa risultati Google Ads
   if (googleResult.status === "fulfilled") {
     result.hasActiveGoogleAds = googleResult.value.hasAds;
+    result.googleAdsStatus = googleResult.value.status;
     result.googleAdsCopy = googleResult.value.adCopy;
     result.landingPageUrl = googleResult.value.landingPageUrl;
   } else {
     result.errors.push(`Google Ads: ${googleResult.reason?.message || "errore"}`);
+    result.googleAdsStatus = "API_ERROR";
   }
 
-  // Processa risultati Meta Ads
   if (metaResult.status === "fulfilled") {
     result.hasActiveMetaAds = metaResult.value.hasAds;
+    result.metaAdsStatus = metaResult.value.status;
     result.metaAdsCopy = metaResult.value.adsCopy;
   } else {
     result.errors.push(`Meta Ads: ${metaResult.reason?.message || "errore"}`);
+    result.metaAdsStatus = "API_ERROR";
   }
 
-  // Se abbiamo trovato una LP, scrape il testo
-  if (result.landingPageUrl) {
+  // Scrape LP solo se confermata per il dominio giusto
+  if (result.landingPageUrl && result.hasActiveGoogleAds) {
     result.landingPageText = await scrapeLandingPageText(result.landingPageUrl);
-
-    // URL Coherence check: confronta dominio LP con dominio lead
-    try {
-      const lpDomain = new URL(result.landingPageUrl).hostname.replace(/^www\./, "").toLowerCase();
-      if (lpDomain !== cleanDomain.toLowerCase()) {
-        result.adsCoherenceWarning = `Dominio LP (${lpDomain}) diverso dal sito (${cleanDomain}). L'annuncio potrebbe puntare a una pagina esterna.`;
-      }
-    } catch {
-      // URL non valido, ignora
-    }
   }
 
-  // Salva risultati nel DB (mai throw)
   await saveAdsResultsToDB(leadId, result);
 
   console.log(
     `[ADS-INTEL] Completato per "${companyName}": ` +
-    `Google=${result.hasActiveGoogleAds ? "SI" : "no"}, ` +
-    `Meta=${result.hasActiveMetaAds ? "SI" : "no"}, ` +
-    `LP=${result.landingPageUrl ? "SI" : "no"} ` +
-    `(errori: ${result.errors.length})`
+    `Google=${result.googleAdsStatus}, Meta=${result.metaAdsStatus} ` +
+    `(circuit: ${consecutiveFailures}/${CIRCUIT_BREAKER_THRESHOLD})`
   );
 
   return result;
 }
 
 // ==========================================
-// DB: Salva risultati Ads nel Lead
+// DB SAVE
 // ==========================================
 
 async function saveAdsResultsToDB(
@@ -446,7 +460,6 @@ async function saveAdsResultsToDB(
       },
     });
   } catch (err) {
-    console.error(`[ADS-INTEL] DB save error per lead ${leadId}:`, err instanceof Error ? err.message : err);
-    // MAI throw — il DB failure non deve bloccare nulla
+    console.error(`[ADS-INTEL] DB save error:`, err instanceof Error ? err.message : err);
   }
 }

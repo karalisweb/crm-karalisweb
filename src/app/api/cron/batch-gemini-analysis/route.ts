@@ -143,8 +143,15 @@ export async function POST(request: NextRequest) {
           strategicData.about_text || strategicData.services_text || "";
       }
 
-      // 3. Analisi Gemini
-      const analysis = await runGeminiAnalysis(strategicData);
+      // 3. Analisi Gemini — costruisci input con ads_status
+      const geminiInput = {
+        company_name: lead.name,
+        home_text: strategicData.home_text,
+        about_text: strategicData.about_text,
+        services_text: strategicData.services_text,
+        ads_status: "PENDING" as const,
+      };
+      const analysis = await runGeminiAnalysis(geminiInput);
 
       // 4. Salva
       await db.lead.update({

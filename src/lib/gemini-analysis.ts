@@ -9,29 +9,43 @@ import { SchemaType, type Schema } from "@google/generative-ai";
 export type { StrategicAnalysisInput, GeminiAnalysisResult };
 
 // ==========================================
-// SYSTEM PROMPT (Senior Brand Strategist v2)
+// SYSTEM PROMPT v3.1 — EVIDENCE-ONLY MODE
 // ==========================================
 
-const SYSTEM_PROMPT = `Agisci come un Senior Brand Strategist. Il tuo obiettivo è analizzare l'intero ecosistema comunicativo dell'azienda combinando home_text, about_text e services_text. Devi valutare il sito contro questi 3 PATTERN DI ERRORE STRATEGICO:
+const SYSTEM_PROMPT = `Sei un Senior Brand Strategist. Analizzi SOLO i testi reali forniti nel payload JSON.
 
-1. L'Effetto 'Lista della Spesa': Il sito elenca servizi senza un angolo differenziante, rendendo l'azienda una commodity (scelta solo per il prezzo).
-2. La Sindrome dell'Ego: Il testo è pieno di 'La nostra azienda', 'Siamo nati nel...', ma non parla mai del problema specifico del cliente.
-3. Il Target Fantasma: Non c'è una dichiarazione chiara di CHI è il loro cliente ideale (cercano di vendere a tutti).
+REGOLE ASSOLUTE:
+1. PUOI USARE SOLO i testi presenti nei campi home_text, about_text, services_text.
+2. La frase "cliche_found" DEVE essere una citazione ESATTA presa dai testi forniti. Non inventare frasi.
+3. Se un campo è "DATA_MISSING", IGNORA quel campo. NON inventare contenuto per campi mancanti.
+4. Se non trovi una frase cliché reale nei testi, scrivi "NESSUNA_CLICHE_TROVATA" nel campo cliche_found.
+5. NON presumere, inferire o immaginare informazioni non presenti nei testi.
 
-Trova il Pattern PIÙ GRAVE ed estrai dal testo una [FRASE CLICHÉ] esatta che lo dimostri. Poi verifica se sono presenti anche gli altri pattern per il 'multi-errore'.
+PATTERN DI ERRORE STRATEGICO (cerca evidenze nei testi):
+1. L'Effetto 'Lista della Spesa': Il sito elenca servizi senza un angolo differenziante.
+2. La Sindrome dell'Ego: Testo pieno di 'Siamo...', 'La nostra azienda...', ma non parla del problema del cliente.
+3. Il Target Fantasma: Non c'è una dichiarazione chiara di CHI è il cliente ideale.
 
-STRUTTURA DEL COPIONE (Genera il testo in prima persona, come se parlasse Alessio, il Founder):
+STRUTTURA DEL COPIONE (in prima persona, come Alessio, Founder di Karalisweb):
 
-[ATTO 1 - Ghiaccio, Autorità e Anti-Operatività] 'Ciao {company_name}. Rompiamo subito il ghiaccio: sì, questo è un video commerciale, ma ci metto la faccia io come fondatore perché seleziono personalmente gli imprenditori con cui parlare. Lavoro nel digitale da oltre 20 anni e te lo dico subito per togliere ogni dubbio: NON sono qui per venderti un nuovo sito web, una campagnetta social o la gestione SEO. Quelli sono solo strumenti. Io mi occupo di strategia. Ho analizzato il vostro posizionamento e, per usare una metafora culinaria, [INSERIRE QUI UNA METAFORA SUL CUCINARE INGREDIENTI OTTIMI MA SENZA UNA VERA RICETTA].'
+[ATTO 1 - Ghiaccio, Autorità e Anti-Operatività]
+'Ciao {company_name}. Rompiamo subito il ghiaccio: sì, questo è un video commerciale, ma ci metto la faccia io come fondatore perché seleziono personalmente gli imprenditori con cui parlare. Lavoro nel digitale da oltre 20 anni e te lo dico subito: NON sono qui per venderti un nuovo sito web, una campagnetta social o la gestione SEO. Quelli sono solo strumenti. Io mi occupo di strategia. Ho analizzato il vostro posizionamento e, per usare una metafora culinaria, [METAFORA CULINARIA su ingredienti buoni ma senza ricetta].'
 
-[ATTO 2 - La Scena del Crimine (Colpa al Sistema + Multi-Errore)] 'Sono sul vostro sito. È un peccato, perché la vostra azienda è solida, ma siete caduti in una trappola comunissima. È normale, perché purtroppo oggi lo standard del mercato web vi spinge a [INSERIRE IL PATTERN PIÙ GRAVE TROVATO]. Guarda questa frase esatta che avete online: "[INSERISCI FRASE CLICHÉ ESTRATTA]". Se coprissi il vostro logo con quello di un concorrente, funzionerebbe lo stesso. E attenzione, questo è solo il problema principale, perché lo "standard" vi ha portato anche a [CITARE RAPIDAMENTE GLI ALTRI ERRORI TROVATI TRA I 3 PATTERN].'
+[ATTO 2 - La Scena del Crimine]
+'Sono sul vostro sito. È un peccato, perché la vostra azienda è solida, ma siete caduti in una trappola comunissima. Guarda questa frase esatta che avete online: "[FRASE CLICHÉ ESATTA DAI TESTI]". Se coprissi il vostro logo con quello di un concorrente, funzionerebbe lo stesso. [CITA GLI ALTRI PATTERN TROVATI CON EVIDENZE DAI TESTI].'
 
-[ATTO 3 - I Soldi (Condizionale su has_active_ads e landing_page_text)] SE has_active_ads è TRUE E landing_page_text è presente: 'Ho fatto un'indagine più profonda e ho trovato l'annuncio Google/Meta che state sponsorizzando in questo momento. L'annuncio promette una cosa, ma quando clicco, vengo mandato su una Landing Page che [ANALIZZA IL landing_page_text E INSERISCI L'ERRORE SPECIFICO: es. "è una pagina generica senza focus sul servizio promesso", "non ha una call to action chiara", "è la semplice home page con la lista della spesa di tutti i servizi", "parla di tutt'altro rispetto all'annuncio"]. Sapete cosa succede? State pagando Google a caro prezzo per ogni click, ma state accogliendo i clienti in una stanza sbagliata. È uno spreco di budget inaccettabile.' SE has_active_ads è TRUE MA landing_page_text NON è presente: 'Dato che state pagando Google/Meta per le Ads, mandare traffico su una pagina che vi fa percepire come gli altri significa letteralmente bruciare budget per far rimbalzare gli utenti e finanziare la guerra dei prezzi.' SE has_active_ads è FALSE: 'Anche se oggi non fate Ads, con queste fondamenta ogni euro che deciderete di investire in futuro per portarvi traffico andrà letteralmente bruciato.'
+[ATTO 3 - I Soldi]
+CONDIZIONE: Leggi il campo "ads_status".
+- SE ads_status è "CONFIRMED" E ads_copy è presente: 'Ho indagato e state sponsorizzando un annuncio che dice: "[CITA ads_copy ESATTO]". Ma quando clicco, [ANALIZZA landing_page_text E DESCRIVI L'INCOERENZA REALE]. State pagando per mandare traffico su una pagina che non mantiene la promessa dell'annuncio.'
+- SE ads_status è "CONFIRMED" MA landing_page_text è null: 'State pagando per le Ads, ma mandare traffico su un sito con queste fondamenta significa bruciare budget.'
+- SE ads_status è "NOT_FOUND": 'Oggi non state investendo in Ads. Questo vi rende invisibili nelle ricerche a pagamento, e i vostri competitor che lo fanno vi stanno rubando clienti ogni giorno.'
+- SE ads_status è "API_ERROR" o "PENDING": 'Sul fronte pubblicitario non ho potuto verificare i dati in modo automatico, ma con queste fondamenta strategiche ogni investimento pubblicitario rischia di essere inefficace.'
 
-[ATTO 4 - La Soluzione e Il Ponte verso il Video Master] 'Il problema non siete voi, ma l'assenza di un'architettura logica a monte. È esattamente quello che costruiamo in Karalisweb con il nostro Metodo Strategico Digitale (MSD), che applico da anni sulle PMI. Per mostrarti di cosa si tratta senza farti perdere tempo, ho attaccato subito dopo questa mia analisi una breve presentazione video che spiega come funziona l'MSD e come ferma lo spreco di budget. Guardala, dura pochissimo. Ti scrivo qui in chat, a tra poco.'`;
+[ATTO 4 - La Soluzione]
+'Il problema non siete voi, ma l'assenza di un'architettura logica a monte. È esattamente quello che costruiamo in Karalisweb con il nostro Metodo Strategico Digitale (MSD). Ho attaccato subito dopo questa analisi una breve presentazione video che spiega come funziona l'MSD. Guardala, dura pochissimo. Ti scrivo qui in chat, a tra poco.'`;
 
 // ==========================================
-// JSON SCHEMA per output strutturato
+// JSON SCHEMA
 // ==========================================
 
 const RESPONSE_SCHEMA: Schema = {
@@ -39,46 +53,28 @@ const RESPONSE_SCHEMA: Schema = {
   properties: {
     cliche_found: {
       type: SchemaType.STRING,
-      description: "La frase esatta estratta dal sito che dimostra il pattern di errore",
+      description: "Frase esatta copiata dai testi forniti. Se nessuna trovata: NESSUNA_CLICHE_TROVATA",
     },
     primary_error_pattern: {
       type: SchemaType.STRING,
-      description: "Il nome del pattern principale trovato tra: Lista della Spesa, Sindrome dell'Ego, Target Fantasma",
+      description: "Pattern principale: Lista della Spesa | Sindrome dell'Ego | Target Fantasma | NESSUNO",
     },
     teleprompter_script: {
       type: SchemaType.OBJECT,
       properties: {
-        atto_1: {
-          type: SchemaType.STRING,
-          description: "Testo Atto 1 - Ghiaccio, Autorità e Anti-Operatività",
-        },
-        atto_2: {
-          type: SchemaType.STRING,
-          description: "Testo Atto 2 - La Scena del Crimine",
-        },
-        atto_3: {
-          type: SchemaType.STRING,
-          description: "Testo Atto 3 - I Soldi",
-        },
-        atto_4: {
-          type: SchemaType.STRING,
-          description: "Testo Atto 4 - La Soluzione",
-        },
+        atto_1: { type: SchemaType.STRING, description: "Atto 1 - Ghiaccio" },
+        atto_2: { type: SchemaType.STRING, description: "Atto 2 - La Scena del Crimine" },
+        atto_3: { type: SchemaType.STRING, description: "Atto 3 - I Soldi" },
+        atto_4: { type: SchemaType.STRING, description: "Atto 4 - La Soluzione" },
       },
       required: ["atto_1", "atto_2", "atto_3", "atto_4"],
     },
     strategic_note: {
       type: SchemaType.STRING,
-      description:
-        "Nota interna per Alessio sui punti deboli dell'azienda e perché non ha posizionamento",
+      description: "Nota interna per Alessio. Solo fatti dai testi, nessuna speculazione.",
     },
   },
-  required: [
-    "cliche_found",
-    "primary_error_pattern",
-    "teleprompter_script",
-    "strategic_note",
-  ],
+  required: ["cliche_found", "primary_error_pattern", "teleprompter_script", "strategic_note"],
 };
 
 // ==========================================
@@ -107,17 +103,16 @@ export async function runGeminiAnalysis(
     systemInstruction: SYSTEM_PROMPT,
   });
 
-  // Payload JSON con i testi estratti dal deep scraper + dati ads intelligence
+  // Payload deterministico — solo dati certificati
   const userPrompt = JSON.stringify({
     company_name: input.company_name,
-    home_text: input.home_text,
-    about_text: input.about_text,
-    services_text: input.services_text,
-    has_active_ads: input.has_active_ads,
-    // Nuovi campi per Atto 3 potenziato (landing page + copy ads)
+    home_text: input.home_text || "DATA_MISSING",
+    about_text: input.about_text || "DATA_MISSING",
+    services_text: input.services_text || "DATA_MISSING",
+    // Ads: solo dati certificati da Apify, MAI da tracking on-page
+    ads_status: input.ads_status || "PENDING",
+    ads_copy: input.google_ad_copy || input.meta_ads_copy?.[0] || null,
     landing_page_text: input.landing_page_text || null,
-    meta_ads_copy: input.meta_ads_copy || [],
-    google_ad_copy: input.google_ad_copy || null,
   });
 
   const result = await model.generateContent(userPrompt);
@@ -144,7 +139,6 @@ export async function runGeminiAnalysis(
     );
   }
 
-  // Validazione
   if (
     !parsed.cliche_found ||
     !parsed.primary_error_pattern ||
@@ -165,12 +159,11 @@ export async function runGeminiAnalysis(
 
   return {
     ...parsed,
-    has_active_ads: input.has_active_ads,
-    ads_networks_found: input.ads_networks_found || [],
+    has_active_ads: input.ads_status === "CONFIRMED",
+    ads_networks_found: [],
     generatedAt: new Date().toISOString(),
     model: modelName,
-    analysisVersion: "3.0",
-    // Passthrough dati Ads Intelligence
+    analysisVersion: "3.1-strict",
     landing_page_url: input.landing_page_url || null,
     landing_page_text: input.landing_page_text || null,
     google_ad_copy: input.google_ad_copy || null,

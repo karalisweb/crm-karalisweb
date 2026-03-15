@@ -161,8 +161,7 @@ async function processGeminiAnalysis(leadId: string): Promise<void> {
       home_text: auditData.home_text as string,
       about_text: (auditData.about_text as string) || null,
       services_text: (auditData.services_text as string) || null,
-      has_active_ads: (auditData.has_active_ads as boolean) || false,
-      ads_networks_found: (auditData.ads_networks_found as string[]) || [],
+      ads_status: "PENDING",
     });
 
     await db.lead.update({

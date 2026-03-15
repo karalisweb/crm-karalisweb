@@ -10,11 +10,12 @@ import { buildMetaAdLibraryUrl, buildGoogleAdsTransparencyUrl } from "@/lib/ads-
 /**
  * POST /api/leads/[id]/gemini-analysis
  *
- * Esegue l'Analisi Strategica del Posizionamento v3:
- * 1. Scarica HTML del sito
- * 2. Deep scraping: home_text, about_text, services_text, has_active_ads (on-page)
- * 3. Legge dati Ads Intelligence dal DB (se già analizzati)
- * 4. Invia tutto a Gemini per generare il copione teleprompter
+ * MSD Engine v3.1 — STRICT MODE:
+ * 1. Scarica HTML, estrae testi (home/about/services)
+ * 2. Cliché detection deterministica (PASS/FAIL)
+ * 3. Legge dati Ads certificati dal DB (mai da tracking on-page)
+ * 4. Invia a Gemini con ads_status deterministico
+ * 5. Supporta manualOverride per testi inseriti a mano
  */
 export async function POST(
   request: Request,
@@ -22,6 +23,22 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+
+    // Check manualOverride nel body (opzionale)
+    let manualTexts: {
+      home_text?: string;
+      about_text?: string;
+      services_text?: string;
+    } | null = null;
+
+    try {
+      const body = await request.json();
+      if (body.manualOverride) {
+        manualTexts = body.manualOverride;
+      }
+    } catch {
+      // No body or invalid JSON — normal flow
+    }
 
     if (!isGeminiConfigured()) {
       return NextResponse.json(
@@ -37,13 +54,13 @@ export async function POST(
         name: true,
         website: true,
         category: true,
-        // Dati Ads Intelligence (se già presenti nel DB)
         hasActiveGoogleAds: true,
         hasActiveMetaAds: true,
         googleAdsCopy: true,
         metaAdsCopy: true,
         landingPageUrl: true,
         landingPageText: true,
+        adsCheckedAt: true,
       },
     });
 
@@ -51,95 +68,107 @@ export async function POST(
       return NextResponse.json({ error: "Lead non trovato" }, { status: 404 });
     }
 
-    if (!lead.website) {
+    if (!lead.website && !manualTexts) {
       return NextResponse.json(
-        { error: "Sito web mancante. Impossibile analizzare." },
+        { error: "Sito web mancante e nessun testo manuale fornito." },
         { status: 400 }
       );
     }
 
-    // 1. Fetch HTML del sito
-    let url = lead.website;
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url;
-    }
+    let home_text: string;
+    let about_text: string | null = null;
+    let services_text: string | null = null;
+    let cliche_status: "PASS" | "FAIL" | "ERROR" = "ERROR";
+    let cliches_found: Array<{ phrase: string; tag: string; context: string }> = [];
+    let tracking_tools: string[] = [];
 
-    let html: string;
-    try {
-      const response = await fetch(url, {
-        signal: AbortSignal.timeout(15000),
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+    if (manualTexts) {
+      // === MANUAL OVERRIDE ===
+      home_text = manualTexts.home_text || "";
+      about_text = manualTexts.about_text || null;
+      services_text = manualTexts.services_text || null;
+      cliche_status = "PASS"; // Override manuale = bypass cliché check
+    } else {
+      // === SCRAPING AUTOMATICO ===
+      let url = lead.website!;
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        url = "https://" + url;
       }
 
-      html = await response.text();
-    } catch (fetchErr) {
-      const msg = fetchErr instanceof Error ? fetchErr.message : "Errore sconosciuto";
-      return NextResponse.json(
-        { error: `Impossibile raggiungere il sito: ${msg}` },
-        { status: 400 }
-      );
+      let html: string;
+      try {
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(15000),
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        html = await response.text();
+      } catch (fetchErr) {
+        const msg = fetchErr instanceof Error ? fetchErr.message : "Errore sconosciuto";
+        return NextResponse.json({
+          error: `Impossibile raggiungere il sito: ${msg}`,
+          cliche_status: "ERROR",
+          manual_check_required: true,
+        }, { status: 400 });
+      }
+
+      const baseUrl = new URL(url).origin;
+      const strategicData = await extractStrategicData(html, baseUrl, lead.name);
+
+      home_text = strategicData.home_text;
+      about_text = strategicData.about_text;
+      services_text = strategicData.services_text;
+      cliche_status = strategicData.cliche_status;
+      cliches_found = strategicData.cliches_found;
+      tracking_tools = strategicData.tracking_tools_found;
+
+      const totalText = [home_text, about_text, services_text].filter(Boolean).join(" ").trim();
+      if (totalText.length < 10) {
+        return NextResponse.json({
+          error: "Testo insufficiente dal sito. Usa l'override manuale.",
+          cliche_status: "ERROR",
+          manual_check_required: true,
+        }, { status: 400 });
+      }
     }
 
-    const baseUrl = new URL(url).origin;
-
-    // 2. Estrazione strategica (testo sito + ads detection on-page)
-    const strategicData = await extractStrategicData(html, baseUrl, lead.name);
-
-    // Fallback testo
-    const totalText = [
-      strategicData.home_text,
-      strategicData.about_text,
-      strategicData.services_text,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-
-    if (totalText.length < 10) {
-      return NextResponse.json(
-        { error: "Impossibile estrarre testo sufficiente dal sito." },
-        { status: 400 }
-      );
+    // Determina ads_status (solo da Apify, mai da tracking on-page)
+    let adsStatus: "CONFIRMED" | "NOT_FOUND" | "API_ERROR" | "PENDING" = "PENDING";
+    if (lead.adsCheckedAt) {
+      if (lead.hasActiveGoogleAds || lead.hasActiveMetaAds) {
+        adsStatus = "CONFIRMED";
+      } else {
+        adsStatus = "NOT_FOUND";
+      }
     }
 
-    if (!strategicData.home_text || strategicData.home_text.trim().length < 10) {
-      strategicData.home_text =
-        strategicData.about_text || strategicData.services_text || "";
-    }
-
-    // 3. Combina ads on-page con dati Ads Intelligence dal DB
-    const hasAdsFromDB = lead.hasActiveGoogleAds || lead.hasActiveMetaAds;
-    const hasAdsOnPage = strategicData.has_active_ads;
-
+    // Input Gemini — NO travaso testi, NO has_active_ads da tracking
     const geminiInput = {
-      ...strategicData,
-      has_active_ads: hasAdsOnPage || hasAdsFromDB,
-      // Dati dal DB (Apify ads-check)
+      company_name: lead.name,
+      home_text,
+      about_text,
+      services_text,
+      ads_status: adsStatus,
       landing_page_text: lead.landingPageText || null,
       landing_page_url: lead.landingPageUrl || null,
       google_ad_copy: lead.googleAdsCopy || null,
       meta_ads_copy: lead.metaAdsCopy ? [lead.metaAdsCopy] : [],
     };
 
-    // 4. Analisi Gemini
     const analysis = await runGeminiAnalysis(geminiInput);
 
-    // Aggiungi URL fallback per UI
-    const cleanDomain = baseUrl.replace(/^https?:\/\//, "").replace(/^www\./, "");
+    const cleanDomain = (lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "");
     analysis.ad_library_url = buildMetaAdLibraryUrl(lead.name);
     analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);
 
-    // 5. Calcola score e salva
     const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null);
     const scoreResult = calculateLeadScore(scoreInput);
 
@@ -152,11 +181,22 @@ export async function POST(
       },
     });
 
-    console.log(`[SCORING] ${lead.name}: score=${scoreResult.score} (${scoreResult.breakdown.join(", ")})`);
+    console.log(
+      `[GEMINI v3.1] ${lead.name}: score=${scoreResult.score}, cliche=${cliche_status}, ads=${adsStatus}`
+    );
 
     return NextResponse.json({
       success: true,
       analysis,
+      evidence: {
+        cliche_status,
+        cliches_found,
+        tracking_tools,
+        ads_status: adsStatus,
+        home_text_length: home_text.length,
+        about_text_length: about_text?.length ?? 0,
+        services_text_length: services_text?.length ?? 0,
+      },
     });
   } catch (error) {
     console.error("[API] gemini-analysis error:", error);

@@ -242,13 +242,13 @@ export interface StrategicAnalysisInput {
   home_text: string;
   about_text: string | null;
   services_text: string | null;
-  has_active_ads: boolean;
-  ads_networks_found?: string[];
-  /** Testo della landing page dell'annuncio Google Ads (se trovato da DataForSEO) */
+  /** Stato Ads certificato da Apify: CONFIRMED | NOT_FOUND | API_ERROR | PENDING */
+  ads_status: "CONFIRMED" | "NOT_FOUND" | "API_ERROR" | "PENDING";
+  /** Testo della landing page dell'annuncio (se trovato) */
   landing_page_text?: string | null;
   /** URL della landing page dell'annuncio */
   landing_page_url?: string | null;
-  /** Copy degli annunci Meta Ads (se trovati da Apify) */
+  /** Copy degli annunci Meta Ads */
   meta_ads_copy?: string[];
   /** Copy dell'annuncio Google Ads */
   google_ad_copy?: string | null;

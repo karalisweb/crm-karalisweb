@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Loader2,
   Sparkles,
@@ -14,6 +17,12 @@ import {
   MonitorPlay,
   StickyNote,
   Crosshair,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+  FileText,
+  AlertTriangle,
+  PenLine,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -34,6 +43,16 @@ interface GeminiAnalysisResult {
   generatedAt: string;
   model: string;
   analysisVersion?: string;
+}
+
+interface EvidenceData {
+  cliche_status: "PASS" | "FAIL" | "ERROR";
+  cliches_found: Array<{ phrase: string; tag: string; context: string }>;
+  tracking_tools: string[];
+  ads_status: "CONFIRMED" | "NOT_FOUND" | "API_ERROR" | "PENDING";
+  home_text_length: number;
+  about_text_length: number;
+  services_text_length: number;
 }
 
 interface GeminiAnalysisCardProps {
@@ -66,21 +85,59 @@ export function GeminiAnalysisCard({
   const [isPrecisionLoading, setIsPrecisionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [evidence, setEvidence] = useState<EvidenceData | null>(null);
+  const [manualOverride, setManualOverride] = useState(false);
+  const [manualTexts, setManualTexts] = useState({
+    home_text: "",
+    about_text: "",
+    services_text: "",
+  });
+  const [lastScrapeError, setLastScrapeError] = useState<string | null>(null);
   const router = useRouter();
 
   const runAnalysis = async () => {
     setIsLoading(true);
     setError(null);
+    setLastScrapeError(null);
 
     try {
+      const body: Record<string, unknown> = {};
+      if (manualOverride) {
+        // Valida che almeno home_text abbia contenuto
+        if (manualTexts.home_text.trim().length < 20) {
+          setError("Il testo homepage deve essere almeno 20 caratteri.");
+          setIsLoading(false);
+          return;
+        }
+        body.manualOverride = {
+          home_text: manualTexts.home_text.trim(),
+          about_text: manualTexts.about_text.trim() || undefined,
+          services_text: manualTexts.services_text.trim() || undefined,
+        };
+      }
+
       const response = await fetch(`/api/leads/${leadId}/gemini-analysis`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Errore nell'analisi");
+        if (data.manual_check_required) {
+          setLastScrapeError(data.error);
+          setManualOverride(true);
+          setError(`Scraping fallito: ${data.error}. Usa l'override manuale.`);
+        } else {
+          throw new Error(data.error || "Errore nell'analisi");
+        }
+        return;
+      }
+
+      // Salva evidence dalla response
+      if (data.evidence) {
+        setEvidence(data.evidence);
       }
 
       router.refresh();
@@ -139,13 +196,30 @@ export function GeminiAnalysisCard({
     }
   };
 
-  // Nessun sito web
-  if (!hasWebsite) {
+  // Hard Lock: il bottone è disabilitato se non c'è un sito E non c'è override manuale con testo sufficiente
+  const canGenerate = manualOverride
+    ? manualTexts.home_text.trim().length >= 20
+    : hasWebsite;
+
+  // Nessun sito web E nessun override manuale
+  if (!hasWebsite && !manualOverride) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          <Sparkles className="h-8 w-8 mx-auto mb-3 opacity-30" />
-          <p>Serve un sito web per generare l&apos;analisi strategica.</p>
+        <CardContent className="py-8 text-center space-y-4">
+          <Sparkles className="h-8 w-8 mx-auto opacity-30" />
+          <p className="text-muted-foreground">
+            Serve un sito web per generare l&apos;analisi strategica.
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            <Switch
+              id="manual-override-no-site"
+              checked={manualOverride}
+              onCheckedChange={setManualOverride}
+            />
+            <Label htmlFor="manual-override-no-site" className="text-sm cursor-pointer">
+              Override Manuale (inserisci testi a mano)
+            </Label>
+          </div>
         </CardContent>
       </Card>
     );
@@ -159,76 +233,142 @@ export function GeminiAnalysisCard({
     geminiAnalysis.teleprompter_script &&
     "cliche_found" in geminiAnalysis;
 
-  // Nessuna analisi o formato vecchio → mostra bottone per generare
+  // Nessuna analisi o formato vecchio → mostra bottone per generare + Evidence Box
   if (!geminiAnalysis || !isNewFormat) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center space-y-4">
-          <MonitorPlay className="h-8 w-8 mx-auto text-purple-500" />
-          <div>
-            <p className="font-medium">
-              {geminiAnalysis && !isNewFormat
-                ? "Analisi precedente (formato legacy) — Rigenera per il nuovo Teleprompter"
-                : "Analisi Strategica non ancora generata"}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Gemini analizzerà il posizionamento del sito e genererà
-              un copione per il teleprompter in 4 atti.
-            </p>
-          </div>
-          <Button onClick={runAnalysis} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Analisi in corso...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="py-8 text-center space-y-4">
+            <MonitorPlay className="h-8 w-8 mx-auto text-purple-500" />
+            <div>
+              <p className="font-medium">
                 {geminiAnalysis && !isNewFormat
-                  ? "Rigenera Analisi Strategica"
-                  : "Genera Analisi Strategica"}
-              </>
+                  ? "Analisi precedente (formato legacy) — Rigenera per il nuovo Teleprompter"
+                  : "Analisi Strategica non ancora generata"}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                MSD Engine v3.1 — Analisi deterministica con evidence box.
+              </p>
+            </div>
+
+            {/* Manual Override Toggle */}
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <Switch
+                id="manual-override"
+                checked={manualOverride}
+                onCheckedChange={setManualOverride}
+              />
+              <Label htmlFor="manual-override" className="text-sm cursor-pointer flex items-center gap-1.5">
+                <PenLine className="h-3.5 w-3.5" />
+                Override Manuale
+              </Label>
+            </div>
+
+            {lastScrapeError && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm text-amber-400">
+                <AlertTriangle className="h-4 w-4 inline mr-1.5" />
+                {lastScrapeError}
+              </div>
             )}
-          </Button>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </CardContent>
-      </Card>
+
+            {/* Manual Override Textareas */}
+            {manualOverride && (
+              <div className="text-left space-y-3 pt-2">
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Testo Homepage (obbligatorio, min 20 caratteri)
+                  </Label>
+                  <Textarea
+                    placeholder="Incolla qui il testo della homepage del sito..."
+                    value={manualTexts.home_text}
+                    onChange={(e) => setManualTexts(prev => ({ ...prev, home_text: e.target.value }))}
+                    rows={5}
+                    className="text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {manualTexts.home_text.length} caratteri
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Testo Chi Siamo (opzionale)
+                  </Label>
+                  <Textarea
+                    placeholder="Incolla qui il testo della pagina Chi Siamo..."
+                    value={manualTexts.about_text}
+                    onChange={(e) => setManualTexts(prev => ({ ...prev, about_text: e.target.value }))}
+                    rows={3}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Testo Servizi (opzionale)
+                  </Label>
+                  <Textarea
+                    placeholder="Incolla qui il testo della pagina Servizi..."
+                    value={manualTexts.services_text}
+                    onChange={(e) => setManualTexts(prev => ({ ...prev, services_text: e.target.value }))}
+                    rows={3}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            <Button onClick={runAnalysis} disabled={isLoading || !canGenerate}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Analisi in corso...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {geminiAnalysis && !isNewFormat
+                    ? "Rigenera Analisi Strategica"
+                    : manualOverride
+                    ? "Genera con Testi Manuali"
+                    : "Genera Analisi Strategica"}
+                </>
+              )}
+            </Button>
+            {!canGenerate && !isLoading && (
+              <p className="text-xs text-amber-400">
+                {manualOverride
+                  ? "Inserisci almeno 20 caratteri nel campo Homepage per sbloccare."
+                  : "Serve un sito web o attiva l'override manuale."}
+              </p>
+            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </CardContent>
+        </Card>
+
+        {/* Evidence Box (mostrato dopo prima analisi, anche se fallita) */}
+        {evidence && <EvidenceBox evidence={evidence} />}
+      </div>
     );
   }
 
   // === TELEPROMPTER MODE ===
   return (
     <div className="space-y-4">
-      {/* Header con badge Ads + data + rigenera */}
+      {/* Evidence Box — mostra sempre i dati estratti */}
+      {evidence && <EvidenceBox evidence={evidence} />}
+
+      {/* Header con badge versione + data + azioni */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          {/* Badge Ads */}
-          {geminiAnalysis.has_active_ads ? (
-            <Badge className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1">
-              <Megaphone className="mr-1.5 h-3.5 w-3.5" />
-              Fanno Ads!
-              {geminiAnalysis.ads_networks_found && geminiAnalysis.ads_networks_found.length > 0 && (
-                <span className="ml-1 opacity-80">
-                  ({geminiAnalysis.ads_networks_found.join(", ")})
-                </span>
-              )}
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-sm px-3 py-1">
-              <Megaphone className="mr-1.5 h-3.5 w-3.5 opacity-50" />
-              Niente Ads
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Badge Versione */}
+          {geminiAnalysis.analysisVersion && (
+            <Badge variant="outline" className="text-sm px-2 py-0.5 border-blue-500/40 text-blue-400 font-mono">
+              v{geminiAnalysis.analysisVersion}
             </Badge>
           )}
           {/* Badge Pattern Errore */}
           {geminiAnalysis.primary_error_pattern && (
             <Badge variant="outline" className="text-sm px-3 py-1 border-red-500/30 text-red-400">
               {geminiAnalysis.primary_error_pattern}
-            </Badge>
-          )}
-          {geminiAnalysis.analysisVersion && (
-            <Badge variant="outline" className="text-sm px-2 py-0.5 border-blue-500/40 text-blue-400 font-mono">
-              v{geminiAnalysis.analysisVersion}
             </Badge>
           )}
           <p className="text-sm text-muted-foreground">
@@ -243,7 +383,7 @@ export function GeminiAnalysisCard({
               : ""}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             onClick={copyFullScript}
             variant="outline"
@@ -296,16 +436,18 @@ export function GeminiAnalysisCard({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {/* Frase Cliché trovata */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
-        <CardContent className="pt-4 pb-3">
-          <p className="text-xs font-medium text-amber-400 mb-1 uppercase tracking-wide">
-            Frase Cliché Trovata
-          </p>
-          <p className="text-lg font-medium italic">
-            &ldquo;{geminiAnalysis.cliche_found}&rdquo;
-          </p>
-        </CardContent>
-      </Card>
+      {geminiAnalysis.cliche_found && geminiAnalysis.cliche_found !== "NESSUNA_CLICHE_TROVATA" && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs font-medium text-amber-400 mb-1 uppercase tracking-wide">
+              Frase Cliché Trovata
+            </p>
+            <p className="text-lg font-medium italic">
+              &ldquo;{geminiAnalysis.cliche_found}&rdquo;
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 4 Atti del Teleprompter - Font grande per lettura da schermo */}
       {ATTO_LABELS.map((atto, index) => (
@@ -329,7 +471,7 @@ export function GeminiAnalysisCard({
         </Card>
       ))}
 
-      {/* Nota strategica interna (collassata, per Alessio) */}
+      {/* Nota strategica interna (per Alessio) */}
       <Card className="border-dashed">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
@@ -344,5 +486,122 @@ export function GeminiAnalysisCard({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ==========================================
+// EVIDENCE BOX — Mostra dati estratti deterministically
+// ==========================================
+
+function EvidenceBox({ evidence }: { evidence: EvidenceData }) {
+  const clicheIcon =
+    evidence.cliche_status === "PASS" ? (
+      <ShieldCheck className="h-4 w-4 text-green-500" />
+    ) : evidence.cliche_status === "FAIL" ? (
+      <ShieldX className="h-4 w-4 text-red-500" />
+    ) : (
+      <ShieldAlert className="h-4 w-4 text-amber-500" />
+    );
+
+  const clicheLabel =
+    evidence.cliche_status === "PASS"
+      ? "Cliché trovati — pronto per script"
+      : evidence.cliche_status === "FAIL"
+      ? "Nessun cliché rilevato"
+      : "Errore nel check cliché";
+
+  const clicheColor =
+    evidence.cliche_status === "PASS"
+      ? "border-green-500/30 bg-green-500/5"
+      : evidence.cliche_status === "FAIL"
+      ? "border-red-500/30 bg-red-500/5"
+      : "border-amber-500/30 bg-amber-500/5";
+
+  const adsLabel =
+    evidence.ads_status === "CONFIRMED"
+      ? "Ads attive confermate"
+      : evidence.ads_status === "NOT_FOUND"
+      ? "Nessuna Ads attiva"
+      : evidence.ads_status === "API_ERROR"
+      ? "Errore API Ads"
+      : "Non ancora verificato";
+
+  return (
+    <Card className={`${clicheColor}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <FileText className="h-4 w-4" />
+          Evidence Box — Dati Estratti
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {/* Cliché Status */}
+        <div className="flex items-center gap-2">
+          {clicheIcon}
+          <span className="font-medium">{clicheLabel}</span>
+        </div>
+
+        {/* Cliché trovati */}
+        {evidence.cliches_found.length > 0 && (
+          <div className="space-y-1.5 pl-6">
+            {evidence.cliches_found.map((c, i) => (
+              <div key={i} className="bg-background/50 rounded p-2 border border-border/50">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    {c.tag}
+                  </Badge>
+                  <span className="font-mono text-xs text-amber-400">
+                    &ldquo;{c.phrase}&rdquo;
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  Contesto: {c.context}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Testi estratti */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="bg-background/50 rounded p-2 border border-border/50 text-center">
+            <p className="text-lg font-bold">{evidence.home_text_length}</p>
+            <p className="text-[10px] text-muted-foreground">Homepage chars</p>
+          </div>
+          <div className="bg-background/50 rounded p-2 border border-border/50 text-center">
+            <p className="text-lg font-bold">{evidence.about_text_length}</p>
+            <p className="text-[10px] text-muted-foreground">Chi Siamo chars</p>
+          </div>
+          <div className="bg-background/50 rounded p-2 border border-border/50 text-center">
+            <p className="text-lg font-bold">{evidence.services_text_length}</p>
+            <p className="text-[10px] text-muted-foreground">Servizi chars</p>
+          </div>
+        </div>
+
+        {/* Ads Status */}
+        <div className="flex items-center gap-2">
+          {evidence.ads_status === "CONFIRMED" ? (
+            <Megaphone className="h-4 w-4 text-green-500" />
+          ) : evidence.ads_status === "NOT_FOUND" ? (
+            <Megaphone className="h-4 w-4 text-muted-foreground opacity-50" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          )}
+          <span>{adsLabel}</span>
+        </div>
+
+        {/* Tracking tools (informativo) */}
+        {evidence.tracking_tools.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Tracking:</span>
+            {evidence.tracking_tools.map((tool) => (
+              <Badge key={tool} variant="secondary" className="text-[10px] px-1.5 py-0">
+                {tool}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
