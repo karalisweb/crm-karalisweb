@@ -97,6 +97,7 @@ export async function PATCH(
       data: {
         hasActiveGoogleAds: newGoogle,
         hasActiveMetaAds: newMeta,
+        adsCheckedAt: new Date(),
         geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
         opportunityScore: scoreResult.score,
         pipelineStage: newStage,
