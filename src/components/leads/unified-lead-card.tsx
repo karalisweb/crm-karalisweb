@@ -354,6 +354,8 @@ export function UnifiedLeadCard({
   const [localManualAds, setLocalManualAds] = useState(() => getManualAdsState(lead));
   const [localAnalysis, setLocalAnalysis] = useState<GeminiAnalysis | null>(lead.geminiAnalysis);
 
+  const [scriptRegenerated, setScriptRegenerated] = useState(false);
+
   const analysis = localAnalysis;
   const isAnalyzed = !!(analysis?.teleprompter_script && analysis?.primary_error_pattern);
   const pixelOk = hasTrackingPixel(lead);
@@ -458,6 +460,10 @@ export function UnifiedLeadCard({
       // Aggiorna localmente analysis e score (card resta aperta)
       if (data.analysis) {
         setLocalAnalysis(data.analysis);
+      }
+      // In variante video: segna che lo script è stato rigenerato con dati verificati
+      if (variant === "video") {
+        setScriptRegenerated(true);
       }
       toast.success(variant === "video"
         ? `Script rigenerato per ${lead.name}`
@@ -732,6 +738,15 @@ export function UnifiedLeadCard({
       case "video":
         return (
           <div className="space-y-2">
+            {/* Badge: Script rigenerato con dati verificati */}
+            {scriptRegenerated && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/25">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="text-[11px] font-semibold text-emerald-400">
+                  Script Tella generato — pronto per registrare
+                </span>
+              </div>
+            )}
             {/* Riga 1: Script + Video Inviato + Info */}
             <div className="flex gap-2">
               {isAnalyzed && analysis?.teleprompter_script && (
