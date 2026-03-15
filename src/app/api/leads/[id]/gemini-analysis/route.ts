@@ -64,6 +64,7 @@ export async function POST(
         googleRating: true,
         googleReviewsCount: true,
         tierOverride: true,
+        geminiAnalysis: true,
       },
     });
 
@@ -174,6 +175,18 @@ export async function POST(
     const cleanDomain = (lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "");
     analysis.ad_library_url = buildMetaAdLibraryUrl(lead.name);
     analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);
+
+    // Preserva ads_override e has_active_ads dalla vecchia analisi (sopravvive a rigenerazione)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const oldAnalysis = lead.geminiAnalysis as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const analysisAny = analysis as any;
+    if (oldAnalysis?.ads_override) {
+      analysisAny.ads_override = oldAnalysis.ads_override;
+    }
+    if (lead.adsCheckedAt) {
+      analysisAny.has_active_ads = lead.hasActiveGoogleAds || lead.hasActiveMetaAds;
+    }
 
     const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category ?? null, {
       googleReviewsCount: lead.googleReviewsCount,

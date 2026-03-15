@@ -182,24 +182,25 @@ function getAdsSignals(lead: UnifiedLead): string[] {
   );
 }
 
-/** Stato verifica manuale ads dall'override */
+/** Stato verifica manuale ads — usa adsCheckedAt (DB) come fonte primaria */
 function getManualAdsState(lead: UnifiedLead): {
   googleVerified: boolean;
   metaVerified: boolean;
   googleAds: boolean;
   metaAds: boolean;
 } {
-  const override = lead.geminiAnalysis?.ads_override;
-  if (!override) {
+  // Fonte primaria: adsCheckedAt nel DB (sopravvive a rigenerazione Gemini)
+  if (lead.adsCheckedAt) {
     return {
-      googleVerified: false,
-      metaVerified: false,
+      googleVerified: true,
+      metaVerified: true,
       googleAds: lead.hasActiveGoogleAds,
       metaAds: lead.hasActiveMetaAds,
     };
   }
-  // v3.3 format
-  if ("googleAds" in override || "metaAds" in override) {
+  // Fallback: ads_override nel JSON (vecchio formato, potrebbe essere cancellato da rigenera)
+  const override = lead.geminiAnalysis?.ads_override;
+  if (override && ("googleAds" in override || "metaAds" in override)) {
     return {
       googleVerified: override.googleAds !== null && override.googleAds !== undefined,
       metaVerified: override.metaAds !== null && override.metaAds !== undefined,
@@ -207,7 +208,7 @@ function getManualAdsState(lead: UnifiedLead): {
       metaAds: override.metaAds === true,
     };
   }
-  // Legacy format
+  // Non verificate
   return {
     googleVerified: false,
     metaVerified: false,
@@ -273,21 +274,16 @@ function TierSelector({
 // SCORE BREAKDOWN COMPONENT
 // ==========================================
 
-function ScoreBreakdown({
+/** Solo le pill dei punteggi + bottone recalc */
+function ScoreBreakdownPills({
   data,
   score,
-  currentTier,
-  onTierSelect,
   onRecalc,
-  tierLoading,
   recalcLoading,
 }: {
   data: ScoreBreakdownData | null;
   score: number | null;
-  currentTier: string;
-  onTierSelect: (tier: string) => void;
   onRecalc: () => void;
-  tierLoading: boolean;
   recalcLoading: boolean;
 }) {
   if (!data && score === null) return null;
@@ -302,36 +298,33 @@ function ScoreBreakdown({
   });
 
   return (
-    <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-1.5">
-        {items.map((item, i) => (
-          <span
-            key={i}
-            className={cn(
-              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold",
-              item.points >= 40
-                ? "bg-red-500/15 text-red-400 border border-red-500/25"
-                : item.points >= 20
-                ? "bg-orange-500/15 text-orange-400 border border-orange-500/25"
-                : item.points >= 10
-                ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25"
-                : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
-            )}
-          >
-            {item.label}
-            <span className="font-black">+{item.points}</span>
-          </span>
-        ))}
-        <button
-          onClick={(e) => { e.stopPropagation(); onRecalc(); }}
-          disabled={recalcLoading}
-          className="inline-flex items-center px-1 py-0.5 rounded text-[10px] text-muted-foreground hover:text-primary transition-colors"
-          title="Ricalcola score"
+    <div className="flex flex-wrap items-center gap-1.5">
+      {items.map((item, i) => (
+        <span
+          key={i}
+          className={cn(
+            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold",
+            item.points >= 40
+              ? "bg-red-500/15 text-red-400 border border-red-500/25"
+              : item.points >= 20
+              ? "bg-orange-500/15 text-orange-400 border border-orange-500/25"
+              : item.points >= 10
+              ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25"
+              : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+          )}
         >
-          <RefreshCw className={cn("h-3 w-3", recalcLoading && "animate-spin")} />
-        </button>
-      </div>
-      <TierSelector currentTier={currentTier} onSelect={onTierSelect} disabled={tierLoading} />
+          {item.label}
+          <span className="font-black">+{item.points}</span>
+        </span>
+      ))}
+      <button
+        onClick={(e) => { e.stopPropagation(); onRecalc(); }}
+        disabled={recalcLoading}
+        className="inline-flex items-center px-1 py-0.5 rounded text-[10px] text-muted-foreground hover:text-primary transition-colors"
+        title="Ricalcola score"
+      >
+        <RefreshCw className={cn("h-3 w-3", recalcLoading && "animate-spin")} />
+      </button>
     </div>
   );
 }
@@ -891,60 +884,66 @@ export function UnifiedLeadCard({
             </div>
           </div>
 
-          {/* ---- COLLAPSED: Tags + Score Breakdown ---- */}
+          {/* ---- COLLAPSED: Dati + Punteggi + Settore ---- */}
           {!expanded && (
             <div className="px-4 py-2.5 space-y-1.5">
-              {/* Riga 1: Tag strategici */}
+              {/* Riga 1: DATI (valori trovati) */}
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 flex-wrap flex-1">
-                  {/* Segnali Ads */}
-                  {adsSignals.length > 0 && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/25">
-                      <Search className="h-2.5 w-2.5 mr-1" />
-                      Segnali: {adsSignals.join(", ")}
+                <div className="flex items-center gap-3 flex-wrap flex-1 text-[11px]">
+                  {/* Segnali */}
+                  <span className="text-muted-foreground">
+                    Segnali:{" "}
+                    <span className={adsSignals.length > 0 ? "text-amber-400 font-semibold" : "text-gray-500"}>
+                      {adsSignals.length > 0 ? adsSignals.join(", ") : "no"}
                     </span>
-                  )}
-
-                  {/* Verifica manuale Google */}
-                  {localManualAds.googleVerified && (
+                  </span>
+                  <span className="text-gray-600">|</span>
+                  {/* Google Ads */}
+                  <span className="text-muted-foreground">
+                    Google:{" "}
                     <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
-                      localManualAds.googleAds
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                        : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+                      "font-semibold",
+                      !localManualAds.googleVerified ? "text-gray-500" :
+                      localManualAds.googleAds ? "text-emerald-400" : "text-gray-400"
                     )}>
-                      Google: {localManualAds.googleAds ? "SI" : "NO"}
+                      {!localManualAds.googleVerified ? "nd" : localManualAds.googleAds ? "sì" : "no"}
                     </span>
-                  )}
-
-                  {/* Verifica manuale Meta */}
-                  {localManualAds.metaVerified && (
+                  </span>
+                  <span className="text-gray-600">|</span>
+                  {/* Meta Ads */}
+                  <span className="text-muted-foreground">
+                    Meta:{" "}
                     <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
-                      localManualAds.metaAds
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                        : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+                      "font-semibold",
+                      !localManualAds.metaVerified ? "text-gray-500" :
+                      localManualAds.metaAds ? "text-emerald-400" : "text-gray-400"
                     )}>
-                      Meta: {localManualAds.metaAds ? "SI" : "NO"}
+                      {!localManualAds.metaVerified ? "nd" : localManualAds.metaAds ? "sì" : "no"}
                     </span>
-                  )}
-
-                  {isAnalyzed && (
+                  </span>
+                  <span className="text-gray-600">|</span>
+                  {/* Sindrome / Errore strategico */}
+                  <span className="text-muted-foreground">
+                    Sindrome:{" "}
                     <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
-                      pixelOk
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                        : "bg-red-500/15 text-red-400 border border-red-500/25"
+                      "font-semibold",
+                      errorPattern ? "text-red-400" : "text-gray-500"
                     )}>
-                      Pixel: {pixelOk ? "OK" : "MANCANTE"}
+                      {errorPattern || "—"}
                     </span>
-                  )}
-
-                  {errorPattern && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-red-900/30 text-red-300 border border-red-800/40">
-                      {errorPattern}
+                  </span>
+                  <span className="text-gray-600">|</span>
+                  {/* Pixel */}
+                  <span className="text-muted-foreground">
+                    Pixel:{" "}
+                    <span className={cn(
+                      "font-semibold",
+                      !isAnalyzed ? "text-gray-500" :
+                      pixelOk ? "text-emerald-400" : "text-red-400"
+                    )}>
+                      {!isAnalyzed ? "nd" : pixelOk ? "OK" : "no"}
                     </span>
-                  )}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -977,16 +976,16 @@ export function UnifiedLeadCard({
                 </div>
               </div>
 
-              {/* Riga 2: Score Breakdown + Tier Selector */}
-              <ScoreBreakdown
+              {/* Riga 2: PUNTEGGI (score breakdown) */}
+              <ScoreBreakdownPills
                 data={localBreakdown}
                 score={localScore}
-                currentTier={localTier}
-                onTierSelect={handleTierOverride}
                 onRecalc={handleRecalcScore}
-                tierLoading={tierLoading}
                 recalcLoading={recalcLoading}
               />
+
+              {/* Riga 3: SETTORE */}
+              <TierSelector currentTier={localTier} onSelect={handleTierOverride} disabled={tierLoading} />
             </div>
           )}
 
@@ -1000,15 +999,15 @@ export function UnifiedLeadCard({
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
                   Composizione Score
                 </p>
-                <ScoreBreakdown
+                <ScoreBreakdownPills
                   data={localBreakdown}
                   score={localScore}
-                  currentTier={localTier}
-                  onTierSelect={handleTierOverride}
                   onRecalc={handleRecalcScore}
-                  tierLoading={tierLoading}
                   recalcLoading={recalcLoading}
                 />
+                <div className="mt-1">
+                  <TierSelector currentTier={localTier} onSelect={handleTierOverride} disabled={tierLoading} />
+                </div>
               </div>
 
               {/* Layout: 2 colonne solo per video con script, altrimenti 1 colonna */}
