@@ -41,6 +41,9 @@ export async function PATCH(
         googleRating: true,
         googleReviewsCount: true,
         tierOverride: true,
+        hasActiveGoogleAds: true,
+        hasActiveMetaAds: true,
+        adsCheckedAt: true,
       },
     });
 
@@ -56,6 +59,9 @@ export async function PATCH(
       googleReviewsCount: lead.googleReviewsCount,
       googleRating: lead.googleRating,
       tierOverride: tier,
+      hasActiveGoogleAds: lead.hasActiveGoogleAds,
+      hasActiveMetaAds: lead.hasActiveMetaAds,
+      adsCheckedAt: lead.adsCheckedAt,
     });
     const scoreResult = calculateLeadScore(scoreInput);
 

@@ -30,6 +30,9 @@ export async function POST(
         googleRating: true,
         googleReviewsCount: true,
         tierOverride: true,
+        hasActiveGoogleAds: true,
+        hasActiveMetaAds: true,
+        adsCheckedAt: true,
       },
     });
 
@@ -65,6 +68,9 @@ export async function POST(
       googleReviewsCount: lead.googleReviewsCount,
       googleRating: lead.googleRating,
       tierOverride: lead.tierOverride,
+      hasActiveGoogleAds: lead.hasActiveGoogleAds,
+      hasActiveMetaAds: lead.hasActiveMetaAds,
+      adsCheckedAt: lead.adsCheckedAt,
     });
     const scoreResult = calculateLeadScore(scoreInput);
 

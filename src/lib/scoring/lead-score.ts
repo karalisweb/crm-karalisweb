@@ -6,7 +6,7 @@
  *
  * Pesi v3.1:
  * - Errore strategico (disallineamento sito):  +50  (driver)
- * - Ads attive (verifica manuale):              +20  (aggravante)
+ * - Ads attive (SOLO dopo verifica manuale):     +20  (aggravante)
  * - Tracking attivo (GA4/GTM/Pixel nel DOM):   +10  (segnale digitale)
  * - Recensioni forti (50+ e rating > 4.0):     +10  (business solido)
  * - Settore high-ticket:                        +20
@@ -196,6 +196,10 @@ export function extractScoreInputFromGeminiAnalysis(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     googleRating?: any; // Accepts Decimal, number, string, null
     tierOverride?: string | null;
+    /** Ads verificate manualmente dal DB (sovrascrivono geminiAnalysis.has_active_ads) */
+    hasActiveGoogleAds?: boolean;
+    hasActiveMetaAds?: boolean;
+    adsCheckedAt?: Date | string | null;
   }
 ): LeadScoreInput {
   if (!geminiAnalysis || typeof geminiAnalysis !== "object") {
@@ -210,7 +214,19 @@ export function extractScoreInputFromGeminiAnalysis(
     };
   }
 
-  const hasActiveAds = geminiAnalysis.has_active_ads === true;
+  // Ads attive: SOLO se verificate manualmente (adsCheckedAt presente)
+  // Se non verificate, ignora qualsiasi dato Gemini/tracking
+  let hasActiveAds = false;
+  if (extra?.adsCheckedAt) {
+    hasActiveAds = !!(extra.hasActiveGoogleAds || extra.hasActiveMetaAds);
+  } else {
+    // Fallback: controlla ads_override nel JSON (vecchio formato verifica manuale)
+    const override = geminiAnalysis.ads_override;
+    if (override && (override.googleAds !== null || override.metaAds !== null)) {
+      hasActiveAds = !!(override.googleAds || override.metaAds);
+    }
+    // Se nessuna verifica: hasActiveAds = false (non dare +20 senza verifica)
+  }
 
   // Tracking tools presenti nel DOM
   const networks: string[] = geminiAnalysis.ads_networks_found || [];

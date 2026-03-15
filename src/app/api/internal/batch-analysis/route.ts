@@ -193,6 +193,9 @@ export async function POST(request: NextRequest) {
         googleReviewsCount: lead.googleReviewsCount,
         googleRating: lead.googleRating,
         tierOverride: lead.tierOverride,
+        hasActiveGoogleAds: lead.hasActiveGoogleAds,
+        hasActiveMetaAds: lead.hasActiveMetaAds,
+        adsCheckedAt: lead.adsCheckedAt,
       });
       const scoreResult = calculateLeadScore(scoreInput);
 

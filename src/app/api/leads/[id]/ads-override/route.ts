@@ -64,11 +64,14 @@ export async function PATCH(
       verifiedAt: new Date().toISOString(),
     };
 
-    // Ricalcola score con v3.1 (include tierOverride, tracking, reviews)
+    // Ricalcola score — passa i NUOVI valori ads verificati
     const scoreInput = extractScoreInputFromGeminiAnalysis(analysis, lead.category, {
       googleReviewsCount: lead.googleReviewsCount,
       googleRating: lead.googleRating,
       tierOverride: lead.tierOverride,
+      hasActiveGoogleAds: newGoogle,
+      hasActiveMetaAds: newMeta,
+      adsCheckedAt: new Date(), // Stiamo verificando ORA
     });
     const scoreResult = calculateLeadScore(scoreInput);
 

@@ -370,9 +370,10 @@ export function UnifiedLeadCard({
     lead.tierOverride || lead.scoreBreakdown?.tier || "standard"
   );
   const [localManualAds, setLocalManualAds] = useState(() => getManualAdsState(lead));
+  const [localAnalysis, setLocalAnalysis] = useState<GeminiAnalysis | null>(lead.geminiAnalysis);
 
-  const analysis = lead.geminiAnalysis;
-  const isAnalyzed = hasAnalysis(lead);
+  const analysis = localAnalysis;
+  const isAnalyzed = !!(analysis?.teleprompter_script && analysis?.primary_error_pattern);
   const pixelOk = hasTrackingPixel(lead);
   const errorPattern = analysis?.primary_error_pattern || null;
   const adsSignals = getAdsSignals(lead);
@@ -471,8 +472,19 @@ export function UnifiedLeadCard({
         const data = await res.json();
         throw new Error(data.error || "Errore");
       }
-      toast.success(`Analisi generata per ${lead.name}`);
-      onAction();
+      const data = await res.json();
+      // Aggiorna localmente analysis e score (card resta aperta)
+      if (data.analysis) {
+        setLocalAnalysis(data.analysis);
+      }
+      toast.success(variant === "video"
+        ? `Script rigenerato per ${lead.name}`
+        : `Analisi generata per ${lead.name}`
+      );
+      // Solo in varianti non-video: refresh lista (il lead cambia lista)
+      if (variant !== "video") {
+        onAction();
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore nell'analisi");
     } finally {
@@ -643,6 +655,9 @@ export function UnifiedLeadCard({
     : null;
 
   // ---- Variant-specific actions ----
+  // Blocca "Passa a Video" se anche solo un canale ads non è verificato
+  const adsNotVerified = !localManualAds.googleVerified || !localManualAds.metaVerified;
+
   const getActionButtons = () => {
     switch (variant) {
       case "analisi":
@@ -650,9 +665,10 @@ export function UnifiedLeadCard({
           <div className="flex gap-2">
             <Button
               onClick={handleApprove}
-              disabled={!!loading}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={!!loading || adsNotVerified}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40"
               size="sm"
+              title={adsNotVerified ? "Verifica prima le Ads (Google/Meta)" : undefined}
             >
               {loading === "approve" ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -688,9 +704,10 @@ export function UnifiedLeadCard({
           <div className="flex gap-2">
             <Button
               onClick={handleApprove}
-              disabled={!!loading}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={!!loading || adsNotVerified}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40"
               size="sm"
+              title={adsNotVerified ? "Verifica prima le Ads (Google/Meta)" : undefined}
             >
               {loading === "approve" ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
