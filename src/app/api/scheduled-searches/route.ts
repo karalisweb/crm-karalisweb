@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { z } from "zod/v4";
+
+const scheduledSearchesSchema = z.object({
+  searches: z
+    .array(
+      z.object({
+        query: z.string().min(1).max(255),
+        location: z.string().min(1).max(255),
+        priority: z.number().int().min(0).optional(),
+      })
+    )
+    .min(1)
+    .max(50),
+});
 
 // GET — Lista ricerche programmate
 export async function GET() {
@@ -32,22 +46,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
     }
 
-    const { searches } = await request.json();
+    const body = await request.json();
+    const parsed = scheduledSearchesSchema.safeParse(body);
 
-    if (!Array.isArray(searches) || searches.length === 0) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Fornire un array di ricerche" },
+        { error: "Dati non validi", details: parsed.error.issues },
         { status: 400 }
       );
     }
 
-    const data = searches.map(
-      (s: { query: string; location: string; priority?: number }, i: number) => ({
-        query: s.query,
-        location: s.location,
-        priority: s.priority ?? i,
-      })
-    );
+    const data = parsed.data.searches.map((s, i) => ({
+      query: s.query,
+      location: s.location,
+      priority: s.priority ?? i,
+    }));
 
     const result = await db.scheduledSearch.createMany({
       data,

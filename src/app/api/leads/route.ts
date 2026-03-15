@@ -1,5 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { z } from "zod/v4";
+
+const createLeadSchema = z.object({
+  name: z.string().min(1).max(255),
+  address: z.string().max(500).optional(),
+  phone: z.string().max(50).optional(),
+  website: z.string().max(500).optional(),
+  category: z.string().max(100).optional(),
+  googleRating: z.number().min(0).max(5).optional(),
+  googleReviewsCount: z.number().int().min(0).optional(),
+  googleMapsUrl: z.string().max(1000).optional(),
+  placeId: z.string().max(255).optional(),
+  source: z.string().max(50).optional(),
+  searchId: z.string().uuid().optional(),
+  notes: z.string().max(5000).optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -103,21 +119,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const parsed = createLeadSchema.safeParse(body);
 
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Dati non validi", details: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = parsed.data;
     const lead = await db.lead.create({
       data: {
-        name: body.name,
-        address: body.address,
-        phone: body.phone,
-        website: body.website,
-        category: body.category,
-        googleRating: body.googleRating,
-        googleReviewsCount: body.googleReviewsCount,
-        googleMapsUrl: body.googleMapsUrl,
-        placeId: body.placeId,
-        source: body.source || "manual",
-        searchId: body.searchId,
-        notes: body.notes,
+        name: data.name,
+        address: data.address,
+        phone: data.phone,
+        website: data.website,
+        category: data.category,
+        googleRating: data.googleRating,
+        googleReviewsCount: data.googleReviewsCount,
+        googleMapsUrl: data.googleMapsUrl,
+        placeId: data.placeId,
+        source: data.source || "manual",
+        searchId: data.searchId,
+        notes: data.notes,
       },
     });
 
