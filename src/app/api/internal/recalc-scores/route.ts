@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       tierOverride: true,
       hasActiveGoogleAds: true,
       hasActiveMetaAds: true,
-      adsCheckedAt: true,
+      adsVerifiedManually: true,
     },
   });
 
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       tierOverride: lead.tierOverride,
       hasActiveGoogleAds: lead.hasActiveGoogleAds,
       hasActiveMetaAds: lead.hasActiveMetaAds,
-      adsCheckedAt: lead.adsCheckedAt,
+      adsVerifiedManually: lead.adsVerifiedManually,
     });
     const scoreResult = calculateLeadScore(scoreInput);
 

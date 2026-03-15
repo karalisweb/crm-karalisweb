@@ -71,7 +71,7 @@ export async function PATCH(
       tierOverride: lead.tierOverride,
       hasActiveGoogleAds: newGoogle,
       hasActiveMetaAds: newMeta,
-      adsCheckedAt: new Date(), // Stiamo verificando ORA
+      adsVerifiedManually: true,
     });
     const scoreResult = calculateLeadScore(scoreInput);
 
@@ -97,6 +97,7 @@ export async function PATCH(
       data: {
         hasActiveGoogleAds: newGoogle,
         hasActiveMetaAds: newMeta,
+        adsVerifiedManually: true,
         adsCheckedAt: new Date(),
         geminiAnalysis: analysis as unknown as Prisma.InputJsonValue,
         opportunityScore: scoreResult.score,

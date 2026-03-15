@@ -441,25 +441,13 @@ export async function analyzeAdsForLead(
 // DB SAVE
 // ==========================================
 
+/**
+ * DISATTIVATO v3.6 — Le ads sono verificate SOLO manualmente.
+ * Nessun sistema automatico scrive hasActiveGoogleAds/hasActiveMetaAds.
+ */
 async function saveAdsResultsToDB(
   leadId: string,
-  result: AdsIntelligenceResult
+  _result: AdsIntelligenceResult
 ): Promise<void> {
-  try {
-    await db.lead.update({
-      where: { id: leadId },
-      data: {
-        hasActiveGoogleAds: result.hasActiveGoogleAds,
-        hasActiveMetaAds: result.hasActiveMetaAds,
-        googleAdsCopy: result.googleAdsCopy,
-        metaAdsCopy: result.metaAdsCopy,
-        landingPageUrl: result.landingPageUrl,
-        landingPageText: result.landingPageText,
-        adsCoherenceWarning: result.adsCoherenceWarning,
-        adsCheckedAt: new Date(),
-      },
-    });
-  } catch (err) {
-    console.error(`[ADS-INTEL] DB save error:`, err instanceof Error ? err.message : err);
-  }
+  console.log(`[ADS-INTEL] DB save SKIPPED per lead ${leadId} — solo verifica manuale`);
 }

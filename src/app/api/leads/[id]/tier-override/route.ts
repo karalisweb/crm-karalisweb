@@ -43,7 +43,7 @@ export async function PATCH(
         tierOverride: true,
         hasActiveGoogleAds: true,
         hasActiveMetaAds: true,
-        adsCheckedAt: true,
+        adsVerifiedManually: true,
       },
     });
 
@@ -61,7 +61,7 @@ export async function PATCH(
       tierOverride: tier,
       hasActiveGoogleAds: lead.hasActiveGoogleAds,
       hasActiveMetaAds: lead.hasActiveMetaAds,
-      adsCheckedAt: lead.adsCheckedAt,
+      adsVerifiedManually: lead.adsVerifiedManually,
     });
     const scoreResult = calculateLeadScore(scoreInput);
 

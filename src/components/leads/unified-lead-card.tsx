@@ -104,6 +104,7 @@ export interface UnifiedLead {
   landingPageUrl: string | null;
   landingPageText: string | null;
   adsCheckedAt: string | null;
+  adsVerifiedManually?: boolean;
   // WhatsApp
   whatsappNumber?: string | null;
   whatsappSource?: string | null;
@@ -182,15 +183,14 @@ function getAdsSignals(lead: UnifiedLead): string[] {
   );
 }
 
-/** Stato verifica manuale ads — usa adsCheckedAt (DB) come fonte primaria */
+/** Stato verifica manuale ads — SOLO adsVerifiedManually conta */
 function getManualAdsState(lead: UnifiedLead): {
   googleVerified: boolean;
   metaVerified: boolean;
   googleAds: boolean;
   metaAds: boolean;
 } {
-  // Fonte primaria: adsCheckedAt nel DB (sopravvive a rigenerazione Gemini)
-  if (lead.adsCheckedAt) {
+  if (lead.adsVerifiedManually) {
     return {
       googleVerified: true,
       metaVerified: true,
@@ -198,22 +198,11 @@ function getManualAdsState(lead: UnifiedLead): {
       metaAds: lead.hasActiveMetaAds,
     };
   }
-  // Fallback: ads_override nel JSON (vecchio formato, potrebbe essere cancellato da rigenera)
-  const override = lead.geminiAnalysis?.ads_override;
-  if (override && ("googleAds" in override || "metaAds" in override)) {
-    return {
-      googleVerified: override.googleAds !== null && override.googleAds !== undefined,
-      metaVerified: override.metaAds !== null && override.metaAds !== undefined,
-      googleAds: override.googleAds === true,
-      metaAds: override.metaAds === true,
-    };
-  }
-  // Non verificate
   return {
     googleVerified: false,
     metaVerified: false,
-    googleAds: lead.hasActiveGoogleAds,
-    metaAds: lead.hasActiveMetaAds,
+    googleAds: false,
+    metaAds: false,
   };
 }
 
@@ -986,6 +975,25 @@ export function UnifiedLeadCard({
 
               {/* Riga 3: SETTORE */}
               <TierSelector currentTier={localTier} onSelect={handleTierOverride} disabled={tierLoading} />
+
+              {/* Riga 4: Passa a Video (solo se tutto verificato) */}
+              {variant !== "video" && localManualAds.googleVerified && localManualAds.metaVerified && isAnalyzed && (
+                <div className="pt-1">
+                  <Button
+                    onClick={(e) => { e.stopPropagation(); handleApprove(); }}
+                    disabled={!!loading}
+                    size="sm"
+                    className="h-7 px-3 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    {loading === "approve" ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                    )}
+                    Passa a Video
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 

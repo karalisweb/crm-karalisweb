@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
       landingPageUrl: true,
       landingPageText: true,
       adsCheckedAt: true,
+      adsVerifiedManually: true,
       googleRating: true,
       googleReviewsCount: true,
       tierOverride: true,
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
 
       // === STEP 3: Determina ads_status dal DB ===
       let adsStatus: "CONFIRMED" | "NOT_FOUND" | "API_ERROR" | "PENDING" = "PENDING";
-      if (lead.adsCheckedAt) {
+      if (lead.adsVerifiedManually) {
         adsStatus = (lead.hasActiveGoogleAds || lead.hasActiveMetaAds)
           ? "CONFIRMED"
           : "NOT_FOUND";
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest) {
         tierOverride: lead.tierOverride,
         hasActiveGoogleAds: lead.hasActiveGoogleAds,
         hasActiveMetaAds: lead.hasActiveMetaAds,
-        adsCheckedAt: lead.adsCheckedAt,
+        adsVerifiedManually: lead.adsVerifiedManually,
       });
       const scoreResult = calculateLeadScore(scoreInput);
 

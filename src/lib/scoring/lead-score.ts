@@ -196,10 +196,10 @@ export function extractScoreInputFromGeminiAnalysis(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     googleRating?: any; // Accepts Decimal, number, string, null
     tierOverride?: string | null;
-    /** Ads verificate manualmente dal DB (sovrascrivono geminiAnalysis.has_active_ads) */
+    /** Solo verifica manuale conta per +20 */
     hasActiveGoogleAds?: boolean;
     hasActiveMetaAds?: boolean;
-    adsCheckedAt?: Date | string | null;
+    adsVerifiedManually?: boolean;
   }
 ): LeadScoreInput {
   if (!geminiAnalysis || typeof geminiAnalysis !== "object") {
@@ -214,19 +214,12 @@ export function extractScoreInputFromGeminiAnalysis(
     };
   }
 
-  // Ads attive: SOLO se verificate manualmente (adsCheckedAt presente)
-  // Se non verificate, ignora qualsiasi dato Gemini/tracking
-  let hasActiveAds = false;
-  if (extra?.adsCheckedAt) {
-    hasActiveAds = !!(extra.hasActiveGoogleAds || extra.hasActiveMetaAds);
-  } else {
-    // Fallback: controlla ads_override nel JSON (vecchio formato verifica manuale)
-    const override = geminiAnalysis.ads_override;
-    if (override && (override.googleAds !== null || override.metaAds !== null)) {
-      hasActiveAds = !!(override.googleAds || override.metaAds);
-    }
-    // Se nessuna verifica: hasActiveAds = false (non dare +20 senza verifica)
-  }
+  // Ads attive +20: SOLO se adsVerifiedManually = true E almeno una ads = sì
+  // Nessun fallback, nessun dato automatico, solo verifica manuale
+  const hasActiveAds = !!(
+    extra?.adsVerifiedManually &&
+    (extra.hasActiveGoogleAds || extra.hasActiveMetaAds)
+  );
 
   // Tracking tools presenti nel DOM
   const networks: string[] = geminiAnalysis.ads_networks_found || [];

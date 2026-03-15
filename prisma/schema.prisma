@@ -105,16 +105,17 @@ model Lead {
   tierOverride      String?       @map("tier_override")
 
   // ==========================================
-  // ADS INTELLIGENCE (Apify)
+  // ADS — Solo verifica manuale
   // ==========================================
-  hasActiveGoogleAds  Boolean     @default(false) @map("has_active_google_ads")
-  hasActiveMetaAds    Boolean     @default(false) @map("has_active_meta_ads")
-  googleAdsCopy       String?     @map("google_ads_copy")
-  metaAdsCopy         String?     @map("meta_ads_copy")
-  landingPageUrl      String?     @map("landing_page_url")
-  landingPageText     String?     @map("landing_page_text") @db.Text
-  adsCheckedAt        DateTime?   @map("ads_checked_at")
-  adsCoherenceWarning String?     @map("ads_coherence_warning")
+  hasActiveGoogleAds    Boolean     @default(false) @map("has_active_google_ads")
+  hasActiveMetaAds      Boolean     @default(false) @map("has_active_meta_ads")
+  adsVerifiedManually   Boolean     @default(false) @map("ads_verified_manually")
+  googleAdsCopy         String?     @map("google_ads_copy")
+  metaAdsCopy           String?     @map("meta_ads_copy")
+  landingPageUrl        String?     @map("landing_page_url")
+  landingPageText       String?     @map("landing_page_text") @db.Text
+  adsCheckedAt          DateTime?   @map("ads_checked_at")
+  adsCoherenceWarning   String?     @map("ads_coherence_warning")
 
   // ==========================================
   // VIDEO TRACKING (sales page esterna)

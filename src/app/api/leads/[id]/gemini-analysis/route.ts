@@ -61,6 +61,7 @@ export async function POST(
         landingPageUrl: true,
         landingPageText: true,
         adsCheckedAt: true,
+        adsVerifiedManually: true,
         googleRating: true,
         googleReviewsCount: true,
         tierOverride: true,
@@ -144,9 +145,9 @@ export async function POST(
       }
     }
 
-    // Determina ads_status (solo da Apify, mai da tracking on-page)
+    // Determina ads_status — SOLO dalla verifica manuale
     let adsStatus: "CONFIRMED" | "NOT_FOUND" | "API_ERROR" | "PENDING" = "PENDING";
-    if (lead.adsCheckedAt) {
+    if (lead.adsVerifiedManually) {
       if (lead.hasActiveGoogleAds || lead.hasActiveMetaAds) {
         adsStatus = "CONFIRMED";
       } else {
@@ -184,7 +185,7 @@ export async function POST(
     if (oldAnalysis?.ads_override) {
       analysisAny.ads_override = oldAnalysis.ads_override;
     }
-    if (lead.adsCheckedAt) {
+    if (lead.adsVerifiedManually) {
       analysisAny.has_active_ads = lead.hasActiveGoogleAds || lead.hasActiveMetaAds;
     }
 
@@ -194,7 +195,7 @@ export async function POST(
       tierOverride: lead.tierOverride,
       hasActiveGoogleAds: lead.hasActiveGoogleAds,
       hasActiveMetaAds: lead.hasActiveMetaAds,
-      adsCheckedAt: lead.adsCheckedAt,
+      adsVerifiedManually: lead.adsVerifiedManually,
     });
     const scoreResult = calculateLeadScore(scoreInput);
 
