@@ -91,6 +91,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       // WhatsApp manuale
       ...(body.whatsappNumber !== undefined && { whatsappNumber: body.whatsappNumber || null }),
       ...(body.whatsappSource !== undefined && { whatsappSource: body.whatsappSource || null }),
+      // Video landing page
+      ...(body.videoYoutubeUrl !== undefined && { videoYoutubeUrl: body.videoYoutubeUrl || null }),
+      ...(body.videoLandingUrl !== undefined && { videoLandingUrl: body.videoLandingUrl || null }),
+      ...(body.videoLandingSlug !== undefined && { videoLandingSlug: body.videoLandingSlug || null }),
     };
 
     // Use transaction to ensure activity + update are atomic

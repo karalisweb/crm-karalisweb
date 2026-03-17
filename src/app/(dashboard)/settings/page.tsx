@@ -46,6 +46,9 @@ interface ApiConfig {
   cronSecret: string;
   geminiApiKey: string;
   geminiModel: string;
+  wpUrl: string;
+  wpUser: string;
+  wpAppPassword: string;
 }
 
 export default function SettingsPage() {
@@ -60,6 +63,9 @@ export default function SettingsPage() {
     cronSecret: "",
     geminiApiKey: "",
     geminiModel: "",
+    wpUrl: "",
+    wpUser: "",
+    wpAppPassword: "",
   });
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "USER" });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -201,6 +207,21 @@ export default function SettingsPage() {
       }
     } catch (error) {
       toast.error("Errore nel test connessione Gemini");
+    }
+  }
+
+  async function testWordPressConnection() {
+    try {
+      toast.info("Test WordPress in corso...");
+      const res = await fetch("/api/settings/test-wordpress");
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connessione WordPress OK");
+      } else {
+        toast.error(data.message || "Connessione WordPress fallita");
+      }
+    } catch {
+      toast.error("Errore nel test connessione WordPress");
     }
   }
 
@@ -561,6 +582,61 @@ export default function SettingsPage() {
               </div>
               <div className="flex gap-2">
                 <Button onClick={testGeminiConnection} variant="outline">
+                  Test Connessione
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* WordPress Landing Page */}
+          <Card>
+            <CardHeader>
+              <CardTitle>WordPress Landing Page</CardTitle>
+              <CardDescription>
+                Connessione al sito WordPress per creare landing page video automaticamente.
+                Serve una Application Password (WordPress &rarr; Utenti &rarr; Profilo &rarr; Password per le applicazioni).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="wpUrl">URL Sito WordPress</Label>
+                <Input
+                  id="wpUrl"
+                  value={apiConfig.wpUrl}
+                  onChange={(e) => setApiConfig({ ...apiConfig, wpUrl: e.target.value })}
+                  placeholder="https://karalisweb.net"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="wpUser">Username WordPress</Label>
+                <Input
+                  id="wpUser"
+                  value={apiConfig.wpUser}
+                  onChange={(e) => setApiConfig({ ...apiConfig, wpUser: e.target.value })}
+                  placeholder="admin"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="wpAppPassword">Application Password</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="wpAppPassword"
+                    type={showTokens.wpAppPassword ? "text" : "password"}
+                    value={apiConfig.wpAppPassword}
+                    onChange={(e) => setApiConfig({ ...apiConfig, wpAppPassword: e.target.value })}
+                    placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => toggleShowToken("wpAppPassword")}
+                  >
+                    {showTokens.wpAppPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={testWordPressConnection} variant="outline">
                   Test Connessione
                 </Button>
               </div>

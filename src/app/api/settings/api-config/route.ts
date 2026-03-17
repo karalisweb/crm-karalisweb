@@ -19,6 +19,10 @@ export async function GET() {
       cronSecret: process.env.CRON_SECRET ? "••••" + (process.env.CRON_SECRET.slice(-4) || "") : "",
       geminiApiKey: process.env.GEMINI_API_KEY ? "••••" + (process.env.GEMINI_API_KEY.slice(-4) || "") : "",
       geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      // WordPress
+      wpUrl: process.env.WP_URL || "",
+      wpUser: process.env.WP_USER || "",
+      wpAppPassword: process.env.WP_APP_PASSWORD ? "••••" + (process.env.WP_APP_PASSWORD.slice(-4) || "") : "",
     };
 
     return NextResponse.json(config);
@@ -39,6 +43,7 @@ export async function PUT(request: NextRequest) {
     const {
       apifyToken, apifyWebhookSecret, cronSecret,
       geminiApiKey, geminiModel,
+      wpUrl, wpUser, wpAppPassword,
     } = await request.json();
 
     let envContent = "";
@@ -65,6 +70,9 @@ export async function PUT(request: NextRequest) {
     envContent = updateEnvVar(envContent, "CRON_SECRET", cronSecret);
     envContent = updateEnvVar(envContent, "GEMINI_API_KEY", geminiApiKey);
     envContent = updateEnvVar(envContent, "GEMINI_MODEL", geminiModel);
+    envContent = updateEnvVar(envContent, "WP_URL", wpUrl);
+    envContent = updateEnvVar(envContent, "WP_USER", wpUser);
+    envContent = updateEnvVar(envContent, "WP_APP_PASSWORD", wpAppPassword);
 
     await writeFile(CONFIG_FILE, envContent.trim() + "\n", "utf-8");
 

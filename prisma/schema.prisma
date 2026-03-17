@@ -123,6 +123,9 @@ model Lead {
   scriptRegeneratedAt DateTime?   @map("script_regenerated_at")
   videoViewsCount     Int         @default(0) @map("video_views_count")
   videoTrackingToken  String?     @unique @map("video_tracking_token")
+  videoYoutubeUrl     String?     @map("video_youtube_url")
+  videoLandingUrl     String?     @map("video_landing_url")
+  videoLandingSlug    String?     @map("video_landing_slug")
 
   // ==========================================
   // FOLLOW-UP TRACKING

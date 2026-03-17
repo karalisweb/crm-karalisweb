@@ -274,9 +274,14 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
           {/* Video Tracking Section */}
           <VideoTrackingSection
             leadId={lead.id}
+            leadName={lead.name}
             videoTrackingToken={lead.videoTrackingToken}
             videoViewsCount={lead.videoViewsCount}
             videoViewedAt={lead.videoViewedAt?.toISOString() ?? null}
+            videoYoutubeUrl={lead.videoYoutubeUrl ?? null}
+            videoLandingUrl={lead.videoLandingUrl ?? null}
+            videoLandingSlug={lead.videoLandingSlug ?? null}
+            videoSentAt={lead.videoSentAt?.toISOString() ?? null}
           />
         </TabsContent>
 
