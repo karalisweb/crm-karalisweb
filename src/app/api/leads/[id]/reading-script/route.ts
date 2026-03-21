@@ -57,24 +57,30 @@ export async function POST(
     const errorPattern = analysis.primary_error_pattern as string;
     const strategicNote = analysis.strategic_note as string;
 
-    const prompt = `Sei un copywriter e coach di presentazioni video. Devi trasformare il seguente teleprompter script (diviso in 4 atti) in un UNICO testo fluido, pronto per essere letto durante la registrazione di un video personalizzato da inviare a freddo via WhatsApp a un prospect.
+    // Leggi il prompt template dai settings (se personalizzato)
+    const settings = await db.settings.findUnique({
+      where: { id: "default" },
+      select: { readingScriptPrompt: true },
+    });
+
+    const DEFAULT_PROMPT = `Sei un copywriter e coach di presentazioni video. Devi trasformare il seguente teleprompter script (diviso in 4 atti) in un UNICO testo fluido, pronto per essere letto durante la registrazione di un video personalizzato da inviare a freddo via WhatsApp a un prospect.
 
 CONTESTO:
-- Chi parla: Alessio Loi, fondatore di Karalisweb
-- Prospect: ${lead.name}
-- Sito: ${lead.website || "N/A"}
-- Score opportunità: ${lead.opportunityScore}/100
-- Pattern trovato: ${errorPattern}
-- Cliché trovato: ${cliche}
-- Nota strategica: ${strategicNote}
+- Chi parla: {{CHI_PARLA}}
+- Prospect: {{PROSPECT_NAME}}
+- Sito: {{PROSPECT_WEBSITE}}
+- Score opportunità: {{OPPORTUNITY_SCORE}}/100
+- Pattern trovato: {{ERROR_PATTERN}}
+- Cliché trovato: {{CLICHE}}
+- Nota strategica: {{STRATEGIC_NOTE}}
 
 TELEPROMPTER ORIGINALE:
-ATTO 1: ${teleprompter.atto_1}
-ATTO 2: ${teleprompter.atto_2}
-ATTO 3: ${teleprompter.atto_3}
-ATTO 4: ${teleprompter.atto_4}
+ATTO 1: {{ATTO_1}}
+ATTO 2: {{ATTO_2}}
+ATTO 3: {{ATTO_3}}
+ATTO 4: {{ATTO_4}}
 
-${customInstructions ? `ISTRUZIONI AGGIUNTIVE: ${customInstructions}` : ""}
+{{CUSTOM_INSTRUCTIONS}}
 
 REGOLE PER LO SCRIPT FINALE:
 1. Deve essere UN FLUSSO CONTINUO senza titoli di sezione, numeri o intestazioni
@@ -89,6 +95,23 @@ REGOLE PER LO SCRIPT FINALE:
 10. Chiudi con una CTA chiara che invita a rispondere al messaggio
 
 Scrivi SOLO lo script finale, nient'altro. No commenti, no spiegazioni, no formattazione extra.`;
+
+    const promptTemplate = settings?.readingScriptPrompt || DEFAULT_PROMPT;
+
+    // Sostituisci le variabili nel template
+    const prompt = promptTemplate
+      .replace(/\{\{CHI_PARLA\}\}/g, "Alessio Loi, fondatore di Karalisweb")
+      .replace(/\{\{PROSPECT_NAME\}\}/g, lead.name)
+      .replace(/\{\{PROSPECT_WEBSITE\}\}/g, lead.website || "N/A")
+      .replace(/\{\{OPPORTUNITY_SCORE\}\}/g, String(lead.opportunityScore ?? "N/A"))
+      .replace(/\{\{ERROR_PATTERN\}\}/g, errorPattern || "N/A")
+      .replace(/\{\{CLICHE\}\}/g, cliche || "N/A")
+      .replace(/\{\{STRATEGIC_NOTE\}\}/g, strategicNote || "N/A")
+      .replace(/\{\{ATTO_1\}\}/g, teleprompter.atto_1 || "")
+      .replace(/\{\{ATTO_2\}\}/g, teleprompter.atto_2 || "")
+      .replace(/\{\{ATTO_3\}\}/g, teleprompter.atto_3 || "")
+      .replace(/\{\{ATTO_4\}\}/g, teleprompter.atto_4 || "")
+      .replace(/\{\{CUSTOM_INSTRUCTIONS\}\}/g, customInstructions ? `ISTRUZIONI AGGIUNTIVE: ${customInstructions}` : "");
 
     const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
     const model = client.getGenerativeModel({ model: modelName });

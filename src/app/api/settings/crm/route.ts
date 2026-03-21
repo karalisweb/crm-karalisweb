@@ -42,6 +42,7 @@ export async function GET() {
       scheduledSearchesPerRun: settings.scheduledSearchesPerRun,
       scheduledSearchHour: settings.scheduledSearchHour,
       scheduledLeadsPerSearch: settings.scheduledLeadsPerSearch,
+      readingScriptPrompt: settings.readingScriptPrompt,
     });
   } catch (error) {
     console.error("Error fetching CRM settings:", error);
@@ -80,6 +81,7 @@ export async function PUT(request: Request) {
       scheduledSearchesPerRun,
       scheduledSearchHour,
       scheduledLeadsPerSearch,
+      readingScriptPrompt,
     } = body;
 
     // Validazione
@@ -158,6 +160,7 @@ export async function PUT(request: Request) {
         ...(scheduledSearchesPerRun !== undefined && { scheduledSearchesPerRun }),
         ...(scheduledSearchHour !== undefined && { scheduledSearchHour }),
         ...(scheduledLeadsPerSearch !== undefined && { scheduledLeadsPerSearch }),
+        ...(readingScriptPrompt !== undefined && { readingScriptPrompt: readingScriptPrompt || null }),
         updatedAt: new Date(),
       },
       create: {
@@ -184,6 +187,7 @@ export async function PUT(request: Request) {
       scheduledSearchesPerRun: settings.scheduledSearchesPerRun,
       scheduledSearchHour: settings.scheduledSearchHour,
       scheduledLeadsPerSearch: settings.scheduledLeadsPerSearch,
+      readingScriptPrompt: settings.readingScriptPrompt,
     });
   } catch (error) {
     console.error("Error updating CRM settings:", error);

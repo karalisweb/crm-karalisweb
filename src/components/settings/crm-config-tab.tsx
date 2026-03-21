@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw, Target, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2, Video, Mail, CalendarClock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Save, RotateCcw, Target, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2, Video, Mail, CalendarClock, FileText } from "lucide-react";
 
 interface CrmSettings {
   scoreThreshold: number;
@@ -17,6 +18,7 @@ interface CrmSettings {
   followUpDaysVideo: number;
   followUpDaysLetter: number;
   recontactMonths: number;
+  readingScriptPrompt: string | null;
 }
 
 interface AuditStats {
@@ -35,6 +37,7 @@ export function CrmConfigTab() {
     followUpDaysVideo: 7,
     followUpDaysLetter: 7,
     recontactMonths: 6,
+    readingScriptPrompt: null,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,7 +67,8 @@ export function CrmConfigTab() {
         settings.maxCallAttempts !== originalSettings.maxCallAttempts ||
         settings.followUpDaysVideo !== originalSettings.followUpDaysVideo ||
         settings.followUpDaysLetter !== originalSettings.followUpDaysLetter ||
-        settings.recontactMonths !== originalSettings.recontactMonths;
+        settings.recontactMonths !== originalSettings.recontactMonths ||
+        settings.readingScriptPrompt !== originalSettings.readingScriptPrompt;
       setHasChanges(changed);
     }
   }, [settings, originalSettings]);
@@ -118,6 +122,7 @@ export function CrmConfigTab() {
       followUpDaysVideo: 7,
       followUpDaysLetter: 7,
       recontactMonths: 6,
+      readingScriptPrompt: null,
     });
   }
 
@@ -463,6 +468,42 @@ export function CrmConfigTab() {
             </div>
             <div className="pt-6 text-sm text-muted-foreground">
               Ghost dopo {settings.ghostOfferDays} giorni
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Prompt Script Video */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <CardTitle>Prompt Script di Lettura</CardTitle>
+          </div>
+          <CardDescription>
+            Il prompt inviato a Gemini per generare lo script video. Usa le variabili tra doppie graffe per i dati dinamici del lead.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={settings.readingScriptPrompt || ""}
+            onChange={(e) => setSettings({ ...settings, readingScriptPrompt: e.target.value || null })}
+            placeholder="Lascia vuoto per usare il prompt predefinito..."
+            rows={16}
+            className="font-mono text-sm"
+          />
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p className="font-medium">Variabili disponibili:</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+              <span><code className="text-primary">{`{{CHI_PARLA}}`}</code> — nome e ruolo speaker</span>
+              <span><code className="text-primary">{`{{PROSPECT_NAME}}`}</code> — nome del lead</span>
+              <span><code className="text-primary">{`{{PROSPECT_WEBSITE}}`}</code> — sito web</span>
+              <span><code className="text-primary">{`{{OPPORTUNITY_SCORE}}`}</code> — score 0-100</span>
+              <span><code className="text-primary">{`{{ERROR_PATTERN}}`}</code> — pattern di errore trovato</span>
+              <span><code className="text-primary">{`{{CLICHE}}`}</code> — cliche trovato</span>
+              <span><code className="text-primary">{`{{STRATEGIC_NOTE}}`}</code> — nota strategica</span>
+              <span><code className="text-primary">{`{{ATTO_1}}`}</code> ... <code className="text-primary">{`{{ATTO_4}}`}</code> — i 4 atti del teleprompter</span>
+              <span><code className="text-primary">{`{{CUSTOM_INSTRUCTIONS}}`}</code> — istruzioni aggiuntive</span>
             </div>
           </div>
         </CardContent>

@@ -604,6 +604,9 @@ model Settings {
   scheduledSearchHour      Int    @default(2)  @map("scheduled_search_hour")
   scheduledLeadsPerSearch  Int    @default(50) @map("scheduled_leads_per_search")
 
+  // Prompt template per script di lettura video (Gemini)
+  readingScriptPrompt      String?  @map("reading_script_prompt") @db.Text
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
