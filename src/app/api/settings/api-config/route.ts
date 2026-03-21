@@ -23,6 +23,10 @@ export async function GET() {
       wpUrl: process.env.WP_URL || "",
       wpUser: process.env.WP_USER || "",
       wpAppPassword: process.env.WP_APP_PASSWORD ? "••••" + (process.env.WP_APP_PASSWORD.slice(-4) || "") : "",
+      // YouTube
+      youtubeClientId: process.env.YOUTUBE_CLIENT_ID ? "••••" + (process.env.YOUTUBE_CLIENT_ID.slice(-4) || "") : "",
+      youtubeClientSecret: process.env.YOUTUBE_CLIENT_SECRET ? "••••" + (process.env.YOUTUBE_CLIENT_SECRET.slice(-4) || "") : "",
+      youtubeRedirectUri: process.env.YOUTUBE_REDIRECT_URI || "",
     };
 
     return NextResponse.json(config);
@@ -44,6 +48,7 @@ export async function PUT(request: NextRequest) {
       apifyToken, apifyWebhookSecret, cronSecret,
       geminiApiKey, geminiModel,
       wpUrl, wpUser, wpAppPassword,
+      youtubeClientId, youtubeClientSecret, youtubeRedirectUri,
     } = await request.json();
 
     let envContent = "";
@@ -73,6 +78,9 @@ export async function PUT(request: NextRequest) {
     envContent = updateEnvVar(envContent, "WP_URL", wpUrl);
     envContent = updateEnvVar(envContent, "WP_USER", wpUser);
     envContent = updateEnvVar(envContent, "WP_APP_PASSWORD", wpAppPassword);
+    envContent = updateEnvVar(envContent, "YOUTUBE_CLIENT_ID", youtubeClientId);
+    envContent = updateEnvVar(envContent, "YOUTUBE_CLIENT_SECRET", youtubeClientSecret);
+    envContent = updateEnvVar(envContent, "YOUTUBE_REDIRECT_URI", youtubeRedirectUri);
 
     await writeFile(CONFIG_FILE, envContent.trim() + "\n", "utf-8");
 

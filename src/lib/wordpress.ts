@@ -10,8 +10,10 @@
  *    - show_in_rest: true
  * 2. ACF PRO Field Group collegato al CPT con campi:
  *    - nome_prospect (testo)
- *    - video_youtube_url (url)
+ *    - video_youtube_id (testo) — ID video YouTube per embed + tracking
+ *    - punto_di_dolore (textarea) — copy personalizzato hero
  *    - tracking_token (testo)
+ *    - video_youtube_url (url) — URL completo YouTube
  * 3. Application Password generata per l'utente admin
  *
  * Variabili .env:
@@ -34,7 +36,9 @@ function getAuthHeader(): string {
 interface CreateLandingPageParams {
   title: string;
   nomeProspect: string;
+  videoYoutubeId: string;
   videoYoutubeUrl: string;
+  puntoDiDolore: string;
   trackingToken: string;
   slug?: string;
 }
@@ -54,16 +58,20 @@ export async function createLandingPage(params: CreateLandingPageParams): Promis
   slug: string;
   url: string;
 }> {
-  const { title, nomeProspect, videoYoutubeUrl, trackingToken, slug } = params;
+  const { title, nomeProspect, videoYoutubeId, videoYoutubeUrl, puntoDiDolore, trackingToken, slug } = params;
+
+  const acf: Record<string, string> = {
+    nome_prospect: nomeProspect,
+    video_youtube_id: videoYoutubeId,
+    video_youtube_url: videoYoutubeUrl,
+    punto_di_dolore: puntoDiDolore,
+    tracking_token: trackingToken,
+  };
 
   const body: Record<string, unknown> = {
     title,
     status: "publish",
-    acf: {
-      nome_prospect: nomeProspect,
-      video_youtube_url: videoYoutubeUrl,
-      tracking_token: trackingToken,
-    },
+    acf,
   };
 
   if (slug) {

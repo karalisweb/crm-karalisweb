@@ -49,6 +49,9 @@ interface ApiConfig {
   wpUrl: string;
   wpUser: string;
   wpAppPassword: string;
+  youtubeClientId: string;
+  youtubeClientSecret: string;
+  youtubeRedirectUri: string;
 }
 
 export default function SettingsPage() {
@@ -66,6 +69,9 @@ export default function SettingsPage() {
     wpUrl: "",
     wpUser: "",
     wpAppPassword: "",
+    youtubeClientId: "",
+    youtubeClientSecret: "",
+    youtubeRedirectUri: "",
   });
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "USER" });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -222,6 +228,25 @@ export default function SettingsPage() {
       }
     } catch {
       toast.error("Errore nel test connessione WordPress");
+    }
+  }
+
+  async function testYouTubeConnection() {
+    try {
+      toast.info("Test YouTube in corso...");
+      const res = await fetch("/api/settings/test-youtube");
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Connessione YouTube OK");
+      } else {
+        if (data.needsAuth) {
+          toast.error(data.message || "Serve autorizzazione YouTube");
+        } else {
+          toast.error(data.message || "Connessione YouTube fallita");
+        }
+      }
+    } catch {
+      toast.error("Errore nel test connessione YouTube");
     }
   }
 
@@ -639,6 +664,85 @@ export default function SettingsPage() {
                 <Button onClick={testWordPressConnection} variant="outline">
                   Test Connessione
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* YouTube Video Upload */}
+          <Card>
+            <CardHeader>
+              <CardTitle>YouTube Video Upload</CardTitle>
+              <CardDescription>
+                Connessione a YouTube per caricare i video analisi direttamente dal CRM come &quot;Non in elenco&quot;.
+                Serve un progetto Google Cloud con YouTube Data API v3 abilitata e credenziali OAuth 2.0.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="youtubeClientId">Client ID</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="youtubeClientId"
+                    type={showTokens.youtubeClientId ? "text" : "password"}
+                    value={apiConfig.youtubeClientId}
+                    onChange={(e) => setApiConfig({ ...apiConfig, youtubeClientId: e.target.value })}
+                    placeholder="xxx.apps.googleusercontent.com"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => toggleShowToken("youtubeClientId")}
+                  >
+                    {showTokens.youtubeClientId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="youtubeClientSecret">Client Secret</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="youtubeClientSecret"
+                    type={showTokens.youtubeClientSecret ? "text" : "password"}
+                    value={apiConfig.youtubeClientSecret}
+                    onChange={(e) => setApiConfig({ ...apiConfig, youtubeClientSecret: e.target.value })}
+                    placeholder="GOCSPx-xxx"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => toggleShowToken("youtubeClientSecret")}
+                  >
+                    {showTokens.youtubeClientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="youtubeRedirectUri">Redirect URI</Label>
+                <Input
+                  id="youtubeRedirectUri"
+                  value={apiConfig.youtubeRedirectUri}
+                  onChange={(e) => setApiConfig({ ...apiConfig, youtubeRedirectUri: e.target.value })}
+                  placeholder="http://localhost:3003/api/youtube/callback"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Deve corrispondere a quello configurato in Google Cloud Console → Credenziali OAuth 2.0
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={testYouTubeConnection} variant="outline">
+                  Test Connessione
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open("/api/youtube/auth", "_blank")}
+                >
+                  Autorizza YouTube
+                </Button>
+              </div>
+              <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground space-y-1">
+                <p><strong>Setup:</strong> Google Cloud Console → API &amp; Services → Abilita &quot;YouTube Data API v3&quot;</p>
+                <p>Crea credenziali OAuth 2.0 (Web application) → aggiungi il Redirect URI qui sopra</p>
+                <p>Aggiungi il tuo account Google come Test User nel Consent Screen</p>
               </div>
             </CardContent>
           </Card>

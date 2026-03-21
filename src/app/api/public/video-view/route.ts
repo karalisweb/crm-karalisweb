@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { recordVideoEvent } from "@/lib/youtube";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -7,11 +7,9 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const RATE_LIMIT_MS = 5 * 60 * 1000; // 5 minuti
-
-// Rate limiting per IP — in-memory, max 1 req/10s per IP
+// Rate limiting per IP — in-memory, max 1 req/3s per IP
 const ipLastRequest = new Map<string, number>();
-const IP_RATE_LIMIT_MS = 10_000; // 10 secondi
+const IP_RATE_LIMIT_MS = 3_000;
 
 function isIpRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -20,7 +18,6 @@ function isIpRateLimited(ip: string): boolean {
     return true;
   }
   ipLastRequest.set(ip, now);
-  // Pulizia periodica per evitare memory leak
   if (ipLastRequest.size > 1000) {
     const cutoff = now - IP_RATE_LIMIT_MS;
     for (const [key, ts] of ipLastRequest) {
@@ -39,8 +36,13 @@ export async function OPTIONS() {
 
 /**
  * POST /api/public/video-view
- * API pubblica (no auth) per tracciare quando un lead guarda il video.
- * Body: { token: string }
+ *
+ * API pubblica (no auth) per tracciare eventi video dalla landing page.
+ *
+ * Body:
+ *   { token: string, event: "play" | "progress" | "complete", percent?: number }
+ *
+ * Retrocompatibile: se event non è presente, tratta come "play" (vecchio comportamento).
  */
 export async function POST(request: Request) {
   try {
@@ -55,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { token } = body;
+    const { token, event, percent } = body;
 
     if (!token || typeof token !== "string") {
       return NextResponse.json(
@@ -64,56 +66,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Trova lead dal token
-    const lead = await db.lead.findUnique({
-      where: { videoTrackingToken: token },
-      select: {
-        id: true,
-        name: true,
-        videoViewedAt: true,
-        videoViewsCount: true,
-      },
-    });
+    // Valida evento
+    const validEvents = ["play", "progress", "complete"];
+    const videoEvent = validEvents.includes(event) ? event : "play";
 
-    if (!lead) {
-      // Non rivelare se il token esiste o meno
-      return NextResponse.json(
-        { ok: true },
-        { status: 200, headers: CORS_HEADERS }
-      );
-    }
+    // Valida percent
+    const validPercent =
+      typeof percent === "number" && percent >= 0 && percent <= 100
+        ? Math.round(percent)
+        : undefined;
 
-    // Rate limit: skip se ultimo view < 5 min fa
-    if (lead.videoViewedAt) {
-      const elapsed = Date.now() - lead.videoViewedAt.getTime();
-      if (elapsed < RATE_LIMIT_MS) {
-        return NextResponse.json(
-          { ok: true, skipped: true },
-          { status: 200, headers: CORS_HEADERS }
-        );
-      }
-    }
-
-    // Aggiorna lead: incrementa conteggio, setta timestamp
-    await db.lead.update({
-      where: { id: lead.id },
-      data: {
-        videoViewsCount: { increment: 1 },
-        videoViewedAt: new Date(),
-      },
-    });
-
-    // Crea Activity VIDEO_VIEWED
-    await db.activity.create({
-      data: {
-        leadId: lead.id,
-        type: "VIDEO_VIEWED",
-        notes: `Video visualizzato (view #${lead.videoViewsCount + 1})`,
-      },
-    });
+    const result = await recordVideoEvent(token, videoEvent, validPercent);
 
     return NextResponse.json(
-      { ok: true },
+      { ok: result.ok },
       { status: 200, headers: CORS_HEADERS }
     );
   } catch (error) {
