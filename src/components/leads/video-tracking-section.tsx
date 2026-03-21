@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,9 @@ import {
   MessageSquare,
   ExternalLink,
   Rocket,
+  Upload,
+  Play,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +33,9 @@ interface VideoTrackingSectionProps {
   videoLandingUrl: string | null;
   videoLandingSlug: string | null;
   videoSentAt: string | null;
+  videoFirstPlayAt?: string | null;
+  videoMaxWatchPercent?: number | null;
+  videoCompletedAt?: string | null;
 }
 
 export function VideoTrackingSection({
@@ -42,6 +48,9 @@ export function VideoTrackingSection({
   videoLandingUrl,
   videoLandingSlug,
   videoSentAt,
+  videoFirstPlayAt,
+  videoMaxWatchPercent,
+  videoCompletedAt,
 }: VideoTrackingSectionProps) {
   const [token, setToken] = useState(videoTrackingToken);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -50,8 +59,11 @@ export function VideoTrackingSection({
   const [landingUrl, setLandingUrl] = useState(videoLandingUrl || "");
   const [landingSlug, setLandingSlug] = useState(videoLandingSlug || "");
   const [creatingLanding, setCreatingLanding] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const landingCreated = !!landingUrl;
+  const hasYoutubeUrl = !!youtubeUrl;
 
   const copyToClipboard = useCallback(async (text: string, field: string) => {
     try {
@@ -86,9 +98,49 @@ export function VideoTrackingSection({
     }
   };
 
+  const handleUploadVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("video/")) {
+      toast.error("Seleziona un file video (MP4, MOV, ecc.)");
+      return;
+    }
+
+    // Limite 100MB
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("File troppo grande (max 100MB)");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("video", file);
+
+      const res = await fetch(`/api/leads/${leadId}/upload-youtube`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Errore upload");
+      }
+
+      setYoutubeUrl(data.url);
+      toast.success(`Video caricato su YouTube! ID: ${data.videoId}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore upload YouTube");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const createLandingPage = async () => {
     if (!youtubeUrl.trim()) {
-      toast.error("Inserisci prima il YouTube URL");
+      toast.error("Inserisci prima il YouTube URL o carica un video");
       return;
     }
 
@@ -124,6 +176,20 @@ export function VideoTrackingSection({
 
   const followUpMessage = `Ciao ${leadName.split(" ")[0]}, qualche giorno fa ti avevo inviato un'analisi personalizzata del tuo sito. Magari ti è sfuggita — eccola qui: ${landingUrl}\nFammi sapere se hai 10 minuti per vederla insieme!`;
 
+  // Calcola engagement label
+  const getEngagementBadge = () => {
+    if (videoCompletedAt) {
+      return <Badge className="bg-green-600 text-white">COMPLETO</Badge>;
+    }
+    if (videoMaxWatchPercent && videoMaxWatchPercent >= 50) {
+      return <Badge className="bg-yellow-600 text-white">{videoMaxWatchPercent}%</Badge>;
+    }
+    if (videoFirstPlayAt) {
+      return <Badge className="bg-blue-600 text-white">PLAY</Badge>;
+    }
+    return null;
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -136,28 +202,86 @@ export function VideoTrackingSection({
               VISTO ({videoViewsCount}x)
             </Badge>
           )}
+          {getEngagementBadge()}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {videoViewedAt && (
-          <p className="text-sm text-muted-foreground">
-            Ultimo view:{" "}
-            {new Date(videoViewedAt).toLocaleDateString("it-IT", {
-              day: "2-digit",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </p>
+        {/* Engagement stats */}
+        {(videoViewedAt || videoFirstPlayAt) && (
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            {videoViewedAt && (
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Eye className="h-3 w-3" />
+                {new Date(videoViewedAt).toLocaleDateString("it-IT", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            )}
+            {videoFirstPlayAt && (
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Play className="h-3 w-3" />
+                Play: {new Date(videoFirstPlayAt).toLocaleDateString("it-IT", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            )}
+            {videoMaxWatchPercent != null && videoMaxWatchPercent > 0 && (
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                Guardato: {videoMaxWatchPercent}%
+              </div>
+            )}
+            {videoCompletedAt && (
+              <div className="flex items-center gap-1.5 text-green-600 font-medium">
+                <Check className="h-3 w-3" />
+                Completato
+              </div>
+            )}
+          </div>
         )}
 
-        {/* Step 1: YouTube URL */}
+        {/* Step 1: YouTube URL (manuale o upload) */}
         <div className="space-y-1.5">
           <Label className="text-xs font-medium flex items-center gap-1.5">
             <Youtube className="h-3.5 w-3.5 text-red-600" />
-            YouTube URL
-            {youtubeUrl && <Check className="h-3 w-3 text-green-600" />}
+            YouTube Video
+            {hasYoutubeUrl && <Check className="h-3 w-3 text-green-600" />}
           </Label>
+
+          {!hasYoutubeUrl && !landingCreated && (
+            <>
+              {/* Upload diretto */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleUploadVideo}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                {uploading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                {uploading ? "Caricamento su YouTube..." : "Carica video da file"}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">oppure incolla URL</p>
+            </>
+          )}
+
           <div className="flex gap-2">
             <Input
               value={youtubeUrl}
@@ -166,7 +290,7 @@ export function VideoTrackingSection({
               onKeyDown={(e) => e.key === "Enter" && saveYoutubeUrl()}
               placeholder="https://youtu.be/..."
               className="text-sm h-8"
-              disabled={landingCreated}
+              disabled={landingCreated || uploading}
             />
             {savingYoutube && <Loader2 className="h-4 w-4 animate-spin mt-2" />}
           </div>
@@ -176,7 +300,7 @@ export function VideoTrackingSection({
         {!landingCreated ? (
           <Button
             onClick={createLandingPage}
-            disabled={creatingLanding || !youtubeUrl.trim()}
+            disabled={creatingLanding || !youtubeUrl.trim() || uploading}
             className="w-full"
             size="sm"
           >
