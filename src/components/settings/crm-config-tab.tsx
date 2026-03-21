@@ -8,9 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, RotateCcw, Target, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2, Video, Mail, CalendarClock, FileText } from "lucide-react";
-import { DEFAULT_READING_SCRIPT_PROMPT } from "@/lib/prompts";
+import { Loader2, Save, RotateCcw, Target, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2, Video, Mail, CalendarClock } from "lucide-react";
 
 interface CrmSettings {
   scoreThreshold: number;
@@ -19,7 +17,6 @@ interface CrmSettings {
   followUpDaysVideo: number;
   followUpDaysLetter: number;
   recontactMonths: number;
-  readingScriptPrompt: string | null;
 }
 
 interface AuditStats {
@@ -38,7 +35,6 @@ export function CrmConfigTab() {
     followUpDaysVideo: 7,
     followUpDaysLetter: 7,
     recontactMonths: 6,
-    readingScriptPrompt: null,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,8 +64,7 @@ export function CrmConfigTab() {
         settings.maxCallAttempts !== originalSettings.maxCallAttempts ||
         settings.followUpDaysVideo !== originalSettings.followUpDaysVideo ||
         settings.followUpDaysLetter !== originalSettings.followUpDaysLetter ||
-        settings.recontactMonths !== originalSettings.recontactMonths ||
-        settings.readingScriptPrompt !== originalSettings.readingScriptPrompt;
+        settings.recontactMonths !== originalSettings.recontactMonths;
       setHasChanges(changed);
     }
   }, [settings, originalSettings]);
@@ -123,7 +118,6 @@ export function CrmConfigTab() {
       followUpDaysVideo: 7,
       followUpDaysLetter: 7,
       recontactMonths: 6,
-      readingScriptPrompt: null,
     });
   }
 
@@ -469,52 +463,6 @@ export function CrmConfigTab() {
             </div>
             <div className="pt-6 text-sm text-muted-foreground">
               Ghost dopo {settings.ghostOfferDays} giorni
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Prompt Script Video */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            <CardTitle>Prompt Script di Lettura</CardTitle>
-          </div>
-          <CardDescription>
-            Il prompt inviato a Gemini per generare lo script video. Le variabili tra {`{{}}`} vengono sostituite con i dati reali del lead.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            value={settings.readingScriptPrompt || DEFAULT_READING_SCRIPT_PROMPT}
-            onChange={(e) => setSettings({ ...settings, readingScriptPrompt: e.target.value })}
-            rows={20}
-            className="font-mono text-xs leading-relaxed"
-          />
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSettings({ ...settings, readingScriptPrompt: DEFAULT_READING_SCRIPT_PROMPT })}
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-              Ripristina Default
-            </Button>
-          </div>
-          <div className="text-xs text-muted-foreground space-y-1.5 bg-muted/30 rounded-lg p-3">
-            <p className="font-medium">Variabili disponibili (sostituite automaticamente):</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5">
-              <span><code className="text-primary">{`{{CHI_PARLA}}`}</code> — nome e ruolo speaker</span>
-              <span><code className="text-primary">{`{{PROSPECT_NAME}}`}</code> — nome del lead</span>
-              <span><code className="text-primary">{`{{PROSPECT_WEBSITE}}`}</code> — sito web</span>
-              <span><code className="text-primary">{`{{OPPORTUNITY_SCORE}}`}</code> — score 0-100</span>
-              <span><code className="text-primary">{`{{ERROR_PATTERN}}`}</code> — pattern di errore</span>
-              <span><code className="text-primary">{`{{CLICHE}}`}</code> — cliché trovato</span>
-              <span><code className="text-primary">{`{{STRATEGIC_NOTE}}`}</code> — nota strategica</span>
-              <span><code className="text-primary">{`{{PROBLEMI_SITO}}`}</code> — lista problemi specifici dall&apos;audit</span>
-              <span><code className="text-primary">{`{{ATTO_1}}`}</code> ... <code className="text-primary">{`{{ATTO_4}}`}</code> — i 4 atti del teleprompter</span>
-              <span><code className="text-primary">{`{{CUSTOM_INSTRUCTIONS}}`}</code> — istruzioni aggiuntive</span>
             </div>
           </div>
         </CardContent>

@@ -4,141 +4,78 @@ import { getGeminiClient } from "@/lib/gemini";
 import { DEFAULT_READING_SCRIPT_PROMPT } from "@/lib/prompts";
 
 /**
- * Estrae i problemi specifici dall'audit data e talking points del lead
- * per rendere lo script iper-personalizzato
+ * Estrae i problemi STRATEGICI dall'analisi Gemini del lead.
+ * NON usa i dati tecnici dell'audit (meta tag, pixel, ecc.)
+ * ma i problemi reali di posizionamento e comunicazione.
  */
-function extractSiteProblems(
-  auditData: Record<string, unknown> | null,
-  talkingPoints: string[],
+function extractStrategicProblems(
   analysis: Record<string, unknown>
 ): string {
   const problems: string[] = [];
 
-  // 1. Talking points già generati (sono i problemi più importanti)
-  if (talkingPoints && talkingPoints.length > 0) {
-    for (const tp of talkingPoints) {
-      problems.push(`- ${tp}`);
+  // 1. Pattern di errore strategico (il più importante)
+  const pattern = analysis.primary_error_pattern as string;
+  if (pattern && pattern !== "NESSUNO") {
+    if (pattern.includes("Lista della Spesa")) {
+      problems.push(`- PATTERN: "Lista della Spesa" — Il sito elenca servizi senza un angolo differenziante. Non si capisce perché scegliere voi e non un competitor.`);
+    } else if (pattern.includes("Sindrome dell'Ego")) {
+      problems.push(`- PATTERN: "Sindrome dell'Ego" — Il sito parla solo di voi ("Siamo...", "La nostra azienda...") ma non del problema del cliente.`);
+    } else if (pattern.includes("Target Fantasma")) {
+      problems.push(`- PATTERN: "Target Fantasma" — Non c'è una dichiarazione chiara di CHI è il cliente ideale.`);
+    } else {
+      problems.push(`- PATTERN: ${pattern}`);
     }
   }
 
-  // 2. Dati specifici dall'audit
-  if (auditData) {
-    const website = auditData.website as Record<string, unknown> | undefined;
-    const seo = auditData.seo as Record<string, unknown> | undefined;
-    const tracking = auditData.tracking as Record<string, unknown> | undefined;
-    const trust = auditData.trust as Record<string, unknown> | undefined;
-    const content = auditData.content as Record<string, unknown> | undefined;
-    const tech = auditData.tech as Record<string, unknown> | undefined;
-    const social = auditData.social as Record<string, Record<string, unknown>> | undefined;
-
-    // Performance
-    if (website?.performance !== undefined && (website.performance as number) < 50) {
-      problems.push(`- Performance sito: ${website.performance}/100 (critica)`);
-    }
-    if (website?.loadTime !== undefined && (website.loadTime as number) > 3) {
-      problems.push(`- Tempo caricamento: ${(website.loadTime as number).toFixed(1)} secondi (lento)`);
-    }
-    if (website?.mobile === false) {
-      problems.push(`- Sito NON ottimizzato per mobile`);
-    }
-    if (website?.https === false) {
-      problems.push(`- Sito senza HTTPS — Chrome mostra "Non sicuro"`);
-    }
-
-    // SEO specifico
-    if (seo?.hasMetaTitle === false) {
-      problems.push(`- Meta title mancante — Google non sa descrivere il sito`);
-    }
-    if (seo?.hasMetaDescription === false) {
-      problems.push(`- Meta description mancante — nei risultati Google appare testo casuale`);
-    }
-    if (seo?.hasH1 === false) {
-      problems.push(`- Tag H1 mancante nella homepage`);
-    }
-    if (seo?.hasSitemap === false) {
-      problems.push(`- Sitemap.xml mancante — Google non indicizza tutte le pagine`);
-    }
-    if (seo?.hasSchemaMarkup === false) {
-      problems.push(`- Nessuno Schema Markup — no rich snippet nei risultati`);
-    }
-    if (seo?.imagesWithoutAlt !== undefined && (seo.imagesWithoutAlt as number) > 5) {
-      problems.push(`- ${seo.imagesWithoutAlt} immagini senza testo alternativo`);
-    }
-
-    // Tracking
-    if (tracking?.hasGA4 === false && tracking?.hasGoogleAnalytics === false) {
-      problems.push(`- Nessun Google Analytics installato — zero visibilità sul traffico`);
-    }
-    if (tracking?.hasGTM === false) {
-      problems.push(`- Google Tag Manager assente`);
-    }
-    if (tracking?.hasFacebookPixel === false) {
-      problems.push(`- Facebook Pixel non installato — no remarketing possibile`);
-    }
-    if (tracking?.hasGoogleAdsTag === false) {
-      problems.push(`- Tag Google Ads assente — impossibile tracciare conversioni ads`);
-    }
-
-    // Trust & Compliance
-    if (trust?.hasCookieBanner === false) {
-      problems.push(`- Cookie banner GDPR mancante — rischio sanzioni`);
-    }
-    if (trust?.hasPrivacyPolicy === false) {
-      problems.push(`- Privacy policy non trovata`);
-    }
-    if (trust?.hasContactForm === false && website?.hasContactForm === false) {
-      problems.push(`- Nessun form di contatto visibile`);
-    }
-
-    // Content
-    if (content?.hasBlog === false) {
-      problems.push(`- Nessun blog — zero content marketing`);
-    } else if (content?.daysSinceLastPost !== undefined && (content.daysSinceLastPost as number) > 180) {
-      problems.push(`- Blog fermo da ${Math.floor((content.daysSinceLastPost as number) / 30)} mesi`);
-    }
-
-    // Tech
-    if (tech?.isOutdated === true) {
-      const cms = tech.cms ? `${tech.cms}${tech.cmsVersion ? ` v${tech.cmsVersion}` : ""}` : "Stack";
-      problems.push(`- Tecnologia obsoleta: ${cms}`);
-    }
-
-    // Social
-    if (social) {
-      const missing: string[] = [];
-      if (social.facebook && !social.facebook.linkedFromSite) missing.push("Facebook");
-      if (social.instagram && !social.instagram.linkedFromSite) missing.push("Instagram");
-      if (social.linkedin && !social.linkedin.linkedFromSite) missing.push("LinkedIn");
-      if (missing.length >= 2) {
-        problems.push(`- Social non collegati al sito: ${missing.join(", ")}`);
-      }
-    }
+  // 2. Cliché trovato (frase esatta dal sito)
+  const cliche = analysis.cliche_found as string;
+  if (cliche && cliche !== "NESSUNA_CLICHE_TROVATA") {
+    problems.push(`- FRASE CLICHÉ ESATTA DAL SITO: "${cliche}" — Se coprissi il logo con quello di un competitor, funzionerebbe ugualmente.`);
   }
 
-  // 3. Dati dall'analisi Gemini (observations)
+  // 3. Nota strategica (contiene osservazioni specifiche)
+  const strategicNote = analysis.strategic_note as string;
+  if (strategicNote) {
+    problems.push(`- NOTA STRATEGICA: ${strategicNote}`);
+  }
+
+  // 4. Stato ads (contesto commerciale)
+  const hasActiveAds = analysis.has_active_ads as boolean;
+  const googleAdCopy = analysis.google_ad_copy as string | null;
+  const metaAdsCopy = analysis.meta_ads_copy as string[] | null;
+
+  if (hasActiveAds && googleAdCopy) {
+    problems.push(`- STANNO INVESTENDO IN ADS con questo annuncio: "${googleAdCopy}" — Ma il sito non mantiene la promessa.`);
+  } else if (hasActiveAds) {
+    problems.push(`- STANNO INVESTENDO IN ADS ma il sito non è costruito per convertire il traffico a pagamento.`);
+  } else {
+    problems.push(`- NON FANNO ADVERTISING — Invisibili nelle ricerche a pagamento, i competitor che investono gli rubano clienti.`);
+  }
+
+  if (metaAdsCopy && metaAdsCopy.length > 0) {
+    problems.push(`- META ADS ATTIVE: "${metaAdsCopy[0]}"`);
+  }
+
+  // 5. Osservazioni dall'analisi (se presenti)
   const observations = analysis.observations as string[] | undefined;
   if (observations && observations.length > 0) {
-    for (const obs of observations.slice(0, 5)) {
-      if (!problems.some(p => p.includes(obs.substring(0, 30)))) {
-        problems.push(`- ${obs}`);
-      }
+    for (const obs of observations.slice(0, 3)) {
+      problems.push(`- ${obs}`);
     }
   }
 
   if (problems.length === 0) {
-    return "Nessun problema specifico rilevato dall'audit automatico.";
+    return "Analisi strategica completata ma nessun problema specifico estratto.";
   }
 
-  // Deduplica e limita
-  const unique = [...new Set(problems)];
-  return unique.slice(0, 15).join("\n");
+  return problems.join("\n");
 }
 
 /**
  * POST /api/leads/[id]/reading-script
  *
  * Genera lo script finale di lettura per il video.
- * Include i PROBLEMI SPECIFICI del sito del prospect.
+ * Include i PROBLEMI STRATEGICI (non tecnici) del prospect.
  */
 export async function POST(
   request: NextRequest,
@@ -159,7 +96,6 @@ export async function POST(
         geminiAnalyzedAt: true,
         auditData: true,
         opportunityScore: true,
-        talkingPoints: true,
       },
     });
 
@@ -188,12 +124,8 @@ export async function POST(
     const errorPattern = analysis.primary_error_pattern as string;
     const strategicNote = analysis.strategic_note as string;
 
-    // Estrai i problemi specifici del sito
-    const siteProblems = extractSiteProblems(
-      lead.auditData as Record<string, unknown> | null,
-      lead.talkingPoints || [],
-      analysis
-    );
+    // Estrai i problemi STRATEGICI (non tecnici) dall'analisi
+    const siteProblems = extractStrategicProblems(analysis);
 
     // Leggi il prompt template dai settings (se personalizzato)
     const settings = await db.settings.findUnique({

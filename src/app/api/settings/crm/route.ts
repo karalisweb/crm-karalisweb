@@ -43,6 +43,11 @@ export async function GET() {
       scheduledSearchHour: settings.scheduledSearchHour,
       scheduledLeadsPerSearch: settings.scheduledLeadsPerSearch,
       readingScriptPrompt: settings.readingScriptPrompt,
+      aiProvider: (settings as Record<string, unknown>).aiProvider ?? "gemini",
+      aiModelGemini: (settings as Record<string, unknown>).aiModelGemini ?? null,
+      aiModelClaude: (settings as Record<string, unknown>).aiModelClaude ?? null,
+      aiModelOpenai: (settings as Record<string, unknown>).aiModelOpenai ?? null,
+      strategicAnalysisPrompt: (settings as Record<string, unknown>).strategicAnalysisPrompt ?? null,
     });
   } catch (error) {
     console.error("Error fetching CRM settings:", error);
@@ -82,6 +87,11 @@ export async function PUT(request: Request) {
       scheduledSearchHour,
       scheduledLeadsPerSearch,
       readingScriptPrompt,
+      aiProvider,
+      aiModelGemini,
+      aiModelClaude,
+      aiModelOpenai,
+      strategicAnalysisPrompt,
     } = body;
 
     // Validazione
@@ -161,6 +171,11 @@ export async function PUT(request: Request) {
         ...(scheduledSearchHour !== undefined && { scheduledSearchHour }),
         ...(scheduledLeadsPerSearch !== undefined && { scheduledLeadsPerSearch }),
         ...(readingScriptPrompt !== undefined && { readingScriptPrompt: readingScriptPrompt || null }),
+        ...(aiProvider !== undefined && { aiProvider }),
+        ...(aiModelGemini !== undefined && { aiModelGemini: aiModelGemini || null }),
+        ...(aiModelClaude !== undefined && { aiModelClaude: aiModelClaude || null }),
+        ...(aiModelOpenai !== undefined && { aiModelOpenai: aiModelOpenai || null }),
+        ...(strategicAnalysisPrompt !== undefined && { strategicAnalysisPrompt: strategicAnalysisPrompt || null }),
         updatedAt: new Date(),
       },
       create: {
@@ -188,6 +203,11 @@ export async function PUT(request: Request) {
       scheduledSearchHour: settings.scheduledSearchHour,
       scheduledLeadsPerSearch: settings.scheduledLeadsPerSearch,
       readingScriptPrompt: settings.readingScriptPrompt,
+      aiProvider: (settings as Record<string, unknown>).aiProvider ?? "gemini",
+      aiModelGemini: (settings as Record<string, unknown>).aiModelGemini ?? null,
+      aiModelClaude: (settings as Record<string, unknown>).aiModelClaude ?? null,
+      aiModelOpenai: (settings as Record<string, unknown>).aiModelOpenai ?? null,
+      strategicAnalysisPrompt: (settings as Record<string, unknown>).strategicAnalysisPrompt ?? null,
     });
   } catch (error) {
     console.error("Error updating CRM settings:", error);

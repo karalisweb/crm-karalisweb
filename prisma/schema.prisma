@@ -604,7 +604,14 @@ model Settings {
   scheduledSearchHour      Int    @default(2)  @map("scheduled_search_hour")
   scheduledLeadsPerSearch  Int    @default(50) @map("scheduled_leads_per_search")
 
-  // Prompt template per script di lettura video (Gemini)
+  // AI Configuration
+  aiProvider               String   @default("gemini") @map("ai_provider") // gemini | claude | openai
+  aiModelGemini            String?  @map("ai_model_gemini")   // es. gemini-2.5-flash
+  aiModelClaude            String?  @map("ai_model_claude")   // es. claude-sonnet-4-6
+  aiModelOpenai            String?  @map("ai_model_openai")   // es. gpt-4o
+
+  // Prompt templates
+  strategicAnalysisPrompt  String?  @map("strategic_analysis_prompt") @db.Text
   readingScriptPrompt      String?  @map("reading_script_prompt") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")

@@ -26,11 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3 } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
 import { CrmConfigTab } from "@/components/settings/crm-config-tab";
 import { ScheduledSearchesTab } from "@/components/settings/scheduled-searches-tab";
 import { ScoringConfigTab } from "@/components/settings/scoring-config-tab";
+import { AiConfigTab } from "@/components/settings/ai-config-tab";
 
 interface User {
   id: string;
@@ -186,21 +187,6 @@ export default function SettingsPage() {
     }
   }
 
-  async function testMetaConnection() {
-    try {
-      toast.info("Test Meta in corso...");
-      const res = await fetch("/api/settings/test-meta");
-      const data = await res.json();
-      if (data.success) {
-        toast.success(data.message || "Connessione Meta OK");
-      } else {
-        toast.error(data.message || "Connessione Meta fallita");
-      }
-    } catch (error) {
-      toast.error("Errore nel test connessione Meta");
-    }
-  }
-
   async function testGeminiConnection() {
     try {
       toast.info("Test Gemini in corso...");
@@ -301,6 +287,10 @@ export default function SettingsPage() {
           <TabsTrigger value="search" className="gap-2">
             <Search className="h-4 w-4" />
             Ricerca
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            AI
           </TabsTrigger>
           <TabsTrigger value="crm" className="gap-2">
             <Target className="h-4 w-4" />
@@ -531,27 +521,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Meta Ad Library */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Meta Ad Library</CardTitle>
-              <CardDescription>
-                Verifica Meta Ads attive dei prospect (Facebook/Instagram). Usa il token Apify — nessun token Meta necessario.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                <p>Questo modulo usa l&apos;actor Apify <strong>facebook-ads-scraper</strong> per cercare nella Meta Ad Library pubblica.</p>
-                <p className="mt-1 text-muted-foreground">Richiede solo il token Apify (configurato sopra).</p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={testMetaConnection} variant="outline">
-                  Test Connessione
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Google Gemini AI */}
           <Card>
             <CardHeader>
@@ -758,6 +727,11 @@ export default function SettingsPage() {
         {/* TAB RICERCA */}
         <TabsContent value="search" className="space-y-4">
           <SearchConfigTab />
+        </TabsContent>
+
+        {/* TAB AI */}
+        <TabsContent value="ai" className="space-y-4">
+          <AiConfigTab />
         </TabsContent>
 
         {/* TAB CRM */}
