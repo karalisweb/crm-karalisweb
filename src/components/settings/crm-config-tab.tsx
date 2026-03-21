@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Save, RotateCcw, Target, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2, Video, Mail, CalendarClock, FileText } from "lucide-react";
+import { DEFAULT_READING_SCRIPT_PROMPT } from "@/lib/prompts";
 
 interface CrmSettings {
   scoreThreshold: number;
@@ -481,27 +482,37 @@ export function CrmConfigTab() {
             <CardTitle>Prompt Script di Lettura</CardTitle>
           </div>
           <CardDescription>
-            Il prompt inviato a Gemini per generare lo script video. Usa le variabili tra doppie graffe per i dati dinamici del lead.
+            Il prompt inviato a Gemini per generare lo script video. Le variabili tra {`{{}}`} vengono sostituite con i dati reali del lead.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Textarea
-            value={settings.readingScriptPrompt || ""}
-            onChange={(e) => setSettings({ ...settings, readingScriptPrompt: e.target.value || null })}
-            placeholder="Lascia vuoto per usare il prompt predefinito..."
-            rows={16}
-            className="font-mono text-sm"
+            value={settings.readingScriptPrompt || DEFAULT_READING_SCRIPT_PROMPT}
+            onChange={(e) => setSettings({ ...settings, readingScriptPrompt: e.target.value })}
+            rows={20}
+            className="font-mono text-xs leading-relaxed"
           />
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p className="font-medium">Variabili disponibili:</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSettings({ ...settings, readingScriptPrompt: DEFAULT_READING_SCRIPT_PROMPT })}
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              Ripristina Default
+            </Button>
+          </div>
+          <div className="text-xs text-muted-foreground space-y-1.5 bg-muted/30 rounded-lg p-3">
+            <p className="font-medium">Variabili disponibili (sostituite automaticamente):</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5">
               <span><code className="text-primary">{`{{CHI_PARLA}}`}</code> — nome e ruolo speaker</span>
               <span><code className="text-primary">{`{{PROSPECT_NAME}}`}</code> — nome del lead</span>
               <span><code className="text-primary">{`{{PROSPECT_WEBSITE}}`}</code> — sito web</span>
               <span><code className="text-primary">{`{{OPPORTUNITY_SCORE}}`}</code> — score 0-100</span>
-              <span><code className="text-primary">{`{{ERROR_PATTERN}}`}</code> — pattern di errore trovato</span>
-              <span><code className="text-primary">{`{{CLICHE}}`}</code> — cliche trovato</span>
+              <span><code className="text-primary">{`{{ERROR_PATTERN}}`}</code> — pattern di errore</span>
+              <span><code className="text-primary">{`{{CLICHE}}`}</code> — cliché trovato</span>
               <span><code className="text-primary">{`{{STRATEGIC_NOTE}}`}</code> — nota strategica</span>
+              <span><code className="text-primary">{`{{PROBLEMI_SITO}}`}</code> — lista problemi specifici dall&apos;audit</span>
               <span><code className="text-primary">{`{{ATTO_1}}`}</code> ... <code className="text-primary">{`{{ATTO_4}}`}</code> — i 4 atti del teleprompter</span>
               <span><code className="text-primary">{`{{CUSTOM_INSTRUCTIONS}}`}</code> — istruzioni aggiuntive</span>
             </div>
@@ -539,12 +550,14 @@ export function CrmConfigTab() {
 
       <Separator className="my-8" />
 
-      {/* Maintenance Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-muted-foreground" />
+      {/* Maintenance Section — collassabile */}
+      <details className="group">
+        <summary className="flex items-center gap-2 cursor-pointer list-none select-none py-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Wrench className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Manutenzione</h2>
-        </div>
+          <span className="text-xs ml-2">(click per espandere)</span>
+        </summary>
+      <div className="space-y-4 mt-4">
 
         {/* Audit Stats */}
         <Card>
@@ -722,6 +735,7 @@ export function CrmConfigTab() {
           </CardContent>
         </Card>
       </div>
+      </details>
     </div>
   );
 }
