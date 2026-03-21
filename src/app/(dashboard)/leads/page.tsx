@@ -31,6 +31,7 @@ import {
   Maximize2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AddManualProspect } from "@/components/leads/add-manual-prospect";
 
 function getScoreBorderClass(score: number | null): string {
   if (score === null) return "border-l-4 border-l-muted";
@@ -895,13 +896,16 @@ function LeadsPageContent() {
             {total} lead analizzati (sito + audit)
           </p>
         </div>
-        <Link
-          href="/search"
-          className="inline-flex items-center justify-center h-9 px-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
-        >
-          <Plus className="h-4 w-4 md:mr-2" />
-          <span className="hidden md:inline">Nuova Ricerca</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <AddManualProspect />
+          <Link
+            href="/search"
+            className="inline-flex items-center justify-center h-9 px-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
+          >
+            <Plus className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Nuova Ricerca</span>
+          </Link>
+        </div>
       </div>
 
       {/* Filtri e toggle vista */}

@@ -5,7 +5,10 @@ import { startGoogleMapsSearch, getSearchResults, importSearchResults, checkRunS
 export async function GET() {
   try {
     const searches = await db.search.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { sortOrder: { sort: "asc", nulls: "last" } },
+        { createdAt: "desc" },
+      ],
       take: 50,
     });
 

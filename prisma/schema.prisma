@@ -71,6 +71,8 @@ model Lead {
   // CRM Pipeline
   pipelineStage     PipelineStage @default(DA_ANALIZZARE) @map("pipeline_stage")
   outreachChannel   String?       @map("outreach_channel") // "WA" | "EMAIL"
+  channelHistory    Json?         @map("channel_history") // [{channel, setAt, reason}]
+  email             String?       // Email del prospect (per fallback invio)
   lostReason        LostReason?   @map("lost_reason")
   lostReasonNotes   String?       @map("lost_reason_notes")
 
@@ -124,8 +126,16 @@ model Lead {
   videoViewsCount     Int         @default(0) @map("video_views_count")
   videoTrackingToken  String?     @unique @map("video_tracking_token")
   videoYoutubeUrl     String?     @map("video_youtube_url")
+  videoYoutubeId      String?     @map("video_youtube_id")
+  videoTellaUrl       String?     @map("video_tella_url")
   videoLandingUrl     String?     @map("video_landing_url")
   videoLandingSlug    String?     @map("video_landing_slug")
+  landingPuntoDolore  String?     @map("landing_punto_dolore") @db.Text
+
+  // YouTube player tracking (eventi dalla landing page)
+  videoFirstPlayAt    DateTime?   @map("video_first_play_at")
+  videoMaxWatchPercent Int?       @map("video_max_watch_percent")
+  videoCompletedAt    DateTime?   @map("video_completed_at")
 
   // ==========================================
   // FOLLOW-UP TRACKING
@@ -274,12 +284,14 @@ model Search {
   leadsFound      Int          @default(0) @map("leads_found")
   leadsWithWebsite Int         @default(0) @map("leads_with_website")
   errorMessage    String?      @map("error_message")
+  sortOrder       Int?         @map("sort_order") // Ordine manuale drag & drop
   createdAt       DateTime     @default(now()) @map("created_at")
   completedAt     DateTime?    @map("completed_at")
 
   // Relazione
   leads           Lead[]
 
+  @@index([sortOrder], name: "idx_searches_sort_order")
   @@map("searches")
 }
 
@@ -443,6 +455,9 @@ enum ActivityType {
   RESPONSE_RECEIVED // Risposta ricevuta dal prospect
   VIDEO_VIEWED      // Il prospect ha visto il video
   QUALIFICATION     // Azione di qualificazione (Daniela)
+  WHATSAPP_SENT     // Messaggio WhatsApp inviato
+  EMAIL_OUTREACH    // Email outreach inviata dal CRM
+  CHANNEL_CHANGED   // Cambio canale comunicazione (WA->Email o viceversa)
 }
 
 enum CallOutcome {

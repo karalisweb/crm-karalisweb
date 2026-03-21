@@ -20,6 +20,8 @@ import { PipelineStageSelector } from "@/components/leads/pipeline-stage-selecto
 import { GeminiAnalysisCard } from "@/components/leads/gemini-analysis-card";
 import { AdsInvestigationButton } from "@/components/leads/ads-investigation-button";
 import { VideoTrackingSection } from "@/components/leads/video-tracking-section";
+import { OutreachSender } from "@/components/leads/outreach-sender";
+import { ReadingScriptCard } from "@/components/leads/reading-script-card";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { timeAgo } from "@/lib/date-utils";
 
@@ -282,6 +284,20 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             videoLandingUrl={lead.videoLandingUrl ?? null}
             videoLandingSlug={lead.videoLandingSlug ?? null}
             videoSentAt={lead.videoSentAt?.toISOString() ?? null}
+            videoFirstPlayAt={lead.videoFirstPlayAt?.toISOString() ?? null}
+            videoMaxWatchPercent={lead.videoMaxWatchPercent ?? null}
+            videoCompletedAt={lead.videoCompletedAt?.toISOString() ?? null}
+          />
+
+          {/* Invio Messaggio WA/Email */}
+          <OutreachSender
+            leadId={lead.id}
+            leadName={lead.name}
+            whatsappNumber={lead.whatsappNumber}
+            email={(lead as Record<string, unknown>).email as string | null}
+            outreachChannel={lead.outreachChannel}
+            landingUrl={lead.videoLandingUrl}
+            phone={lead.phone}
           />
         </TabsContent>
 
@@ -295,6 +311,16 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             adsCheckedAt={lead.adsCheckedAt?.toISOString() ?? null}
             googleAdsCopy={lead.googleAdsCopy}
             metaAdsCopy={lead.metaAdsCopy}
+          />
+
+          {/* Script di Lettura per Video */}
+          <ReadingScriptCard
+            leadId={lead.id}
+            leadName={lead.name}
+            hasGeminiAnalysis={!!lead.geminiAnalyzedAt}
+            existingScript={
+              (lead.geminiAnalysis as Record<string, unknown>)?.readingScript as string | null ?? null
+            }
           />
 
           {lead.website && (

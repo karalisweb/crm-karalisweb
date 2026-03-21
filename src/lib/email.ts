@@ -161,6 +161,49 @@ Nota importante:
   }
 }
 
+// Invia email di outreach a un prospect
+export async function sendOutreachEmail(
+  to: string,
+  subject: string,
+  body: string,
+): Promise<boolean> {
+  const fromEmail = process.env.SMTP_FROM_OUTREACH || process.env.SMTP_USER || 'alessio@karalisweb.net';
+  const fromName = process.env.SMTP_FROM_NAME || 'Alessio Loi - Karalisweb';
+
+  // Converti il body plain-text in HTML con formattazione base
+  const htmlBody = body
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color: #f5a623;">$1</a>');
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #333;">
+  ${htmlBody}
+</body>
+</html>`.trim();
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to,
+      subject,
+      text: body,
+      html,
+    });
+
+    console.log(`[EMAIL] Outreach inviato a ${to}, messageId: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error('[EMAIL] Errore invio outreach:', error);
+    return false;
+  }
+}
+
 // Invia email per reset password
 export async function sendPasswordResetEmail(
   to: string,
