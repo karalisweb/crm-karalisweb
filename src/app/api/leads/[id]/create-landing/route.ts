@@ -89,6 +89,7 @@ export async function POST(
       nomeAzienda: lead.name,
       videoYoutubeUrl: lead.videoYoutubeUrl,
       puntoDiDolore,
+      trackingToken: token,
       slug,
     });
 

@@ -12,6 +12,7 @@
  *    - prospect_punto_di_dolore (textarea)
  *    - prospect_video_youtube (url)
  *    - prospect_nome_titolare (testo)
+ *    - prospect_tracking_token (testo)
  * 3. Application Password generata per l'utente admin
  *
  * Variabili .env:
@@ -37,6 +38,7 @@ interface CreateLandingPageParams {
   nomeTitolare?: string;
   videoYoutubeUrl: string;
   puntoDiDolore: string;
+  trackingToken: string;
   slug?: string;
 }
 
@@ -55,12 +57,13 @@ export async function createLandingPage(params: CreateLandingPageParams): Promis
   slug: string;
   url: string;
 }> {
-  const { title, nomeAzienda, nomeTitolare, videoYoutubeUrl, puntoDiDolore, slug } = params;
+  const { title, nomeAzienda, nomeTitolare, videoYoutubeUrl, puntoDiDolore, trackingToken, slug } = params;
 
   const acf: Record<string, string> = {
     prospect_nome_azienda: nomeAzienda,
     prospect_punto_di_dolore: puntoDiDolore,
     prospect_video_youtube: videoYoutubeUrl,
+    prospect_tracking_token: trackingToken,
   };
 
   if (nomeTitolare) {
