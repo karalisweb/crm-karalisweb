@@ -1,14 +1,13 @@
 /**
  * WordPress REST API Client
  *
- * Crea post nel CPT "video_prospect" su karalisweb.net
+ * Crea post nel CPT "prospect" su karalisweb.net
  * tramite WordPress REST API + Application Passwords.
  *
  * Requisiti WordPress:
- * 1. CPT "video_prospect" registrato (via ACF PRO → Post Types)
- *    - slug rewrite: "video"
+ * 1. CPT "prospect" registrato (via ACF → Post Types)
  *    - show_in_rest: true
- * 2. ACF PRO Field Group collegato al CPT con campi:
+ * 2. ACF Field Group "Dati Prospect" collegato al CPT con campi:
  *    - nome_prospect (testo)
  *    - video_youtube_id (testo) — ID video YouTube per embed + tracking
  *    - punto_di_dolore (textarea) — copy personalizzato hero
@@ -78,7 +77,7 @@ export async function createLandingPage(params: CreateLandingPageParams): Promis
     body.slug = slug;
   }
 
-  const response = await fetch(`${WP_URL}/wp-json/wp/v2/video_prospect`, {
+  const response = await fetch(`${WP_URL}/wp-json/wp/v2/prospect`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -94,7 +93,7 @@ export async function createLandingPage(params: CreateLandingPageParams): Promis
       throw new Error("Autenticazione WordPress fallita — verifica WP_USER e WP_APP_PASSWORD");
     }
     if (response.status === 404) {
-      throw new Error("CPT 'video_prospect' non trovato — verifica che sia registrato con show_in_rest: true");
+      throw new Error("CPT 'prospect' non trovato — verifica che sia registrato con show_in_rest: true");
     }
     throw new Error(`WordPress API error ${response.status}: ${errorText}`);
   }
@@ -112,7 +111,7 @@ export async function createLandingPage(params: CreateLandingPageParams): Promis
  * Elimina un Video Prospect da WordPress
  */
 export async function deleteLandingPage(wpPostId: number): Promise<void> {
-  const response = await fetch(`${WP_URL}/wp-json/wp/v2/video_prospect/${wpPostId}`, {
+  const response = await fetch(`${WP_URL}/wp-json/wp/v2/prospect/${wpPostId}`, {
     method: "DELETE",
     headers: { Authorization: getAuthHeader() },
     signal: AbortSignal.timeout(10000),

@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
  * Testa la connessione WordPress:
  * 1. Verifica che le credenziali siano configurate
  * 2. Chiama WP REST API per verificare autenticazione
- * 3. Verifica che il CPT video_prospect esista
+ * 3. Verifica che il CPT prospect esista
  */
 export async function GET() {
   try {
@@ -51,8 +51,8 @@ export async function GET() {
     const userData = await userRes.json();
     const userName = userData.name || userData.slug || wpUser;
 
-    // Step 2: Verifica CPT video_prospect
-    const cptRes = await fetch(`${wpUrl}/wp-json/wp/v2/types/video_prospect`, {
+    // Step 2: Verifica CPT prospect
+    const cptRes = await fetch(`${wpUrl}/wp-json/wp/v2/types/prospect`, {
       headers: { Authorization: authHeader },
       signal: AbortSignal.timeout(10000),
     });
@@ -62,7 +62,7 @@ export async function GET() {
       const cptData = await cptRes.json();
       cptStatus = ` | CPT "${cptData.name}" attivo`;
     } else {
-      cptStatus = " | ⚠️ CPT 'video_prospect' non trovato — crealo in ACF PRO";
+      cptStatus = " | ⚠️ CPT 'prospect' non trovato — crealo in ACF PRO";
     }
 
     return NextResponse.json({
