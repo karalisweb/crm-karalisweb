@@ -34,11 +34,11 @@ services:
     profiles:
       - migrate
 
-  # Sales App
+  # Sales App (build avviene sull'host, Docker solo runner)
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: sales-app
     restart: unless-stopped
     environment:
