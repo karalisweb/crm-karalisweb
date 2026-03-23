@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createLandingPage } from "@/lib/wordpress";
-import { extractYoutubeVideoId } from "@/lib/youtube";
 import { randomUUID } from "crypto";
 import type { GeminiAnalysisResult } from "@/types";
 
 /**
  * POST /api/leads/[id]/create-landing
  *
- * In un click:
+ * Crea landing page su WordPress:
  * 1. Genera token tracking (se non esiste)
- * 2. Estrae YouTube video ID dall'URL
- * 3. Crea il post CPT su WordPress via REST API
+ * 2. Crea il post CPT "prospect" su WordPress via REST API
+ * 3. Compila i campi ACF (nome azienda, punto di dolore, video YouTube)
  * 4. Salva slug e URL nel lead
  */
 export async function POST(
@@ -47,15 +46,6 @@ export async function POST(
       );
     }
 
-    // Estrai video ID
-    const videoId = lead.videoYoutubeId || extractYoutubeVideoId(lead.videoYoutubeUrl);
-    if (!videoId) {
-      return NextResponse.json(
-        { error: "URL YouTube non valido — non riesco a estrarre il video ID" },
-        { status: 400 }
-      );
-    }
-
     // Se la landing esiste già, errore
     if (lead.videoLandingUrl) {
       return NextResponse.json(
@@ -83,7 +73,7 @@ export async function POST(
       }
     }
 
-    // 3. Genera slug dal nome
+    // 3. Genera slug dal nome azienda
     const slug = lead.name
       .toLowerCase()
       .normalize("NFD")
@@ -93,14 +83,12 @@ export async function POST(
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "");
 
-    // 4. Crea post su WordPress
+    // 4. Crea post su WordPress con campi ACF
     const wp = await createLandingPage({
       title: lead.name,
-      nomeProspect: lead.name.split(" ")[0],
-      videoYoutubeId: videoId,
+      nomeAzienda: lead.name,
       videoYoutubeUrl: lead.videoYoutubeUrl,
       puntoDiDolore,
-      trackingToken: token,
       slug,
     });
 
@@ -109,7 +97,7 @@ export async function POST(
       where: { id },
       data: {
         videoTrackingToken: token,
-        videoYoutubeId: videoId,
+        videoYoutubeId: lead.videoYoutubeId,
         videoLandingSlug: wp.slug,
         videoLandingUrl: wp.url,
       },

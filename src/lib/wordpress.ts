@@ -7,21 +7,20 @@
  * Requisiti WordPress:
  * 1. CPT "prospect" registrato (via ACF → Post Types)
  *    - show_in_rest: true
- * 2. ACF Field Group "Dati Prospect" collegato al CPT con campi:
- *    - nome_prospect (testo)
- *    - video_youtube_id (testo) — ID video YouTube per embed + tracking
- *    - punto_di_dolore (textarea) — copy personalizzato hero
- *    - tracking_token (testo)
- *    - video_youtube_url (url) — URL completo YouTube
+ * 2. ACF Field Group "Dati Prospect" con campi:
+ *    - prospect_nome_azienda (testo)
+ *    - prospect_punto_di_dolore (textarea)
+ *    - prospect_video_youtube (url)
+ *    - prospect_nome_titolare (testo)
  * 3. Application Password generata per l'utente admin
  *
  * Variabili .env:
- * - WP_URL=https://karalisweb.net
- * - WP_USER=admin
+ * - WP_URL=https://www.karalisweb.net
+ * - WP_USER=alessioloi
  * - WP_APP_PASSWORD=xxxx xxxx xxxx xxxx
  */
 
-const WP_URL = process.env.WP_URL || "https://karalisweb.net";
+const WP_URL = process.env.WP_URL || "https://www.karalisweb.net";
 const WP_USER = process.env.WP_USER || "";
 const WP_APP_PASSWORD = process.env.WP_APP_PASSWORD || "";
 
@@ -34,11 +33,10 @@ function getAuthHeader(): string {
 
 interface CreateLandingPageParams {
   title: string;
-  nomeProspect: string;
-  videoYoutubeId: string;
+  nomeAzienda: string;
+  nomeTitolare?: string;
   videoYoutubeUrl: string;
   puntoDiDolore: string;
-  trackingToken: string;
   slug?: string;
 }
 
@@ -50,22 +48,24 @@ interface WPPostResponse {
 }
 
 /**
- * Crea un nuovo Video Prospect su WordPress
+ * Crea un nuovo Prospect su WordPress con campi ACF
  */
 export async function createLandingPage(params: CreateLandingPageParams): Promise<{
   wpPostId: number;
   slug: string;
   url: string;
 }> {
-  const { title, nomeProspect, videoYoutubeId, videoYoutubeUrl, puntoDiDolore, trackingToken, slug } = params;
+  const { title, nomeAzienda, nomeTitolare, videoYoutubeUrl, puntoDiDolore, slug } = params;
 
   const acf: Record<string, string> = {
-    nome_prospect: nomeProspect,
-    video_youtube_id: videoYoutubeId,
-    video_youtube_url: videoYoutubeUrl,
-    punto_di_dolore: puntoDiDolore,
-    tracking_token: trackingToken,
+    prospect_nome_azienda: nomeAzienda,
+    prospect_punto_di_dolore: puntoDiDolore,
+    prospect_video_youtube: videoYoutubeUrl,
   };
+
+  if (nomeTitolare) {
+    acf.prospect_nome_titolare = nomeTitolare;
+  }
 
   const body: Record<string, unknown> = {
     title,
@@ -108,7 +108,7 @@ export async function createLandingPage(params: CreateLandingPageParams): Promis
 }
 
 /**
- * Elimina un Video Prospect da WordPress
+ * Elimina un Prospect da WordPress
  */
 export async function deleteLandingPage(wpPostId: number): Promise<void> {
   const response = await fetch(`${WP_URL}/wp-json/wp/v2/prospect/${wpPostId}`, {
