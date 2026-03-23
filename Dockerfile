@@ -24,7 +24,7 @@ RUN npx prisma generate
 
 # Build Next.js (rm -rf .next per evitare cache stale)
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN rm -rf .next && npm run build
+RUN rm -rf .next && NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 # Stage 3: Runner
 FROM node:20-slim AS runner

@@ -58,6 +58,20 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_FROM: ${SMTP_FROM:-noreply@karalisweb.net}
+      # WordPress Landing Page
+      WP_URL: ${WP_URL}
+      WP_USER: ${WP_USER}
+      WP_APP_PASSWORD: ${WP_APP_PASSWORD}
+      # YouTube
+      YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID}
+      YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET}
+      YOUTUBE_REDIRECT_URI: ${YOUTUBE_REDIRECT_URI}
+      YOUTUBE_REFRESH_TOKEN: ${YOUTUBE_REFRESH_TOKEN}
+      # PageSpeed
+      PAGESPEED_API_KEY: ${PAGESPEED_API_KEY}
+      # DataForSEO
+      DATAFORSEO_LOGIN: ${DATAFORSEO_LOGIN}
+      DATAFORSEO_PASSWORD: ${DATAFORSEO_PASSWORD}
     ports:
       - "3003:3000"
     depends_on:
