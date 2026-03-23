@@ -27,6 +27,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/layout/sidebar-context";
+import { VideoOutreachInline } from "@/components/leads/video-outreach-inline";
 import {
   Dialog,
   DialogContent,
@@ -112,6 +113,19 @@ export interface UnifiedLead {
   // Video
   videoScriptData?: unknown;
   scriptRegeneratedAt?: string | null;
+  // Video outreach
+  videoYoutubeUrl?: string | null;
+  videoLandingUrl?: string | null;
+  videoLandingSlug?: string | null;
+  videoTrackingToken?: string | null;
+  landingPuntoDolore?: string | null;
+  videoSentAt?: string | null;
+  videoViewsCount?: number;
+  videoViewedAt?: string | null;
+  videoMaxWatchPercent?: number | null;
+  // Contact
+  email?: string | null;
+  outreachChannel?: string | null;
   // Tier override
   tierOverride?: string | null;
 }
@@ -1386,6 +1400,21 @@ export function UnifiedLeadCard({
                       </p>
                       <p className="text-sm">{lead.danielaNotes}</p>
                     </div>
+                  )}
+
+                  {/* Sezione Completa e Invia (solo variant video) */}
+                  {variant === "video" && (
+                    <VideoOutreachInline
+                      leadId={lead.id}
+                      leadName={lead.name}
+                      phone={lead.phone}
+                      whatsappNumber={lead.whatsappNumber ?? null}
+                      email={lead.email ?? null}
+                      videoYoutubeUrl={lead.videoYoutubeUrl ?? null}
+                      videoLandingUrl={lead.videoLandingUrl ?? null}
+                      landingPuntoDolore={lead.landingPuntoDolore ?? null}
+                      onVideoSent={onAction}
+                    />
                   )}
 
                   {/* Bottoni operativi */}
