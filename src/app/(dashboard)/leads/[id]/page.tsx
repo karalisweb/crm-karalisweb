@@ -287,6 +287,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             videoFirstPlayAt={lead.videoFirstPlayAt?.toISOString() ?? null}
             videoMaxWatchPercent={lead.videoMaxWatchPercent ?? null}
             videoCompletedAt={lead.videoCompletedAt?.toISOString() ?? null}
+            landingPuntoDolore={lead.landingPuntoDolore ?? null}
           />
 
           {/* Invio Messaggio WA/Email */}

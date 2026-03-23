@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2,
   Copy,
@@ -20,6 +21,7 @@ import {
   Upload,
   Play,
   Clock,
+  Target,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,6 +38,7 @@ interface VideoTrackingSectionProps {
   videoFirstPlayAt?: string | null;
   videoMaxWatchPercent?: number | null;
   videoCompletedAt?: string | null;
+  landingPuntoDolore?: string | null;
 }
 
 export function VideoTrackingSection({
@@ -51,6 +54,7 @@ export function VideoTrackingSection({
   videoFirstPlayAt,
   videoMaxWatchPercent,
   videoCompletedAt,
+  landingPuntoDolore,
 }: VideoTrackingSectionProps) {
   const [token, setToken] = useState(videoTrackingToken);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -60,6 +64,8 @@ export function VideoTrackingSection({
   const [landingSlug, setLandingSlug] = useState(videoLandingSlug || "");
   const [creatingLanding, setCreatingLanding] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [puntoDolore, setPuntoDolore] = useState(landingPuntoDolore || "");
+  const [savingPuntoDolore, setSavingPuntoDolore] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const landingCreated = !!landingUrl;
@@ -79,6 +85,23 @@ export function VideoTrackingSection({
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
   }, []);
+
+  const savePuntoDolore = async () => {
+    setSavingPuntoDolore(true);
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ landingPuntoDolore: puntoDolore.trim() }),
+      });
+      if (!res.ok) throw new Error("Errore salvataggio");
+      toast.success("Punto di dolore salvato");
+    } catch {
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setSavingPuntoDolore(false);
+    }
+  };
 
   const saveYoutubeUrl = async () => {
     if (!youtubeUrl.trim()) return;
@@ -294,6 +317,29 @@ export function VideoTrackingSection({
             />
             {savingYoutube && <Loader2 className="h-4 w-4 animate-spin mt-2" />}
           </div>
+        </div>
+
+        {/* Punto di dolore */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium flex items-center gap-1.5">
+            <Target className="h-3.5 w-3.5 text-orange-500" />
+            Punto di dolore
+            {puntoDolore.trim() && <Check className="h-3 w-3 text-green-600" />}
+          </Label>
+          <Textarea
+            value={puntoDolore}
+            onChange={(e) => setPuntoDolore(e.target.value)}
+            onBlur={savePuntoDolore}
+            placeholder="Es: Il vostro sito non comunica cosa vi rende diversi dai competitor..."
+            className="text-sm min-h-[60px] resize-y"
+            disabled={landingCreated}
+          />
+          {savingPuntoDolore && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Salvataggio...
+            </div>
+          )}
         </div>
 
         {/* Step 2: Crea Landing Page (o mostra risultato) */}

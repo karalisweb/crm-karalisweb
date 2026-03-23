@@ -95,6 +95,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       ...(body.videoYoutubeUrl !== undefined && { videoYoutubeUrl: body.videoYoutubeUrl || null }),
       ...(body.videoLandingUrl !== undefined && { videoLandingUrl: body.videoLandingUrl || null }),
       ...(body.videoLandingSlug !== undefined && { videoLandingSlug: body.videoLandingSlug || null }),
+      ...(body.landingPuntoDolore !== undefined && { landingPuntoDolore: body.landingPuntoDolore || null }),
     };
 
     // Use transaction to ensure activity + update are atomic
