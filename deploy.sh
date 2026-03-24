@@ -5,7 +5,7 @@
 # ╠══════════════════════════════════════════════════════════════╣
 # ║ App:              KW Sales CRM                               ║
 # ║ Versione:         (da package.json)                          ║
-# ║ Ultimo update:    2026-03-11                                 ║
+# ║ Ultimo update:    2026-03-24                                 ║
 # ║                                                              ║
 # ║ Cartella locale:  ~/Desktop/Sviluppo App Claude Code/       ║
 # ║                   CRM /sales-app                             ║
@@ -455,15 +455,16 @@ print_success "Push completato"
 # STEP 6: Pull sul VPS (con git stash)
 # ═══════════════════════════════════════════
 
-print_step "Step 6/9 - Pull sul VPS (con stash automatico)..."
-ssh $VPS_HOST "cd $VPS_PATH && git stash --include-untracked 2>/dev/null; git pull origin $BRANCH"
+print_step "Step 6/9 - Pull sul VPS (con stash + pulizia)..."
+# Stash modifiche locali + rimuovi file spuri non tracciati nella root
+ssh $VPS_HOST "cd $VPS_PATH && git stash --include-untracked 2>/dev/null; git clean -f -d --exclude=node_modules --exclude=.next --exclude=logs --exclude=.env* 2>/dev/null; git pull origin $BRANCH"
 print_success "Pull completato"
 
 # ═══════════════════════════════════════════
-# STEP 7: npm install + Prisma generate
+# STEP 7: npm install + Prisma (db push → generate)
 # ═══════════════════════════════════════════
 
-print_step "Step 7/9 - Dipendenze e Prisma generate..."
+print_step "Step 7/9 - Dipendenze + Prisma (schema → client)..."
 
 # npm install solo se package.json è cambiato
 PACKAGE_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff HEAD~1 --name-only 2>/dev/null | grep package.json" 2>/dev/null || echo "")
@@ -475,26 +476,26 @@ else
     print_success "package.json invariato, skip npm install"
 fi
 
-# Prisma generate + db push (sempre necessario per CRM)
-ssh $VPS_HOST "cd $VPS_PATH && npx prisma generate"
-print_success "Prisma client generato"
-
-# Sincronizza schema DB (se ci sono nuovi campi)
+# PRIMA sincronizza schema DB (nuovi campi/tabelle)
 SCHEMA_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff HEAD~1 --name-only 2>/dev/null | grep schema.prisma" 2>/dev/null || echo "")
 if [ -n "$SCHEMA_CHANGED" ]; then
     echo -e "  ${CYAN}schema.prisma modificato → prisma db push${NC}"
-    ssh $VPS_HOST "cd $VPS_PATH && npx prisma db push"
+    ssh $VPS_HOST "cd $VPS_PATH && npx prisma db push --accept-data-loss"
     print_success "Database sincronizzato"
 else
     print_success "schema.prisma invariato, skip db push"
 fi
+
+# POI genera il client Prisma (riflette lo schema aggiornato)
+ssh $VPS_HOST "cd $VPS_PATH && npx prisma generate"
+print_success "Prisma client generato"
 
 # ═══════════════════════════════════════════
 # STEP 8: Build Next.js sul server
 # ═══════════════════════════════════════════
 
 print_step "Step 8/9 - Build Next.js sul server..."
-ssh $VPS_HOST "cd $VPS_PATH && npm run build"
+ssh $VPS_HOST "cd $VPS_PATH && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build"
 print_success "Build completata"
 
 # ═══════════════════════════════════════════
