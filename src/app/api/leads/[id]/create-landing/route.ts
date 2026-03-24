@@ -31,12 +31,22 @@ export async function POST(
         videoLandingUrl: true,
         videoLandingSlug: true,
         landingPuntoDolore: true,
+        puntoDoloreLungo: true,
+        scriptApprovedAt: true,
         geminiAnalysis: true,
       },
     });
 
     if (!lead) {
       return NextResponse.json({ error: "Lead non trovato" }, { status: 404 });
+    }
+
+    // Gate check: script deve essere approvato (catena 2-prompt)
+    if (!lead.scriptApprovedAt) {
+      return NextResponse.json(
+        { error: "Devi prima approvare lo script video (Step 2)" },
+        { status: 400 }
+      );
     }
 
     if (!lead.videoYoutubeUrl) {
@@ -64,8 +74,8 @@ export async function POST(
       });
     }
 
-    // 2. Punto di dolore: campo manuale > fallback da Gemini
-    let puntoDiDolore = lead.landingPuntoDolore || "";
+    // 2. Punto di dolore: puntoDoloreLungo (v2) > landingPuntoDolore (legacy) > fallback Gemini
+    let puntoDiDolore = lead.puntoDoloreLungo || lead.landingPuntoDolore || "";
     if (!puntoDiDolore && lead.geminiAnalysis) {
       const gemini = lead.geminiAnalysis as unknown as GeminiAnalysisResult;
       if (gemini.primary_error_pattern) {

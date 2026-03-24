@@ -7,9 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw, Sparkles, FileText, Cpu } from "lucide-react";
+import { Loader2, Save, RotateCcw, Sparkles, FileText, Cpu, Search, Pen } from "lucide-react";
 import { DEFAULT_READING_SCRIPT_PROMPT } from "@/lib/prompts";
 import { DEFAULT_STRATEGIC_ANALYSIS_PROMPT } from "@/lib/prompts";
+import {
+  DEFAULT_ANALYST_PROMPT,
+  DEFAULT_SCRIPTWRITER_PROMPT,
+  ANALYST_PLACEHOLDERS,
+  SCRIPTWRITER_PLACEHOLDERS,
+} from "@/lib/prompts-v2";
+import { PromptEditor } from "./prompt-editor";
 
 interface AiSettings {
   aiProvider: string;
@@ -18,6 +25,8 @@ interface AiSettings {
   aiModelOpenai: string | null;
   strategicAnalysisPrompt: string | null;
   readingScriptPrompt: string | null;
+  analystPrompt: string | null;
+  scriptwriterPrompt: string | null;
 }
 
 const AI_PROVIDERS = [
@@ -40,6 +49,8 @@ export function AiConfigTab() {
     aiModelOpenai: null,
     strategicAnalysisPrompt: null,
     readingScriptPrompt: null,
+    analystPrompt: null,
+    scriptwriterPrompt: null,
   });
   const [original, setOriginal] = useState<AiSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +72,8 @@ export function AiConfigTab() {
           aiModelOpenai: data.aiModelOpenai || null,
           strategicAnalysisPrompt: data.strategicAnalysisPrompt || null,
           readingScriptPrompt: data.readingScriptPrompt || null,
+          analystPrompt: data.analystPrompt || null,
+          scriptwriterPrompt: data.scriptwriterPrompt || null,
         };
         setSettings(s);
         setOriginal(s);
@@ -89,6 +102,8 @@ export function AiConfigTab() {
           aiModelOpenai: data.aiModelOpenai || null,
           strategicAnalysisPrompt: data.strategicAnalysisPrompt || null,
           readingScriptPrompt: data.readingScriptPrompt || null,
+          analystPrompt: data.analystPrompt || null,
+          scriptwriterPrompt: data.scriptwriterPrompt || null,
         };
         setSettings(s);
         setOriginal(s);
@@ -181,22 +196,76 @@ export function AiConfigTab() {
         </CardContent>
       </Card>
 
-      {/* Prompt Analisi Strategica (Gemini/Claude/OpenAI) */}
-      <Card>
+      {/* ==========================================
+          CATENA 2 PROMPT (V2)
+          ========================================== */}
+
+      {/* Prompt 1 - Analista */}
+      <Card className="border-blue-200 dark:border-blue-800">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Search className="h-5 w-5 text-blue-600" />
+            <CardTitle>Prompt 1 — Analista</CardTitle>
+          </div>
+          <CardDescription>
+            Analizza il sito del prospect e trova punti di dolore concreti, pattern di errore e clich&eacute;.
+            Produce l&apos;output che verr&agrave; validato prima di passare allo Sceneggiatore.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PromptEditor
+            value={settings.analystPrompt || DEFAULT_ANALYST_PROMPT}
+            defaultValue={DEFAULT_ANALYST_PROMPT}
+            placeholders={ANALYST_PLACEHOLDERS}
+            onChange={(v) => setSettings({ ...settings, analystPrompt: v })}
+            rows={24}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Prompt 2 - Sceneggiatore */}
+      <Card className="border-purple-200 dark:border-purple-800">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Pen className="h-5 w-5 text-purple-600" />
+            <CardTitle>Prompt 2 — Sceneggiatore</CardTitle>
+          </div>
+          <CardDescription>
+            Prende l&apos;output approvato dell&apos;Analista e crea lo script video a 4 atti.
+            Alimenta il problema, crea una metafora, toglie le colpe e presenta la soluzione.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PromptEditor
+            value={settings.scriptwriterPrompt || DEFAULT_SCRIPTWRITER_PROMPT}
+            defaultValue={DEFAULT_SCRIPTWRITER_PROMPT}
+            placeholders={SCRIPTWRITER_PLACEHOLDERS}
+            onChange={(v) => setSettings({ ...settings, scriptwriterPrompt: v })}
+            rows={24}
+          />
+        </CardContent>
+      </Card>
+
+      {/* ==========================================
+          PROMPT LEGACY (mantenuti per backward compat)
+          ========================================== */}
+
+      {/* Prompt Analisi Strategica (Legacy) */}
+      <Card className="opacity-60">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle>Prompt Analisi Strategica</CardTitle>
+            <CardTitle>Prompt Analisi Strategica (Legacy)</CardTitle>
           </div>
           <CardDescription>
-            Il system prompt per l&apos;analisi del sito del prospect. Produce: pattern di errore, cliché, nota strategica, teleprompter a 4 atti.
+            Prompt singolo originale (v3.1). Usato per lead gi&agrave; processati. I nuovi lead usano la catena Analista + Sceneggiatore.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Textarea
             value={settings.strategicAnalysisPrompt || DEFAULT_STRATEGIC_ANALYSIS_PROMPT}
             onChange={(e) => setSettings({ ...settings, strategicAnalysisPrompt: e.target.value })}
-            rows={20}
+            rows={12}
             className="font-mono text-xs leading-relaxed"
           />
           <div className="flex gap-2">
@@ -208,10 +277,6 @@ export function AiConfigTab() {
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
               Ripristina Default
             </Button>
-          </div>
-          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
-            <p className="font-medium mb-1">Come funziona:</p>
-            <p>Questo prompt viene inviato come system instruction. I dati del lead (testi homepage, about, servizi, ads) vengono inviati come payload JSON separato. L&apos;AI risponde con un JSON strutturato contenente cliche_found, primary_error_pattern, teleprompter_script (4 atti) e strategic_note.</p>
           </div>
         </CardContent>
       </Card>
@@ -252,7 +317,7 @@ export function AiConfigTab() {
               <span><code className="text-primary">{`{{PROSPECT_WEBSITE}}`}</code> — sito web</span>
               <span><code className="text-primary">{`{{OPPORTUNITY_SCORE}}`}</code> — score 0-100</span>
               <span><code className="text-primary">{`{{ERROR_PATTERN}}`}</code> — pattern di errore strategico</span>
-              <span><code className="text-primary">{`{{CLICHE}}`}</code> — frase cliché trovata sul sito</span>
+              <span><code className="text-primary">{`{{CLICHE}}`}</code> — frase clich&eacute; trovata sul sito</span>
               <span><code className="text-primary">{`{{STRATEGIC_NOTE}}`}</code> — nota strategica</span>
               <span><code className="text-primary">{`{{PROBLEMI_SITO}}`}</code> — problemi strategici dall&apos;analisi AI</span>
               <span><code className="text-primary">{`{{ATTO_1}}`}</code> ... <code className="text-primary">{`{{ATTO_4}}`}</code> — i 4 atti del teleprompter</span>

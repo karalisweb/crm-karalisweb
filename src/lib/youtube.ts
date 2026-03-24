@@ -19,6 +19,7 @@
 
 import { google } from "googleapis";
 import { db } from "./db";
+import { sendVideoViewNotification } from "./email";
 
 const YOUTUBE_CLIENT_ID = process.env.YOUTUBE_CLIENT_ID || "";
 const YOUTUBE_CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET || "";
@@ -157,6 +158,7 @@ export async function recordVideoEvent(
     where: { videoTrackingToken: token },
     select: {
       id: true,
+      name: true,
       videoFirstPlayAt: true,
       videoMaxWatchPercent: true,
       videoCompletedAt: true,
@@ -216,6 +218,13 @@ export async function recordVideoEvent(
         notes: activityNote,
       },
     });
+  }
+
+  // Notifica email: solo al primo play e al complete
+  if (event === "play" && !lead.videoFirstPlayAt) {
+    sendVideoViewNotification(lead.name, lead.id, "play").catch(() => {});
+  } else if (event === "complete" && !lead.videoCompletedAt) {
+    sendVideoViewNotification(lead.name, lead.id, "complete").catch(() => {});
   }
 
   return { ok: true, leadId: lead.id };

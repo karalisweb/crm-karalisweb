@@ -24,6 +24,7 @@ import { OutreachSender } from "@/components/leads/outreach-sender";
 import { ReadingScriptCard } from "@/components/leads/reading-script-card";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { timeAgo } from "@/lib/date-utils";
+import { VideoOutreachStepperWrapper } from "@/components/leads/video-outreach-stepper-wrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ interface LeadPageProps {
 export default async function LeadDetailPage({ params, searchParams }: LeadPageProps) {
   const { id } = await params;
   const { tab } = await searchParams;
-  const validTabs = ["info", "analisi-strategica", "activities"];
+  const validTabs = ["info", "analisi-strategica", "video-outreach", "activities"];
   const defaultTab = tab && validTabs.includes(tab) ? tab : "info";
   // Supporta anche vecchi alias
   const resolvedTab = tab === "ai-analysis" || tab === "analisi-ai"
@@ -134,6 +135,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
         <TabsList>
           <TabsTrigger value="info">Informazioni</TabsTrigger>
           <TabsTrigger value="analisi-strategica">Analisi Strategica</TabsTrigger>
+          <TabsTrigger value="video-outreach">Video Outreach</TabsTrigger>
           <TabsTrigger value="activities">Attivita</TabsTrigger>
         </TabsList>
 
@@ -339,6 +341,18 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
               auditHasFacebookPixel={!!(lead.auditData as Record<string, unknown>)?.tracking && !!((lead.auditData as Record<string, Record<string, unknown>>)?.tracking?.hasFacebookPixel)}
             />
           )}
+        </TabsContent>
+
+        {/* Video Outreach Tab */}
+        <TabsContent value="video-outreach">
+          <Card>
+            <CardHeader>
+              <CardTitle>Video Outreach</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <VideoOutreachStepperWrapper leadId={lead.id} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Activities Tab */}

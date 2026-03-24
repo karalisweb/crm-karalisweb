@@ -204,6 +204,82 @@ export async function sendOutreachEmail(
   }
 }
 
+// Notifica email quando un prospect guarda il video
+export async function sendVideoViewNotification(
+  leadName: string,
+  leadId: string,
+  event: 'play' | 'progress' | 'complete',
+  percent?: number
+): Promise<boolean> {
+  const toEmail = process.env.SMTP_USER || 'alessio@karalisweb.net';
+  const fromEmail = process.env.SMTP_FROM || 'noreply@karalisweb.net';
+  const crmUrl = process.env.NEXTAUTH_URL || 'https://crm.karalisdemo.it';
+
+  let emoji = '▶️';
+  let eventText = 'ha aperto il video';
+  if (event === 'progress' && percent) {
+    emoji = percent >= 75 ? '🔥' : '⏩';
+    eventText = `ha guardato il ${percent}% del video`;
+  } else if (event === 'complete') {
+    emoji = '🎯';
+    eventText = 'ha guardato il video FINO ALLA FINE';
+  }
+
+  const subject = `${emoji} ${leadName} ${eventText}`;
+  const leadUrl = `${crmUrl}/leads/${leadId}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin: 0; padding: 0; background-color: #0f1419; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0f1419;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 480px; margin: 0 auto; background-color: #192230; border-radius: 16px; overflow: hidden;">
+          <tr>
+            <td style="padding: 32px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 16px;">${emoji}</div>
+              <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 20px;">${leadName}</h1>
+              <p style="margin: 0 0 24px; color: #f5a623; font-size: 18px; font-weight: 600;">${eventText}</p>
+              <p style="margin: 0 0 24px; color: #8899a6; font-size: 14px;">
+                ${new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' })}
+              </p>
+              <a href="${leadUrl}" style="display: inline-block; background-color: #f5a623; color: #0f1419; text-decoration: none; font-weight: 600; font-size: 16px; padding: 14px 32px; border-radius: 8px;">
+                Apri Lead nel CRM
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px 32px; background-color: rgba(0,0,0,0.2); text-align: center;">
+              <p style="margin: 0; color: #8899a6; font-size: 12px;">Sales CRM by Karalisweb</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+
+  const text = `${emoji} ${leadName} ${eventText}\n\nApri il lead: ${leadUrl}`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Sales CRM" <${fromEmail}>`,
+      to: toEmail,
+      subject,
+      text,
+      html,
+    });
+    console.log(`[EMAIL] Video notification inviata per ${leadName}, messageId: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error('[EMAIL] Errore invio video notification:', error);
+    return false;
+  }
+}
+
 // Invia email per reset password
 export async function sendPasswordResetEmail(
   to: string,

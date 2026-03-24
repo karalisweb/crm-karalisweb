@@ -86,6 +86,17 @@ model Lead {
   offerSentAt       DateTime?     @map("offer_sent_at")
 
   // ==========================================
+  // 2-PROMPT CHAIN (Analista + Sceneggiatore)
+  // ==========================================
+  analystOutput         Json?       @map("analyst_output")
+  analystApprovedAt     DateTime?   @map("analyst_approved_at")
+  analystApprovedBy     String?     @map("analyst_approved_by")
+  scriptApprovedAt      DateTime?   @map("script_approved_at")
+  scriptApprovedBy      String?     @map("script_approved_by")
+  puntoDoloreBreve      String?     @map("punto_dolore_breve") @db.Text
+  puntoDoloreLungo      String?     @map("punto_dolore_lungo") @db.Text
+
+  // ==========================================
   // VIDEO OUTREACH
   // ==========================================
   // Script video generato dall'app
@@ -613,6 +624,8 @@ model Settings {
   // Prompt templates
   strategicAnalysisPrompt  String?  @map("strategic_analysis_prompt") @db.Text
   readingScriptPrompt      String?  @map("reading_script_prompt") @db.Text
+  analystPrompt            String?  @map("analyst_prompt") @db.Text
+  scriptwriterPrompt       String?  @map("scriptwriter_prompt") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -48,6 +48,8 @@ export async function GET() {
       aiModelClaude: (settings as Record<string, unknown>).aiModelClaude ?? null,
       aiModelOpenai: (settings as Record<string, unknown>).aiModelOpenai ?? null,
       strategicAnalysisPrompt: (settings as Record<string, unknown>).strategicAnalysisPrompt ?? null,
+      analystPrompt: (settings as Record<string, unknown>).analystPrompt ?? null,
+      scriptwriterPrompt: (settings as Record<string, unknown>).scriptwriterPrompt ?? null,
     });
   } catch (error) {
     console.error("Error fetching CRM settings:", error);
@@ -92,6 +94,8 @@ export async function PUT(request: Request) {
       aiModelClaude,
       aiModelOpenai,
       strategicAnalysisPrompt,
+      analystPrompt,
+      scriptwriterPrompt,
     } = body;
 
     // Validazione
@@ -176,6 +180,8 @@ export async function PUT(request: Request) {
         ...(aiModelClaude !== undefined && { aiModelClaude: aiModelClaude || null }),
         ...(aiModelOpenai !== undefined && { aiModelOpenai: aiModelOpenai || null }),
         ...(strategicAnalysisPrompt !== undefined && { strategicAnalysisPrompt: strategicAnalysisPrompt || null }),
+        ...(analystPrompt !== undefined && { analystPrompt: analystPrompt || null }),
+        ...(scriptwriterPrompt !== undefined && { scriptwriterPrompt: scriptwriterPrompt || null }),
         updatedAt: new Date(),
       },
       create: {
@@ -208,6 +214,8 @@ export async function PUT(request: Request) {
       aiModelClaude: (settings as Record<string, unknown>).aiModelClaude ?? null,
       aiModelOpenai: (settings as Record<string, unknown>).aiModelOpenai ?? null,
       strategicAnalysisPrompt: (settings as Record<string, unknown>).strategicAnalysisPrompt ?? null,
+      analystPrompt: (settings as Record<string, unknown>).analystPrompt ?? null,
+      scriptwriterPrompt: (settings as Record<string, unknown>).scriptwriterPrompt ?? null,
     });
   } catch (error) {
     console.error("Error updating CRM settings:", error);

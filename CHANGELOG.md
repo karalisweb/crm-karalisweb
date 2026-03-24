@@ -4,6 +4,93 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.7.0] - 2026-03-24
+
+### Catena 2 Prompt con Gate Manuali (Major Feature)
+
+Il sistema di analisi AI e generazione script video e stato completamente ridisegnato. Il vecchio prompt singolo (che analizzava il sito E generava lo script, spesso inventando dati) e stato sostituito da una catena a 2 prompt con validazione manuale obbligatoria tra ogni passaggio.
+
+#### Nuovo Flusso (5 Step con Gate)
+
+```
+Step 1: Analisi Sito (Prompt 1 "Analista") -> Approva/Modifica/Rigenera
+Step 2: Script Video (Prompt 2 "Sceneggiatore") -> Approva/Modifica/Rigenera
+Step 3: YouTube URL
+Step 4: Landing Page
+Step 5: Invio WhatsApp/Email
+```
+
+Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
+
+#### Prompt 1 "Analista"
+- Ri-scrapa il sito (HTML fresco, non dati cache)
+- Analizza brand positioning, cliche, pain points con citazioni ESATTE
+- Genera automaticamente **punto di dolore breve** (per WA) e **lungo** (per landing page)
+- Output strutturato con severity per ogni pain point
+
+#### Prompt 2 "Sceneggiatore"
+- Riceve SOLO l'output approvato del Prompt 1 (non inventa nulla)
+- Genera script video a 4 atti (Ghiaccio, Crimine, Soldi, Soluzione)
+- Alimenta il problema con metafora, toglie le colpe, presenta la soluzione
+
+#### Editor Prompt nelle Impostazioni
+- **Impostazioni > AI**: 2 nuovi editor per Prompt 1 e Prompt 2
+- **Pill cliccabili**: inseriscono placeholder (`{{home_text}}`, `{{analyst_output}}`, ecc.) alla posizione del cursore
+- **Ripristina Default**: per tornare al prompt originale
+- I prompt vecchi (Legacy v3.1) restano disponibili per backward compatibility
+
+#### Stepper Video Outreach (Lead Detail)
+- **Nuovo tab "Video Outreach"** nella pagina dettaglio lead
+- Stepper verticale a 5 step con stati: bloccato (grigio + lucchetto), attivo (blu + ring), completato (verde + check)
+- Ogni step espandibile con contenuto specifico e azioni
+- Step 1-2: bottoni Approva / Modifica / Rigenera + Note
+- Step 3: input YouTube URL
+- Step 4: anteprima punto di dolore + creazione landing
+- Step 5: selezione canale WA/Email + invio
+
+#### Pagina Fare Video Rinnovata
+- Ogni lead mostra **5 pallini di progresso** (step 1-5)
+- Badge "X/5" con step corrente
+- Ordinamento: lead con meno step completati in cima
+- Click su card apre direttamente il tab Video Outreach
+
+### Nuovi Campi Database (Lead)
+- `analystOutput` (Json) — output Prompt 1
+- `analystApprovedAt` / `analystApprovedBy` — approvazione Step 1
+- `scriptApprovedAt` / `scriptApprovedBy` — approvazione Step 2
+- `puntoDoloreBreve` (Text) — versione breve per WhatsApp
+- `puntoDoloreLungo` (Text) — versione lunga per landing page
+
+### Nuovi Campi Database (Settings)
+- `analystPrompt` (Text) — prompt personalizzato Analista
+- `scriptwriterPrompt` (Text) — prompt personalizzato Sceneggiatore
+
+### Nuove API Routes
+- `POST /api/leads/[id]/run-analyst` — esegue Prompt 1
+- `POST /api/leads/[id]/approve-analyst` — approva/modifica output Prompt 1
+- `POST /api/leads/[id]/run-scriptwriter` — esegue Prompt 2 (gate: Step 1 approvato)
+- `POST /api/leads/[id]/approve-script` — approva/modifica script (gate: Step 1 approvato)
+
+### Modifiche a Route Esistenti
+- `POST /api/leads/[id]/create-landing` — gate check: richiede `scriptApprovedAt`, usa `puntoDoloreLungo`
+- `GET/PUT /api/settings/crm` — supporta `analystPrompt` e `scriptwriterPrompt`
+
+### Nuovi File
+- `src/lib/prompts-v2.ts` — prompt default + placeholder definitions
+- `src/lib/gemini-analyst.ts` — funzione Prompt 1
+- `src/lib/gemini-scriptwriter.ts` — funzione Prompt 2
+- `src/components/settings/prompt-editor.tsx` — editor con pill cliccabili
+- `src/components/leads/video-outreach-stepper.tsx` — stepper a 5 step
+- `src/components/leads/video-outreach-stepper-wrapper.tsx` — wrapper client-side
+
+### Backward Compatibility
+- Lead gia processati con il vecchio flusso continuano a funzionare
+- Tab "Analisi Strategica" resta visibile per reference
+- Il campo `geminiAnalysis` e riusato dal Prompt 2 (stesso formato)
+- I prompt Legacy v3.1 sono ancora configurabili nelle impostazioni
+
+---
+
 ## [3.6.0] - 2026-03-15
 
 ### Ads — Solo Verifica Manuale (Breaking Change)
