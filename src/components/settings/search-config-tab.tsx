@@ -299,18 +299,18 @@ function groupCategoriesByCluster(categories: Category[]): Record<string, Record
     if (!result[cluster][sub]) result[cluster][sub] = [];
     result[cluster][sub].push(cat);
   }
-  // Sort subclusters by priority within each cluster
+  // Sort subclusters by actual priority (from DB, not hardcoded)
   for (const cluster of Object.keys(result)) {
-    const subs = SUBCLUSTER_OPTIONS[cluster] || [];
+    const subEntries = Object.entries(result[cluster]);
+    // Sort by the priority of the first category in each subcluster
+    subEntries.sort((a, b) => {
+      const priA = a[1][0]?.priority || 99;
+      const priB = b[1][0]?.priority || 99;
+      return priA - priB;
+    });
     const ordered: Record<string, Category[]> = {};
-    for (const s of subs) {
-      if (result[cluster][s.label]) {
-        ordered[s.label] = result[cluster][s.label].sort((a, b) => a.priority - b.priority);
-      }
-    }
-    // Add any subclusters not in the predefined list
-    for (const [sub, cats] of Object.entries(result[cluster])) {
-      if (!ordered[sub]) ordered[sub] = cats.sort((a, b) => a.priority - b.priority);
+    for (const [sub, cats] of subEntries) {
+      ordered[sub] = cats.sort((a, b) => a.order - b.order);
     }
     result[cluster] = ordered;
   }
@@ -381,6 +381,47 @@ export function SearchConfigTab({ section = "all" }: { section?: "categories" | 
       }
     } catch {
       toast.error("Errore nell'aggiunta categoria");
+    }
+  }
+
+  async function reorderSubcluster(cluster: string, subKey: string, direction: "up" | "down") {
+    // Get subclusters sorted by priority for this cluster
+    const clusterCats = categories.filter((c) => c.cluster === cluster);
+    const subPriorities: Record<string, number> = {};
+    for (const c of clusterCats) {
+      if (!subPriorities[c.subcluster]) subPriorities[c.subcluster] = c.priority;
+    }
+    const sortedSubs = Object.entries(subPriorities).sort((a, b) => a[1] - b[1]);
+    const idx = sortedSubs.findIndex(([k]) => k === subKey);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sortedSubs.length) return;
+
+    const [, currentPri] = sortedSubs[idx];
+    const [swapKey, swapPri] = sortedSubs[swapIdx];
+
+    // Update all categories in both subclusters
+    const updates: Promise<Response>[] = [];
+    for (const c of clusterCats) {
+      if (c.subcluster === subKey) {
+        updates.push(fetch("/api/settings/search-config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "category", id: c.id, priority: swapPri }),
+        }));
+      } else if (c.subcluster === swapKey) {
+        updates.push(fetch("/api/settings/search-config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "category", id: c.id, priority: currentPri }),
+        }));
+      }
+    }
+    try {
+      await Promise.all(updates);
+      toast.success(`${SUBCLUSTER_LABELS[subKey] || subKey} spostato`);
+      fetchConfig();
+    } catch {
+      toast.error("Errore nel riordino");
     }
   }
 
@@ -693,22 +734,40 @@ export function SearchConfigTab({ section = "all" }: { section?: "categories" | 
                         {clusterCount === 0 ? (
                           <p className="text-xs text-muted-foreground py-3 text-center">Nessuna categoria in questo cluster</p>
                         ) : (
-                          Object.entries(subclusters).map(([subKey, cats]) => {
+                          Object.entries(subclusters).map(([subKey, cats], subIdx, subArr) => {
                             const subLabel = SUBCLUSTER_LABELS[subKey] || subKey;
                             const groupKey = `cluster_${clusterKey}_${subKey}`;
                             const isSubCollapsed = collapsedGroups.has(groupKey);
                             return (
-                              <div key={groupKey} className="border rounded-lg overflow-hidden">
-                                <button
-                                  onClick={() => toggleGroup(groupKey)}
-                                  className="w-full flex items-center justify-between px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
-                                >
-                                  <span className="text-sm font-medium flex items-center gap-2">
-                                    {isSubCollapsed ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-                                    {subLabel}
-                                    <span className="text-xs text-muted-foreground font-normal">({cats.length})</span>
+                              <div key={groupKey} className="border rounded-lg overflow-hidden group/sub">
+                                <div className="flex items-center justify-between px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors">
+                                  <button
+                                    onClick={() => toggleGroup(groupKey)}
+                                    className="flex items-center gap-2 text-left flex-1"
+                                  >
+                                    <span className="text-sm font-medium flex items-center gap-2">
+                                      {isSubCollapsed ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                                      {subLabel}
+                                      <span className="text-xs text-muted-foreground font-normal">({cats.length})</span>
+                                    </span>
+                                  </button>
+                                  <span className="flex items-center gap-0.5 opacity-0 group-hover/sub:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => reorderSubcluster(clusterKey, subKey, "up")}
+                                      className={`p-0.5 rounded text-muted-foreground hover:text-foreground ${subIdx === 0 ? "invisible" : ""}`}
+                                      title="Sposta su"
+                                    >
+                                      <ArrowUp className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => reorderSubcluster(clusterKey, subKey, "down")}
+                                      className={`p-0.5 rounded text-muted-foreground hover:text-foreground ${subIdx === subArr.length - 1 ? "invisible" : ""}`}
+                                      title="Sposta giù"
+                                    >
+                                      <ArrowDown className="h-3.5 w-3.5" />
+                                    </button>
                                   </span>
-                                </button>
+                                </div>
                                 {!isSubCollapsed && (
                                   <div className="px-3 py-2 space-y-0.5">
                                     {cats.map((cat, catIdx) => (
