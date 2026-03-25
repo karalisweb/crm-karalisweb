@@ -26,10 +26,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin, History } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
 import { CrmConfigTab } from "@/components/settings/crm-config-tab";
 import { ScheduledSearchesTab } from "@/components/settings/scheduled-searches-tab";
+import { SearchHistoryTab } from "@/components/settings/search-history-tab";
 import { ScoringConfigTab } from "@/components/settings/scoring-config-tab";
 import { AiConfigTab } from "@/components/settings/ai-config-tab";
 
@@ -724,7 +725,7 @@ export default function SettingsPage() {
         {/* TAB RICERCA */}
         <TabsContent value="search" className="space-y-4">
           <Tabs defaultValue="categorie" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="categorie" className="gap-1.5 text-xs sm:text-sm">
                 <Building2 className="h-3.5 w-3.5" />
                 Categorie
@@ -737,6 +738,10 @@ export default function SettingsPage() {
                 <Clock className="h-3.5 w-3.5" />
                 Programmate
               </TabsTrigger>
+              <TabsTrigger value="storico" className="gap-1.5 text-xs sm:text-sm">
+                <History className="h-3.5 w-3.5" />
+                Storico
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="categorie">
               <SearchConfigTab section="categories" />
@@ -746,6 +751,9 @@ export default function SettingsPage() {
             </TabsContent>
             <TabsContent value="programmate">
               <ScheduledSearchesTab />
+            </TabsContent>
+            <TabsContent value="storico">
+              <SearchHistoryTab />
             </TabsContent>
           </Tabs>
         </TabsContent>

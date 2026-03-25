@@ -87,13 +87,6 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: "SCOUTING",
-    items: [
-      { href: "/search", label: "Nuova Ricerca", icon: Search },
-      { href: "/searches", label: "Ricerche", icon: FolderSearch },
-    ],
-  },
-  {
     title: "ALTRO",
     items: [
       { href: "/archivio", label: "Archivio", icon: Archive },
