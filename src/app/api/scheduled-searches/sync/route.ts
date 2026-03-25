@@ -2,66 +2,96 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 // POST /api/scheduled-searches/sync
-// Genera la coda di ricerche programmate in ordine sequenziale:
 //
-// Ordine: subcluster priority → category order → location order
+// Solo Wave 1. Alterna cluster Casa ↔ Microturismo per subcluster.
 //
-// Es: Infissi (pri 10) → Negozio di infissi × [Ferrara, Forlì, Modena...]
-//                       → Negozio di serramenti × [Ferrara, Forlì, Modena...]
-//     Edilizia Alto (pri 15) → Impresa edile × [Ferrara, Forlì, Modena...]
+// Es: Infissi (Casa, pri 10)
+//       → Negozio di infissi × [Ferrara, Forlì, Modena...]
+//       → Negozio di serramenti × [Ferrara, Forlì, Modena...]
+//       → Fornitore di porte e finestre × [...]
+//       → Installatore di finestre × [...]
+//     Property Manager (Micro, pri 10)
+//       → Gestore di proprietà × [Ferrara, Forlì, Modena...]
+//       → Servizi gestione affitti × [...]
+//       → ...
+//     Edilizia Alto (Casa, pri 15)
+//       → Impresa edile × [...]
+//       → ...
+//     Agenzie Immobiliari (Micro, pri 20)
+//       → ...
+//     Impiantistica (Casa, pri 20)
+//       → ...
+//     Strutture Ricettive (Micro, pri 30)
+//       → ...
+//     Arredo (Casa, pri 25)  ← micro esaurito, continua solo casa
+//     Pavimenti (Casa, pri 30)
 //     ...
-//
-// Wave 1: tutte le categorie attive
-// Wave 2: solo subclusters con priority <= 20
-// Wave 3: niente (distretti, solo ricerca manuale)
 
 export async function POST() {
   try {
     const [categories, locations, existing] = await Promise.all([
       db.searchCategory.findMany({
         where: { active: true },
-        select: { label: true, priority: true, subcluster: true, order: true },
+        select: { label: true, priority: true, subcluster: true, cluster: true, order: true },
         orderBy: [{ priority: "asc" }, { order: "asc" }],
       }),
       db.searchLocation.findMany({
-        where: { active: true },
-        select: { name: true, wave: true, region: true, order: true },
-        orderBy: [{ wave: "asc" }, { region: "asc" }, { order: "asc" }],
+        where: { active: true, wave: 1 },
+        select: { name: true, region: true, order: true },
+        orderBy: [{ region: "asc" }, { order: "asc" }],
       }),
       db.scheduledSearch.findMany({
         select: { id: true, query: true, location: true, status: true },
       }),
     ]);
 
-    // Soglie priority per wave
-    const wavePriorityThreshold: Record<number, number> = {
-      1: 999, // Wave 1: tutte le categorie attive
-      2: 20,  // Wave 2: solo infissi(10), edilizia_alto(15), impiantistica(20)
-      3: 0,   // Wave 3: niente auto
-    };
+    // Raggruppa categorie per cluster → subcluster (ordinati per priority)
+    type CatInfo = { label: string; order: number };
+    type SubclusterBlock = { subcluster: string; cluster: string; priority: number; categories: CatInfo[] };
 
-    // Separa location per wave
-    const locationsByWave: Record<number, typeof locations> = {};
-    for (const loc of locations) {
-      const w = loc.wave || 1;
-      if (!locationsByWave[w]) locationsByWave[w] = [];
-      locationsByWave[w].push(loc);
+    const subMap = new Map<string, SubclusterBlock>();
+    for (const cat of categories) {
+      const key = `${cat.cluster}:${cat.subcluster}`;
+      if (!subMap.has(key)) {
+        subMap.set(key, {
+          subcluster: cat.subcluster,
+          cluster: cat.cluster,
+          priority: cat.priority,
+          categories: [],
+        });
+      }
+      subMap.get(key)!.categories.push({ label: cat.label, order: cat.order });
     }
 
-    // Genera la coda in ordine sequenziale
-    // priority globale crescente: 1 = prima ricerca da eseguire
+    // Ordina categorie dentro ogni subcluster per order
+    for (const block of subMap.values()) {
+      block.categories.sort((a, b) => a.order - b.order);
+    }
+
+    // Separa per cluster e ordina per priority
+    const casaSubs = Array.from(subMap.values())
+      .filter((b) => b.cluster === "casa")
+      .sort((a, b) => a.priority - b.priority);
+
+    const microSubs = Array.from(subMap.values())
+      .filter((b) => b.cluster === "microturismo")
+      .sort((a, b) => a.priority - b.priority);
+
+    // Alterna Casa ↔ Microturismo (interleave)
+    const orderedBlocks: SubclusterBlock[] = [];
+    let ci = 0, mi = 0;
+    while (ci < casaSubs.length || mi < microSubs.length) {
+      if (ci < casaSubs.length) orderedBlocks.push(casaSubs[ci++]);
+      if (mi < microSubs.length) orderedBlocks.push(microSubs[mi++]);
+    }
+
+    // Genera coda sequenziale
     const desiredCombos = new Map<string, { query: string; location: string; priority: number }>();
     let globalPriority = 1;
 
-    // Per ogni categoria (già ordinata per subcluster priority → order)
-    for (const cat of categories) {
-      // Per ogni wave
-      for (const wave of [1, 2, 3]) {
-        const threshold = wavePriorityThreshold[wave] || 0;
-        if (cat.priority > threshold) continue;
-
-        const waveLocs = locationsByWave[wave] || [];
-        for (const loc of waveLocs) {
+    for (const block of orderedBlocks) {
+      for (const cat of block.categories) {
+        for (const loc of locations) {
           const key = `${cat.label}|||${loc.name}`;
           if (!desiredCombos.has(key)) {
             desiredCombos.set(key, {
@@ -84,7 +114,7 @@ export async function POST() {
       }
     }
 
-    // Anche aggiorna le priority di quelle esistenti che rimangono
+    // Aggiorna priority di quelle esistenti
     const toUpdatePriority: { id: string; priority: number }[] = [];
     for (const ex of existing) {
       const key = `${ex.query}|||${ex.location}`;
@@ -112,7 +142,7 @@ export async function POST() {
       });
     }
 
-    // Update priorities (batch — max 50 per query to avoid timeout)
+    // Update priorities in batches
     for (let i = 0; i < toUpdatePriority.length; i += 50) {
       const batch = toUpdatePriority.slice(i, i + 50);
       await Promise.all(
@@ -127,17 +157,24 @@ export async function POST() {
 
     const remaining = desiredCombos.size;
 
+    // Preview: mostra i primi della coda con indicazione cluster
+    const preview = Array.from(desiredCombos.values())
+      .sort((a, b) => a.priority - b.priority)
+      .slice(0, 15)
+      .map((c, i) => `${i + 1}. ${c.query} — ${c.location}`);
+
+    // Riepilogo blocchi
+    const blockSummary = orderedBlocks.map((b) =>
+      `${b.cluster === "casa" ? "🏠" : "🏡"} ${b.subcluster} (${b.categories.length} cat × ${locations.length} loc = ${b.categories.length * locations.length})`
+    );
+
     return NextResponse.json({
       removed: toRemove.length,
       added: toAdd.length,
       updated: toUpdatePriority.length,
       remaining,
-      removedDetails: toRemove.slice(0, 5).map((s) => `${s.query} — ${s.location}`),
-      addedDetails: toAdd.slice(0, 5).map((c) => `${c.query} — ${c.location}`),
-      queuePreview: Array.from(desiredCombos.values())
-        .sort((a, b) => a.priority - b.priority)
-        .slice(0, 10)
-        .map((c, i) => `${i + 1}. ${c.query} — ${c.location}`),
+      blockSummary,
+      queuePreview: preview,
     });
   } catch (error) {
     console.error("Error syncing scheduled searches:", error);
