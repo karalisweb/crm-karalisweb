@@ -557,13 +557,15 @@ model SearchCategory {
 }
 
 model SearchLocation {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  wave      Int      @default(1)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  name        String   @unique
+  region      String   @default("")         // "Emilia-Romagna", "Veneto", etc.
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  wave        Int      @default(1)
+  isCapoluogo Boolean  @default(true) @map("is_capoluogo") // true = capoluogo provincia, false = città distretto
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("search_locations")
 }

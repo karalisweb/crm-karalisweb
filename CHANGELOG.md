@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.7.0] - 2026-03-24
@@ -93,6 +95,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.6.0] - 2026-03-15
@@ -138,6 +142,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.5.0] - 2026-03-15
@@ -154,6 +160,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Tab Scoring aggiornata: soglia ≥80 = HOT LEAD, esempi aggiornati
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -194,6 +202,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.3.0] - 2026-03-15
@@ -222,6 +232,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.2.1] - 2026-03-15
@@ -237,6 +249,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - **Tab Scoring aggiornata** con nuovi pesi, nuovi esempi e nota sull'implicazione chiave
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -268,6 +282,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.1.1] - 2026-03-15
@@ -284,6 +300,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Dashboard mission API: aggiunto conteggio badge per Cold Leads
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -323,6 +341,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.0.0] - 2026-03-15
@@ -356,6 +376,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.7.0] - 2026-03-14
@@ -372,6 +394,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.6.0] - 2026-03-14
@@ -379,6 +403,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Refactoring: sostituito audit tecnico con Analisi Strategica + Teleprompter Mode. Eliminato codice morto (17 file).
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -388,6 +414,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.5.0] - 2026-03-13
@@ -395,6 +423,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Rimozione Inngest: sostituito con cron API + p-queue per job in background
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -404,6 +434,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.4.0] - 2026-03-11
@@ -411,6 +443,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Auto-Gemini dopo audit + Sidebar redesign per workflow
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -424,6 +458,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.2.0] - 2026-02-22
@@ -436,6 +472,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.1.0] - 2026-02-16
@@ -444,6 +482,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - README.md aggiornato
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -455,6 +495,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.9.0] - 2026-01-27
@@ -464,6 +506,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.8.0] - 2026-01-22
@@ -471,6 +515,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - 2FA con OTP, password reset, RBAC
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -480,6 +526,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.6.0] - 2026-01-20
@@ -487,6 +535,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Sistema commerciale 5 chiamate/giorno
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -496,6 +546,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.4.0] - 2026-01-16
@@ -503,6 +555,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Integrazione PageSpeed Insights API (poi rimossa in v3.0)
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
@@ -512,6 +566,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
+
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.2.0] - 2026-01-14
@@ -519,6 +575,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Setup CRM iniziale, Apify mock mode, Docker, NextAuth v5
 
 ---
+
+## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
 
 ## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 

@@ -50,7 +50,9 @@ interface Category {
 interface Location {
   id: string;
   name: string;
+  region: string;
   wave?: number;
+  isCapoluogo: boolean;
 }
 
 const WAVE_COLORS: Record<number, string> = {
@@ -312,29 +314,44 @@ export default function SearchPage() {
                 disabled={loading}
                 className="h-12 text-base"
               />
-              {/* Quick location chips */}
-              <div className="flex gap-2 flex-wrap pt-1">
+              {/* Location per regione */}
+              <div className="space-y-2 pt-1">
                 {configLoading ? (
-                  <>
+                  <div className="flex gap-2 flex-wrap">
                     {[1, 2, 3, 4].map((i) => (
                       <Skeleton key={i} className="h-6 w-16" />
                     ))}
-                  </>
+                  </div>
                 ) : (
-                  displayLocations.map((loc) => (
-                    <Badge
-                      key={loc.id}
-                      variant={location === loc.name ? "default" : "outline"}
-                      className={`cursor-pointer text-xs transition-colors ${
-                        location === loc.name
-                          ? ""
-                          : WAVE_COLORS[loc.wave || 1] || ""
-                      }`}
-                      onClick={() => handleQuickLocation(loc.name)}
-                    >
-                      {loc.name}
-                    </Badge>
-                  ))
+                  (() => {
+                    const byRegion: Record<string, Location[]> = {};
+                    for (const loc of displayLocations) {
+                      const r = (loc as Location).region || "Altro";
+                      if (!byRegion[r]) byRegion[r] = [];
+                      byRegion[r].push(loc as Location);
+                    }
+                    return Object.entries(byRegion).map(([region, locs]) => (
+                      <div key={region} className="flex items-start gap-2">
+                        <span className="text-[10px] text-muted-foreground font-medium min-w-[90px] pt-1 shrink-0">{region}</span>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {locs.map((loc) => (
+                            <Badge
+                              key={loc.id}
+                              variant={location === loc.name ? "default" : "outline"}
+                              className={`cursor-pointer text-xs transition-colors ${
+                                location === loc.name
+                                  ? ""
+                                  : WAVE_COLORS[loc.wave || 1] || ""
+                              }`}
+                              onClick={() => handleQuickLocation(loc.name)}
+                            >
+                              {loc.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  })()
                 )}
               </div>
             </div>
