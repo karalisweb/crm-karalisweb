@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Building2, MapPin, Search, X, ChevronDown, ChevronRight, Pencil, GripVertical } from "lucide-react";
+import { Plus, Trash2, Building2, MapPin, Search, X, ChevronDown, ChevronRight, Pencil, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -384,6 +384,36 @@ export function SearchConfigTab({ section = "all" }: { section?: "categories" | 
     }
   }
 
+  async function reorderItem(type: "category" | "location", id: string, direction: "up" | "down") {
+    const items = type === "category" ? categories : locations;
+    const sorted = [...items].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((i) => i.id === id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+
+    const current = sorted[idx];
+    const swap = sorted[swapIdx];
+
+    // Swap orders
+    try {
+      await Promise.all([
+        fetch("/api/settings/search-config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, id: current.id, order: swap.order }),
+        }),
+        fetch("/api/settings/search-config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, id: swap.id, order: current.order }),
+        }),
+      ]);
+      fetchConfig();
+    } catch {
+      toast.error("Errore nel riordino");
+    }
+  }
+
   async function updateCategory(id: string, data: Partial<Category>) {
     try {
       const res = await fetch("/api/settings/search-config", {
@@ -681,13 +711,25 @@ export function SearchConfigTab({ section = "all" }: { section?: "categories" | 
                                 </button>
                                 {!isSubCollapsed && (
                                   <div className="px-3 py-2 space-y-0.5">
-                                    {cats.map((cat) => (
+                                    {cats.map((cat, catIdx) => (
                                       <div key={cat.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-muted/40 group text-sm">
                                         <span className="flex items-center gap-2 min-w-0">
                                           <span className="text-base shrink-0">{cat.icon}</span>
                                           <span className="truncate">{cat.label}</span>
                                         </span>
-                                        <span className="flex items-center gap-1 shrink-0">
+                                        <span className="flex items-center gap-0.5 shrink-0">
+                                          <button
+                                            onClick={() => reorderItem("category", cat.id, "up")}
+                                            className={`opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground ${catIdx === 0 ? "invisible" : ""}`}
+                                          >
+                                            <ArrowUp className="h-3.5 w-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => reorderItem("category", cat.id, "down")}
+                                            className={`opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground ${catIdx === cats.length - 1 ? "invisible" : ""}`}
+                                          >
+                                            <ArrowDown className="h-3.5 w-3.5" />
+                                          </button>
                                           <button
                                             onClick={() => setEditingCategory(cat)}
                                             className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
@@ -935,7 +977,7 @@ export function SearchConfigTab({ section = "all" }: { section?: "categories" | 
                                 </button>
                                 {!isRegCollapsed && (
                                   <div className="px-3 py-2 space-y-0.5">
-                                    {cities.map((loc) => (
+                                    {cities.map((loc, locIdx) => (
                                       <div
                                         key={loc.id}
                                         className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-muted/40 group text-sm"
@@ -948,8 +990,19 @@ export function SearchConfigTab({ section = "all" }: { section?: "categories" | 
                                             </span>
                                           )}
                                         </span>
-                                        <span className="flex items-center gap-1 shrink-0">
-                                          {/* Wave selector buttons */}
+                                        <span className="flex items-center gap-0.5 shrink-0">
+                                          <button
+                                            onClick={() => reorderItem("location", loc.id, "up")}
+                                            className={`opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground ${locIdx === 0 ? "invisible" : ""}`}
+                                          >
+                                            <ArrowUp className="h-3.5 w-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => reorderItem("location", loc.id, "down")}
+                                            className={`opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground ${locIdx === cities.length - 1 ? "invisible" : ""}`}
+                                          >
+                                            <ArrowDown className="h-3.5 w-3.5" />
+                                          </button>
                                           {[1, 2, 3].map((w) => (
                                             <button
                                               key={w}

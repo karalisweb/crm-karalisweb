@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Trash2, RotateCcw, Plus, Download, Save, Settings } from "lucide-react";
+import { Loader2, Trash2, RotateCcw, Plus, Download, Save, Settings, RefreshCw } from "lucide-react";
 
 interface ScheduledSearch {
   id: string;
@@ -43,7 +43,7 @@ export function ScheduledSearchesTab() {
   const [loading, setLoading] = useState(true);
   const [newQuery, setNewQuery] = useState("");
   const [newLocation, setNewLocation] = useState("");
-  const [seeding, setSeeding] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Configurazione
   const [config, setConfig] = useState<ScheduledConfig>({
@@ -111,21 +111,21 @@ export function ScheduledSearchesTab() {
     }
   }
 
-  async function seedDefaults() {
-    setSeeding(true);
+  async function syncScheduled() {
+    setSyncing(true);
     try {
-      const res = await fetch("/api/scheduled-searches/seed", { method: "POST" });
+      const res = await fetch("/api/scheduled-searches/sync", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        toast.success(data.message);
+        toast.success(`Sync: ${data.removed} rimosse, ${data.added} aggiunte`);
         fetchSearches();
       } else {
-        toast.error(data.error || "Errore nel caricamento");
+        toast.error(data.error || "Errore nella sincronizzazione");
       }
     } catch {
-      toast.error("Errore nel caricamento lista predefinita");
+      toast.error("Errore nella sincronizzazione");
     } finally {
-      setSeeding(false);
+      setSyncing(false);
     }
   }
 
@@ -312,27 +312,31 @@ export function ScheduledSearchesTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Statistiche */}
-          <div className="flex gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">{queued}</Badge>
-              <span className="text-sm text-muted-foreground">In coda</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">{completed}</Badge>
-              <span className="text-sm text-muted-foreground">Completate</span>
-            </div>
-            {failed > 0 && (
+          {/* Statistiche + Sync */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <Badge variant="destructive">{failed}</Badge>
-                <span className="text-sm text-muted-foreground">Fallite</span>
+                <Badge variant="outline">{queued}</Badge>
+                <span className="text-sm text-muted-foreground">In coda</span>
               </div>
-            )}
-            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{completed}</Badge>
+                <span className="text-sm text-muted-foreground">Completate</span>
+              </div>
+              {failed > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="destructive">{failed}</Badge>
+                  <span className="text-sm text-muted-foreground">Fallite</span>
+                </div>
+              )}
               <span className="text-sm text-muted-foreground">
-                Totale: {searches.length} | ~{nightsRemaining} notti rimanenti
+                ~{nightsRemaining} notti rimanenti
               </span>
             </div>
+            <Button onClick={syncScheduled} variant="outline" size="sm" disabled={syncing}>
+              {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Sincronizza con Categorie/Location
+            </Button>
           </div>
 
           {/* Form aggiunta manuale */}
