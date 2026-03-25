@@ -335,18 +335,6 @@ export function ScheduledSearchesTab() {
             </div>
           </div>
 
-          {/* Azioni rapide */}
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={seedDefaults} variant="outline" disabled={seeding}>
-              {seeding ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Carica Lista Predefinita (39 ricerche)
-            </Button>
-          </div>
-
           {/* Form aggiunta manuale */}
           <div className="flex gap-2 items-end">
             <div className="flex-1">
