@@ -542,13 +542,16 @@ enum OtpType {
 // SEARCH CONFIG - Configurazione ricerche
 // ==========================================
 model SearchCategory {
-  id        String   @id @default(uuid())
-  label     String   @unique
-  icon      String   @default("🏢")
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  label      String   @unique
+  icon       String   @default("🏢")
+  order      Int      @default(0)
+  active     Boolean  @default(true)
+  cluster    String   @default("casa")      // "casa" | "microturismo"
+  subcluster String   @default("altro")     // es. "arredo", "infissi", "edilizia_alto", etc.
+  priority   Int      @default(50)          // 1 = massima priorità, 100 = minima
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("search_categories")
 }

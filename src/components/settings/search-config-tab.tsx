@@ -15,7 +15,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Building2, MapPin, Search, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Building2, MapPin, Search, X, ChevronDown, ChevronRight, Pencil, GripVertical } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Category {
   id: string;
@@ -23,7 +30,52 @@ interface Category {
   icon: string;
   order: number;
   active: boolean;
+  cluster: string;
+  subcluster: string;
+  priority: number;
 }
+
+const CLUSTER_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
+  casa: { label: "Casa", icon: "🏠", color: "text-blue-700 bg-blue-50 border-blue-200" },
+  microturismo: { label: "Microturismo", icon: "🏡", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+};
+
+const SUBCLUSTER_OPTIONS: Record<string, { label: string; priority: number }[]> = {
+  casa: [
+    { label: "infissi", priority: 10 },
+    { label: "edilizia_alto", priority: 15 },
+    { label: "impiantistica", priority: 20 },
+    { label: "arredo", priority: 25 },
+    { label: "pavimenti", priority: 30 },
+    { label: "clima", priority: 35 },
+    { label: "edilizia_finiture", priority: 40 },
+    { label: "edilizia_nicchia", priority: 45 },
+    { label: "macchinari", priority: 50 },
+    { label: "giardinaggio", priority: 55 },
+  ],
+  microturismo: [
+    { label: "property_manager", priority: 10 },
+    { label: "agenzie_immobiliari", priority: 20 },
+    { label: "strutture_ricettive", priority: 30 },
+  ],
+};
+
+const SUBCLUSTER_LABELS: Record<string, string> = {
+  infissi: "Infissi e Serramenti",
+  edilizia_alto: "Edilizia — Alto Volume",
+  impiantistica: "Impiantistica",
+  arredo: "Arredo",
+  pavimenti: "Pavimenti e Rivestimenti",
+  clima: "Clima",
+  edilizia_finiture: "Edilizia — Finiture",
+  edilizia_nicchia: "Edilizia — Nicchia",
+  macchinari: "Macchinari Edilizia",
+  giardinaggio: "Giardinaggio",
+  property_manager: "Case Vacanza e Property Manager",
+  agenzie_immobiliari: "Agenzie Immobiliari",
+  strutture_ricettive: "Strutture Ricettive Boutique",
+  altro: "Altro",
+};
 
 interface Location {
   id: string;
@@ -238,40 +290,30 @@ function groupLocationsByRegion(locations: Location[]): Record<string, (Location
   return sorted;
 }
 
-// Raggruppa categorie per tipo in base a keyword nel nome
-function groupCategories(categories: Category[]): Record<string, Category[]> {
-  const groups: Record<string, string[]> = {
-    "Arredamento & Design": ["arredamento", "interior", "design", "mobili", "showroom", "architett", "consulente di arredamento"],
-    "Salute & Benessere": ["dentist", "odontoiat", "ottic", "occhiali", "fisioterapi", "radiolog", "diagnostica", "sanitari", "medicali", "cliniche"],
-    "Beauty & Fitness": ["estetico", "bellezza", "salone", "fitness", "personal trainer", "parrucchi"],
-    "Ristorazione & Hospitality": ["ristorante", "hotel", "b&b", "bed", "affittacamere", "agriturismo", "gourmet", "fine dining"],
-    "Edilizia & Impiantistica": ["infissi", "serrament", "finestre", "edil", "costruzion", "impianti", "condizionamento", "domotici", "elettric", "piscin", "ceramich", "ceramica", "materiali"],
-    "Immobiliare": ["immobiliar", "property", "affitti"],
-    "Eventi & Wedding": ["event", "matrimoni", "wedding", "organizzat"],
-    "Servizi & Noleggio": ["noleggio", "piattaforme", "sollevamento", "attrezzatur", "macchinari"],
-    "Verde & Outdoor": ["giardinier", "paesaggio", "manutenzione del verde"],
-    "Moda & Artigianato": ["sart", "laboratorio", "ceramica"],
-  };
-
-  const result: Record<string, Category[]> = {};
-  const assigned = new Set<string>();
-
-  for (const [groupName, keywords] of Object.entries(groups)) {
-    const matching = categories.filter((cat) =>
-      keywords.some((kw) => cat.label.toLowerCase().includes(kw)) && !assigned.has(cat.id)
-    );
-    if (matching.length > 0) {
-      result[groupName] = matching;
-      matching.forEach((m) => assigned.add(m.id));
+function groupCategoriesByCluster(categories: Category[]): Record<string, Record<string, Category[]>> {
+  const result: Record<string, Record<string, Category[]>> = {};
+  for (const cat of categories) {
+    const cluster = cat.cluster || "casa";
+    const sub = cat.subcluster || "altro";
+    if (!result[cluster]) result[cluster] = {};
+    if (!result[cluster][sub]) result[cluster][sub] = [];
+    result[cluster][sub].push(cat);
+  }
+  // Sort subclusters by priority within each cluster
+  for (const cluster of Object.keys(result)) {
+    const subs = SUBCLUSTER_OPTIONS[cluster] || [];
+    const ordered: Record<string, Category[]> = {};
+    for (const s of subs) {
+      if (result[cluster][s.label]) {
+        ordered[s.label] = result[cluster][s.label].sort((a, b) => a.priority - b.priority);
+      }
     }
+    // Add any subclusters not in the predefined list
+    for (const [sub, cats] of Object.entries(result[cluster])) {
+      if (!ordered[sub]) ordered[sub] = cats.sort((a, b) => a.priority - b.priority);
+    }
+    result[cluster] = ordered;
   }
-
-  // Tutto ciò che non è stato assegnato va in "Altro"
-  const unassigned = categories.filter((cat) => !assigned.has(cat.id));
-  if (unassigned.length > 0) {
-    result["Altro"] = unassigned;
-  }
-
   return result;
 }
 
@@ -286,7 +328,8 @@ export function SearchConfigTab() {
   // Dialog states
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
-  const [newCategory, setNewCategory] = useState({ label: "", icon: "🏢" });
+  const [newCategory, setNewCategory] = useState({ label: "", icon: "🏢", cluster: "casa", subcluster: "arredo", priority: 50 });
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newLocation, setNewLocation] = useState({ name: "", wave: 1 });
 
   useEffect(() => {
@@ -322,11 +365,14 @@ export function SearchConfigTab() {
           label: newCategory.label.trim(),
           icon: newCategory.icon,
           order: categories.length,
+          cluster: newCategory.cluster,
+          subcluster: newCategory.subcluster,
+          priority: newCategory.priority,
         }),
       });
       if (res.ok) {
         toast.success("Categoria aggiunta");
-        setNewCategory({ label: "", icon: "🏢" });
+        setNewCategory({ label: "", icon: "🏢", cluster: "casa", subcluster: "arredo", priority: 50 });
         setCategoryDialogOpen(false);
         fetchConfig();
       } else {
@@ -335,6 +381,25 @@ export function SearchConfigTab() {
       }
     } catch {
       toast.error("Errore nell'aggiunta categoria");
+    }
+  }
+
+  async function updateCategory(id: string, data: Partial<Category>) {
+    try {
+      const res = await fetch("/api/settings/search-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "category", id, ...data }),
+      });
+      if (res.ok) {
+        toast.success("Categoria aggiornata");
+        setEditingCategory(null);
+        fetchConfig();
+      } else {
+        toast.error("Errore nell'aggiornamento");
+      }
+    } catch {
+      toast.error("Errore nell'aggiornamento");
     }
   }
 
@@ -429,7 +494,7 @@ export function SearchConfigTab() {
   }, [categories, catSearch]);
 
   const groupedCategories = useMemo(
-    () => groupCategories(filteredCategories),
+    () => groupCategoriesByCluster(filteredCategories),
     [filteredCategories]
   );
 
@@ -485,10 +550,10 @@ export function SearchConfigTab() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
-              Categorie ({categories.length})
+              Categorie GMB ({categories.length})
             </CardTitle>
             <CardDescription>
-              Scorciatoie per la pagina Nuova Ricerca
+              Organizzate per Cluster e Sottocluster. Clicca la matita per modificare.
             </CardDescription>
           </div>
           <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
@@ -498,118 +563,151 @@ export function SearchConfigTab() {
                 Aggiungi
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Nuova Categoria</DialogTitle>
-                <DialogDescription>
-                  Aggiungi una categoria rapida per la ricerca
-                </DialogDescription>
+                <DialogDescription>Categoria GMB per il prospecting</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="catLabel">Nome categoria</Label>
+                  <Label>Nome categoria GMB</Label>
                   <Input
-                    id="catLabel"
                     value={newCategory.label}
                     onChange={(e) => setNewCategory({ ...newCategory, label: e.target.value })}
-                    placeholder="es. Ristoranti, Dentisti..."
+                    placeholder="es. Negozio di infissi"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Cluster</Label>
+                    <Select value={newCategory.cluster} onValueChange={(v) => {
+                      const subs = SUBCLUSTER_OPTIONS[v] || [];
+                      setNewCategory({ ...newCategory, cluster: v, subcluster: subs[0]?.label || "altro" });
+                    }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CLUSTER_CONFIG).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v.icon} {v.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sottocluster</Label>
+                    <Select value={newCategory.subcluster} onValueChange={(v) => setNewCategory({ ...newCategory, subcluster: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(SUBCLUSTER_OPTIONS[newCategory.cluster] || []).map((s) => (
+                          <SelectItem key={s.label} value={s.label}>{SUBCLUSTER_LABELS[s.label] || s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Icona</Label>
                   <div className="flex flex-wrap gap-2">
                     {emojiOptions.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        className={`w-10 h-10 text-xl rounded-lg border transition-colors ${
-                          newCategory.icon === emoji
-                            ? "border-primary bg-primary/20"
-                            : "border-border hover:border-primary/50"
-                        }`}
+                      <button key={emoji} type="button"
+                        className={`w-9 h-9 text-lg rounded-lg border transition-colors ${newCategory.icon === emoji ? "border-primary bg-primary/20" : "border-border hover:border-primary/50"}`}
                         onClick={() => setNewCategory({ ...newCategory, icon: emoji })}
-                      >
-                        {emoji}
-                      </button>
+                      >{emoji}</button>
                     ))}
                   </div>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>
-                  Annulla
-                </Button>
+                <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>Annulla</Button>
                 <Button onClick={addCategory}>Aggiungi</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Barra di ricerca */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={catSearch}
-              onChange={(e) => setCatSearch(e.target.value)}
-              placeholder="Cerca categoria..."
-              className="pl-9 h-9"
-            />
+            <Input value={catSearch} onChange={(e) => setCatSearch(e.target.value)} placeholder="Cerca categoria, sottocluster o cluster..." className="pl-9 h-9" />
             {catSearch && (
-              <button
-                onClick={() => setCatSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
+              <button onClick={() => setCatSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
 
-          {/* Gruppi */}
-          {Object.keys(groupedCategories).length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              {catSearch ? "Nessuna categoria trovata" : "Nessuna categoria configurata"}
-            </p>
+          {categories.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Nessuna categoria configurata</p>
           ) : (
-            <div className="space-y-1">
-              {Object.entries(groupedCategories).map(([groupName, cats]) => {
-                const isCollapsed = collapsedGroups.has(groupName);
+            <div className="space-y-6">
+              {Object.entries(CLUSTER_CONFIG).map(([clusterKey, clusterConf]) => {
+                const subclusters = groupedCategories[clusterKey] || {};
+                const clusterCount = Object.values(subclusters).reduce((sum, cats) => sum + cats.length, 0);
+                const isClusterCollapsed = collapsedGroups.has(`cluster_${clusterKey}`);
+
                 return (
-                  <div key={groupName} className="border rounded-lg overflow-hidden">
+                  <div key={clusterKey} className={`border rounded-xl overflow-hidden ${clusterConf.color}`}>
                     <button
-                      onClick={() => toggleGroup(groupName)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                      onClick={() => toggleGroup(`cluster_${clusterKey}`)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left"
                     >
-                      <span className="text-sm font-medium flex items-center gap-2">
-                        {isCollapsed ? (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        {groupName}
-                        <span className="text-xs text-muted-foreground font-normal">
-                          ({cats.length})
-                        </span>
+                      <span className="font-semibold flex items-center gap-2">
+                        {isClusterCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        <span className="text-lg">{clusterConf.icon}</span>
+                        Cluster {clusterConf.label}
+                        <span className="text-xs font-normal opacity-70">({clusterCount})</span>
                       </span>
                     </button>
-                    {!isCollapsed && (
-                      <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                        {cats.map((cat) => (
-                          <div
-                            key={cat.id}
-                            className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-md hover:bg-muted/40 group text-sm"
-                          >
-                            <span className="flex items-center gap-2 min-w-0">
-                              <span className="text-base shrink-0">{cat.icon}</span>
-                              <span className="truncate">{cat.label}</span>
-                            </span>
-                            <button
-                              onClick={() => deleteCategory(cat.id)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 shrink-0"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
+
+                    {!isClusterCollapsed && (
+                      <div className="bg-background px-2 pb-2 space-y-1">
+                        {clusterCount === 0 ? (
+                          <p className="text-xs text-muted-foreground py-3 text-center">Nessuna categoria in questo cluster</p>
+                        ) : (
+                          Object.entries(subclusters).map(([subKey, cats]) => {
+                            const subLabel = SUBCLUSTER_LABELS[subKey] || subKey;
+                            const groupKey = `cluster_${clusterKey}_${subKey}`;
+                            const isSubCollapsed = collapsedGroups.has(groupKey);
+                            return (
+                              <div key={groupKey} className="border rounded-lg overflow-hidden">
+                                <button
+                                  onClick={() => toggleGroup(groupKey)}
+                                  className="w-full flex items-center justify-between px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                                >
+                                  <span className="text-sm font-medium flex items-center gap-2">
+                                    {isSubCollapsed ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                                    {subLabel}
+                                    <span className="text-xs text-muted-foreground font-normal">({cats.length})</span>
+                                  </span>
+                                </button>
+                                {!isSubCollapsed && (
+                                  <div className="px-3 py-2 space-y-0.5">
+                                    {cats.map((cat) => (
+                                      <div key={cat.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-muted/40 group text-sm">
+                                        <span className="flex items-center gap-2 min-w-0">
+                                          <span className="text-base shrink-0">{cat.icon}</span>
+                                          <span className="truncate">{cat.label}</span>
+                                        </span>
+                                        <span className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            onClick={() => setEditingCategory(cat)}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                          >
+                                            <Pencil className="h-3.5 w-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => deleteCategory(cat.id)}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     )}
                   </div>
@@ -619,6 +717,70 @@ export function SearchConfigTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* ========== EDIT CATEGORY DIALOG ========== */}
+      <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Modifica Categoria</DialogTitle>
+          </DialogHeader>
+          {editingCategory && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input value={editingCategory.label} onChange={(e) => setEditingCategory({ ...editingCategory, label: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Cluster</Label>
+                  <Select value={editingCategory.cluster} onValueChange={(v) => {
+                    const subs = SUBCLUSTER_OPTIONS[v] || [];
+                    setEditingCategory({ ...editingCategory, cluster: v, subcluster: subs[0]?.label || "altro" });
+                  }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(CLUSTER_CONFIG).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v.icon} {v.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sottocluster</Label>
+                  <Select value={editingCategory.subcluster} onValueChange={(v) => setEditingCategory({ ...editingCategory, subcluster: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(SUBCLUSTER_OPTIONS[editingCategory.cluster] || []).map((s) => (
+                        <SelectItem key={s.label} value={s.label}>{SUBCLUSTER_LABELS[s.label] || s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Icona</Label>
+                <div className="flex flex-wrap gap-2">
+                  {emojiOptions.map((emoji) => (
+                    <button key={emoji} type="button"
+                      className={`w-9 h-9 text-lg rounded-lg border transition-colors ${editingCategory.icon === emoji ? "border-primary bg-primary/20" : "border-border hover:border-primary/50"}`}
+                      onClick={() => setEditingCategory({ ...editingCategory, icon: emoji })}
+                    >{emoji}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingCategory(null)}>Annulla</Button>
+            <Button onClick={() => editingCategory && updateCategory(editingCategory.id, {
+              label: editingCategory.label,
+              icon: editingCategory.icon,
+              cluster: editingCategory.cluster,
+              subcluster: editingCategory.subcluster,
+            })}>Salva</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ========== CITTA ========== */}
       <Card>

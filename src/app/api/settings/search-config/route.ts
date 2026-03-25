@@ -37,6 +37,9 @@ export async function POST(request: Request) {
           label: data.label,
           icon: data.icon || "🏢",
           order: data.order || 0,
+          cluster: data.cluster || "casa",
+          subcluster: data.subcluster || "altro",
+          priority: data.priority || 50,
         },
       });
       return NextResponse.json(category);
