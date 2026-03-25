@@ -117,7 +117,11 @@ export function ScheduledSearchesTab() {
       const res = await fetch("/api/scheduled-searches/sync", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        toast.success(`Sync: ${data.removed} rimosse, ${data.added} aggiunte`);
+        const parts = [];
+        if (data.removed > 0) parts.push(`${data.removed} rimosse`);
+        if (data.added > 0) parts.push(`${data.added} aggiunte`);
+        if (data.updated > 0) parts.push(`${data.updated} riordinate`);
+        toast.success(`Sync completato: ${parts.join(", ") || "già allineato"}. Totale: ${data.remaining} ricerche`);
         fetchSearches();
       } else {
         toast.error(data.error || "Errore nella sincronizzazione");
@@ -375,21 +379,26 @@ export function ScheduledSearchesTab() {
             </div>
           ) : searches.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              Nessuna ricerca programmata. Usa &quot;Carica Lista Predefinita&quot; per iniziare.
+              Nessuna ricerca programmata. Usa &quot;Sincronizza&quot; per generare la coda.
             </p>
           ) : (
-            <div className="space-y-2">
-              {searches.map((search) => {
+            <div className="space-y-1">
+              {searches
+                .sort((a, b) => a.priority - b.priority)
+                .map((search) => {
                 const badge = STATUS_BADGES[search.status];
                 return (
                   <div
                     key={search.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between p-2.5 border rounded-lg"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Badge variant={badge.variant}>{badge.label}</Badge>
+                      <span className="text-xs text-muted-foreground font-mono w-6 text-right shrink-0">
+                        {search.priority}
+                      </span>
+                      <Badge variant={badge.variant} className="shrink-0">{badge.label}</Badge>
                       <div className="min-w-0">
-                        <p className="font-medium truncate">
+                        <p className="text-sm font-medium truncate">
                           {search.query} — {search.location}
                         </p>
                         {search.lastRunAt && (
