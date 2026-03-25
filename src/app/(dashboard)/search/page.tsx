@@ -16,6 +16,7 @@ import {
   Building2,
   Sparkles,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
 // Fallback quando il DB è vuoto
@@ -41,6 +42,9 @@ interface Category {
   id: string;
   label: string;
   icon: string;
+  cluster: string;
+  subcluster: string;
+  priority: number;
 }
 
 interface Location {
@@ -55,6 +59,46 @@ const WAVE_COLORS: Record<number, string> = {
   3: "border-yellow-300 hover:bg-yellow-100",
 };
 
+const CLUSTER_INFO: Record<string, { label: string; icon: string; color: string }> = {
+  casa: { label: "Casa", icon: "🏠", color: "border-blue-300 bg-blue-50/50" },
+  microturismo: { label: "Microturismo", icon: "🏡", color: "border-emerald-300 bg-emerald-50/50" },
+};
+
+const SUBCLUSTER_LABELS: Record<string, string> = {
+  infissi: "Infissi e Serramenti",
+  edilizia_alto: "Edilizia — Alto Volume",
+  impiantistica: "Impiantistica",
+  arredo: "Arredo",
+  pavimenti: "Pavimenti e Rivestimenti",
+  clima: "Clima",
+  edilizia_finiture: "Edilizia — Finiture",
+  edilizia_nicchia: "Edilizia — Nicchia",
+  macchinari: "Macchinari",
+  giardinaggio: "Giardinaggio",
+  property_manager: "Property Manager",
+  agenzie_immobiliari: "Agenzie Immobiliari",
+  strutture_ricettive: "Strutture Ricettive",
+  altro: "Altro",
+};
+
+function groupByCluster(categories: Category[]): Record<string, Record<string, Category[]>> {
+  const result: Record<string, Record<string, Category[]>> = {};
+  for (const cat of categories) {
+    const cl = cat.cluster || "casa";
+    const sub = cat.subcluster || "altro";
+    if (!result[cl]) result[cl] = {};
+    if (!result[cl][sub]) result[cl][sub] = [];
+    result[cl][sub].push(cat);
+  }
+  // Sort by priority within each subcluster
+  for (const cl of Object.keys(result)) {
+    for (const sub of Object.keys(result[cl])) {
+      result[cl][sub].sort((a, b) => a.priority - b.priority);
+    }
+  }
+  return result;
+}
+
 export default function SearchPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -66,6 +110,7 @@ export default function SearchPage() {
   // Configurazioni da DB
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [collapsedSubs, setCollapsedSubs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchConfig();
@@ -86,14 +131,20 @@ export default function SearchPage() {
     }
   }
 
-  // Usa configurazioni da DB o fallback
-  const displayCategories = categories.length > 0
-    ? categories.map(c => ({ label: c.label, icon: c.icon }))
-    : defaultCategories;
+  const clusteredCategories = groupByCluster(categories);
 
   const displayLocations = locations.length > 0
     ? locations
     : defaultLocations.map(name => ({ id: name, name, wave: 1 }));
+
+  const toggleSub = (key: string) => {
+    setCollapsedSubs(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,33 +204,79 @@ export default function SearchPage() {
         </p>
       </div>
 
-      {/* Quick Categories - Wrap on mobile instead of scroll */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground">
-          Categorie popolari
-        </p>
-        {configLoading ? (
-          <div className="flex gap-2 flex-wrap">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-8 w-24" />
-            ))}
-          </div>
-        ) : (
-          <div className="flex gap-2 flex-wrap">
-            {displayCategories.map((cat) => (
-              <Badge
-                key={cat.label}
-                variant={query === cat.label ? "default" : "outline"}
-                className="cursor-pointer px-3 py-1.5 text-sm hover:bg-primary/20 transition-colors"
-                onClick={() => handleQuickCategory(cat.label)}
-              >
-                <span className="mr-1.5">{cat.icon}</span>
-                {cat.label}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Categorie per Cluster > Subcluster */}
+      {configLoading ? (
+        <div className="flex gap-2 flex-wrap">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-8 w-24" />
+          ))}
+        </div>
+      ) : categories.length > 0 ? (
+        <div className="space-y-3">
+          {Object.entries(CLUSTER_INFO).map(([clusterKey, info]) => {
+            const subclusters = clusteredCategories[clusterKey];
+            if (!subclusters) return null;
+            return (
+              <div key={clusterKey} className={`border rounded-xl overflow-hidden ${info.color}`}>
+                <div className="px-4 py-2.5 flex items-center gap-2">
+                  <span className="text-lg">{info.icon}</span>
+                  <span className="font-semibold text-sm">{info.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({Object.values(subclusters).reduce((s, c) => s + c.length, 0)})
+                  </span>
+                </div>
+                <div className="bg-background/80 px-2 pb-2 space-y-1">
+                  {Object.entries(subclusters).map(([subKey, cats]) => {
+                    const subLabel = SUBCLUSTER_LABELS[subKey] || subKey;
+                    const groupKey = `${clusterKey}_${subKey}`;
+                    const collapsed = collapsedSubs.has(groupKey);
+                    return (
+                      <div key={groupKey}>
+                        <button
+                          onClick={() => toggleSub(groupKey)}
+                          className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          {subLabel} ({cats.length})
+                        </button>
+                        {!collapsed && (
+                          <div className="flex gap-1.5 flex-wrap px-2 pb-1.5">
+                            {cats.map((cat) => (
+                              <Badge
+                                key={cat.id}
+                                variant={query === cat.label ? "default" : "outline"}
+                                className="cursor-pointer px-2.5 py-1 text-xs hover:bg-primary/20 transition-colors"
+                                onClick={() => handleQuickCategory(cat.label)}
+                              >
+                                <span className="mr-1">{cat.icon}</span>
+                                {cat.label}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex gap-2 flex-wrap">
+          {defaultCategories.map((cat) => (
+            <Badge
+              key={cat.label}
+              variant={query === cat.label ? "default" : "outline"}
+              className="cursor-pointer px-3 py-1.5 text-sm hover:bg-primary/20 transition-colors"
+              onClick={() => handleQuickCategory(cat.label)}
+            >
+              <span className="mr-1.5">{cat.icon}</span>
+              {cat.label}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {/* Search Form - Mobile first card */}
       <Card>
