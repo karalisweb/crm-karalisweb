@@ -317,7 +317,7 @@ function groupCategoriesByCluster(categories: Category[]): Record<string, Record
   return result;
 }
 
-export function SearchConfigTab() {
+export function SearchConfigTab({ section = "all" }: { section?: "categories" | "locations" | "all" }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -544,6 +544,7 @@ export function SearchConfigTab() {
 
   return (
     <div className="space-y-6">
+      {(section === "all" || section === "categories") && <>
       {/* ========== CATEGORIE ========== */}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between flex-wrap gap-4 pb-4">
@@ -782,6 +783,9 @@ export function SearchConfigTab() {
         </DialogContent>
       </Dialog>
 
+      </>}
+
+      {(section === "all" || section === "locations") && <>
       {/* ========== CITTA ========== */}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between flex-wrap gap-4 pb-4">
@@ -983,6 +987,7 @@ export function SearchConfigTab() {
           )}
         </CardContent>
       </Card>
+      </>}
     </div>
   );
 }

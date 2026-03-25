@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
 import { CrmConfigTab } from "@/components/settings/crm-config-tab";
 import { ScheduledSearchesTab } from "@/components/settings/scheduled-searches-tab";
@@ -296,10 +296,7 @@ export default function SettingsPage() {
             <Target className="h-4 w-4" />
             CRM
           </TabsTrigger>
-          <TabsTrigger value="scheduled" className="gap-2">
-            <Clock className="h-4 w-4" />
-            Programmate
-          </TabsTrigger>
+          {/* Programmate ora dentro tab Ricerca */}
           <TabsTrigger value="scoring" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Scoring
@@ -726,7 +723,31 @@ export default function SettingsPage() {
 
         {/* TAB RICERCA */}
         <TabsContent value="search" className="space-y-4">
-          <SearchConfigTab />
+          <Tabs defaultValue="categorie" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="categorie" className="gap-1.5 text-xs sm:text-sm">
+                <Building2 className="h-3.5 w-3.5" />
+                Categorie
+              </TabsTrigger>
+              <TabsTrigger value="location" className="gap-1.5 text-xs sm:text-sm">
+                <MapPin className="h-3.5 w-3.5" />
+                Location
+              </TabsTrigger>
+              <TabsTrigger value="programmate" className="gap-1.5 text-xs sm:text-sm">
+                <Clock className="h-3.5 w-3.5" />
+                Programmate
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="categorie">
+              <SearchConfigTab section="categories" />
+            </TabsContent>
+            <TabsContent value="location">
+              <SearchConfigTab section="locations" />
+            </TabsContent>
+            <TabsContent value="programmate">
+              <ScheduledSearchesTab />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* TAB AI */}
@@ -740,9 +761,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* TAB RICERCHE PROGRAMMATE */}
-        <TabsContent value="scheduled" className="space-y-4">
-          <ScheduledSearchesTab />
-        </TabsContent>
+        {/* Programmate ora dentro tab Ricerca */}
 
         {/* TAB SCORING */}
         <TabsContent value="scoring" className="space-y-4">

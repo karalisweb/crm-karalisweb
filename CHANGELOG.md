@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [3.7.0] - 2026-03-24
 
 ### Catena 2 Prompt con Gate Manuali (Major Feature)
@@ -91,6 +93,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [3.6.0] - 2026-03-15
 
 ### Ads — Solo Verifica Manuale (Breaking Change)
@@ -134,6 +138,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [3.5.0] - 2026-03-15
 
 ### Pipeline Flow v3.5 — "Tu decidi se fare il video"
@@ -148,6 +154,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Tab Scoring aggiornata: soglia ≥80 = HOT LEAD, esempi aggiornati
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.4.0] - 2026-03-15
 
@@ -186,6 +194,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [3.3.0] - 2026-03-15
 
 ### Rework Ads — Verifica Manuale
@@ -212,6 +222,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [3.2.1] - 2026-03-15
 
 ### Changed
@@ -225,6 +237,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - **Tab Scoring aggiornata** con nuovi pesi, nuovi esempi e nota sull'implicazione chiave
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.2.0] - 2026-03-15
 
@@ -254,6 +268,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [3.1.1] - 2026-03-15
 
 ### Features
@@ -268,6 +284,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Dashboard mission API: aggiunto conteggio badge per Cold Leads
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [3.1.0] - 2026-03-15
 
@@ -305,6 +323,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [3.0.0] - 2026-03-15
 
 ### Pulizia e semplificazione
@@ -336,6 +356,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [2.7.0] - 2026-03-14
 
 ### Aggiunto - Ads Intelligence Engine (100% Apify)
@@ -350,11 +372,15 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [2.6.0] - 2026-03-14
 
 - Refactoring: sostituito audit tecnico con Analisi Strategica + Teleprompter Mode. Eliminato codice morto (17 file).
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.5.1] - 2026-03-13
 
@@ -362,11 +388,15 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [2.5.0] - 2026-03-13
 
 - Rimozione Inngest: sostituito con cron API + p-queue per job in background
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.4.1] - 2026-03-11
 
@@ -374,11 +404,15 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [2.4.0] - 2026-03-11
 
 - Auto-Gemini dopo audit + Sidebar redesign per workflow
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.3.0] - 2026-03-11
 
@@ -390,6 +424,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [2.2.0] - 2026-02-22
 
 ### Aggiunto - UI/UX Overhaul
@@ -400,12 +436,16 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [2.1.0] - 2026-02-16
 
 - CHANGELOG.md e GUIDA_UTENTE.md aggiunti
 - README.md aggiornato
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [2.0.0] - 2026-02-08
 
@@ -415,6 +455,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [1.9.0] - 2026-01-27
 
 - Pipeline MSD completa con nuovi stati e pagine dedicate
@@ -422,11 +464,15 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [1.8.0] - 2026-01-22
 
 - 2FA con OTP, password reset, RBAC
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.7.0] - 2026-01-21
 
@@ -434,11 +480,15 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [1.6.0] - 2026-01-20
 
 - Sistema commerciale 5 chiamate/giorno
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.5.0] - 2026-01-19
 
@@ -446,11 +496,15 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [1.4.0] - 2026-01-16
 
 - Integrazione PageSpeed Insights API (poi rimossa in v3.0)
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.3.0] - 2026-01-15
 
@@ -458,11 +512,15 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
+
 ## [1.2.0] - 2026-01-14
 
 - Setup CRM iniziale, Apify mock mode, Docker, NextAuth v5
 
 ---
+
+## [3.8.0] - 2026-03-25nn- feat: unifica tab Ricerca con sotto-sezioni Categorie/Location/Programmaten
 
 ## [1.0.0] - 2026-01-13
 
