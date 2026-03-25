@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PIPELINE_STAGES } from "@/types";
+import { PIPELINE_STAGES, STAGE_ROUTES } from "@/types";
 import {
   ArrowLeft,
   Phone,
@@ -62,6 +62,8 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
   }
 
   const stageInfo = PIPELINE_STAGES[lead.pipelineStage as keyof typeof PIPELINE_STAGES];
+  const stageRoute = STAGE_ROUTES[lead.pipelineStage] || "/da-analizzare";
+  const stageLabel = stageInfo?.label || "Leads";
 
   return (
     <div className="space-y-6">
@@ -69,14 +71,14 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
       <Breadcrumb
         items={[
           { label: "Dashboard", href: "/" },
-          { label: "Leads", href: "/leads" },
+          { label: stageLabel, href: stageRoute },
           { label: lead.name },
         ]}
       />
 
       {/* Header */}
       <div className="flex items-start gap-4">
-        <Link href="/leads">
+        <Link href={stageRoute}>
           <Button variant="ghost" size="icon" className="mt-1">
             <ArrowLeft className="h-4 w-4" />
           </Button>

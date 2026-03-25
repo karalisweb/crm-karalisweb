@@ -200,6 +200,30 @@ export const PIPELINE_STAGES = {
 
 export type PipelineStageKey = keyof typeof PIPELINE_STAGES;
 
+// Mapping stage → pagina dedicata nella sidebar
+export const STAGE_ROUTES: Record<string, string> = {
+  DA_ANALIZZARE: "/da-analizzare",
+  HOT_LEAD: "/hot-leads",
+  WARM_LEAD: "/warm-leads",
+  COLD_LEAD: "/warm-leads",
+  FARE_VIDEO: "/fare-video",
+  VIDEO_INVIATO: "/video-inviati",
+  FOLLOW_UP_1: "/follow-up",
+  FOLLOW_UP_2: "/follow-up",
+  FOLLOW_UP_3: "/follow-up",
+  LINKEDIN: "/linkedin",
+  TELEFONATA_1: "/telefonate",
+  TELEFONATA_2: "/telefonate",
+  TELEFONATA_3: "/telefonate",
+  CALL_FISSATA: "/trattative",
+  IN_TRATTATIVA: "/trattative",
+  CLIENTE: "/trattative",
+  PERSO: "/trattative",
+  ARCHIVIATO: "/da-analizzare",
+  NON_TARGET: "/da-analizzare",
+  SENZA_SITO: "/senza-sito",
+};
+
 // Gruppi di stage per navigazione e filtri
 export const STAGE_GROUPS = {
   analisi: ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD", "COLD_LEAD"] as PipelineStageKey[],
