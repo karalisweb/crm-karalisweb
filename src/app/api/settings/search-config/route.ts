@@ -45,6 +45,7 @@ export async function POST(request: Request) {
         data: {
           name: data.name,
           order: data.order || 0,
+          wave: data.wave || 1,
         },
       });
       return NextResponse.json(location);

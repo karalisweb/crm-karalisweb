@@ -558,6 +558,7 @@ model SearchLocation {
   name      String   @unique
   order     Int      @default(0)
   active    Boolean  @default(true)
+  wave      Int      @default(1)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

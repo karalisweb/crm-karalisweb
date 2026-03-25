@@ -30,6 +30,7 @@ interface Location {
   name: string;
   order: number;
   active: boolean;
+  wave: number;
 }
 
 const emojiOptions = [
@@ -52,11 +53,13 @@ const CITY_DATA: Record<string, { regione: string; abitanti: number }> = {
   "lecco": { regione: "Lombardia", abitanti: 48637 },
   "lodi": { regione: "Lombardia", abitanti: 47305 },
   "sondrio": { regione: "Lombardia", abitanti: 21876 },
+  "lumezzane": { regione: "Lombardia", abitanti: 22478 },
   // Lazio
   "roma": { regione: "Lazio", abitanti: 2761632 },
   "latina": { regione: "Lazio", abitanti: 127279 },
   "frosinone": { regione: "Lazio", abitanti: 45803 },
   "viterbo": { regione: "Lazio", abitanti: 67798 },
+  "civita castellana": { regione: "Lazio", abitanti: 16217 },
   "rieti": { regione: "Lazio", abitanti: 47656 },
   // Campania
   "napoli": { regione: "Campania", abitanti: 914758 },
@@ -73,6 +76,9 @@ const CITY_DATA: Record<string, { regione: string; abitanti: number }> = {
   "vercelli": { regione: "Piemonte", abitanti: 45999 },
   "biella": { regione: "Piemonte", abitanti: 43818 },
   "verbania": { regione: "Piemonte", abitanti: 30541 },
+  "valenza": { regione: "Piemonte", abitanti: 19287 },
+  "alba": { regione: "Piemonte", abitanti: 31437 },
+  "langhirano": { regione: "Emilia-Romagna", abitanti: 10461 },
   // Veneto
   "venezia": { regione: "Veneto", abitanti: 254661 },
   "verona": { regione: "Veneto", abitanti: 259608 },
@@ -81,6 +87,8 @@ const CITY_DATA: Record<string, { regione: string; abitanti: number }> = {
   "treviso": { regione: "Veneto", abitanti: 85308 },
   "rovigo": { regione: "Veneto", abitanti: 51149 },
   "belluno": { regione: "Veneto", abitanti: 35596 },
+  "montebelluna": { regione: "Veneto", abitanti: 31361 },
+  "arzignano": { regione: "Veneto", abitanti: 25686 },
   // Emilia-Romagna
   "bologna": { regione: "Emilia-Romagna", abitanti: 394463 },
   "modena": { regione: "Emilia-Romagna", abitanti: 187938 },
@@ -93,6 +101,10 @@ const CITY_DATA: Record<string, { regione: string; abitanti: number }> = {
   "forli": { regione: "Emilia-Romagna", abitanti: 117913 },
   "cesena": { regione: "Emilia-Romagna", abitanti: 97484 },
   "piacenza": { regione: "Emilia-Romagna", abitanti: 104458 },
+  "sassuolo": { regione: "Emilia-Romagna", abitanti: 40890 },
+  "carpi": { regione: "Emilia-Romagna", abitanti: 72629 },
+  "faenza": { regione: "Emilia-Romagna", abitanti: 58786 },
+  "san mauro pascoli": { regione: "Emilia-Romagna", abitanti: 12018 },
   // Toscana
   "firenze": { regione: "Toscana", abitanti: 367048 },
   "prato": { regione: "Toscana", abitanti: 195089 },
@@ -104,6 +116,7 @@ const CITY_DATA: Record<string, { regione: string; abitanti: number }> = {
   "grosseto": { regione: "Toscana", abitanti: 82259 },
   "siena": { regione: "Toscana", abitanti: 53903 },
   "massa": { regione: "Toscana", abitanti: 68872 },
+  "santa croce sull'arno": { regione: "Toscana", abitanti: 14702 },
   // Sicilia
   "palermo": { regione: "Sicilia", abitanti: 630828 },
   "catania": { regione: "Sicilia", abitanti: 300356 },
@@ -145,13 +158,17 @@ const CITY_DATA: Record<string, { regione: string; abitanti: number }> = {
   "udine": { regione: "Friuli Venezia Giulia", abitanti: 99518 },
   "pordenone": { regione: "Friuli Venezia Giulia", abitanti: 51127 },
   "gorizia": { regione: "Friuli Venezia Giulia", abitanti: 34411 },
+  "manzano": { regione: "Friuli Venezia Giulia", abitanti: 6508 },
   // Marche
   "ancona": { regione: "Marche", abitanti: 100282 },
   "pesaro": { regione: "Marche", abitanti: 96786 },
+  "pesaro-urbino": { regione: "Marche", abitanti: 96786 },
   "fano": { regione: "Marche", abitanti: 60888 },
+  "civitanova marche": { regione: "Marche", abitanti: 41548 },
   "ascoli piceno": { regione: "Marche", abitanti: 48656 },
   "macerata": { regione: "Marche", abitanti: 42468 },
   "fermo": { regione: "Marche", abitanti: 37341 },
+  "montegranaro": { regione: "Marche", abitanti: 12584 },
   // Abruzzo
   "pescara": { regione: "Abruzzo", abitanti: 121014 },
   "l'aquila": { regione: "Abruzzo", abitanti: 69753 },
@@ -171,6 +188,12 @@ const CITY_DATA: Record<string, { regione: string; abitanti: number }> = {
   "isernia": { regione: "Molise", abitanti: 21620 },
   // Valle d'Aosta
   "aosta": { regione: "Valle d'Aosta", abitanti: 33916 },
+};
+
+const WAVE_CONFIG: Record<number, { label: string; color: string; badge: string; description: string }> = {
+  1: { label: "Ondata 1", color: "text-red-600 bg-red-50 border-red-200", badge: "bg-red-500", description: "Province principali" },
+  2: { label: "Ondata 2", color: "text-orange-600 bg-orange-50 border-orange-200", badge: "bg-orange-500", description: "Province minori" },
+  3: { label: "Ondata 3", color: "text-yellow-600 bg-yellow-50 border-yellow-200", badge: "bg-yellow-500", description: "Distretti merceologici" },
 };
 
 function formatAbitanti(n: number): string {
@@ -264,7 +287,7 @@ export function SearchConfigTab() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [newCategory, setNewCategory] = useState({ label: "", icon: "🏢" });
-  const [newLocation, setNewLocation] = useState({ name: "" });
+  const [newLocation, setNewLocation] = useState({ name: "", wave: 1 });
 
   useEffect(() => {
     fetchConfig();
@@ -328,11 +351,12 @@ export function SearchConfigTab() {
           type: "location",
           name: newLocation.name.trim(),
           order: locations.length,
+          wave: newLocation.wave,
         }),
       });
       if (res.ok) {
         toast.success("Citta aggiunta");
-        setNewLocation({ name: "" });
+        setNewLocation({ name: "", wave: 1 });
         setLocationDialogOpen(false);
         fetchConfig();
       } else {
@@ -341,6 +365,24 @@ export function SearchConfigTab() {
       }
     } catch {
       toast.error("Errore nell'aggiunta citta");
+    }
+  }
+
+  async function updateLocationWave(id: string, wave: number) {
+    try {
+      const res = await fetch("/api/settings/search-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "location", id, wave }),
+      });
+      if (res.ok) {
+        toast.success(`Spostata in ${WAVE_CONFIG[wave].label}`);
+        fetchConfig();
+      } else {
+        toast.error("Errore nello spostamento");
+      }
+    } catch {
+      toast.error("Errore nello spostamento");
     }
   }
 
@@ -404,10 +446,23 @@ export function SearchConfigTab() {
     return locs;
   }, [locations, locSearch]);
 
-  const groupedLocations = useMemo(
-    () => groupLocationsByRegion(filteredLocations),
-    [filteredLocations]
-  );
+  const locationsByWave = useMemo(() => {
+    const byWave: Record<number, Location[]> = { 1: [], 2: [], 3: [] };
+    for (const loc of filteredLocations) {
+      const w = loc.wave || 1;
+      if (!byWave[w]) byWave[w] = [];
+      byWave[w].push(loc);
+    }
+    return byWave;
+  }, [filteredLocations]);
+
+  const groupedLocationsByWave = useMemo(() => {
+    const result: Record<number, Record<string, (Location & { info: { regione: string; abitanti: number } | null })[]>> = {};
+    for (const [wave, locs] of Object.entries(locationsByWave)) {
+      result[Number(wave)] = groupLocationsByRegion(locs);
+    }
+    return result;
+  }, [locationsByWave]);
 
   const toggleGroup = (group: string) => {
     setCollapsedGroups((prev) => {
@@ -574,7 +629,7 @@ export function SearchConfigTab() {
               Citta ({locations.length})
             </CardTitle>
             <CardDescription>
-              Scorciatoie per la pagina Nuova Ricerca
+              Organizzate per ondata di priorita. Clicca 1/2/3 per spostare.
             </CardDescription>
           </div>
           <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
@@ -597,9 +652,29 @@ export function SearchConfigTab() {
                   <Input
                     id="locName"
                     value={newLocation.name}
-                    onChange={(e) => setNewLocation({ name: e.target.value })}
-                    placeholder="es. Milano, Roma centro..."
+                    onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                    placeholder="es. Modena, Sassuolo..."
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ondata</Label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3].map((w) => (
+                      <button
+                        key={w}
+                        type="button"
+                        onClick={() => setNewLocation({ ...newLocation, wave: w })}
+                        className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                          newLocation.wave === w
+                            ? `${WAVE_CONFIG[w].color} border-current`
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        {WAVE_CONFIG[w].label}
+                        <span className="block text-[11px] font-normal opacity-70">{WAVE_CONFIG[w].description}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -618,7 +693,7 @@ export function SearchConfigTab() {
             <Input
               value={locSearch}
               onChange={(e) => setLocSearch(e.target.value)}
-              placeholder="Cerca citta..."
+              placeholder="Cerca citta o regione..."
               className="pl-9 h-9"
             />
             {locSearch && (
@@ -631,55 +706,112 @@ export function SearchConfigTab() {
             )}
           </div>
 
-          {Object.keys(groupedLocations).length === 0 ? (
+          {locations.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              {locSearch ? "Nessuna citta trovata" : "Nessuna citta configurata"}
+              Nessuna citta configurata
             </p>
           ) : (
-            <div className="space-y-1">
-              {Object.entries(groupedLocations).map(([regione, cities]) => {
-                const isCollapsed = collapsedGroups.has(`loc_${regione}`);
+            <div className="space-y-6">
+              {[1, 2, 3].map((wave) => {
+                const waveLocations = groupedLocationsByWave[wave] || {};
+                const waveCount = locationsByWave[wave]?.length || 0;
+                const waveConf = WAVE_CONFIG[wave];
+                const isWaveCollapsed = collapsedGroups.has(`wave_${wave}`);
+
                 return (
-                  <div key={regione} className="border rounded-lg overflow-hidden">
+                  <div key={wave} className={`border rounded-xl overflow-hidden ${waveConf.color}`}>
+                    {/* Wave header */}
                     <button
-                      onClick={() => toggleGroup(`loc_${regione}`)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                      onClick={() => toggleGroup(`wave_${wave}`)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left"
                     >
-                      <span className="text-sm font-medium flex items-center gap-2">
-                        {isCollapsed ? (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-semibold flex items-center gap-2">
+                        {isWaveCollapsed ? (
+                          <ChevronRight className="h-4 w-4" />
                         ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          <ChevronDown className="h-4 w-4" />
                         )}
-                        {regione}
-                        <span className="text-xs text-muted-foreground font-normal">
-                          ({cities.length})
+                        <span className={`w-2.5 h-2.5 rounded-full ${waveConf.badge}`} />
+                        {waveConf.label}
+                        <span className="text-xs font-normal opacity-70">
+                          — {waveConf.description} ({waveCount})
                         </span>
                       </span>
                     </button>
-                    {!isCollapsed && (
-                      <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                        {cities.map((loc) => (
-                          <div
-                            key={loc.id}
-                            className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-md hover:bg-muted/40 group text-sm"
-                          >
-                            <span className="flex items-center gap-2 min-w-0">
-                              <span className="truncate">{loc.name}</span>
-                              {loc.info && (
-                                <span className="text-[11px] text-muted-foreground shrink-0">
-                                  {formatAbitanti(loc.info.abitanti)} ab.
-                                </span>
-                              )}
-                            </span>
-                            <button
-                              onClick={() => deleteLocation(loc.id)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 shrink-0"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
+
+                    {!isWaveCollapsed && (
+                      <div className="bg-background px-2 pb-2 space-y-1">
+                        {waveCount === 0 ? (
+                          <p className="text-xs text-muted-foreground py-3 text-center">
+                            Nessuna citta in questa ondata
+                          </p>
+                        ) : (
+                          Object.entries(waveLocations).map(([regione, cities]) => {
+                            const regionKey = `wave${wave}_${regione}`;
+                            const isRegCollapsed = collapsedGroups.has(regionKey);
+                            return (
+                              <div key={regionKey} className="border rounded-lg overflow-hidden">
+                                <button
+                                  onClick={() => toggleGroup(regionKey)}
+                                  className="w-full flex items-center justify-between px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                                >
+                                  <span className="text-sm font-medium flex items-center gap-2">
+                                    {isRegCollapsed ? (
+                                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                    )}
+                                    {regione}
+                                    <span className="text-xs text-muted-foreground font-normal">
+                                      ({cities.length})
+                                    </span>
+                                  </span>
+                                </button>
+                                {!isRegCollapsed && (
+                                  <div className="px-3 py-2 space-y-0.5">
+                                    {cities.map((loc) => (
+                                      <div
+                                        key={loc.id}
+                                        className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-muted/40 group text-sm"
+                                      >
+                                        <span className="flex items-center gap-2 min-w-0">
+                                          <span className="truncate">{loc.name}</span>
+                                          {loc.info && (
+                                            <span className="text-[11px] text-muted-foreground shrink-0">
+                                              {formatAbitanti(loc.info.abitanti)} ab.
+                                            </span>
+                                          )}
+                                        </span>
+                                        <span className="flex items-center gap-1 shrink-0">
+                                          {/* Wave selector buttons */}
+                                          {[1, 2, 3].map((w) => (
+                                            <button
+                                              key={w}
+                                              onClick={() => w !== wave && updateLocationWave(loc.id, w)}
+                                              className={`w-5 h-5 rounded text-[10px] font-bold transition-all ${
+                                                w === wave
+                                                  ? `${WAVE_CONFIG[w].badge} text-white`
+                                                  : "bg-muted/50 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted"
+                                              }`}
+                                            >
+                                              {w}
+                                            </button>
+                                          ))}
+                                          <button
+                                            onClick={() => deleteLocation(loc.id)}
+                                            className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     )}
                   </div>

@@ -46,7 +46,14 @@ interface Category {
 interface Location {
   id: string;
   name: string;
+  wave?: number;
 }
+
+const WAVE_COLORS: Record<number, string> = {
+  1: "border-red-300 hover:bg-red-100",
+  2: "border-orange-300 hover:bg-orange-100",
+  3: "border-yellow-300 hover:bg-yellow-100",
+};
 
 export default function SearchPage() {
   const router = useRouter();
@@ -85,8 +92,8 @@ export default function SearchPage() {
     : defaultCategories;
 
   const displayLocations = locations.length > 0
-    ? locations.map(l => l.name)
-    : defaultLocations;
+    ? locations
+    : defaultLocations.map(name => ({ id: name, name, wave: 1 }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,12 +226,16 @@ export default function SearchPage() {
                 ) : (
                   displayLocations.map((loc) => (
                     <Badge
-                      key={loc}
-                      variant={location === loc ? "default" : "secondary"}
-                      className="cursor-pointer text-xs hover:bg-primary/20 transition-colors"
-                      onClick={() => handleQuickLocation(loc)}
+                      key={loc.id}
+                      variant={location === loc.name ? "default" : "outline"}
+                      className={`cursor-pointer text-xs transition-colors ${
+                        location === loc.name
+                          ? ""
+                          : WAVE_COLORS[loc.wave || 1] || ""
+                      }`}
+                      onClick={() => handleQuickLocation(loc.name)}
                     >
-                      {loc}
+                      {loc.name}
                     </Badge>
                   ))
                 )}
