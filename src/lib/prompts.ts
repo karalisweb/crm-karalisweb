@@ -74,20 +74,44 @@ ATTO 4: {{ATTO_4}}
 {{CUSTOM_INSTRUCTIONS}}
 
 REGOLE PER LO SCRIPT FINALE:
+
+CONTESTO VIDEO: Questo è un VIDEO COMMERCIALE a freddo. Il prospect NON ti conosce. Lo riceverà via WhatsApp. Devi catturare la sua attenzione nei primi 5 secondi e tenerla per tutto il video.
+
+STRUTTURA OBBLIGATORIA:
+
+A) APERTURA — PERMESSO (primi 5-10 secondi):
+   - Presentati brevemente come Alessio Loi, fondatore di Karalisweb
+   - CHIEDI IL PERMESSO: "Mi concede 60 secondi? Ho analizzato il vostro sito e ho trovato qualcosa di importante da mostrarvi."
+   - Questa frase è fondamentale: crea curiosità e rispetto. Il prospect si sente considerato, non aggredito.
+
+B) CORPO — ANALISI SPECIFICA (60-80 secondi):
+   - Mostra che hai DAVVERO guardato il SUO sito con CITAZIONI ESATTE
+   - Esponi i problemi trovati con dati concreti
+   - Usa la metafora del settore per spiegare il MSD
+
+C) CHIUSURA — CTA (10-15 secondi):
+   - Invita a rispondere al messaggio o a fissare una chiamata
+
+REGOLE DI SCRITTURA:
+
 1. Deve essere UN FLUSSO CONTINUO senza titoli di sezione, numeri o intestazioni
 2. Deve suonare naturale e conversazionale, come se parlassi a un amico imprenditore
-3. FONDAMENTALE — SPECIFICITÀ: Il prospect deve capire che hai DAVVERO analizzato il SUO sito. Per farlo DEVI:
-   - CITARE almeno 2-3 FRASI ESATTE prese dai testi del sito (homepage, about, servizi) — tra virgolette
-   - Menzionare NOMI di prodotti, servizi o sezioni specifiche che trovi nei testi
-   - Riferire DATI CONCRETI dal sito (es. nomi di proprietà, categorie, cifre, nomi di persone)
+3. FONDAMENTALE — SPECIFICITÀ ESTREMA: Il prospect deve capire che hai DAVVERO analizzato il SUO sito. Per farlo DEVI:
+   - CITARE almeno 3-4 FRASI ESATTE prese dai testi del sito (homepage, about, servizi) — tra virgolette
+   - Menzionare NOMI PROPRI di prodotti, servizi, persone o sezioni specifiche che trovi nei testi
+   - Riferire DATI CONCRETI dal sito (es. nomi di proprietà, categorie, cifre, nomi di persone, titoli di pagine)
+   - Descrivere COSA HAI VISTO sul sito in modo visuale ("Quando apro la vostra homepage, la prima cosa che vedo è...")
    - Il test di qualità: se cambi il nome dell'azienda nello script, il testo NON deve funzionare per un altro — deve essere impossibile da riciclare
-4. Usa una METAFORA potente e coerente che aiuti il cliente a capire il MSD (Metodo Strategico Digitale)
+4. METAFORA DEL SETTORE — OBBLIGATORIA:
+   - Crea una metafora che viene DAL SETTORE del cliente per spiegare il MSD (Metodo Strategico Digitale)
+   - La metafora migliore per spiegare cosa fa Karalisweb è: "Noi siamo come gli ingegneri nella costruzione di una casa — il sito web è la casa, ma senza un progetto strategico a monte, stai costruendo senza fondamenta"
+   - ADATTA questa metafora al settore del prospect: se è un ristorante, parla di ricetta e ingredienti; se è immobiliare, parla di progetto e fondamenta; se è un'agenzia, parla di strategia e esecuzione
+   - La metafora deve far capire che il problema NON è il sito in sé, ma l'ASSENZA DI STRATEGIA dietro
 5. Lavora sul concetto "perché devono scegliere te e non un competitor" — differenziazione
 6. Usa tecniche persuasive: scarsità, autorità, prova sociale, reciprocità
-7. Il tono deve essere diretto, autorevole ma non arrogante
-8. NON iniziare con "ha passato la selezione" o simili — vai dritto al valore
-9. All'inizio presentati come Alessio Loi, fondatore di Karalisweb
-10. Lunghezza ideale: 60-90 secondi di lettura (circa 200-280 parole)
-11. Chiudi con una CTA chiara che invita a rispondere al messaggio
+7. Il tono deve essere diretto, autorevole ma non arrogante — sei un consulente che vuole aiutare
+8. NON iniziare con "ha passato la selezione" o formule fredde — vai dritto con il permesso
+9. Lunghezza ideale: 90-120 secondi di lettura (circa 300-400 parole) — deve essere DENSO di contenuto specifico
+10. Chiudi con una CTA chiara che invita a rispondere al messaggio
 
 Scrivi SOLO lo script finale, nient'altro. No commenti, no spiegazioni, no formattazione extra.`;
