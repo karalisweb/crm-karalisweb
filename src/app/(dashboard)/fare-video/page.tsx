@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Video, RefreshCw, AlertTriangle, ChevronRight, Search, Pen, Globe, Send } from "lucide-react";
+import { Video, RefreshCw, AlertTriangle, ChevronRight, Search, Pen, Globe, Send, FileText } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,8 @@ interface FareVideoLead {
   videoLandingUrl: string | null;
   videoSentAt: string | null;
   scriptRegeneratedAt: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  geminiAnalysis: any;
 }
 
 function calculateStep(lead: FareVideoLead): number {
@@ -156,11 +158,22 @@ export default function VideoDaFarePage() {
                         ))}
                       </div>
 
-                      {/* Current step label */}
+                      {/* Current step label + Tella status */}
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 w-32">
                         <StepIcon className="h-3.5 w-3.5" />
                         <span className="truncate">{STEP_LABELS[step]}</span>
                       </div>
+
+                      {/* Tella script status */}
+                      {lead.geminiAnalysis?.readingScript ? (
+                        <Badge variant="outline" className="text-xs shrink-0 text-orange-600 border-orange-300 bg-orange-50 gap-1">
+                          <FileText className="h-3 w-3" />Tella
+                        </Badge>
+                      ) : step >= 2 ? (
+                        <Badge variant="outline" className="text-xs shrink-0 text-gray-400 border-gray-300 gap-1">
+                          <FileText className="h-3 w-3" />No Tella
+                        </Badge>
+                      ) : null}
 
                       {/* Step count */}
                       <Badge variant="outline" className="text-xs shrink-0">
