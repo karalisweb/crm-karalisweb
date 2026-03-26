@@ -163,11 +163,11 @@ export async function POST(
 
     const script = result.response.text().trim();
 
-    // Salva lo script nel lead
+    // Salva lo script nel lead (dentro geminiAnalysis, dove la pagina lo legge)
     await db.lead.update({
       where: { id },
       data: {
-        videoScriptData: {
+        geminiAnalysis: {
           ...(lead.geminiAnalysis as object),
           readingScript: script,
           readingScriptGeneratedAt: new Date().toISOString(),

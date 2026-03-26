@@ -12,7 +12,7 @@ import {
   Lock, Check, ChevronDown, ChevronUp,
   Loader2, RefreshCw, Pencil, Copy,
   ExternalLink, MessageCircle, Mail,
-  AlertTriangle, Target,
+  AlertTriangle, Target, FileText,
 } from "lucide-react";
 import type { AnalystOutput, AnalystPainPoint } from "@/lib/gemini-analyst";
 
@@ -28,7 +28,7 @@ interface StepperProps {
   analystOutput: AnalystOutput | null;
   analystApprovedAt: string | null;
   // Step 2
-  geminiAnalysis: { teleprompter_script?: { atto_1: string; atto_2: string; atto_3: string; atto_4: string }; strategic_note?: string } | null;
+  geminiAnalysis: { teleprompter_script?: { atto_1: string; atto_2: string; atto_3: string; atto_4: string }; strategic_note?: string; readingScript?: string } | null;
   scriptApprovedAt: string | null;
   puntoDoloreBreve: string | null;
   puntoDoloreLungo: string | null;
@@ -487,6 +487,19 @@ function Step2Content({
   const [editBreve, setEditBreve] = useState(puntoDoloreBreve || "");
   const [editLungo, setEditLungo] = useState(puntoDoloreLungo || "");
 
+  // Editable acts
+  const script = geminiAnalysis?.teleprompter_script;
+  const [editAtto1, setEditAtto1] = useState(script?.atto_1 || "");
+  const [editAtto2, setEditAtto2] = useState(script?.atto_2 || "");
+  const [editAtto3, setEditAtto3] = useState(script?.atto_3 || "");
+  const [editAtto4, setEditAtto4] = useState(script?.atto_4 || "");
+
+  // Reading script (Script per Tella)
+  const [readingScript, setReadingScript] = useState(geminiAnalysis?.readingScript || "");
+  const [readingLoading, setReadingLoading] = useState(false);
+  const [readingCopied, setReadingCopied] = useState(false);
+  const [readingInstructions, setReadingInstructions] = useState("");
+
   const runScript = useCallback(async (notes?: string) => {
     setLoading(true);
     try {
@@ -514,6 +527,18 @@ function Step2Content({
       if (action === "edit") {
         body.puntoDoloreBreve = editBreve;
         body.puntoDoloreLungo = editLungo;
+        // Save modified acts into geminiAnalysis
+        if (geminiAnalysis) {
+          body.geminiAnalysis = {
+            ...geminiAnalysis,
+            teleprompter_script: {
+              atto_1: editAtto1,
+              atto_2: editAtto2,
+              atto_3: editAtto3,
+              atto_4: editAtto4,
+            },
+          };
+        }
       }
       const res = await fetch(`/api/leads/${leadId}/approve-script`, {
         method: "POST",
@@ -522,15 +547,51 @@ function Step2Content({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("Script approvato");
+      toast.success("Modifiche salvate e approvate");
       setEditing(false);
       onRefresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore");
     }
-  }, [leadId, editBreve, editLungo, onRefresh]);
+  }, [leadId, editBreve, editLungo, editAtto1, editAtto2, editAtto3, editAtto4, geminiAnalysis, onRefresh]);
 
-  const script = geminiAnalysis?.teleprompter_script;
+  // Generate reading script for Tella
+  const generateReadingScript = useCallback(async () => {
+    setReadingLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${leadId}/reading-script`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customInstructions: readingInstructions.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setReadingScript(data.script);
+      toast.success("Script per Tella generato!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore nella generazione");
+    } finally {
+      setReadingLoading(false);
+    }
+  }, [leadId, readingInstructions]);
+
+  const copyReadingScript = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(readingScript);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = readingScript;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setReadingCopied(true);
+    setTimeout(() => setReadingCopied(false), 2000);
+    toast.success("Testo copiato — pronto per Tella!");
+  }, [readingScript]);
 
   if (!script) {
     return (
@@ -550,10 +611,10 @@ function Step2Content({
   }
 
   const acts = [
-    { num: 1, title: "Ghiaccio e Metafora", text: script.atto_1 },
-    { num: 2, title: "La Scena del Crimine", text: script.atto_2 },
-    { num: 3, title: "I Soldi", text: script.atto_3 },
-    { num: 4, title: "La Soluzione", text: script.atto_4 },
+    { num: 1, title: "Ghiaccio e Metafora", text: script.atto_1, value: editAtto1, setter: setEditAtto1 },
+    { num: 2, title: "La Scena del Crimine", text: script.atto_2, value: editAtto2, setter: setEditAtto2 },
+    { num: 3, title: "I Soldi", text: script.atto_3, value: editAtto3, setter: setEditAtto3 },
+    { num: 4, title: "La Soluzione", text: script.atto_4, value: editAtto4, setter: setEditAtto4 },
   ];
 
   return (
@@ -564,25 +625,10 @@ function Step2Content({
             <Check className="h-3 w-3 mr-1" />
             Approvato il {new Date(scriptApprovedAt).toLocaleDateString("it-IT")}
           </Badge>
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-blue-600 border-blue-300 hover:bg-blue-50"
-            onClick={() => {
-              const fullText = acts.map(a => a.text).join("\n\n");
-              navigator.clipboard.writeText(fullText).then(() => {
-                toast.success("Testo copiato — pronto per il teleprompter!");
-              }).catch(() => {
-                toast.error("Errore nella copia");
-              });
-            }}
-          >
-            <Copy className="h-3.5 w-3.5 mr-1.5" />Copia Teleprompter
-          </Button>
         </div>
       )}
 
-      {/* 4 Acts */}
+      {/* 4 Acts — editable when editing mode */}
       {acts.map(act => (
         <Card key={act.num}>
           <CardHeader className="pb-2 pt-3 px-4">
@@ -594,7 +640,16 @@ function Step2Content({
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <p className="text-sm leading-relaxed">{act.text}</p>
+            {editing ? (
+              <Textarea
+                value={act.value}
+                onChange={(e) => act.setter(e.target.value)}
+                rows={4}
+                className="text-sm"
+              />
+            ) : (
+              <p className="text-sm leading-relaxed">{act.text}</p>
+            )}
           </CardContent>
         </Card>
       ))}
@@ -650,6 +705,10 @@ function Step2Content({
             )}
             <Button size="sm" variant="outline" onClick={() => {
               setEditing(true);
+              setEditAtto1(script.atto_1);
+              setEditAtto2(script.atto_2);
+              setEditAtto3(script.atto_3);
+              setEditAtto4(script.atto_4);
               setEditBreve(puntoDoloreBreve || "");
               setEditLungo(puntoDoloreLungo || "");
             }}>
@@ -657,11 +716,11 @@ function Step2Content({
             </Button>
             {showRegenNotes ? (
               <div className="w-full space-y-2 mt-2">
-                <Textarea placeholder="Note per rigenerazione..." value={regenNotes} onChange={(e) => setRegenNotes(e.target.value)} rows={2} className="text-sm" />
+                <Textarea placeholder="Istruzioni per rigenerazione (es. 'Più aggressivo', 'Usa metafora del ristorante')..." value={regenNotes} onChange={(e) => setRegenNotes(e.target.value)} rows={2} className="text-sm" />
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => runScript(regenNotes)} disabled={loading}>
                     {loading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
-                    Rigenera con note
+                    Rigenera con istruzioni
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => { setShowRegenNotes(false); setRegenNotes(""); }}>Annulla</Button>
                 </div>
@@ -672,6 +731,85 @@ function Step2Content({
               </Button>
             )}
           </>
+        )}
+      </div>
+
+      {/* ================================================ */}
+      {/* Script per Tella — testo fluido per teleprompter  */}
+      {/* ================================================ */}
+      <div className="border-t pt-4 mt-4">
+        <div className="flex items-center gap-2 mb-3">
+          <FileText className="h-4 w-4 text-orange-500" />
+          <h4 className="text-sm font-semibold">Script per Tella</h4>
+          <span className="text-xs text-muted-foreground">(testo da leggere nel video)</span>
+        </div>
+
+        {readingScript ? (
+          <div className="space-y-3">
+            {/* Script text */}
+            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 text-sm leading-relaxed whitespace-pre-wrap max-h-[400px] overflow-y-auto">
+              {readingScript}
+            </div>
+
+            {/* Copy button — prominent */}
+            <Button
+              onClick={copyReadingScript}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+              size="sm"
+            >
+              {readingCopied ? (
+                <><Check className="h-4 w-4 mr-2" />Copiato — incolla in Tella!</>
+              ) : (
+                <><Copy className="h-4 w-4 mr-2" />Copia Testo per Tella</>
+              )}
+            </Button>
+
+            {/* Rigenera con istruzioni */}
+            <div className="space-y-2">
+              <Input
+                value={readingInstructions}
+                onChange={(e) => setReadingInstructions(e.target.value)}
+                placeholder='Istruzioni per rigenerazione (es. "Più colloquiale", "Aggiungi esempio concreto")'
+                className="text-sm h-8"
+              />
+              <Button
+                onClick={generateReadingScript}
+                variant="outline"
+                size="sm"
+                disabled={readingLoading}
+              >
+                {readingLoading ? (
+                  <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Rigenerazione...</>
+                ) : (
+                  <><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Rigenera Script Tella</>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Genera il testo fluido da leggere nel video. Prende i 4 atti e li trasforma in un copione naturale.
+            </p>
+            <Input
+              value={readingInstructions}
+              onChange={(e) => setReadingInstructions(e.target.value)}
+              placeholder='Istruzioni opzionali (es. "Tono amichevole", "Max 60 secondi")'
+              className="text-sm h-8"
+            />
+            <Button
+              onClick={generateReadingScript}
+              disabled={readingLoading}
+              className="w-full"
+              size="sm"
+            >
+              {readingLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generazione in corso...</>
+              ) : (
+                <><FileText className="h-4 w-4 mr-2" />Genera Script per Tella</>
+              )}
+            </Button>
+          </div>
         )}
       </div>
     </div>

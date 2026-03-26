@@ -17,11 +17,8 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { PipelineStageSelector } from "@/components/leads/pipeline-stage-selector";
-import { GeminiAnalysisCard } from "@/components/leads/gemini-analysis-card";
-import { AdsInvestigationButton } from "@/components/leads/ads-investigation-button";
 import { VideoTrackingSection } from "@/components/leads/video-tracking-section";
 import { OutreachSender } from "@/components/leads/outreach-sender";
-import { ReadingScriptCard } from "@/components/leads/reading-script-card";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { timeAgo } from "@/lib/date-utils";
 import { VideoOutreachStepperWrapper } from "@/components/leads/video-outreach-stepper-wrapper";
@@ -36,11 +33,11 @@ interface LeadPageProps {
 export default async function LeadDetailPage({ params, searchParams }: LeadPageProps) {
   const { id } = await params;
   const { tab } = await searchParams;
-  const validTabs = ["info", "analisi-strategica", "video-outreach", "activities"];
+  const validTabs = ["info", "video-outreach", "activities"];
   const defaultTab = tab && validTabs.includes(tab) ? tab : "info";
-  // Supporta anche vecchi alias
-  const resolvedTab = tab === "ai-analysis" || tab === "analisi-ai"
-    ? "analisi-strategica"
+  // Supporta anche vecchi alias — redirect to video-outreach
+  const resolvedTab = tab === "ai-analysis" || tab === "analisi-ai" || tab === "analisi-strategica"
+    ? "video-outreach"
     : defaultTab;
 
   const lead = await db.lead.findUnique({
@@ -136,7 +133,6 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
       <Tabs defaultValue={resolvedTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Informazioni</TabsTrigger>
-          <TabsTrigger value="analisi-strategica">Analisi Strategica</TabsTrigger>
           <TabsTrigger value="video-outreach">Video Outreach</TabsTrigger>
           <TabsTrigger value="activities">Attivita</TabsTrigger>
         </TabsList>
@@ -304,45 +300,6 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             landingUrl={lead.videoLandingUrl}
             phone={lead.phone}
           />
-        </TabsContent>
-
-        {/* Analisi Strategica Tab (Teleprompter) */}
-        <TabsContent value="analisi-strategica" className="space-y-6">
-          <GeminiAnalysisCard
-            leadId={lead.id}
-            hasWebsite={!!lead.website}
-            geminiAnalysis={lead.geminiAnalysis as Parameters<typeof GeminiAnalysisCard>[0]["geminiAnalysis"]}
-            geminiAnalyzedAt={lead.geminiAnalyzedAt?.toISOString() ?? null}
-            adsCheckedAt={lead.adsCheckedAt?.toISOString() ?? null}
-            googleAdsCopy={lead.googleAdsCopy}
-            metaAdsCopy={lead.metaAdsCopy}
-          />
-
-          {/* Script di Lettura per Video */}
-          <ReadingScriptCard
-            leadId={lead.id}
-            leadName={lead.name}
-            hasGeminiAnalysis={!!lead.geminiAnalyzedAt}
-            existingScript={
-              (lead.geminiAnalysis as Record<string, unknown>)?.readingScript as string | null ?? null
-            }
-          />
-
-          {lead.website && (
-            <AdsInvestigationButton
-              leadId={lead.id}
-              leadName={lead.name}
-              website={lead.website}
-              hasActiveGoogleAds={lead.hasActiveGoogleAds}
-              hasActiveMetaAds={lead.hasActiveMetaAds}
-              adsCheckedAt={lead.adsCheckedAt?.toISOString() ?? null}
-              adsCoherenceWarning={lead.adsCoherenceWarning}
-              googleAdsCopy={lead.googleAdsCopy}
-              metaAdsCopy={lead.metaAdsCopy}
-              auditHasGoogleAdsTag={!!(lead.auditData as Record<string, unknown>)?.tracking && !!((lead.auditData as Record<string, Record<string, unknown>>)?.tracking?.hasGoogleAdsTag)}
-              auditHasFacebookPixel={!!(lead.auditData as Record<string, unknown>)?.tracking && !!((lead.auditData as Record<string, Record<string, unknown>>)?.tracking?.hasFacebookPixel)}
-            />
-          )}
         </TabsContent>
 
         {/* Video Outreach Tab */}
