@@ -559,10 +559,27 @@ function Step2Content({
   return (
     <div className="space-y-4">
       {scriptApprovedAt && !editing && (
-        <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-          <Check className="h-3 w-3 mr-1" />
-          Approvato il {new Date(scriptApprovedAt).toLocaleDateString("it-IT")}
-        </Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+            <Check className="h-3 w-3 mr-1" />
+            Approvato il {new Date(scriptApprovedAt).toLocaleDateString("it-IT")}
+          </Badge>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+            onClick={() => {
+              const fullText = acts.map(a => a.text).join("\n\n");
+              navigator.clipboard.writeText(fullText).then(() => {
+                toast.success("Testo copiato — pronto per il teleprompter!");
+              }).catch(() => {
+                toast.error("Errore nella copia");
+              });
+            }}
+          >
+            <Copy className="h-3.5 w-3.5 mr-1.5" />Copia Teleprompter
+          </Button>
+        </div>
       )}
 
       {/* 4 Acts */}
