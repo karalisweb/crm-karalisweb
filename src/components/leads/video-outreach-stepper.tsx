@@ -619,12 +619,33 @@ function Step2Content({
 
   return (
     <div className="space-y-4">
-      {scriptApprovedAt && !editing && (
+      {/* Status badges — stato dei due testi */}
+      {!editing && (
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-            <Check className="h-3 w-3 mr-1" />
-            Approvato il {new Date(scriptApprovedAt).toLocaleDateString("it-IT")}
-          </Badge>
+          {/* Script 4 atti */}
+          {scriptApprovedAt ? (
+            <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+              <Check className="h-3 w-3 mr-1" />
+              4 Atti approvati
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-yellow-600 border-yellow-300 bg-yellow-50">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              4 Atti da approvare
+            </Badge>
+          )}
+          {/* Script Tella */}
+          {readingScript ? (
+            <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
+              <FileText className="h-3 w-3 mr-1" />
+              Script Tella pronto
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-gray-500 border-gray-300 bg-gray-50">
+              <FileText className="h-3 w-3 mr-1" />
+              Script Tella da generare
+            </Badge>
+          )}
         </div>
       )}
 
