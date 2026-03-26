@@ -52,6 +52,19 @@ CONTESTO:
 PROBLEMI STRATEGICI TROVATI SUL SITO DEL PROSPECT:
 {{PROBLEMI_SITO}}
 
+=== TESTI REALI ESTRATTI DAL SITO DEL PROSPECT ===
+
+HOMEPAGE:
+{{TESTI_HOMEPAGE}}
+
+PAGINA ABOUT/CHI SIAMO:
+{{TESTI_ABOUT}}
+
+PAGINA SERVIZI:
+{{TESTI_SERVIZI}}
+
+=== FINE TESTI SITO ===
+
 TELEPROMPTER ORIGINALE:
 ATTO 1: {{ATTO_1}}
 ATTO 2: {{ATTO_2}}
@@ -63,7 +76,11 @@ ATTO 4: {{ATTO_4}}
 REGOLE PER LO SCRIPT FINALE:
 1. Deve essere UN FLUSSO CONTINUO senza titoli di sezione, numeri o intestazioni
 2. Deve suonare naturale e conversazionale, come se parlassi a un amico imprenditore
-3. FONDAMENTALE: Il prospect deve capire che hai DAVVERO analizzato il SUO sito. Cita la frase cliché esatta trovata, menziona il pattern di errore specifico, parla dei problemi STRATEGICI (non tecnici). Se cambi il logo o il nome dell'azienda nello script, il testo NON deve funzionare ugualmente — deve essere iper-specifico per questo prospect.
+3. FONDAMENTALE — SPECIFICITÀ: Il prospect deve capire che hai DAVVERO analizzato il SUO sito. Per farlo DEVI:
+   - CITARE almeno 2-3 FRASI ESATTE prese dai testi del sito (homepage, about, servizi) — tra virgolette
+   - Menzionare NOMI di prodotti, servizi o sezioni specifiche che trovi nei testi
+   - Riferire DATI CONCRETI dal sito (es. nomi di proprietà, categorie, cifre, nomi di persone)
+   - Il test di qualità: se cambi il nome dell'azienda nello script, il testo NON deve funzionare per un altro — deve essere impossibile da riciclare
 4. Usa una METAFORA potente e coerente che aiuti il cliente a capire il MSD (Metodo Strategico Digitale)
 5. Lavora sul concetto "perché devono scegliere te e non un competitor" — differenziazione
 6. Usa tecniche persuasive: scarsità, autorità, prova sociale, reciprocità

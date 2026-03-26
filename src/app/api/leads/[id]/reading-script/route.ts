@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getGeminiClient } from "@/lib/gemini";
 import { DEFAULT_READING_SCRIPT_PROMPT } from "@/lib/prompts";
+import { fetchSiteHtml } from "@/lib/gemini-analyst";
+import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 
 /**
  * Estrae i problemi STRATEGICI dall'analisi Gemini del lead.
@@ -72,10 +74,60 @@ function extractStrategicProblems(
 }
 
 /**
+ * Recupera i testi estratti dal sito.
+ * Prima cerca nei dati salvati (analystOutput), se non ci sono ri-estrae dal sito.
+ */
+async function getExtractedTexts(
+  lead: { website: string | null; name: string; analystOutput: unknown }
+): Promise<{ home_text: string; about_text: string; services_text: string }> {
+  const analystData = lead.analystOutput as Record<string, unknown> | null;
+
+  // Prova a prendere i testi salvati
+  const savedHome = analystData?.extracted_home_text as string | null;
+  const savedAbout = analystData?.extracted_about_text as string | null;
+  const savedServices = analystData?.extracted_services_text as string | null;
+
+  if (savedHome) {
+    return {
+      home_text: savedHome,
+      about_text: savedAbout || "Non disponibile",
+      services_text: savedServices || "Non disponibile",
+    };
+  }
+
+  // Testi non salvati (lead esistente) → ri-estrai dal sito
+  if (!lead.website) {
+    return {
+      home_text: "Sito non disponibile",
+      about_text: "Non disponibile",
+      services_text: "Non disponibile",
+    };
+  }
+
+  try {
+    console.log(`[reading-script] Ri-estrazione testi da ${lead.website}...`);
+    const html = await fetchSiteHtml(lead.website);
+    const extracted = await extractStrategicData(html, lead.website, lead.name);
+    return {
+      home_text: extracted.home_text || "Non estratto",
+      about_text: extracted.about_text || "Non disponibile",
+      services_text: extracted.services_text || "Non disponibile",
+    };
+  } catch (err) {
+    console.warn(`[reading-script] Impossibile ri-estrarre testi: ${err}`);
+    return {
+      home_text: "Errore nell'estrazione",
+      about_text: "Non disponibile",
+      services_text: "Non disponibile",
+    };
+  }
+}
+
+/**
  * POST /api/leads/[id]/reading-script
  *
  * Genera lo script finale di lettura per il video.
- * Include i PROBLEMI STRATEGICI (non tecnici) del prospect.
+ * Include i PROBLEMI STRATEGICI e i TESTI REALI del sito del prospect.
  */
 export async function POST(
   request: NextRequest,
@@ -94,6 +146,7 @@ export async function POST(
         website: true,
         geminiAnalysis: true,
         geminiAnalyzedAt: true,
+        analystOutput: true,
         auditData: true,
         opportunityScore: true,
       },
@@ -127,6 +180,9 @@ export async function POST(
     // Estrai i problemi STRATEGICI (non tecnici) dall'analisi
     const siteProblems = extractStrategicProblems(analysis);
 
+    // Recupera i TESTI REALI del sito (salvati o ri-estratti)
+    const extractedTexts = await getExtractedTexts(lead);
+
     // Leggi il prompt template dai settings (se personalizzato)
     const settings = await db.settings.findUnique({
       where: { id: "default" },
@@ -145,6 +201,9 @@ export async function POST(
       .replace(/\{\{CLICHE\}\}/g, cliche || "N/A")
       .replace(/\{\{STRATEGIC_NOTE\}\}/g, strategicNote || "N/A")
       .replace(/\{\{PROBLEMI_SITO\}\}/g, siteProblems)
+      .replace(/\{\{TESTI_HOMEPAGE\}\}/g, extractedTexts.home_text)
+      .replace(/\{\{TESTI_ABOUT\}\}/g, extractedTexts.about_text)
+      .replace(/\{\{TESTI_SERVIZI\}\}/g, extractedTexts.services_text)
       .replace(/\{\{ATTO_1\}\}/g, teleprompter.atto_1 || "")
       .replace(/\{\{ATTO_2\}\}/g, teleprompter.atto_2 || "")
       .replace(/\{\{ATTO_3\}\}/g, teleprompter.atto_3 || "")

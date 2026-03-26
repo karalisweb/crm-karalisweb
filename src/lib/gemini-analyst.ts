@@ -33,6 +33,10 @@ export interface AnalystOutput {
   services_text_length: number;
   cliche_status: string;
   tracking_tools: string[];
+  // Testi estratti dal sito (per Script per Tella)
+  extracted_home_text?: string | null;
+  extracted_about_text?: string | null;
+  extracted_services_text?: string | null;
 }
 
 // ==========================================
@@ -95,7 +99,7 @@ const ANALYST_RESPONSE_SCHEMA: Schema = {
 // FETCH HTML (riusa pattern da background-jobs)
 // ==========================================
 
-async function fetchSiteHtml(url: string): Promise<string> {
+export async function fetchSiteHtml(url: string): Promise<string> {
   validatePublicUrl(url);
 
   const response = await fetch(url, {
@@ -215,7 +219,7 @@ export async function runAnalystPrompt(
     throw new Error("Risposta Gemini incompleta: mancano campi obbligatori");
   }
 
-  // 9. Componi output completo con metadata
+  // 9. Componi output completo con metadata + testi estratti
   const output: AnalystOutput = {
     ...parsed,
     generatedAt: new Date().toISOString(),
@@ -225,6 +229,10 @@ export async function runAnalystPrompt(
     services_text_length: extracted.services_text?.length || 0,
     cliche_status: extracted.cliche_status,
     tracking_tools: extracted.tracking_tools_found,
+    // Salva i testi estratti per uso futuro (Script per Tella, ecc.)
+    extracted_home_text: extracted.home_text || null,
+    extracted_about_text: extracted.about_text || null,
+    extracted_services_text: extracted.services_text || null,
   };
 
   return output;
