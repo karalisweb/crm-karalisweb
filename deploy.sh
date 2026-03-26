@@ -410,7 +410,7 @@ fi
 
 print_step "Step 3/9 - Build locale di verifica (type-check)..."
 BUILD_LOG=$(mktemp)
-if cd "${SCRIPT_DIR}" && npm run build > "$BUILD_LOG" 2>&1; then
+if cd "${SCRIPT_DIR}" && NODE_OPTIONS="--max-old-space-size=4096" npm run build > "$BUILD_LOG" 2>&1; then
     print_success "Build locale OK"
 else
     print_error "Build locale fallita!"

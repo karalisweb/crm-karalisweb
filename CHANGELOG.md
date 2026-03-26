@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -97,6 +99,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -146,6 +150,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -166,6 +172,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Tab Scoring aggiornata: soglia ≥80 = HOT LEAD, esempi aggiornati
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -210,6 +218,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -242,6 +252,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -261,6 +273,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - **Tab Scoring aggiornata** con nuovi pesi, nuovi esempi e nota sull'implicazione chiave
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -296,6 +310,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -316,6 +332,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Dashboard mission API: aggiunto conteggio badge per Cold Leads
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -359,6 +377,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -396,6 +416,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -416,6 +438,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -427,6 +451,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Refactoring: sostituito audit tecnico con Analisi Strategica + Teleprompter Mode. Eliminato codice morto (17 file).
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -440,6 +466,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -451,6 +479,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Rimozione Inngest: sostituito con cron API + p-queue per job in background
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -464,6 +494,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -475,6 +507,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Auto-Gemini dopo audit + Sidebar redesign per workflow
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -492,6 +526,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -508,6 +544,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -520,6 +558,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - README.md aggiornato
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -535,6 +575,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -548,6 +590,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -559,6 +603,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - 2FA con OTP, password reset, RBAC
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -572,6 +618,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -583,6 +631,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Sistema commerciale 5 chiamate/giorno
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -596,6 +646,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -607,6 +659,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Integrazione PageSpeed Insights API (poi rimossa in v3.0)
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
@@ -620,6 +674,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
+
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 
 ## [3.8.1] - 2026-03-25nn- feat: location con regione dal DB, sync ricerche programmate auto, pulizia CITY_DATAn
@@ -631,6 +687,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Setup CRM iniziale, Apify mock mode, Docker, NextAuth v5
 
 ---
+
+## [3.8.3] - 2026-03-26nn- Script Tella: testi reali sito + atti editabili + fix salvataggion
 
 ## [3.8.2] - 2026-03-25nn- feat: sync ricerche sequenziale — subcluster priority → category order → location ordern
 

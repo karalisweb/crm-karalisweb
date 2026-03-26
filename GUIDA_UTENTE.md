@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.8.2** | Ultimo aggiornamento: 2026-03-25
+Versione: **3.8.3** | Ultimo aggiornamento: 2026-03-26
 
 > Questa guida spiega come utilizzare il CRM per gestire i lead e il processo commerciale.
 
@@ -351,4 +351,4 @@ R: Il sistema cerca il numero WhatsApp in due modi: prima nel sito web del prosp
 
 ---
 
-*Documento aggiornato il 2026-03-25 | KW Sales CRM v3.8.2*
+*Documento aggiornato il 2026-03-26 | KW Sales CRM v3.8.3*
