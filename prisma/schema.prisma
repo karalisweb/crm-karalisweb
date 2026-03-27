@@ -19,8 +19,9 @@ model Lead {
   name              String
   address           String?
   phone             String?
+  phoneVerified     Boolean   @default(false) @map("phone_verified") // Numero verificato manualmente
   whatsappNumber    String?   @map("whatsapp_number")
-  whatsappSource    String?   @map("whatsapp_source") // "website" | "google_maps"
+  whatsappSource    String?   @map("whatsapp_source") // "website" | "google_maps" | "manual" | "none"
   website           String?
   socialUrl         String?   @map("social_url")
   category          String?

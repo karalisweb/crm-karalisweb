@@ -51,7 +51,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const updateData = {
       ...(body.name !== undefined && { name: body.name }),
       ...(body.address !== undefined && { address: body.address }),
-      ...(body.phone !== undefined && { phone: body.phone }),
+      ...(body.phone !== undefined && { phone: body.phone || null }),
+      ...(body.phoneVerified !== undefined && { phoneVerified: body.phoneVerified }),
+      ...(body.email !== undefined && { email: body.email || null }),
       ...(body.website !== undefined && { website: body.website }),
       ...(body.category !== undefined && { category: body.category }),
       ...(body.pipelineStage !== undefined && { pipelineStage: body.pipelineStage }),

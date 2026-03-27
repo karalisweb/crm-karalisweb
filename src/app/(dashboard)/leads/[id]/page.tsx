@@ -9,12 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PIPELINE_STAGES, STAGE_ROUTES } from "@/types";
 import {
   ArrowLeft,
-  Phone,
-  Globe,
-  MapPin,
   Star,
-  ExternalLink,
-  MessageCircle,
 } from "lucide-react";
 import { PipelineStageSelector } from "@/components/leads/pipeline-stage-selector";
 import { VideoTrackingSection } from "@/components/leads/video-tracking-section";
@@ -22,6 +17,7 @@ import { OutreachSender } from "@/components/leads/outreach-sender";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { timeAgo } from "@/lib/date-utils";
 import { VideoOutreachStepperWrapper } from "@/components/leads/video-outreach-stepper-wrapper";
+import { ContactInfoEditor } from "@/components/leads/contact-info-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -143,133 +139,22 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             <CardHeader>
               <CardTitle>Dettagli Contatto</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {lead.address && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Indirizzo</p>
-                    <p className="text-sm text-muted-foreground">{lead.address}</p>
-                  </div>
-                </div>
-              )}
-
-              {lead.phone && (
-                <div className="flex items-start gap-3">
-                  <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Telefono</p>
-                    <a
-                      href={`tel:${lead.phone}`}
-                      className="text-sm text-blue-400 hover:underline"
-                    >
-                      {lead.phone}
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {/* WhatsApp */}
-              {(lead.whatsappNumber || lead.phone) && (
-                <div className="flex items-start gap-3">
-                  <MessageCircle className="h-5 w-5 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">
-                      WhatsApp
-                      {lead.whatsappSource === "website" && (
-                        <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1 text-green-500 border-green-500/30">
-                          dal sito
-                        </Badge>
-                      )}
-                      {lead.whatsappSource === "google_maps" && (
-                        <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1 text-yellow-500 border-yellow-500/30">
-                          da Google Maps
-                        </Badge>
-                      )}
-                      {!lead.whatsappNumber && lead.phone && (
-                        <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1 text-gray-400 border-gray-500/30">
-                          da verificare
-                        </Badge>
-                      )}
-                    </p>
-                    <a
-                      href={`https://wa.me/${lead.whatsappNumber || lead.phone?.replace(/\D/g, "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-green-400 hover:underline flex items-center gap-1"
-                    >
-                      +{lead.whatsappNumber || lead.phone?.replace(/\D/g, "")}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {lead.website && (
-                <div className="flex items-start gap-3">
-                  <Globe className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Sito Web</p>
-                    <a
-                      href={lead.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      {lead.website}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {lead.socialUrl && (
-                <div className="flex items-start gap-3">
-                  <Globe className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Profilo Social</p>
-                    <a
-                      href={lead.socialUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      {lead.socialUrl}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {lead.googleMapsUrl && (
-                <div className="flex items-start gap-3">
-                  <ExternalLink className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Google Maps</p>
-                    <a
-                      href={lead.googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      Apri su Google Maps
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {lead.notes && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="font-medium text-sm mb-2">Note</p>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {lead.notes}
-                    </p>
-                  </div>
-                </>
-              )}
+            <CardContent>
+              <ContactInfoEditor
+                lead={{
+                  id: lead.id,
+                  address: lead.address,
+                  phone: lead.phone,
+                  phoneVerified: lead.phoneVerified,
+                  whatsappNumber: lead.whatsappNumber,
+                  whatsappSource: lead.whatsappSource,
+                  email: lead.email,
+                  website: lead.website,
+                  socialUrl: lead.socialUrl,
+                  googleMapsUrl: lead.googleMapsUrl,
+                  notes: lead.notes,
+                }}
+              />
             </CardContent>
           </Card>
 
