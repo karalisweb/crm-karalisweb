@@ -28,7 +28,7 @@ interface StepperProps {
   analystOutput: AnalystOutput | null;
   analystApprovedAt: string | null;
   // Step 2
-  geminiAnalysis: { teleprompter_script?: { atto_1: string; atto_2: string; atto_3: string; atto_4: string }; strategic_note?: string; readingScript?: string } | null;
+  geminiAnalysis: { teleprompter_script?: { atto_1: string; atto_2: string; atto_3: string; atto_4: string; atto_5?: string }; strategic_note?: string; readingScript?: string } | null;
   scriptApprovedAt: string | null;
   puntoDoloreBreve: string | null;
   puntoDoloreLungo: string | null;
@@ -493,6 +493,7 @@ function Step2Content({
   const [editAtto2, setEditAtto2] = useState(script?.atto_2 || "");
   const [editAtto3, setEditAtto3] = useState(script?.atto_3 || "");
   const [editAtto4, setEditAtto4] = useState(script?.atto_4 || "");
+  const [editAtto5, setEditAtto5] = useState(script?.atto_5 || "");
 
   // Reading script (Script per Tella)
   const [readingScript, setReadingScript] = useState(geminiAnalysis?.readingScript || "");
@@ -536,6 +537,7 @@ function Step2Content({
               atto_2: editAtto2,
               atto_3: editAtto3,
               atto_4: editAtto4,
+              atto_5: editAtto5,
             },
           };
         }
@@ -611,10 +613,11 @@ function Step2Content({
   }
 
   const acts = [
-    { num: 1, title: "Ghiaccio e Metafora", text: script.atto_1, value: editAtto1, setter: setEditAtto1 },
+    { num: 1, title: "Introduzione", text: script.atto_1, value: editAtto1, setter: setEditAtto1 },
     { num: 2, title: "La Scena del Crimine", text: script.atto_2, value: editAtto2, setter: setEditAtto2 },
     { num: 3, title: "I Soldi", text: script.atto_3, value: editAtto3, setter: setEditAtto3 },
     { num: 4, title: "La Soluzione", text: script.atto_4, value: editAtto4, setter: setEditAtto4 },
+    { num: 5, title: "Chiusura e Contatto", text: script.atto_5 || "", value: editAtto5, setter: setEditAtto5 },
   ];
 
   return (
@@ -622,16 +625,16 @@ function Step2Content({
       {/* Status badges — stato dei due testi */}
       {!editing && (
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Script 4 atti */}
+          {/* Script 5 atti */}
           {scriptApprovedAt ? (
             <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
               <Check className="h-3 w-3 mr-1" />
-              4 Atti approvati
+              5 Atti approvati
             </Badge>
           ) : (
             <Badge variant="outline" className="text-yellow-600 border-yellow-300 bg-yellow-50">
               <AlertTriangle className="h-3 w-3 mr-1" />
-              4 Atti da approvare
+              5 Atti da approvare
             </Badge>
           )}
           {/* Script Tella */}
@@ -730,6 +733,7 @@ function Step2Content({
               setEditAtto2(script.atto_2);
               setEditAtto3(script.atto_3);
               setEditAtto4(script.atto_4);
+              setEditAtto5(script.atto_5 || "");
               setEditBreve(puntoDoloreBreve || "");
               setEditLungo(puntoDoloreLungo || "");
             }}>

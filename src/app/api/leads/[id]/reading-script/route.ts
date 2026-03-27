@@ -208,6 +208,7 @@ export async function POST(
       .replace(/\{\{ATTO_2\}\}/g, teleprompter.atto_2 || "")
       .replace(/\{\{ATTO_3\}\}/g, teleprompter.atto_3 || "")
       .replace(/\{\{ATTO_4\}\}/g, teleprompter.atto_4 || "")
+      .replace(/\{\{ATTO_5\}\}/g, teleprompter.atto_5 || "")
       .replace(/\{\{CUSTOM_INSTRUCTIONS\}\}/g, customInstructions ? `ISTRUZIONI AGGIUNTIVE: ${customInstructions}` : "");
 
     const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";

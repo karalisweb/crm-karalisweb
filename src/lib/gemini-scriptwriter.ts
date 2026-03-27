@@ -13,6 +13,7 @@ export interface ScriptwriterOutput {
     atto_2: string;
     atto_3: string;
     atto_4: string;
+    atto_5: string;
   };
   strategic_note: string;
   // Metadata
@@ -31,12 +32,13 @@ const SCRIPTWRITER_RESPONSE_SCHEMA: Schema = {
     teleprompter_script: {
       type: SchemaType.OBJECT,
       properties: {
-        atto_1: { type: SchemaType.STRING, description: "Atto 1 - Ghiaccio e Metafora" },
-        atto_2: { type: SchemaType.STRING, description: "Atto 2 - La Scena del Crimine" },
-        atto_3: { type: SchemaType.STRING, description: "Atto 3 - I Soldi" },
-        atto_4: { type: SchemaType.STRING, description: "Atto 4 - La Soluzione" },
+        atto_1: { type: SchemaType.STRING, description: "Atto 1 - Introduzione (chi sono, perché ti mando questo video)" },
+        atto_2: { type: SchemaType.STRING, description: "Atto 2 - La Scena del Crimine (problema concreto + metafora)" },
+        atto_3: { type: SchemaType.STRING, description: "Atto 3 - I Soldi (collegamento problema-costi)" },
+        atto_4: { type: SchemaType.STRING, description: "Atto 4 - La Soluzione (MSD, togliamo le colpe)" },
+        atto_5: { type: SchemaType.STRING, description: "Atto 5 - Chiusura e Contatto (video MSD, form, messaggio)" },
       },
-      required: ["atto_1", "atto_2", "atto_3", "atto_4"],
+      required: ["atto_1", "atto_2", "atto_3", "atto_4", "atto_5"],
     },
     strategic_note: {
       type: SchemaType.STRING,
@@ -144,7 +146,7 @@ export async function runScriptwriterPrompt(
   }
 
   const text = response.text();
-  let parsed: { teleprompter_script: { atto_1: string; atto_2: string; atto_3: string; atto_4: string }; strategic_note: string };
+  let parsed: { teleprompter_script: { atto_1: string; atto_2: string; atto_3: string; atto_4: string; atto_5: string }; strategic_note: string };
 
   try {
     parsed = JSON.parse(text);
@@ -156,7 +158,8 @@ export async function runScriptwriterPrompt(
     !parsed.teleprompter_script?.atto_1 ||
     !parsed.teleprompter_script?.atto_2 ||
     !parsed.teleprompter_script?.atto_3 ||
-    !parsed.teleprompter_script?.atto_4
+    !parsed.teleprompter_script?.atto_4 ||
+    !parsed.teleprompter_script?.atto_5
   ) {
     throw new Error("Risposta Gemini incompleta: mancano atti del teleprompter");
   }

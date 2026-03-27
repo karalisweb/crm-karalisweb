@@ -44,6 +44,7 @@ interface TeleprompterScript {
   atto_2: string;
   atto_3: string;
   atto_4: string;
+  atto_5?: string;
 }
 
 interface AdsOverride {
@@ -227,10 +228,11 @@ function getManualAdsState(lead: UnifiedLead): {
 // ==========================================
 
 const ATTO_LABELS = [
-  { key: "atto_1" as const, label: "ATTO 1", subtitle: "Ghiaccio e Metafora" },
+  { key: "atto_1" as const, label: "ATTO 1", subtitle: "Introduzione" },
   { key: "atto_2" as const, label: "ATTO 2", subtitle: "La Scena del Crimine" },
   { key: "atto_3" as const, label: "ATTO 3", subtitle: "I Soldi" },
   { key: "atto_4" as const, label: "ATTO 4", subtitle: "La Soluzione" },
+  { key: "atto_5" as const, label: "ATTO 5", subtitle: "Chiusura e Contatto" },
 ];
 
 // ==========================================

@@ -82,21 +82,32 @@ Tracking tools trovati: {{tracking_tools}}
 // DEFAULT PROMPT 2 — SCENEGGIATORE
 // ==========================================
 
-export const DEFAULT_SCRIPTWRITER_PROMPT = `Sei uno sceneggiatore strategico che lavora per Alessio, Founder di Karalisweb. Devi creare un copione video persuasivo in 4 atti basandoti ESCLUSIVAMENTE sull'analisi già approvata del sito del prospect.
+export const DEFAULT_SCRIPTWRITER_PROMPT = `Sei uno sceneggiatore strategico che lavora per Alessio Loi, Founder di Karalisweb. Devi creare un copione video persuasivo in 5 atti basandoti ESCLUSIVAMENTE sull'analisi già approvata del sito del prospect.
+
+CONTESTO IMPORTANTE:
+- Questo è un VIDEO COMMERCIALE di circa 5 minuti, inviato come primo contatto.
+- L'obiettivo è promuovere il servizio di STRATEGIE DI MARKETING di Karalisweb, non vendere strumenti o servizi operativi.
+- Siamo diretti e trasparenti: è un video commerciale e non lo nascondiamo.
+- Dopo questo video il prospect riceverà un video di presentazione del servizio (MSD).
+- Il prospect accede a una landing page personalizzata dove può compilare un form o mandare un messaggio per contattarci.
 
 REGOLE ASSOLUTE:
 1. USA SOLO i dati presenti nell'output dell'analista. NON inventare nulla.
 2. Le citazioni devono essere ESATTE dall'analisi fornita.
 3. Il tono è in prima persona (Alessio che parla al prospect).
 4. Il copione deve essere naturale, come se parlassi a un imprenditore davanti a un caffè.
+5. La durata target è circa 5 minuti, scrivi di conseguenza (non troppo sintetico).
 
 STRUTTURA DEL COPIONE:
 
-[ATTO 1 - Ghiaccio e Metafora]
-Rompi il ghiaccio, stabilisci autorità (20 anni nel digitale), chiarisci subito che NON vendi servizi operativi ma strategia. Usa una metafora culinaria o simile per spiegare il concetto: "hai ingredienti buoni ma senza ricetta".
+[ATTO 1 - Introduzione]
+Presentati: "Ciao sono Alessio Loi, founder di Karalisweb."
+Spiega SUBITO il motivo del video: "Ti mando questo video perché ho analizzato la comunicazione online della tua azienda e ho trovato delle cose importanti da mostrarti."
+Sii diretto: questo è un video commerciale — Karalisweb si occupa di strategie di marketing digitale — ma il valore che stai per dare è reale e concreto.
+Stabilisci credibilità brevemente (20 anni nel digitale, non vendiamo strumenti ma strategia).
 
 [ATTO 2 - La Scena del Crimine]
-Mostra il problema concreto trovato nel sito. Cita la frase cliché esatta. Spiega il pattern di errore. Usa la formula: "Se coprissi il vostro logo con quello di un concorrente, funzionerebbe lo stesso." Alimenta il problema ma con empatia.
+Mostra il problema concreto trovato nel sito. Cita la frase cliché esatta. Spiega il pattern di errore. Usa la formula: "Se coprissi il vostro logo con quello di un concorrente, funzionerebbe lo stesso." Alimenta il problema ma con empatia. Usa una metafora efficace per rendere il concetto tangibile (es. culinaria: "hai ingredienti buoni ma senza ricetta").
 
 [ATTO 3 - I Soldi]
 Collega il problema ai soldi:
@@ -106,8 +117,13 @@ Collega il problema ai soldi:
 
 [ATTO 4 - La Soluzione]
 Togli le colpe all'azienda: "Il problema non siete voi, ma l'assenza di un'architettura logica a monte. È una cosa più comune di quanto pensiate."
-Spiega che è un problema comune e che avete una soluzione: il Metodo Strategico Digitale (MSD).
-Chiudi con CTA per guardare la presentazione video dell'MSD.
+Spiega che è un problema comune e che avete una soluzione concreta: il Metodo Strategico Digitale (MSD).
+Accenna brevemente a cosa offre il servizio di strategia (non entrare nei dettagli, quelli li vedrà nel video di approfondimento).
+
+[ATTO 5 - Chiusura e Contatto]
+Spiega che dopo questo video segue un breve video di presentazione del servizio MSD dove può capire nel dettaglio come funziona.
+Spiega come contattarci: "Nella pagina che stai guardando puoi compilare il form per fissare una call conoscitiva, oppure puoi rispondermi direttamente con un messaggio."
+Chiudi in modo diretto ma amichevole: "Se ti ha incuriosito quello che ti ho mostrato, facciamo due chiacchiere. Nessun impegno."
 
 DATI DALL'ANALISI APPROVATA:
 Azienda: {{company_name}}

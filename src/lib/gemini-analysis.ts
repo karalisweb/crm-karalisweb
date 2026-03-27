@@ -62,12 +62,13 @@ const RESPONSE_SCHEMA: Schema = {
     teleprompter_script: {
       type: SchemaType.OBJECT,
       properties: {
-        atto_1: { type: SchemaType.STRING, description: "Atto 1 - Ghiaccio" },
+        atto_1: { type: SchemaType.STRING, description: "Atto 1 - Introduzione" },
         atto_2: { type: SchemaType.STRING, description: "Atto 2 - La Scena del Crimine" },
         atto_3: { type: SchemaType.STRING, description: "Atto 3 - I Soldi" },
         atto_4: { type: SchemaType.STRING, description: "Atto 4 - La Soluzione" },
+        atto_5: { type: SchemaType.STRING, description: "Atto 5 - Chiusura e Contatto" },
       },
-      required: ["atto_1", "atto_2", "atto_3", "atto_4"],
+      required: ["atto_1", "atto_2", "atto_3", "atto_4", "atto_5"],
     },
     strategic_note: {
       type: SchemaType.STRING,
@@ -142,6 +143,7 @@ export async function runGeminiAnalysis(
       atto_2: string;
       atto_3: string;
       atto_4: string;
+      atto_5: string;
     };
     strategic_note: string;
   };
@@ -167,7 +169,8 @@ export async function runGeminiAnalysis(
     !parsed.teleprompter_script.atto_1 ||
     !parsed.teleprompter_script.atto_2 ||
     !parsed.teleprompter_script.atto_3 ||
-    !parsed.teleprompter_script.atto_4
+    !parsed.teleprompter_script.atto_4 ||
+    !parsed.teleprompter_script.atto_5
   ) {
     throw new Error("Risposta Gemini incompleta: mancano atti del teleprompter");
   }

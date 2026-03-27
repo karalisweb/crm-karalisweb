@@ -26,6 +26,7 @@ interface GeminiAnalysis {
     atto_2?: string;
     atto_3?: string;
     atto_4?: string;
+    atto_5?: string;
   };
 }
 
