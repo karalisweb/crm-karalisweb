@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -105,6 +107,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -162,6 +166,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -190,6 +196,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Tab Scoring aggiornata: soglia ≥80 = HOT LEAD, esempi aggiornati
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -242,6 +250,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -282,6 +292,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -309,6 +321,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - **Tab Scoring aggiornata** con nuovi pesi, nuovi esempi e nota sull'implicazione chiave
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -352,6 +366,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -380,6 +396,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Dashboard mission API: aggiunto conteggio badge per Cold Leads
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -431,6 +449,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -476,6 +496,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -504,6 +526,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -523,6 +547,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Refactoring: sostituito audit tecnico con Analisi Strategica + Teleprompter Mode. Eliminato codice morto (17 file).
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -544,6 +570,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -563,6 +591,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Rimozione Inngest: sostituito con cron API + p-queue per job in background
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -584,6 +614,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -603,6 +635,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Auto-Gemini dopo audit + Sidebar redesign per workflow
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -628,6 +662,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -652,6 +688,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -672,6 +710,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - README.md aggiornato
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -695,6 +735,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -716,6 +758,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -735,6 +779,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - 2FA con OTP, password reset, RBAC
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -756,6 +802,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -775,6 +823,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Sistema commerciale 5 chiamate/giorno
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -796,6 +846,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -815,6 +867,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Integrazione PageSpeed Insights API (poi rimossa in v3.0)
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
@@ -836,6 +890,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
+
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 
 ## [3.8.5] - 2026-03-26nn- Fare Video: badge stato Script Tella nella listan
@@ -855,6 +911,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Setup CRM iniziale, Apify mock mode, Docker, NextAuth v5
 
 ---
+
+## [3.8.7] - 2026-03-27nn- fix: fallback HTTP quando HTTPS va in timeout nell'auditn
 
 ## [3.8.6] - 2026-03-27nn- feat: gestione contatti editabile nella scheda leadn
 

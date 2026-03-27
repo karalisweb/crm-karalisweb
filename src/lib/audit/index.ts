@@ -38,29 +38,64 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
     url = "https://" + url;
   }
 
-  // Fetch HTML della homepage
   // Headers completi per evitare blocchi anti-bot (es. SiteGround, Cloudflare)
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(15000),
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      "Accept":
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-      "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Cache-Control": "no-cache",
-      "Pragma": "no-cache",
-      "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-      "Sec-Ch-Ua-Mobile": "?0",
-      "Sec-Ch-Ua-Platform": '"macOS"',
-      "Sec-Fetch-Dest": "document",
-      "Sec-Fetch-Mode": "navigate",
-      "Sec-Fetch-Site": "none",
-      "Sec-Fetch-User": "?1",
-      "Upgrade-Insecure-Requests": "1",
-    },
-  });
+  const fetchHeaders = {
+    "User-Agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept":
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"macOS"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+  };
+
+  // Fetch HTML della homepage (con fallback HTTP se HTTPS fallisce)
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
+      headers: fetchHeaders,
+    });
+  } catch {
+    // Se HTTPS fallisce (timeout, SSL error), prova HTTP
+    if (url.startsWith("https://")) {
+      const httpUrl = url.replace("https://", "http://");
+      response = await fetch(httpUrl, {
+        signal: AbortSignal.timeout(15000),
+        redirect: "manual", // Non seguire redirect a HTTPS che potrebbe fallire di nuovo
+        headers: fetchHeaders,
+      });
+      // Se il sito risponde con redirect a HTTPS (che sappiamo non funzionare),
+      // ri-fetch in HTTP seguendo solo redirect HTTP
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location") || "";
+        if (location.startsWith("https://")) {
+          // Il redirect va a HTTPS che non funziona, fetch HTTP senza redirect manual
+          response = await fetch(httpUrl, {
+            signal: AbortSignal.timeout(15000),
+            headers: fetchHeaders,
+          });
+        } else {
+          response = await fetch(location, {
+            signal: AbortSignal.timeout(15000),
+            headers: fetchHeaders,
+          });
+        }
+      }
+      url = httpUrl; // Aggiorna url per i check successivi
+    } else {
+      throw new Error("Failed to fetch website: connection timeout");
+    }
+  }
 
   if (!response.ok) {
     throw new Error(`Failed to fetch website: ${response.status}`);
