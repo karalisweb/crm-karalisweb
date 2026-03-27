@@ -10,14 +10,16 @@ import { PIPELINE_STAGES, STAGE_ROUTES } from "@/types";
 import {
   ArrowLeft,
   Star,
+  Target,
+  MessageSquare,
 } from "lucide-react";
 import { PipelineStageSelector } from "@/components/leads/pipeline-stage-selector";
 import { VideoTrackingSection } from "@/components/leads/video-tracking-section";
-import { OutreachSender } from "@/components/leads/outreach-sender";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { timeAgo } from "@/lib/date-utils";
 import { VideoOutreachStepperWrapper } from "@/components/leads/video-outreach-stepper-wrapper";
 import { ContactInfoEditor } from "@/components/leads/contact-info-editor";
+import { MessagingHub } from "@/components/leads/messaging-hub";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,7 @@ interface LeadPageProps {
 export default async function LeadDetailPage({ params, searchParams }: LeadPageProps) {
   const { id } = await params;
   const { tab } = await searchParams;
-  const validTabs = ["info", "video-outreach", "activities"];
+  const validTabs = ["info", "messaggi", "video-outreach", "activities"];
   const defaultTab = tab && validTabs.includes(tab) ? tab : "info";
   // Supporta anche vecchi alias — redirect to video-outreach
   const resolvedTab = tab === "ai-analysis" || tab === "analisi-ai" || tab === "analisi-strategica"
@@ -129,6 +131,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
       <Tabs defaultValue={resolvedTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Informazioni</TabsTrigger>
+          <TabsTrigger value="messaggi">Messaggi</TabsTrigger>
           <TabsTrigger value="video-outreach">Video Outreach</TabsTrigger>
           <TabsTrigger value="activities">Attivita</TabsTrigger>
         </TabsList>
@@ -158,6 +161,21 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             </CardContent>
           </Card>
 
+          {/* Punto di dolore (read-only) */}
+          {lead.landingPuntoDolore && (
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-start gap-2">
+                  <Target className="h-4 w-4 mt-0.5 text-orange-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Punto di dolore</p>
+                    <p className="text-sm">{lead.landingPuntoDolore}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Video Tracking Section */}
           <VideoTrackingSection
             leadId={lead.id}
@@ -174,9 +192,11 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             videoCompletedAt={lead.videoCompletedAt?.toISOString() ?? null}
             landingPuntoDolore={lead.landingPuntoDolore ?? null}
           />
+        </TabsContent>
 
-          {/* Invio Messaggio WA/Email */}
-          <OutreachSender
+        {/* Messaggi Tab */}
+        <TabsContent value="messaggi">
+          <MessagingHub
             leadId={lead.id}
             leadName={lead.name}
             whatsappNumber={lead.whatsappNumber}
@@ -184,6 +204,18 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             outreachChannel={lead.outreachChannel}
             landingUrl={lead.videoLandingUrl}
             phone={lead.phone}
+            landingPuntoDolore={lead.landingPuntoDolore}
+            videoViewsCount={lead.videoViewsCount}
+            videoFirstPlayAt={lead.videoFirstPlayAt?.toISOString() ?? null}
+            videoMaxWatchPercent={lead.videoMaxWatchPercent ?? null}
+            videoCompletedAt={lead.videoCompletedAt?.toISOString() ?? null}
+            unsubscribed={lead.unsubscribed}
+            activities={lead.activities.map(a => ({
+              id: a.id,
+              type: a.type,
+              notes: a.notes,
+              createdAt: a.createdAt.toISOString(),
+            }))}
           />
         </TabsContent>
 

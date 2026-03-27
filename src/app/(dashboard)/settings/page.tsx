@@ -26,13 +26,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin, History } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin, History, Mail } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
 import { CrmConfigTab } from "@/components/settings/crm-config-tab";
 import { ScheduledSearchesTab } from "@/components/settings/scheduled-searches-tab";
 import { SearchHistoryTab } from "@/components/settings/search-history-tab";
 import { ScoringConfigTab } from "@/components/settings/scoring-config-tab";
 import { AiConfigTab } from "@/components/settings/ai-config-tab";
+import { EmailMessagingConfigTab } from "@/components/settings/email-messaging-config-tab";
 
 interface User {
   id: string;
@@ -298,6 +299,10 @@ export default function SettingsPage() {
             CRM
           </TabsTrigger>
           {/* Programmate ora dentro tab Ricerca */}
+          <TabsTrigger value="email" className="gap-2">
+            <Mail className="h-4 w-4" />
+            Email & Messaggi
+          </TabsTrigger>
           <TabsTrigger value="scoring" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Scoring
@@ -770,6 +775,11 @@ export default function SettingsPage() {
 
         {/* TAB RICERCHE PROGRAMMATE */}
         {/* Programmate ora dentro tab Ricerca */}
+
+        {/* TAB EMAIL & MESSAGGI */}
+        <TabsContent value="email" className="space-y-4">
+          <EmailMessagingConfigTab />
+        </TabsContent>
 
         {/* TAB SCORING */}
         <TabsContent value="scoring" className="space-y-4">

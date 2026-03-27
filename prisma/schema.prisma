@@ -204,6 +204,12 @@ model Lead {
   qualificationAt       DateTime?   @map("qualification_at")
 
   // ==========================================
+  // UNSUBSCRIBE (GDPR)
+  // ==========================================
+  unsubscribed      Boolean       @default(false)
+  unsubscribedAt    DateTime?     @map("unsubscribed_at")
+
+  // ==========================================
   // RECONTACT (Da richiamare tra 6 mesi)
   // ==========================================
   recontactAt       DateTime?     @map("recontact_at")
@@ -633,6 +639,34 @@ model Settings {
   readingScriptPrompt      String?  @map("reading_script_prompt") @db.Text
   analystPrompt            String?  @map("analyst_prompt") @db.Text
   scriptwriterPrompt       String?  @map("scriptwriter_prompt") @db.Text
+
+  // ==========================================
+  // EMAIL & MESSAGGI
+  // ==========================================
+  // Mittente
+  emailFromAddress    String?  @map("email_from_address")    // default: env SMTP_FROM_OUTREACH
+  emailFromName       String?  @map("email_from_name")       // default: env SMTP_FROM_NAME
+
+  // Oggetti email
+  emailSubjectFirst   String?  @map("email_subject_first")   @db.Text // "Analisi gratuita per {azienda}"
+  emailSubjectFollowup String? @map("email_subject_followup") @db.Text // "Re: Analisi per {azienda}"
+
+  // Template messaggi (8 template: primo/followup1-3 x WA/Email)
+  tplFirstWa          String?  @map("tpl_first_wa")          @db.Text
+  tplFirstEmail       String?  @map("tpl_first_email")       @db.Text
+  tplFollowup1Wa      String?  @map("tpl_followup1_wa")      @db.Text
+  tplFollowup1Email   String?  @map("tpl_followup1_email")   @db.Text
+  tplFollowup2Wa      String?  @map("tpl_followup2_wa")      @db.Text
+  tplFollowup2Email   String?  @map("tpl_followup2_email")   @db.Text
+  tplFollowup3Wa      String?  @map("tpl_followup3_wa")      @db.Text
+  tplFollowup3Email   String?  @map("tpl_followup3_email")   @db.Text
+
+  // Footer GDPR
+  gdprCompanyName     String?  @map("gdpr_company_name")
+  gdprAddress         String?  @map("gdpr_address")
+  gdprVatNumber       String?  @map("gdpr_vat_number")       // P.IVA
+  gdprFooterText      String?  @map("gdpr_footer_text")      @db.Text // "Hai ricevuto questa email..."
+  gdprUnsubscribeText String?  @map("gdpr_unsubscribe_text") // "Non desidero ricevere..."
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

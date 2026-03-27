@@ -15,7 +15,6 @@ import {
   Eye,
   Youtube,
   Globe,
-  MessageSquare,
   ExternalLink,
   Rocket,
   Upload,
@@ -197,7 +196,6 @@ export function VideoTrackingSection({
     }
   };
 
-  const followUpMessage = `Ciao ${leadName.split(" ")[0]}, qualche giorno fa ti avevo inviato un'analisi personalizzata del tuo sito. Magari ti è sfuggita — eccola qui: ${landingUrl}\nFammi sapere se hai 10 minuti per vederla insieme!`;
 
   // Calcola engagement label
   const getEngagementBadge = () => {
@@ -405,19 +403,6 @@ export function VideoTrackingSection({
                   <Copy className="mr-1.5 h-3 w-3" />
                 )}
                 Copia URL
-              </Button>
-              <Button
-                onClick={() => copyToClipboard(followUpMessage, "followup")}
-                variant="outline"
-                size="sm"
-                className="text-xs h-8"
-              >
-                {copiedField === "followup" ? (
-                  <Check className="mr-1.5 h-3 w-3" />
-                ) : (
-                  <MessageSquare className="mr-1.5 h-3 w-3" />
-                )}
-                Copia Follow-up WA
               </Button>
             </div>
           </>

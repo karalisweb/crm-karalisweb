@@ -161,14 +161,90 @@ Nota importante:
   }
 }
 
+// Recupera settings GDPR dal DB (con cache in-memory 5 min)
+let gdprCache: { data: Record<string, string | null>; ts: number } | null = null;
+
+async function getGdprSettings(): Promise<Record<string, string | null>> {
+  if (gdprCache && Date.now() - gdprCache.ts < 5 * 60 * 1000) {
+    return gdprCache.data;
+  }
+  try {
+    const { db } = await import('@/lib/db');
+    const settings = await db.settings.findUnique({ where: { id: "default" } });
+    const data: Record<string, string | null> = {
+      emailFromAddress: (settings as Record<string, unknown>)?.emailFromAddress as string | null ?? null,
+      emailFromName: (settings as Record<string, unknown>)?.emailFromName as string | null ?? null,
+      gdprCompanyName: (settings as Record<string, unknown>)?.gdprCompanyName as string | null ?? null,
+      gdprAddress: (settings as Record<string, unknown>)?.gdprAddress as string | null ?? null,
+      gdprVatNumber: (settings as Record<string, unknown>)?.gdprVatNumber as string | null ?? null,
+      gdprFooterText: (settings as Record<string, unknown>)?.gdprFooterText as string | null ?? null,
+      gdprUnsubscribeText: (settings as Record<string, unknown>)?.gdprUnsubscribeText as string | null ?? null,
+    };
+    gdprCache = { data, ts: Date.now() };
+    return data;
+  } catch {
+    return {};
+  }
+}
+
+function buildGdprFooter(gdpr: Record<string, string | null>, leadId?: string): string {
+  const company = gdpr.gdprCompanyName;
+  const address = gdpr.gdprAddress;
+  const vat = gdpr.gdprVatNumber;
+  const footerText = gdpr.gdprFooterText || "Hai ricevuto questa email perché la tua attività è presente su Google Maps.";
+  const unsubText = gdpr.gdprUnsubscribeText || "Non desidero ricevere altre comunicazioni";
+
+  // Se non ci sono dati GDPR configurati, non aggiungere footer
+  if (!company && !address && !vat) return "";
+
+  const baseUrl = process.env.NEXTAUTH_URL || "https://crm.karalisweb.it";
+  const unsubToken = leadId ? Buffer.from(leadId).toString("base64url") : "";
+  const unsubUrl = unsubToken ? `${baseUrl}/api/public/unsubscribe?t=${unsubToken}` : "";
+
+  const companyLine = [company, address, vat ? `P.IVA ${vat}` : ""].filter(Boolean).join(" | ");
+
+  let footer = `\n\n---\n${footerText}`;
+  if (unsubUrl) footer += `\n${unsubText}: ${unsubUrl}`;
+  if (companyLine) footer += `\n${companyLine}`;
+
+  return footer;
+}
+
+function buildGdprFooterHtml(gdpr: Record<string, string | null>, leadId?: string): string {
+  const company = gdpr.gdprCompanyName;
+  const address = gdpr.gdprAddress;
+  const vat = gdpr.gdprVatNumber;
+  const footerText = gdpr.gdprFooterText || "Hai ricevuto questa email perché la tua attività è presente su Google Maps.";
+  const unsubText = gdpr.gdprUnsubscribeText || "Non desidero ricevere altre comunicazioni";
+
+  if (!company && !address && !vat) return "";
+
+  const baseUrl = process.env.NEXTAUTH_URL || "https://crm.karalisweb.it";
+  const unsubToken = leadId ? Buffer.from(leadId).toString("base64url") : "";
+  const unsubUrl = unsubToken ? `${baseUrl}/api/public/unsubscribe?t=${unsubToken}` : "";
+
+  const companyLine = [company, address, vat ? `P.IVA ${vat}` : ""].filter(Boolean).join(" &middot; ");
+
+  return `
+  <hr style="border:none;border-top:1px solid #eee;margin:30px 0 15px">
+  <p style="font-size:11px;color:#999;line-height:1.5;">
+    ${footerText}<br>
+    ${unsubUrl ? `<a href="${unsubUrl}" style="color:#999;text-decoration:underline;">${unsubText}</a><br>` : ""}
+    ${companyLine}
+  </p>`;
+}
+
 // Invia email di outreach a un prospect
 export async function sendOutreachEmail(
   to: string,
   subject: string,
   body: string,
+  leadId?: string,
 ): Promise<boolean> {
-  const fromEmail = process.env.SMTP_FROM_OUTREACH || process.env.SMTP_USER || 'alessio@karalisweb.net';
-  const fromName = process.env.SMTP_FROM_NAME || 'Alessio Loi - Karalisweb';
+  const gdpr = await getGdprSettings();
+
+  const fromEmail = gdpr.emailFromAddress || process.env.SMTP_FROM_OUTREACH || process.env.SMTP_USER || 'alessio@karalisweb.net';
+  const fromName = gdpr.emailFromName || process.env.SMTP_FROM_NAME || 'Alessio Loi - Karalisweb';
 
   // Converti il body plain-text in HTML con formattazione base
   const htmlBody = body
@@ -178,21 +254,27 @@ export async function sendOutreachEmail(
     .replace(/\n/g, '<br>')
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color: #f5a623;">$1</a>');
 
+  const gdprFooterHtml = buildGdprFooterHtml(gdpr, leadId);
+  const gdprFooterText = buildGdprFooter(gdpr, leadId);
+
   const html = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #333;">
   ${htmlBody}
+  ${gdprFooterHtml}
 </body>
 </html>`.trim();
+
+  const plainText = body + gdprFooterText;
 
   try {
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,
       to,
       subject,
-      text: body,
+      text: plainText,
       html,
     });
 

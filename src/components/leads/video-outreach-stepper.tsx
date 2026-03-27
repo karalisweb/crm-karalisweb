@@ -998,15 +998,17 @@ function Step4Content({
 }
 
 // ==========================================
-// STEP 5: Invia Messaggio
+// STEP 5: Invia Messaggio → Redirect a tab Messaggi
 // ==========================================
 
 function Step5Content({
-  leadId, leadName, videoLandingUrl,
-  whatsappNumber, email, phone,
-  videoSentAt, outreachChannel,
-  videoViewsCount, videoFirstPlayAt, videoMaxWatchPercent, videoCompletedAt,
-  onRefresh,
+  leadId,
+  videoSentAt,
+  outreachChannel,
+  videoViewsCount,
+  videoFirstPlayAt,
+  videoMaxWatchPercent,
+  videoCompletedAt,
 }: {
   leadId: string;
   leadName: string;
@@ -1022,60 +1024,6 @@ function Step5Content({
   videoCompletedAt: string | null;
   onRefresh: () => void;
 }) {
-  const hasWA = !!whatsappNumber;
-  const defaultChannel = hasWA ? "WA" : "EMAIL";
-  const [channel, setChannel] = useState<"WA" | "EMAIL">(
-    (outreachChannel as "WA" | "EMAIL") || defaultChannel
-  );
-  const [leadEmail, setLeadEmail] = useState(email || "");
-  const [sending, setSending] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const firstName = leadName.split(" ")[0];
-  const videoLink = videoLandingUrl || "[link]";
-
-  const message = channel === "WA"
-    ? `Ciao ${firstName}, sono Alessio Loi, fondatore di Karalisweb.\n\nHo analizzato il vostro posizionamento digitale e ho preparato un breve video personalizzato con quello che ho trovato. Te lo lascio qui: ${videoLink}\n\nDura meno di 2 minuti. Se vuoi ne parliamo.`
-    : `Buongiorno ${firstName},\n\nsono Alessio Loi, fondatore di Karalisweb.\n\nHo analizzato il posizionamento digitale della vostra azienda e ho preparato un breve video personalizzato con le mie osservazioni: ${videoLink}\n\nDura meno di 2 minuti. Sarò felice di approfondire se le farà piacere.\n\nBuona giornata,\nAlessio Loi`;
-
-  const sendViaWA = useCallback(() => {
-    const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, "_blank");
-    // Log activity
-    fetch(`/api/leads/${leadId}/quick-log`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "WHATSAPP_SENT" }),
-    }).then(() => onRefresh());
-  }, [leadId, whatsappNumber, message, onRefresh]);
-
-  const sendViaEmail = useCallback(async () => {
-    if (!leadEmail) {
-      toast.error("Inserisci l'email del prospect");
-      return;
-    }
-    setSending(true);
-    try {
-      const res = await fetch(`/api/leads/${leadId}/send-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: leadEmail,
-          subject: `${firstName}, ho analizzato il vostro posizionamento digitale`,
-          body: message,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success("Email inviata");
-      onRefresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore invio email");
-    } finally {
-      setSending(false);
-    }
-  }, [leadId, leadEmail, firstName, message, onRefresh]);
-
   if (videoSentAt) {
     return (
       <div className="space-y-3">
@@ -1084,7 +1032,6 @@ function Step5Content({
           Inviato il {new Date(videoSentAt).toLocaleDateString("it-IT")} via {outreachChannel || "—"}
         </Badge>
 
-        {/* Video tracking stats */}
         {videoViewsCount > 0 && (
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-muted/50 rounded p-2">
@@ -1115,71 +1062,16 @@ function Step5Content({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Channel selection */}
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={channel === "WA" ? "default" : "outline"}
-          onClick={() => setChannel("WA")}
-          disabled={!hasWA}
-        >
-          <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
-          WhatsApp
+    <div className="space-y-3 text-center py-4">
+      <p className="text-sm text-muted-foreground">
+        Per inviare il messaggio, vai alla tab dedicata.
+      </p>
+      <a href={`/leads/${leadId}?tab=messaggi`}>
+        <Button>
+          <Send className="h-4 w-4 mr-2" />
+          Vai a Tab Messaggi
         </Button>
-        <Button
-          size="sm"
-          variant={channel === "EMAIL" ? "default" : "outline"}
-          onClick={() => setChannel("EMAIL")}
-        >
-          <Mail className="h-3.5 w-3.5 mr-1.5" />
-          Email
-        </Button>
-      </div>
-
-      {!hasWA && channel === "WA" && (
-        <p className="text-xs text-amber-600">Nessun numero WhatsApp disponibile. Usa Email.</p>
-      )}
-
-      {channel === "EMAIL" && (
-        <Input
-          placeholder="info@esempio.it"
-          value={leadEmail}
-          onChange={(e) => setLeadEmail(e.target.value)}
-        />
-      )}
-
-      {/* Message preview */}
-      <div className="bg-muted/30 rounded-lg p-3">
-        <p className="text-xs font-medium text-muted-foreground mb-1">Anteprima messaggio:</p>
-        <p className="text-sm whitespace-pre-line">{message}</p>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        {channel === "WA" ? (
-          <Button onClick={sendViaWA} className="bg-green-600 hover:bg-green-700">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Apri WhatsApp
-          </Button>
-        ) : (
-          <Button onClick={sendViaEmail} disabled={sending}>
-            {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-            Invia Email
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          onClick={() => {
-            navigator.clipboard.writeText(message);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-          }}
-        >
-          {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-          {copied ? "Copiato" : "Copia"}
-        </Button>
-      </div>
+      </a>
     </div>
   );
 }

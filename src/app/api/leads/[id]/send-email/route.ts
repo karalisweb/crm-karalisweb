@@ -24,8 +24,16 @@ export async function POST(
       return NextResponse.json({ error: "Lead non trovato" }, { status: 404 });
     }
 
-    // Invia email
-    const sent = await sendOutreachEmail(data.to, data.subject, data.body);
+    // Controlla se il lead si è disiscritto
+    if (lead.unsubscribed) {
+      return NextResponse.json(
+        { error: "Questo lead si è disiscritto e non desidera ricevere comunicazioni." },
+        { status: 403 }
+      );
+    }
+
+    // Invia email con GDPR footer
+    const sent = await sendOutreachEmail(data.to, data.subject, data.body, lead.id);
     if (!sent) {
       return NextResponse.json(
         { error: "Errore nell'invio email. Verifica la configurazione SMTP." },
