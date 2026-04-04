@@ -159,60 +159,51 @@ export default function LoginPage() {
     setError("");
   };
 
-  const getDescription = () => {
-    switch (step) {
-      case "credentials":
-        return "Pipeline commerciale";
-      case "2fa":
-        return "Verifica in due passaggi";
-      default:
-        return "";
-    }
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center px-8" style={{ background: '#0d1521' }}>
-      {/* Login Box */}
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: '#0d1521' }}>
+      {/* Login Box - angoli lievemente stondati, ombra sottile */}
       <div
-        className="w-full max-w-[420px] rounded-2xl p-10"
+        className="w-full max-w-[420px] p-10"
         style={{
-          background: '#132032',
-          border: '1px solid rgba(212, 167, 38, 0.15)',
-          boxShadow: '0 0 40px rgba(212, 167, 38, 0.06), 0 8px 32px rgba(0, 0, 0, 0.5)',
+          background: '#141c2b',
+          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)',
         }}
       >
-        {/* Logo negativo Karalisweb */}
-        <div className="flex justify-center mb-6">
+        {/* Logo Karalisweb giallo */}
+        <div className="flex justify-center mb-8">
           <Image
             src="/logo-kw-negativo.png"
             alt="Karalisweb"
-            width={180}
-            height={60}
-            className="max-w-[180px] h-auto"
+            width={200}
+            height={65}
+            className="max-w-[200px] h-auto"
             priority
           />
         </div>
 
-        {/* Titolo app con gradiente oro > teal */}
+        {/* Nome app con gradiente arancione */}
         <h1
-          className="text-center text-[1.6rem] font-semibold mb-1"
+          className="text-center text-[1.7rem] font-bold mb-1"
           style={{
-            background: 'linear-gradient(135deg, #d4a726, #2d7d9a)',
+            background: 'linear-gradient(135deg, #e8a020, #d4872a)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}
         >
           KW Sales CRM
         </h1>
-        <p className="text-center text-[0.85rem] text-[#a1a1aa] mb-8">
-          Pipeline commerciale{step === "2fa" ? " | Verifica 2FA" : ""}
+        {/* Descrizione | Versione */}
+        <p className="text-center text-[0.85rem] text-[#8a8a9a] mb-10">
+          {step === "2fa" ? "Verifica 2FA" : "Pipeline Commerciale"} &nbsp;|&nbsp; v3.8.8
         </p>
 
         {/* Step: Credentials */}
         {step === "credentials" && (
           <form onSubmit={handleCredentialsSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-[#e4e4e7]">
+              <label htmlFor="email" className="block text-[13px] font-medium mb-1.5 text-[#e0e0e4]">
                 Email
               </label>
               <Input
@@ -228,12 +219,12 @@ export default function LoginPage() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="password" className="text-sm font-medium text-[#e4e4e7]">
+                <label htmlFor="password" className="text-[13px] font-medium text-[#e0e0e4]">
                   Password
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-[#a1a1aa] hover:text-[#d4a726] transition-colors"
+                  className="text-[12px] text-[#8a8a9a] hover:text-[#e8a020] transition-colors"
                 >
                   Password dimenticata?
                 </Link>
@@ -252,24 +243,26 @@ export default function LoginPage() {
             {error && (
               <div className="text-[#ef4444] text-sm text-center">{error}</div>
             )}
-            <Button
+            {/* Bottone full-width, angoli lievemente arrotondati, gradiente arancione */}
+            <button
               type="submit"
-              className="w-full h-11 text-sm font-semibold text-[#1a1a2e] border-0 cursor-pointer"
-              style={{
-                background: 'linear-gradient(135deg, #d4a726, #c4922a, #b87d2e)',
-                boxShadow: '0 2px 12px rgba(212, 167, 38, 0.3)',
-              }}
               disabled={loading}
+              className="w-full h-[46px] text-[14px] font-semibold text-[#1a1a2e] border-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #e8a020, #d4872a, #c07030)',
+                boxShadow: '0 2px 12px rgba(212, 135, 42, 0.25)',
+              }}
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Accesso in corso...
                 </>
               ) : (
                 "Accedi"
               )}
-            </Button>
+            </button>
           </form>
         )}
 
@@ -310,24 +303,25 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button
+            <button
               type="submit"
-              className="w-full h-11 text-sm font-semibold text-[#1a1a2e] border-0 cursor-pointer"
-              style={{
-                background: 'linear-gradient(135deg, #d4a726, #c4922a, #b87d2e)',
-                boxShadow: '0 2px 12px rgba(212, 167, 38, 0.3)',
-              }}
               disabled={loading || otpCode.length !== 6}
+              className="w-full h-[46px] text-[14px] font-semibold text-[#1a1a2e] border-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #e8a020, #d4872a, #c07030)',
+                boxShadow: '0 2px 12px rgba(212, 135, 42, 0.25)',
+              }}
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Verifica in corso...
                 </>
               ) : (
                 "Verifica"
               )}
-            </Button>
+            </button>
 
             <div className="flex flex-col gap-2">
               <Button
