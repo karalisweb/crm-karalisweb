@@ -11,19 +11,30 @@ export default function Icon() {
     (
       <div
         style={{
-          fontSize: 20,
-          background: "#0f1419",
           width: "100%",
           height: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 4,
-          fontFamily: "Arial, sans-serif",
+          background: "#0d1521",
+          borderRadius: 6,
         }}
       >
-        <span style={{ color: "#f5a623", fontWeight: "bold" }}>K</span>
-        <span style={{ color: "#f5a623", fontSize: 12, marginTop: 4 }}>sc</span>
+        {/* Target icon - cerchi concentrici oro */}
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 22 22"
+          fill="none"
+          stroke="#d4a726"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="11" cy="11" r="10" />
+          <circle cx="11" cy="11" r="6" />
+          <circle cx="11" cy="11" r="2" />
+        </svg>
       </div>
     ),
     {
