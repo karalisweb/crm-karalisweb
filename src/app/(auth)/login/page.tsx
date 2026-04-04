@@ -172,17 +172,17 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-8" style={{ background: '#0d1521' }}>
-      {/* Login Box - Ref: DESIGN-SYSTEM.md sezione 6.1 */}
+      {/* Login Box */}
       <div
-        className="w-full max-w-[400px] rounded-xl p-12"
+        className="w-full max-w-[420px] rounded-2xl p-10"
         style={{
           background: '#132032',
-          border: '1px solid #2a2a35',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+          border: '1px solid rgba(212, 167, 38, 0.15)',
+          boxShadow: '0 0 40px rgba(212, 167, 38, 0.06), 0 8px 32px rgba(0, 0, 0, 0.5)',
         }}
       >
-        {/* Logo negativo Karalisweb (giallo su sfondo scuro) */}
-        <div className="flex justify-center mb-8">
+        {/* Logo negativo Karalisweb */}
+        <div className="flex justify-center mb-6">
           <Image
             src="/logo-kw-negativo.png"
             alt="Karalisweb"
@@ -195,7 +195,7 @@ export default function LoginPage() {
 
         {/* Titolo app con gradiente oro > teal */}
         <h1
-          className="text-center text-[1.75rem] font-semibold mb-1"
+          className="text-center text-[1.6rem] font-semibold mb-1"
           style={{
             background: 'linear-gradient(135deg, #d4a726, #2d7d9a)',
             WebkitBackgroundClip: 'text',
@@ -204,21 +204,21 @@ export default function LoginPage() {
         >
           KW Sales CRM
         </h1>
-        <p className="text-center text-[0.9rem] text-[#a1a1aa] mb-8">
-          {getDescription()}
+        <p className="text-center text-[0.85rem] text-[#a1a1aa] mb-8">
+          Pipeline commerciale{step === "2fa" ? " | Verifica 2FA" : ""}
         </p>
 
         {/* Step: Credentials */}
         {step === "credentials" && (
-          <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+          <form onSubmit={handleCredentialsSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1 text-[#a1a1aa]">
+              <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-[#e4e4e7]">
                 Email
               </label>
               <Input
                 id="email"
                 type="email"
-                placeholder="nome@agenzia.it"
+                placeholder="nome@karalisweb.net"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -227,9 +227,17 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1 text-[#a1a1aa]">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password" className="text-sm font-medium text-[#e4e4e7]">
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-[#a1a1aa] hover:text-[#d4a726] transition-colors"
+                >
+                  Password dimenticata?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -244,17 +252,24 @@ export default function LoginPage() {
             {error && (
               <div className="text-[#ef4444] text-sm text-center">{error}</div>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Accesso in corso..." : "Accedi"}
+            <Button
+              type="submit"
+              className="w-full h-11 text-sm font-semibold text-[#1a1a2e] border-0 cursor-pointer"
+              style={{
+                background: 'linear-gradient(135deg, #d4a726, #c4922a, #b87d2e)',
+                boxShadow: '0 2px 12px rgba(212, 167, 38, 0.3)',
+              }}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Accesso in corso...
+                </>
+              ) : (
+                "Accedi"
+              )}
             </Button>
-            <div className="text-center">
-              <Link
-                href="/forgot-password"
-                className="text-sm text-[#a1a1aa] hover:text-[#d4a726] transition-colors"
-              >
-                Password dimenticata?
-              </Link>
-            </div>
           </form>
         )}
 
@@ -295,8 +310,23 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading || otpCode.length !== 6}>
-              {loading ? "Verifica in corso..." : "Verifica"}
+            <Button
+              type="submit"
+              className="w-full h-11 text-sm font-semibold text-[#1a1a2e] border-0 cursor-pointer"
+              style={{
+                background: 'linear-gradient(135deg, #d4a726, #c4922a, #b87d2e)',
+                boxShadow: '0 2px 12px rgba(212, 167, 38, 0.3)',
+              }}
+              disabled={loading || otpCode.length !== 6}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Verifica in corso...
+                </>
+              ) : (
+                "Verifica"
+              )}
             </Button>
 
             <div className="flex flex-col gap-2">

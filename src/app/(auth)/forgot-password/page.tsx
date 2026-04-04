@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ArrowLeft, Mail, CheckCircle } from "lucide-react";
 
 export default function ForgotPasswordPage() {
@@ -41,94 +40,121 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4">
-          {/* Logo */}
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-xl bg-[#0f1419] flex items-center justify-center border border-border">
-              <span className="text-primary font-bold text-3xl">K</span>
-              <span className="text-primary text-lg mt-1">sc</span>
+    <div className="min-h-screen flex items-center justify-center px-8" style={{ background: '#0d1521' }}>
+      <div
+        className="w-full max-w-[420px] rounded-2xl p-10"
+        style={{
+          background: '#132032',
+          border: '1px solid rgba(212, 167, 38, 0.15)',
+          boxShadow: '0 0 40px rgba(212, 167, 38, 0.06), 0 8px 32px rgba(0, 0, 0, 0.5)',
+        }}
+      >
+        <div className="flex justify-center mb-6">
+          <Image
+            src="/logo-kw-negativo.png"
+            alt="Karalisweb"
+            width={180}
+            height={60}
+            className="max-w-[180px] h-auto"
+            priority
+          />
+        </div>
+
+        <h1
+          className="text-center text-[1.6rem] font-semibold mb-1"
+          style={{
+            background: 'linear-gradient(135deg, #d4a726, #2d7d9a)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          {submitted ? "Email Inviata" : "Password Dimenticata"}
+        </h1>
+        <p className="text-center text-[0.85rem] text-[#a1a1aa] mb-8">
+          {submitted
+            ? "Controlla la tua casella di posta"
+            : "Inserisci la tua email per reimpostare la password"}
+        </p>
+
+        {submitted ? (
+          <div className="space-y-5">
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'rgba(34, 197, 94, 0.15)' }}>
+                <CheckCircle className="h-7 w-7 text-[#22c55e]" />
+              </div>
+              <p className="text-sm text-[#a1a1aa] text-center">
+                Se l&apos;email <strong className="text-[#e4e4e7]">{email}</strong> è registrata, riceverai le istruzioni per reimpostare la password.
+              </p>
             </div>
-          </div>
-          <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              {submitted ? "Email Inviata" : "Password Dimenticata"}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {submitted
-                ? "Controlla la tua casella di posta"
-                : "Inserisci la tua email per reimpostare la password"}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {submitted ? (
-            <div className="space-y-6">
-              <div className="flex flex-col items-center gap-4 py-4">
-                <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <CheckCircle className="h-8 w-8 text-green-500" />
-                </div>
-                <div className="text-center">
-                  <p className="text-muted-foreground">
-                    Se l&apos;email <strong>{email}</strong> è registrata, riceverai le istruzioni per reimpostare la password.
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground text-center">
-                  Non hai ricevuto l&apos;email?
-                </p>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setSubmitted(false);
-                    setEmail("");
-                  }}
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Riprova con un&apos;altra email
-                </Button>
-                <Link href="/login">
-                  <Button variant="ghost" className="w-full">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Torna al login
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="nome@agenzia.it"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-              {error && (
-                <p className="text-sm text-red-500 text-center">{error}</p>
-              )}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {loading ? "Invio in corso..." : "Invia link di reset"}
+            <div className="space-y-3">
+              <p className="text-xs text-[#a1a1aa] text-center">
+                Non hai ricevuto l&apos;email?
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setSubmitted(false);
+                  setEmail("");
+                }}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Riprova con un&apos;altra email
               </Button>
               <Link href="/login">
-                <Button variant="ghost" className="w-full">
+                <Button variant="ghost" className="w-full text-[#a1a1aa]">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Torna al login
                 </Button>
               </Link>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-[#e4e4e7]">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="nome@karalisweb.net"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-[#ef4444] text-center">{error}</p>
+            )}
+            <Button
+              type="submit"
+              className="w-full h-11 text-sm font-semibold text-[#1a1a2e] border-0 cursor-pointer"
+              style={{
+                background: 'linear-gradient(135deg, #d4a726, #c4922a, #b87d2e)',
+                boxShadow: '0 2px 12px rgba(212, 167, 38, 0.3)',
+              }}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Invio in corso...
+                </>
+              ) : (
+                "Invia link di reset"
+              )}
+            </Button>
+            <Link href="/login">
+              <Button variant="ghost" className="w-full text-[#a1a1aa]">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Torna al login
+              </Button>
+            </Link>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
