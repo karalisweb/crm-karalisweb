@@ -59,12 +59,20 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { token, event, percent } = body;
+    const { token, event, percent, utm } = body;
 
     if (!token || typeof token !== "string") {
       return NextResponse.json(
         { error: "Token mancante" },
         { status: 400, headers }
+      );
+    }
+
+    // Solo le visite con utm=client vengono tracciate (esclude visite interne)
+    if (utm !== "client") {
+      return NextResponse.json(
+        { ok: true, skipped: true, reason: "internal" },
+        { status: 200, headers }
       );
     }
 

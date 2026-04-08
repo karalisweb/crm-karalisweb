@@ -45,6 +45,10 @@
     return;
   }
 
+  // Leggi parametro utm dalla URL (solo utm=client viene tracciato dal CRM)
+  var urlParams = new URLSearchParams(window.location.search);
+  var UTM = urlParams.get("utm") || "";
+
   // Stato tracking
   var milestones = { 25: false, 50: false, 75: false };
   var hasPlayed = false;
@@ -53,7 +57,7 @@
 
   // Invia evento al CRM
   function sendEvent(event, percent) {
-    var body = { token: TOKEN, event: event };
+    var body = { token: TOKEN, event: event, utm: UTM };
     if (typeof percent === "number") body.percent = percent;
 
     try {

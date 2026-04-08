@@ -35,11 +35,15 @@ add_action('wp_footer', function () {
         var TOKEN = <?php echo json_encode($token); ?>;
         var sent = {};
 
+        // Leggi parametro utm dalla URL (solo utm=client viene tracciato)
+        var urlParams = new URLSearchParams(window.location.search);
+        var UTM = urlParams.get('utm') || '';
+
         function sendEvent(event, percent) {
             if (sent[event + (percent || '')]) return;
             sent[event + (percent || '')] = true;
 
-            var data = { token: TOKEN, event: event };
+            var data = { token: TOKEN, event: event, utm: UTM };
             if (typeof percent === 'number') data.percent = percent;
 
             if (navigator.sendBeacon) {

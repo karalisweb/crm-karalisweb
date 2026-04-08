@@ -16,6 +16,9 @@ import {
   Youtube,
   Globe,
   ExternalLink,
+  User,
+  Users,
+  Send,
   Rocket,
   Upload,
   Play,
@@ -369,10 +372,10 @@ export function VideoTrackingSection({
                   href={landingUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                  className="text-sm text-blue-600 hover:underline flex items-center gap-1 truncate"
                 >
                   {landingUrl}
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
                 </a>
               </div>
             </div>
@@ -389,20 +392,57 @@ export function VideoTrackingSection({
               </div>
             )}
 
-            {/* Azioni rapide */}
-            <div className="flex flex-wrap gap-2 pt-2 border-t">
+            {/* Link separati: interni (no tracking) e cliente (con tracking) */}
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Link interni (no tracking)
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => copyToClipboard(landingUrl, "alessio")}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8"
+                >
+                  {copiedField === "alessio" ? (
+                    <Check className="mr-1.5 h-3 w-3 text-green-600" />
+                  ) : (
+                    <User className="mr-1.5 h-3 w-3" />
+                  )}
+                  Alessio
+                </Button>
+                <Button
+                  onClick={() => copyToClipboard(landingUrl, "francesca")}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8"
+                >
+                  {copiedField === "francesca" ? (
+                    <Check className="mr-1.5 h-3 w-3 text-green-600" />
+                  ) : (
+                    <Users className="mr-1.5 h-3 w-3" />
+                  )}
+                  Francesca
+                </Button>
+              </div>
+
+              <Label className="text-xs font-medium text-muted-foreground">
+                Link cliente (con tracking)
+              </Label>
               <Button
-                onClick={() => copyToClipboard(landingUrl, "landing")}
-                variant="outline"
+                onClick={() => {
+                  const clientUrl = landingUrl + (landingUrl.includes("?") ? "&" : "?") + "utm=client";
+                  copyToClipboard(clientUrl, "cliente");
+                }}
                 size="sm"
-                className="text-xs h-8"
+                className="text-xs h-8 w-full bg-orange-600 hover:bg-orange-700 text-white"
               >
-                {copiedField === "landing" ? (
+                {copiedField === "cliente" ? (
                   <Check className="mr-1.5 h-3 w-3" />
                 ) : (
-                  <Copy className="mr-1.5 h-3 w-3" />
+                  <Send className="mr-1.5 h-3 w-3" />
                 )}
-                Copia URL
+                Copia URL per il cliente
               </Button>
             </div>
           </>
