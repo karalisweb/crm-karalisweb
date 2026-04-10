@@ -38,6 +38,7 @@ interface Category {
 const CLUSTER_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
   casa: { label: "Casa", icon: "🏠", color: "text-blue-700 bg-blue-50 border-blue-200" },
   microturismo: { label: "Microturismo", icon: "🏡", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+  persona: { label: "Persona", icon: "👤", color: "text-purple-700 bg-purple-50 border-purple-200" },
 };
 
 const SUBCLUSTER_OPTIONS: Record<string, { label: string; priority: number }[]> = {
@@ -58,6 +59,11 @@ const SUBCLUSTER_OPTIONS: Record<string, { label: string; priority: number }[]> 
     { label: "agenzie_immobiliari", priority: 20 },
     { label: "strutture_ricettive", priority: 30 },
   ],
+  persona: [
+    { label: "estetica", priority: 10 },
+    { label: "salute", priority: 20 },
+    { label: "riabilitazione", priority: 30 },
+  ],
 };
 
 const SUBCLUSTER_LABELS: Record<string, string> = {
@@ -74,6 +80,9 @@ const SUBCLUSTER_LABELS: Record<string, string> = {
   property_manager: "Case Vacanza e Property Manager",
   agenzie_immobiliari: "Agenzie Immobiliari",
   strutture_ricettive: "Strutture Ricettive Boutique",
+  estetica: "Estetica e Benessere",
+  salute: "Salute e Diagnostica",
+  riabilitazione: "Riabilitazione",
   altro: "Altro",
 };
 

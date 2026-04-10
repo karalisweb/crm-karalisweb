@@ -64,6 +64,7 @@ const WAVE_COLORS: Record<number, string> = {
 const CLUSTER_INFO: Record<string, { label: string; icon: string; color: string }> = {
   casa: { label: "Casa", icon: "🏠", color: "border-blue-300 bg-blue-50/50" },
   microturismo: { label: "Microturismo", icon: "🏡", color: "border-emerald-300 bg-emerald-50/50" },
+  persona: { label: "Persona", icon: "👤", color: "border-purple-300 bg-purple-50/50" },
 };
 
 const SUBCLUSTER_LABELS: Record<string, string> = {
@@ -80,6 +81,9 @@ const SUBCLUSTER_LABELS: Record<string, string> = {
   property_manager: "Property Manager",
   agenzie_immobiliari: "Agenzie Immobiliari",
   strutture_ricettive: "Strutture Ricettive",
+  estetica: "Estetica e Benessere",
+  salute: "Salute e Diagnostica",
+  riabilitazione: "Riabilitazione",
   altro: "Altro",
 };
 

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 // POST /api/scheduled-searches/sync
 //
-// Solo Wave 1. Alterna cluster Casa ↔ Microturismo per subcluster.
+// Solo Wave 1. Alterna cluster Casa ↔ Microturismo ↔ Persona per subcluster.
 //
 // Es: Infissi (Casa, pri 10)
 //       → Negozio di infissi × [Ferrara, Forlì, Modena...]
@@ -69,20 +69,25 @@ export async function POST() {
     }
 
     // Separa per cluster e ordina per priority
-    const casaSubs = Array.from(subMap.values())
-      .filter((b) => b.cluster === "casa")
-      .sort((a, b) => a.priority - b.priority);
+    const clusterNames = ["casa", "microturismo", "persona"];
+    const clusterSubs: SubclusterBlock[][] = clusterNames.map((name) =>
+      Array.from(subMap.values())
+        .filter((b) => b.cluster === name)
+        .sort((a, b) => a.priority - b.priority)
+    );
 
-    const microSubs = Array.from(subMap.values())
-      .filter((b) => b.cluster === "microturismo")
-      .sort((a, b) => a.priority - b.priority);
-
-    // Alterna Casa ↔ Microturismo (interleave)
+    // Alterna tra tutti i cluster (round-robin interleave)
     const orderedBlocks: SubclusterBlock[] = [];
-    let ci = 0, mi = 0;
-    while (ci < casaSubs.length || mi < microSubs.length) {
-      if (ci < casaSubs.length) orderedBlocks.push(casaSubs[ci++]);
-      if (mi < microSubs.length) orderedBlocks.push(microSubs[mi++]);
+    const indices = clusterSubs.map(() => 0);
+    let hasMore = true;
+    while (hasMore) {
+      hasMore = false;
+      for (let c = 0; c < clusterSubs.length; c++) {
+        if (indices[c] < clusterSubs[c].length) {
+          orderedBlocks.push(clusterSubs[c][indices[c]++]);
+          hasMore = true;
+        }
+      }
     }
 
     // Genera coda sequenziale
@@ -165,7 +170,7 @@ export async function POST() {
 
     // Riepilogo blocchi
     const blockSummary = orderedBlocks.map((b) =>
-      `${b.cluster === "casa" ? "🏠" : "🏡"} ${b.subcluster} (${b.categories.length} cat × ${locations.length} loc = ${b.categories.length * locations.length})`
+      `${b.cluster === "casa" ? "🏠" : b.cluster === "microturismo" ? "🏡" : "👤"} ${b.subcluster} (${b.categories.length} cat × ${locations.length} loc = ${b.categories.length * locations.length})`
     );
 
     return NextResponse.json({
