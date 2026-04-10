@@ -34,9 +34,14 @@ interface VideoOutreachInlineProps {
   onVideoSent: () => void;
 }
 
+function addUtm(url: string | null): string {
+  if (!url) return "[link analisi]";
+  return url + (url.includes("?") ? "&" : "?") + "utm=client";
+}
+
 function generateMessage(leadName: string, landingUrl: string | null, channel: "WA" | "EMAIL"): string {
   const firstName = leadName.split(" ")[0];
-  const videoLink = landingUrl || "[link analisi]";
+  const videoLink = addUtm(landingUrl);
 
   if (channel === "WA") {
     return `Ciao ${firstName}, sono Alessio Loi, fondatore di Karalisweb.

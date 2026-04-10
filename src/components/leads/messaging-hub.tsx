@@ -88,7 +88,8 @@ function applyTemplate(
   landingUrl: string | null
 ): string {
   const firstName = leadName.split(" ")[0];
-  const url = landingUrl || "[link analisi]";
+  const rawUrl = landingUrl || "[link analisi]";
+  const url = landingUrl ? landingUrl + (landingUrl.includes("?") ? "&" : "?") + "utm=client" : rawUrl;
 
   if (template) {
     return template

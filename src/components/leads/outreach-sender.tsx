@@ -30,9 +30,14 @@ interface OutreachSenderProps {
   phone: string | null;
 }
 
+function addUtm(url: string | null): string {
+  if (!url) return "[link analisi]";
+  return url + (url.includes("?") ? "&" : "?") + "utm=client";
+}
+
 function generateFirstMessage(leadName: string, landingUrl: string | null, channel: "WA" | "EMAIL"): string {
   const firstName = leadName.split(" ")[0];
-  const videoLink = landingUrl || "[link analisi]";
+  const videoLink = addUtm(landingUrl);
 
   if (channel === "WA") {
     return `Ciao ${firstName}, sono Alessio Loi, fondatore di Karalisweb.
@@ -61,7 +66,7 @@ Karalisweb`;
 
 function generateFollowUpMessage(leadName: string, landingUrl: string | null, channel: "WA" | "EMAIL"): string {
   const firstName = leadName.split(" ")[0];
-  const videoLink = landingUrl || "[link analisi]";
+  const videoLink = addUtm(landingUrl);
 
   if (channel === "WA") {
     return `Ciao ${firstName}, qualche giorno fa ti avevo inviato un'analisi personalizzata del tuo sito. Magari ti è sfuggita — eccola qui: ${videoLink}
