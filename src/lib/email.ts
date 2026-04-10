@@ -240,11 +240,12 @@ export async function sendOutreachEmail(
   subject: string,
   body: string,
   leadId?: string,
+  options?: { fromName?: string; fromEmail?: string },
 ): Promise<boolean> {
   const gdpr = await getGdprSettings();
 
-  const fromEmail = gdpr.emailFromAddress || process.env.SMTP_FROM_OUTREACH || process.env.SMTP_USER || 'alessio@karalisweb.net';
-  const fromName = gdpr.emailFromName || process.env.SMTP_FROM_NAME || 'Alessio Loi - Karalisweb';
+  const fromEmail = options?.fromEmail || gdpr.emailFromAddress || process.env.SMTP_FROM_OUTREACH || process.env.SMTP_USER || 'alessio@karalisweb.net';
+  const fromName = options?.fromName || gdpr.emailFromName || process.env.SMTP_FROM_NAME || 'Alessio Loi - Karalisweb';
 
   // Converti il body plain-text in HTML con formattazione base
   const htmlBody = body

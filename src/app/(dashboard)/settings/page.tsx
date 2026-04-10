@@ -26,8 +26,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin, History, Mail } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin, History, Mail, GitBranch } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
+import { WorkflowConfigTab } from "@/components/settings/workflow-config-tab";
 import { CrmConfigTab } from "@/components/settings/crm-config-tab";
 import { ScheduledSearchesTab } from "@/components/settings/scheduled-searches-tab";
 import { SearchHistoryTab } from "@/components/settings/search-history-tab";
@@ -299,6 +300,10 @@ export default function SettingsPage() {
             CRM
           </TabsTrigger>
           {/* Programmate ora dentro tab Ricerca */}
+          <TabsTrigger value="workflow" className="gap-2">
+            <GitBranch className="h-4 w-4" />
+            Workflow
+          </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
             Email & Messaggi
@@ -775,6 +780,11 @@ export default function SettingsPage() {
 
         {/* TAB RICERCHE PROGRAMMATE */}
         {/* Programmate ora dentro tab Ricerca */}
+
+        {/* TAB WORKFLOW */}
+        <TabsContent value="workflow" className="space-y-4">
+          <WorkflowConfigTab />
+        </TabsContent>
 
         {/* TAB EMAIL & MESSAGGI */}
         <TabsContent value="email" className="space-y-4">

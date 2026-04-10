@@ -20,6 +20,7 @@ import { timeAgo } from "@/lib/date-utils";
 import { VideoOutreachStepperWrapper } from "@/components/leads/video-outreach-stepper-wrapper";
 import { ContactInfoEditor } from "@/components/leads/contact-info-editor";
 import { MessagingHub } from "@/components/leads/messaging-hub";
+import { WorkflowPendingTasks } from "@/components/leads/workflow-pending-tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -195,7 +196,8 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
         </TabsContent>
 
         {/* Messaggi Tab */}
-        <TabsContent value="messaggi">
+        <TabsContent value="messaggi" className="space-y-4">
+          <WorkflowPendingTasks leadId={lead.id} />
           <MessagingHub
             leadId={lead.id}
             leadName={lead.name}

@@ -243,8 +243,9 @@ model Lead {
   // Relazioni
   searchId          String?     @map("search_id")
   search            Search?     @relation(fields: [searchId], references: [id])
-  activities        Activity[]
-  tasks             Task[]
+  activities          Activity[]
+  tasks               Task[]
+  workflowExecutions  WorkflowExecution[]
 
   @@index([opportunityScore(sort: Desc)], name: "idx_leads_score")
   @@index([pipelineStage], name: "idx_leads_stage")
@@ -668,8 +669,64 @@ model Settings {
   gdprFooterText      String?  @map("gdpr_footer_text")      @db.Text // "Hai ricevuto questa email..."
   gdprUnsubscribeText String?  @map("gdpr_unsubscribe_text") // "Non desidero ricevere..."
 
+  // Workflow Engine
+  workflowEnabled       Boolean  @default(false) @map("workflow_enabled")
+  calendlyUrl           String?  @map("calendly_url")
+  signatureAlessio      String?  @map("signature_alessio") @db.Text
+  signatureFrancesca    String?  @map("signature_francesca") @db.Text
+  caseStudiesBlock      String?  @map("case_studies_block") @db.Text
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("settings")
+}
+
+// ==========================================
+// WORKFLOW ENGINE - Automazione email/WA
+// ==========================================
+model WorkflowStep {
+  id            String   @id @default(uuid())
+  stepNumber    Int      @map("step_number")       // 1, 2, 3
+  channel       String                              // "email" | "whatsapp"
+  name          String                              // Label leggibile
+  variantLabel  String   @default("") @map("variant_label") // "" | "A" | "B"
+  subject       String?  @db.Text                   // Oggetto email (null per WA)
+  body          String   @db.Text                   // Template body con {placeholder}
+  delayDays     Int      @default(0) @map("delay_days") // Giorni di attesa dopo step precedente
+  condition     String   @default("always")         // "always" | "video_watched" | "video_not_watched"
+  mode          String   @default("manual")         // "manual" | "auto"
+  active        Boolean  @default(true)
+  fromName      String?  @map("from_name")          // Override mittente (es. "Francesca")
+  fromEmail     String?  @map("from_email")         // Override email mittente
+  triggerStage  String?  @map("trigger_stage")      // PipelineStage che attiva questo step
+  nextStage     String?  @map("next_stage")         // PipelineStage dopo invio
+
+  executions    WorkflowExecution[]
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([stepNumber, channel, variantLabel], name: "uq_step_channel_variant")
+  @@map("workflow_steps")
+}
+
+model WorkflowExecution {
+  id        String    @id @default(uuid())
+  stepId    String    @map("step_id")
+  leadId    String    @map("lead_id")
+  status    String    @default("pending") // "pending" | "sent" | "skipped" | "failed"
+  sentAt    DateTime? @map("sent_at")
+  error     String?
+  taskId    String?   @map("task_id")
+
+  step      WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  lead      Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([stepId, leadId], name: "uq_execution_step_lead")
+  @@index([leadId], name: "idx_exec_lead")
+  @@index([status], name: "idx_exec_status")
+  @@map("workflow_executions")
 }
