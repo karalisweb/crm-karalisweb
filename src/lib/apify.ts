@@ -4,6 +4,7 @@ import type { GoogleMapsResult } from "@/types";
 import { generateMockResults, simulateApiDelay, isMockMode } from "./apify-mock";
 import { processBatchAudits } from "@/lib/background-jobs";
 import { isRealWebsite } from "./url-utils";
+import { detectSegment } from "./segments";
 import type { AuditStatus, PipelineStage } from "@prisma/client";
 
 const apifyClient = new ApifyClient({
@@ -202,6 +203,7 @@ export async function importSearchResults(
           website: realWebsite,
           socialUrl,
           category: result.categoryName,
+          segment: detectSegment(result.categoryName),
           googleRating: result.totalScore,
           googleReviewsCount: result.reviewsCount,
           googleMapsUrl: result.url,

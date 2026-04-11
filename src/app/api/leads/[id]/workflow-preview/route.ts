@@ -19,7 +19,7 @@ export async function POST(
     const [lead, step, settings] = await Promise.all([
       db.lead.findUnique({
         where: { id },
-        select: { name: true, category: true, videoLandingUrl: true },
+        select: { name: true, category: true, segment: true, videoLandingUrl: true },
       }),
       db.workflowStep.findUnique({ where: { id: stepId } }),
       db.settings.findFirst({

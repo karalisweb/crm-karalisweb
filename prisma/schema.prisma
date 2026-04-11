@@ -25,6 +25,7 @@ model Lead {
   website           String?
   socialUrl         String?   @map("social_url")
   category          String?
+  segment           String?                          // Micro-segmento: "infissi", "edilizia", "immobiliare", etc.
   googleRating      Decimal?  @map("google_rating") @db.Decimal(2, 1)
   googleReviewsCount Int?     @map("google_reviews_count")
   googleMapsUrl     String?   @map("google_maps_url")
@@ -267,6 +268,7 @@ model Lead {
   // Indici per qualifica automatica
   @@index([qualificationScore(sort: Desc)], name: "idx_leads_qualification_score")
   @@index([qualificationPriority], name: "idx_leads_qualification_priority")
+  @@index([segment], name: "idx_leads_segment")
   @@map("leads")
 }
 

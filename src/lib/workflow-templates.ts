@@ -16,6 +16,7 @@
 export interface TemplateLead {
   name: string;
   category: string | null;
+  segment: string | null;
   videoLandingUrl: string | null;
 }
 
@@ -50,7 +51,7 @@ export function renderTemplate(
   return template
     .replace(/\{nome\}/g, firstName)
     .replace(/\{azienda\}/g, lead.name)
-    .replace(/\{settore\}/g, lead.category || "")
+    .replace(/\{settore\}/g, lead.segment || lead.category || "")
     .replace(/\{landingUrl\}/g, addUtm(lead.videoLandingUrl))
     .replace(/\{calendlyUrl\}/g, settings.calendlyUrl || "[link calendly]")
     .replace(/\{firma\}/g, firma)

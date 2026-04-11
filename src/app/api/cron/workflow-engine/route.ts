@@ -64,6 +64,7 @@ export async function POST(request: Request) {
         phone: true,
         whatsappNumber: true,
         category: true,
+        segment: true,
         videoLandingUrl: true,
         pipelineStage: true,
         outreachChannel: true,
