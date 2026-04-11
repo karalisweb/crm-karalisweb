@@ -23,7 +23,7 @@ Ho deciso di registrare un'analisi video di 10 minuti realizzata su misura per v
 Puoi vederla qui: {landingUrl}
 
 Se quello che dico ti torna utile, possiamo approfondire insieme e parlarne direttamente.
-Ti lascio qui il link per prenotare la tua consulenza gratuita: {calendlyUrl}
+Ti lascio qui il link per prenotare la tua consulenza gratuita: {linkPrenotazione}
 
 In caso contrario, spero potrai sfruttare comunque i suggerimenti in modo utile.
 
@@ -38,8 +38,8 @@ A presto,
     active: true,
     fromName: null,
     fromEmail: null,
-    triggerStage: "VIDEO_INVIATO",
-    nextStage: "FOLLOW_UP_1",
+    triggerStage: "FARE_VIDEO",
+    nextStage: "VIDEO_INVIATO",
   },
   {
     stepNumber: 1,
@@ -63,8 +63,8 @@ Alessio - Karalisweb`,
     active: true,
     fromName: null,
     fromEmail: null,
-    triggerStage: "VIDEO_INVIATO",
-    nextStage: "FOLLOW_UP_1",
+    triggerStage: "FARE_VIDEO",
+    nextStage: "VIDEO_INVIATO",
   },
 
   // ============ STEP 2 — Casi studio / Follow-up ============
@@ -98,7 +98,7 @@ Il video che ti ho preparato mostra esattamente dove {azienda} si trova rispetto
 Se ti va di parlarne, mi piacerebbe capire meglio in quale direzione vuoi portare l'azienda, dal sito è difficile leggerlo, e prima di dirti se e come possiamo aiutarti ho bisogno di sentirlo da te direttamente.
 
 Se ti riconosci in quello che ti ho scritto, 20 minuti insieme potrebbero valere la pena:
-{calendlyUrl}
+{linkPrenotazione}
 
 A presto,
 
@@ -109,8 +109,8 @@ A presto,
     active: true,
     fromName: null,
     fromEmail: null,
-    triggerStage: "FOLLOW_UP_1",
-    nextStage: "FOLLOW_UP_2",
+    triggerStage: "VIDEO_INVIATO",
+    nextStage: "FOLLOW_UP_1",
   },
   {
     stepNumber: 2,
@@ -131,7 +131,7 @@ Diverso è capire come sfruttare quello che hai già e fare in modo che la ruota
 
 L'analisi che ti ho mandato risponde esattamente a questo. La consulenza inclusa serve a capire come tradurla in qualcosa di concreto per {azienda}, con le priorità giuste e nell'ordine giusto.
 
-Ti propongo di bloccarla subito così da avere massima scelta con le disponibilità ancora libere: {calendlyUrl}
+Ti propongo di bloccarla subito così da avere massima scelta con le disponibilità ancora libere: {linkPrenotazione}
 
 Fammi sapere`,
     delayDays: 3,
@@ -140,8 +140,8 @@ Fammi sapere`,
     active: true,
     fromName: null,
     fromEmail: null,
-    triggerStage: "FOLLOW_UP_1",
-    nextStage: "FOLLOW_UP_2",
+    triggerStage: "VIDEO_INVIATO",
+    nextStage: "FOLLOW_UP_1",
   },
 
   // ============ STEP 3 — Chiusura ciclo (con varianti) ============
@@ -160,7 +160,7 @@ Ti scrivo perché stiamo chiudendo le analisi di questo ciclo e {azienda} è anc
 
 Alessio lavora su un numero limitato di realtà alla volta, ogni analisi richiede circa tre settimane e prima di passare al ciclo successivo volevo assicurarmi che tu avessi ricevuto tutto.
 
-Se hai domande su quello che ha trovato, o vuoi semplicemente capire da dove si partirebbe, puoi prenotare direttamente con lui: {calendlyUrl}
+Se hai domande su quello che ha trovato, o vuoi semplicemente capire da dove si partirebbe, puoi prenotare direttamente con lui: {linkPrenotazione}
 
 In questo modo, partendo da quanto già visto insieme, potrai approfondire in modo concreto come allineare la tua presenza online a obiettivi realistici.
 
@@ -175,8 +175,8 @@ A presto,
     active: true,
     fromName: "Francesca - Karalisweb",
     fromEmail: null,
-    triggerStage: "FOLLOW_UP_2",
-    nextStage: "FOLLOW_UP_3",
+    triggerStage: "FOLLOW_UP_1",
+    nextStage: "FOLLOW_UP_2",
   },
 
   // Email Variante B — Video NON visto
@@ -200,7 +200,7 @@ Non so se {azienda} ha lo stesso margine, dipende da cose che non conosco ancora
 
 Ma so che Alessio ha già analizzato il vostro sito e ha identificato esattamente dove state perdendo domanda intercettabile.
 
-Se ti va di capire cosa ha trovato, blocca ora la tua analisi gratuita e ottieni una consulenza di digital marketing su misura per la tua realtà: {calendlyUrl}
+Se ti va di capire cosa ha trovato, blocca ora la tua analisi gratuita e ottieni una consulenza di digital marketing su misura per la tua realtà: {linkPrenotazione}
 
 Per qualsiasi domanda, resto a disposizione.
 
@@ -213,8 +213,8 @@ A presto,
     active: true,
     fromName: "Francesca - Karalisweb",
     fromEmail: null,
-    triggerStage: "FOLLOW_UP_2",
-    nextStage: "FOLLOW_UP_3",
+    triggerStage: "FOLLOW_UP_1",
+    nextStage: "FOLLOW_UP_2",
   },
 
   // WA Variante A — Video visto
@@ -230,7 +230,7 @@ Volevo solo avvisarti che chiudiamo il ciclo tra 5 giorni e volevo assicurarmi c
 
 Per accedere alla consulenza strategica inclusa con l'analisi puoi ancora scegliere tra le disponibilità rimaste libere.
 
-Se hai perso il link per procedere con la prenotazione, te lo riporto qui: {calendlyUrl}
+Se hai perso il link per procedere con la prenotazione, te lo riporto qui: {linkPrenotazione}
 
 Aggiornami una volta bloccata la disponibilità così dò conferma ad Alessio per l'appuntamento e blocco lo slot in agenda.
 
@@ -243,8 +243,8 @@ Francesca - Karalisweb`,
     active: true,
     fromName: "Francesca - Karalisweb",
     fromEmail: null,
-    triggerStage: "FOLLOW_UP_2",
-    nextStage: "FOLLOW_UP_3",
+    triggerStage: "FOLLOW_UP_1",
+    nextStage: "FOLLOW_UP_2",
   },
 
   // WA Variante B — Video NON visto
@@ -260,7 +260,7 @@ Ti scrivo perché stiamo chiudendo il ciclo con l'accesso gratuito alla consulen
 
 La consulenza strategica ti permette di comprendere come applicare i suggerimenti offerti in fase di analisi, secondo le logiche di marketing aggiornate agli update di Febbraio 2026.
 
-Se hai perso il link per procedere con la prenotazione, te lo riporto qui: {calendlyUrl}
+Se hai perso il link per procedere con la prenotazione, te lo riporto qui: {linkPrenotazione}
 
 Aggiornami una volta bloccata la disponibilità così dò conferma ad Alessio per l'appuntamento e blocco lo slot in agenda.
 
@@ -273,8 +273,8 @@ Francesca - Karalisweb`,
     active: true,
     fromName: "Francesca - Karalisweb",
     fromEmail: null,
-    triggerStage: "FOLLOW_UP_2",
-    nextStage: "FOLLOW_UP_3",
+    triggerStage: "FOLLOW_UP_1",
+    nextStage: "FOLLOW_UP_2",
   },
 ];
 

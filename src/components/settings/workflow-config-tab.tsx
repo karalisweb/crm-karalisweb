@@ -44,7 +44,7 @@ interface WorkflowStep {
 
 interface WorkflowSettings {
   workflowEnabled?: boolean;
-  calendlyUrl?: string | null;
+  bookingUrl?: string | null;
   signatureAlessio?: string | null;
   signatureFrancesca?: string | null;
   caseStudiesBlock?: string | null;
@@ -129,7 +129,7 @@ export function WorkflowConfigTab() {
     try {
       // Salva settings
       await saveSettings({
-        calendlyUrl: settings.calendlyUrl,
+        bookingUrl: settings.bookingUrl,
         signatureAlessio: settings.signatureAlessio,
         signatureFrancesca: settings.signatureFrancesca,
         caseStudiesBlock: settings.caseStudiesBlock,
@@ -218,11 +218,11 @@ export function WorkflowConfigTab() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>URL Calendly</Label>
+                <Label>Link Prenotazione (Google Calendar)</Label>
                 <Input
-                  value={settings.calendlyUrl || ""}
-                  onChange={(e) => setSettings((p) => ({ ...p, calendlyUrl: e.target.value }))}
-                  placeholder="https://calendly.com/..."
+                  value={settings.bookingUrl || ""}
+                  onChange={(e) => setSettings((p) => ({ ...p, bookingUrl: e.target.value }))}
+                  placeholder="https://calendar.app.google/..."
                 />
               </div>
             </div>

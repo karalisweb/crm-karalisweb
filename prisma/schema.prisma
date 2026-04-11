@@ -673,7 +673,7 @@ model Settings {
 
   // Workflow Engine
   workflowEnabled       Boolean  @default(false) @map("workflow_enabled")
-  calendlyUrl           String?  @map("calendly_url")
+  bookingUrl            String?  @map("booking_url")
   signatureAlessio      String?  @map("signature_alessio") @db.Text
   signatureFrancesca    String?  @map("signature_francesca") @db.Text
   caseStudiesBlock      String?  @map("case_studies_block") @db.Text

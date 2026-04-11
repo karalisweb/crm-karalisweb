@@ -12,7 +12,7 @@ export async function GET() {
     const settings = await db.settings.findFirst({
       select: {
         workflowEnabled: true,
-        calendlyUrl: true,
+        bookingUrl: true,
         signatureAlessio: true,
         signatureFrancesca: true,
         caseStudiesBlock: true,
@@ -31,7 +31,7 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
 
-    // Update settings workflow (workflowEnabled, calendlyUrl, etc.)
+    // Update settings workflow (workflowEnabled, bookingUrl, etc.)
     if (body.type === "settings") {
       const { type: _, ...data } = body;
       const settings = await db.settings.upsert({

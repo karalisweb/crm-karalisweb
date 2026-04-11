@@ -24,7 +24,7 @@ export async function POST(
       db.workflowStep.findUnique({ where: { id: stepId } }),
       db.settings.findFirst({
         select: {
-          calendlyUrl: true,
+          bookingUrl: true,
           signatureAlessio: true,
           signatureFrancesca: true,
           caseStudiesBlock: true,
@@ -37,7 +37,7 @@ export async function POST(
     }
 
     const renderedBody = renderTemplate(step.body, lead, settings || {
-      calendlyUrl: null,
+      bookingUrl: null,
       signatureAlessio: null,
       signatureFrancesca: null,
       caseStudiesBlock: null,
@@ -45,7 +45,7 @@ export async function POST(
 
     const renderedSubject = step.subject
       ? renderTemplate(step.subject, lead, settings || {
-          calendlyUrl: null,
+          bookingUrl: null,
           signatureAlessio: null,
           signatureFrancesca: null,
           caseStudiesBlock: null,

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const settings = await db.settings.findFirst({
       select: {
         workflowEnabled: true,
-        calendlyUrl: true,
+        bookingUrl: true,
         signatureAlessio: true,
         signatureFrancesca: true,
         caseStudiesBlock: true,
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     let skipped = 0;
 
     const templateSettings = {
-      calendlyUrl: settings.calendlyUrl,
+      bookingUrl: settings.bookingUrl,
       signatureAlessio: settings.signatureAlessio,
       signatureFrancesca: settings.signatureFrancesca,
       caseStudiesBlock: settings.caseStudiesBlock,
@@ -224,11 +224,67 @@ export async function POST(request: Request) {
       }
     }
 
+    // ========================================
+    // FASE 2: Segnalazioni LinkedIn + Telefono
+    // Per lead in FOLLOW_UP_2 (workflow email completato)
+    // che non hanno ancora task LinkedIn/Telefono
+    // ========================================
+    let linkedinTasks = 0;
+    let phoneTasks = 0;
+
+    const postWorkflowLeads = await db.lead.findMany({
+      where: {
+        pipelineStage: "FOLLOW_UP_2" as any,
+        unsubscribed: false,
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        tasks: {
+          where: { completedAt: null },
+          select: { title: true },
+        },
+      },
+      take: 50,
+    });
+
+    for (const lead of postWorkflowLeads) {
+      const existingTitles = lead.tasks.map((t) => t.title);
+
+      // Task LinkedIn (se non esiste già)
+      if (!existingTitles.some((t) => t.includes("LinkedIn"))) {
+        await db.task.create({
+          data: {
+            leadId: lead.id,
+            title: `🔗 Cerca su LinkedIn — ${lead.name}`,
+            description: `Il workflow email è completato. Cerca ${lead.name} su LinkedIn, collegati e invia un messaggio personalizzato.`,
+            dueAt: new Date(),
+          },
+        });
+        linkedinTasks++;
+      }
+
+      // Task Telefono (se non esiste già e ha numero)
+      if (lead.phone && !existingTitles.some((t) => t.includes("Chiama") || t.includes("Telefon"))) {
+        await db.task.create({
+          data: {
+            leadId: lead.id,
+            title: `📞 Chiama — ${lead.name}`,
+            description: `Il workflow email è completato. Chiama ${lead.name} al ${lead.phone} per un contatto diretto.`,
+            dueAt: new Date(),
+          },
+        });
+        phoneTasks++;
+      }
+    }
+
     const summary = {
       processed: leads.length,
       autoSent,
       tasksCreated,
       skipped,
+      postWorkflow: { linkedinTasks, phoneTasks },
       timestamp: new Date().toISOString(),
     };
 
