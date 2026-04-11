@@ -87,6 +87,7 @@ export interface UnifiedLead {
   phone: string | null;
   website: string | null;
   category: string | null;
+  segment: string | null;
   address: string | null;
   googleRating: string | null;
   googleReviewsCount: number | null;
@@ -891,7 +892,11 @@ export function UnifiedLeadCard({
               <div className="min-w-0">
                 <p className="font-semibold text-sm truncate">{lead.name}</p>
                 <p className="text-xs opacity-80 truncate">
-                  {lead.category}
+                  {lead.segment ? (
+                    <span className="inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium bg-purple-100 text-purple-700 mr-1">
+                      {lead.segment.replace(/_/g, " ")}
+                    </span>
+                  ) : lead.category ? lead.category : null}
                   {lead.googleRating && (
                     <span className="ml-1">
                       · <Star className="h-2.5 w-2.5 inline fill-yellow-300 text-yellow-300" />{" "}

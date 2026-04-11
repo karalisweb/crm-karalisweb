@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -111,6 +113,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -174,6 +178,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -208,6 +214,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Tab Scoring aggiornata: soglia ≥80 = HOT LEAD, esempi aggiornati
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -266,6 +274,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -312,6 +322,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -345,6 +357,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - **Tab Scoring aggiornata** con nuovi pesi, nuovi esempi e nota sull'implicazione chiave
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -394,6 +408,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -428,6 +444,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Dashboard mission API: aggiunto conteggio badge per Cold Leads
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -485,6 +503,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -536,6 +556,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -570,6 +592,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -595,6 +619,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Refactoring: sostituito audit tecnico con Analisi Strategica + Teleprompter Mode. Eliminato codice morto (17 file).
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -622,6 +648,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -647,6 +675,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Rimozione Inngest: sostituito con cron API + p-queue per job in background
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -674,6 +704,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -699,6 +731,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Auto-Gemini dopo audit + Sidebar redesign per workflow
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -730,6 +764,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -760,6 +796,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -786,6 +824,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - README.md aggiornato
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -815,6 +855,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -842,6 +884,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -867,6 +911,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - 2FA con OTP, password reset, RBAC
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -894,6 +940,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -919,6 +967,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Sistema commerciale 5 chiamate/giorno
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -946,6 +996,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -971,6 +1023,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Integrazione PageSpeed Insights API (poi rimossa in v3.0)
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
@@ -998,6 +1052,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 
 ---
 
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
+
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 
 ## [3.8.8] - 2026-03-27nn- feat: script video 5 atti - intro, scena crimine, soldi, soluzione, chiusura+contatton
@@ -1023,6 +1079,8 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - Setup CRM iniziale, Apify mock mode, Docker, NextAuth v5
 
 ---
+
+## [3.9.1] - 2026-04-11nn- Badge segmento visibile nella scheda lead e nella card listan
 
 ## [3.9.0] - 2026-04-11nn- Workflow Engine + Micro-segmenti: automazione email/WA 3 step con copy Francesca, toggle auto/manual, segmentazione lead per settoren
 

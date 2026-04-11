@@ -81,9 +81,16 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
         </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl md:text-3xl font-bold truncate">{lead.name}</h1>
-          {lead.category && (
-            <p className="text-sm text-muted-foreground">{lead.category}</p>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {lead.category && (
+              <p className="text-sm text-muted-foreground">{lead.category}</p>
+            )}
+            {"segment" in lead && lead.segment && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                {String(lead.segment).replace(/_/g, " ")}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
