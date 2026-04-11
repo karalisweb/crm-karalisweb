@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
   MessageCircle,
   Mail,
@@ -48,73 +47,40 @@ interface MessagingHubProps {
 
 type MessageType = "first" | "followup1" | "followup2" | "followup3";
 
-interface EmailSettings {
-  emailSubjectFirst: string | null;
-  emailSubjectFollowup: string | null;
-  tplFirstWa: string | null;
-  tplFirstEmail: string | null;
-  tplFollowup1Wa: string | null;
-  tplFollowup1Email: string | null;
-  tplFollowup2Wa: string | null;
-  tplFollowup2Email: string | null;
-  tplFollowup3Wa: string | null;
-  tplFollowup3Email: string | null;
-}
-
-// Default templates
-const DEFAULT_TEMPLATES: Record<string, (name: string, company: string, url: string) => string> = {
-  tplFirstWa: (name, company, url) =>
-    `Ciao ${name}, sono Alessio Loi, fondatore di Karalisweb.\n\nHo preparato un'analisi personalizzata per ${company} — un breve video dove ti mostro alcune opportunità concrete che ho individuato navigando il vostro sito.\n\nEccola qui: ${url}\n\nDura pochi minuti. Fammi sapere se preferisci ricevere aggiornamenti via email invece che qui su WhatsApp!`,
-  tplFirstEmail: (name, company, url) =>
-    `Buongiorno ${name},\n\nSono Alessio Loi, fondatore di Karalisweb.\n\nHo preparato un'analisi personalizzata per ${company}: un breve video dove le mostro alcune opportunità concrete che ho individuato navigando il vostro sito.\n\nPuò visionarla qui: ${url}\n\nSe preferisce, posso contattarla via WhatsApp per un riscontro più rapido.\n\nCordiali saluti,\nAlessio Loi\nKaralisweb`,
-  tplFollowup1Wa: (name, _company, url) =>
-    `Ciao ${name}, qualche giorno fa ti avevo inviato un'analisi personalizzata del tuo sito. Magari ti è sfuggita — eccola qui: ${url}\n\nFammi sapere se hai 10 minuti per vederla insieme!`,
-  tplFollowup1Email: (name, _company, url) =>
-    `Buongiorno ${name},\n\nLe scrivo per un breve follow-up: qualche giorno fa le avevo inviato un'analisi personalizzata del vostro sito.\n\nSe non ha avuto modo di visionarla, può trovarla qui: ${url}\n\nSarei felice di dedicarle 10 minuti per mostrarle i punti principali. Quando le farebbe comodo?\n\nCordiali saluti,\nAlessio Loi\nKaralisweb`,
-  tplFollowup2Wa: (name, _company, url) =>
-    `Ciao ${name}, è la terza volta che ti scrivo — prometto che è l'ultima! 😄\n\nSe hai 2 minuti, dai un'occhiata alla tua analisi: ${url}\n\nSe non ti interessa, nessun problema — scrivimi "no" e non ti disturbo più.`,
-  tplFollowup2Email: (name, _company, url) =>
-    `Buongiorno ${name},\n\nMi permetto un ultimo follow-up: l'analisi che ho preparato per voi è ancora disponibile qui: ${url}\n\nSe non è il momento giusto, capisco perfettamente. In caso contrario, sono disponibile per una breve call di 10 minuti.\n\nCordiali saluti,\nAlessio Loi\nKaralisweb`,
-  tplFollowup3Wa: (name, _company, _url) =>
-    `Ciao ${name}, solo un ultimo messaggio. Se in futuro avessi bisogno di supporto per il sito o il marketing digitale, sono qui.\n\nBuon lavoro! 👋\nAlessio`,
-  tplFollowup3Email: (name, _company, _url) =>
-    `Buongiorno ${name},\n\nNon le scrivo più, non voglio essere invadente.\n\nSe in futuro avesse bisogno di supporto per il sito web o il marketing digitale, sarò felice di aiutarla.\n\nLe auguro buon lavoro.\n\nCordiali saluti,\nAlessio Loi\nKaralisweb`,
-};
-
-function applyTemplate(
-  template: string | null,
-  defaultKey: string,
-  leadName: string,
-  landingUrl: string | null
-): string {
-  const firstName = leadName.split(" ")[0];
-  const rawUrl = landingUrl || "[link analisi]";
-  const url = landingUrl ? landingUrl + (landingUrl.includes("?") ? "&" : "?") + "utm=client" : rawUrl;
-
-  if (template) {
-    return template
-      .replace(/\{nome\}/g, firstName)
-      .replace(/\{azienda\}/g, leadName)
-      .replace(/\{landingUrl\}/g, url);
-  }
-
-  const defaultFn = DEFAULT_TEMPLATES[defaultKey];
-  return defaultFn ? defaultFn(firstName, leadName, url) : "";
-}
-
 const MESSAGE_TYPE_LABELS: Record<MessageType, string> = {
-  first: "Primo contatto",
-  followup1: "Follow-up 1",
-  followup2: "Follow-up 2",
-  followup3: "Follow-up 3",
+  first: "Step 1 — Primo contatto",
+  followup1: "Step 2 — Casi studio",
+  followup2: "Step 3 — Chiusura ciclo",
+  followup3: "Follow-up extra",
 };
 
-const TEMPLATE_KEYS: Record<MessageType, { wa: string; email: string }> = {
-  first: { wa: "tplFirstWa", email: "tplFirstEmail" },
-  followup1: { wa: "tplFollowup1Wa", email: "tplFollowup1Email" },
-  followup2: { wa: "tplFollowup2Wa", email: "tplFollowup2Email" },
-  followup3: { wa: "tplFollowup3Wa", email: "tplFollowup3Email" },
-};
+// Mappa tipo messaggio → (stepNumber, variantLabel) nel workflow
+// Per step 3 la variante viene scelta automaticamente basandosi su videoViewed
+function getStepFilter(type: MessageType, channel: string, videoWatched: boolean) {
+  switch (type) {
+    case "first":
+      return { stepNumber: 1, channel, variantLabel: "" };
+    case "followup1":
+      return { stepNumber: 2, channel, variantLabel: "" };
+    case "followup2":
+      return { stepNumber: 3, channel, variantLabel: videoWatched ? "A" : "B" };
+    case "followup3":
+      return null; // Non c'è step 4 nel workflow
+  }
+}
+
+interface WorkflowStep {
+  id: string;
+  stepNumber: number;
+  channel: string;
+  name: string;
+  variantLabel: string;
+  subject: string | null;
+  body: string;
+  fromName: string | null;
+  fromEmail: string | null;
+  condition: string;
+}
 
 // Filtra solo activity legate a messaggi
 const MESSAGE_ACTIVITY_TYPES = [
@@ -153,53 +119,99 @@ export function MessagingHub({
   const [leadEmail, setLeadEmail] = useState(email || "");
   const [copiedMsg, setCopiedMsg] = useState(false);
   const [sending, setSending] = useState(false);
-  const [settings, setSettings] = useState<EmailSettings | null>(null);
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
+  const [currentStepId, setCurrentStepId] = useState<string | null>(null);
 
   const waNumber = whatsappNumber || phone;
   const canWA = !!waNumber;
   const canEmail = !!leadEmail.trim();
+  const videoWatched = videoViewsCount > 0 || (videoMaxWatchPercent ?? 0) > 0;
 
-  // Carica settings da API
+  // Carica workflow steps
   useEffect(() => {
-    fetch("/api/settings/email-messaging")
+    fetch("/api/settings/workflow-steps")
       .then((r) => r.json())
-      .then((data) => setSettings(data))
+      .then((data) => {
+        setWorkflowSteps(data.steps || []);
+      })
       .catch(() => {});
   }, []);
 
-  // Rigenera messaggio quando cambiano parametri
-  const regenerateMessage = useCallback(
-    (ch: "WA" | "EMAIL", type: MessageType) => {
-      const keys = TEMPLATE_KEYS[type];
-      const templateKey = ch === "WA" ? keys.wa : keys.email;
-      const settingValue = settings?.[templateKey as keyof EmailSettings] ?? null;
-      const msg = applyTemplate(settingValue, templateKey, leadName, landingUrl);
-      setMessage(msg);
+  // Carica preview renderizzata dallo step workflow
+  const loadPreview = useCallback(
+    async (ch: "WA" | "EMAIL", type: MessageType) => {
+      const wfChannel = ch === "WA" ? "whatsapp" : "email";
+      const filter = getStepFilter(type, wfChannel, videoWatched);
 
-      // Aggiorna anche l'oggetto email
-      if (ch === "EMAIL") {
-        const subjectTemplate = type === "first"
-          ? settings?.emailSubjectFirst
-          : settings?.emailSubjectFollowup;
-        const defaultSubject = type === "first"
-          ? `Analisi personalizzata per ${leadName}`
-          : `Re: Analisi per ${leadName}`;
-        const subject = subjectTemplate
-          ? subjectTemplate.replace(/\{nome\}/g, leadName.split(" ")[0]).replace(/\{azienda\}/g, leadName)
-          : defaultSubject;
-        setEmailSubject(subject);
+      if (!filter) {
+        // Nessuno step workflow per followup3, usa fallback
+        const firstName = leadName.split(" ")[0];
+        setMessage(
+          ch === "WA"
+            ? `Ciao ${firstName}, se in futuro avessi bisogno di supporto per il sito o il marketing digitale, sono qui.\n\nBuon lavoro!\nAlessio`
+            : `Buongiorno ${firstName},\n\nSe in futuro avesse bisogno di supporto per il sito o il marketing digitale, sarò felice di aiutarla.\n\nCordiali saluti,\nAlessio Loi\nKaralisweb`,
+        );
+        setEmailSubject(`Re: Analisi per ${leadName}`);
+        setCurrentStepId(null);
+        return;
+      }
+
+      // Trova lo step nel workflow
+      const step = workflowSteps.find(
+        (s) =>
+          s.stepNumber === filter.stepNumber &&
+          s.channel === filter.channel &&
+          s.variantLabel === filter.variantLabel,
+      );
+
+      if (!step) {
+        // Fallback se step non trovato
+        setMessage("[Template non configurato. Vai a Impostazioni > Workflow per configurare.]");
+        setEmailSubject(`Analisi per ${leadName}`);
+        setCurrentStepId(null);
+        return;
+      }
+
+      setCurrentStepId(step.id);
+
+      // Chiama preview API per renderizzare con dati reali del lead
+      try {
+        const res = await fetch(`/api/leads/${leadId}/workflow-preview`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stepId: step.id }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMessage(data.body || "");
+          setEmailSubject(data.subject || `Analisi per ${leadName}`);
+        }
+      } catch {
+        // Fallback: mostra template non renderizzato
+        setMessage(step.body);
+        setEmailSubject(step.subject || `Analisi per ${leadName}`);
       }
     },
-    [leadName, landingUrl, settings]
+    [leadId, leadName, workflowSteps, videoWatched],
   );
 
-  // Init messaggio quando settings caricate
+  // Rigenera quando cambiano steps/canale/tipo
   useEffect(() => {
-    if (settings !== null) {
-      regenerateMessage(channel, messageType);
+    if (workflowSteps.length > 0) {
+      loadPreview(channel, messageType);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings]);
+  }, [workflowSteps]);
+
+  const handleChannelChange = (ch: "WA" | "EMAIL") => {
+    setChannel(ch);
+    loadPreview(ch, messageType);
+  };
+
+  const handleTypeChange = (type: MessageType) => {
+    setMessageType(type);
+    loadPreview(channel, type);
+  };
 
   const handleSendWA = async () => {
     if (!waNumber) return;
@@ -208,14 +220,23 @@ export function MessagingHub({
 
     setSending(true);
     try {
-      await fetch(`/api/leads/${leadId}/quick-log`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "WHATSAPP_SENT",
-          notes: `Messaggio WA ${MESSAGE_TYPE_LABELS[messageType]} inviato`,
-        }),
-      });
+      // Se c'è uno step workflow, usa workflow-send per tracking coerente
+      if (currentStepId) {
+        await fetch(`/api/leads/${leadId}/workflow-send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stepId: currentStepId, body: message }),
+        });
+      } else {
+        await fetch(`/api/leads/${leadId}/quick-log`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "WHATSAPP_SENT",
+            notes: `Messaggio WA ${MESSAGE_TYPE_LABELS[messageType]} inviato`,
+          }),
+        });
+      }
 
       if (!outreachChannel) {
         await fetch(`/api/leads/${leadId}`, {
@@ -242,19 +263,35 @@ export function MessagingHub({
 
     setSending(true);
     try {
-      const res = await fetch(`/api/leads/${leadId}/send-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: leadEmail.trim(),
-          subject: emailSubject || `Analisi personalizzata per ${leadName}`,
-          body: message,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Errore invio email");
+      // Se c'è uno step workflow, usa workflow-send per tracking + fromName coerente
+      if (currentStepId) {
+        const res = await fetch(`/api/leads/${leadId}/workflow-send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stepId: currentStepId,
+            body: message,
+            subject: emailSubject,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Errore invio email");
+        }
+      } else {
+        const res = await fetch(`/api/leads/${leadId}/send-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: leadEmail.trim(),
+            subject: emailSubject || `Analisi personalizzata per ${leadName}`,
+            body: message,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Errore invio email");
+        }
       }
 
       if (!email) {
@@ -292,6 +329,9 @@ export function MessagingHub({
   const messageActivities = activities.filter((a) =>
     MESSAGE_ACTIVITY_TYPES.includes(a.type)
   );
+
+  // Trova info step corrente per mostrare variante
+  const currentStep = workflowSteps.find((s) => s.id === currentStepId);
 
   return (
     <div className="space-y-4">
@@ -356,6 +396,12 @@ export function MessagingHub({
           <CardTitle className="text-base flex items-center gap-2">
             <Send className="h-4 w-4" />
             Componi Messaggio
+            {currentStep && (
+              <Badge variant="outline" className="text-xs font-normal ml-auto">
+                {currentStep.name}
+                {currentStep.variantLabel && ` (${currentStep.condition === "video_watched" ? "video visto" : "video non visto"})`}
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -364,10 +410,7 @@ export function MessagingHub({
             <Button
               variant={channel === "WA" ? "default" : "outline"}
               size="sm"
-              onClick={() => {
-                setChannel("WA");
-                regenerateMessage("WA", messageType);
-              }}
+              onClick={() => handleChannelChange("WA")}
               disabled={!canWA}
               className="flex-1"
             >
@@ -378,10 +421,7 @@ export function MessagingHub({
             <Button
               variant={channel === "EMAIL" ? "default" : "outline"}
               size="sm"
-              onClick={() => {
-                setChannel("EMAIL");
-                regenerateMessage("EMAIL", messageType);
-              }}
+              onClick={() => handleChannelChange("EMAIL")}
               className="flex-1"
             >
               <Mail className="h-4 w-4 mr-1.5" />
@@ -397,10 +437,7 @@ export function MessagingHub({
                 variant={messageType === type ? "secondary" : "ghost"}
                 size="sm"
                 className="text-xs"
-                onClick={() => {
-                  setMessageType(type);
-                  regenerateMessage(channel, type);
-                }}
+                onClick={() => handleTypeChange(type)}
               >
                 {MESSAGE_TYPE_LABELS[type]}
               </Button>
