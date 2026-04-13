@@ -2,132 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getGeminiClient } from "@/lib/gemini";
 import { DEFAULT_READING_SCRIPT_PROMPT } from "@/lib/prompts";
-import { fetchSiteHtml } from "@/lib/gemini-analyst";
-import { extractStrategicData } from "@/lib/audit/strategic-extractor";
-
-/**
- * Estrae i problemi STRATEGICI dall'analisi Gemini del lead.
- * NON usa i dati tecnici dell'audit (meta tag, pixel, ecc.)
- * ma i problemi reali di posizionamento e comunicazione.
- */
-function extractStrategicProblems(
-  analysis: Record<string, unknown>
-): string {
-  const problems: string[] = [];
-
-  // 1. Pattern di errore strategico (il più importante)
-  const pattern = analysis.primary_error_pattern as string;
-  if (pattern && pattern !== "NESSUNO") {
-    if (pattern.includes("Lista della Spesa")) {
-      problems.push(`- PATTERN: "Lista della Spesa" — Il sito elenca servizi senza un angolo differenziante. Non si capisce perché scegliere voi e non un competitor.`);
-    } else if (pattern.includes("Sindrome dell'Ego")) {
-      problems.push(`- PATTERN: "Sindrome dell'Ego" — Il sito parla solo di voi ("Siamo...", "La nostra azienda...") ma non del problema del cliente.`);
-    } else if (pattern.includes("Target Fantasma")) {
-      problems.push(`- PATTERN: "Target Fantasma" — Non c'è una dichiarazione chiara di CHI è il cliente ideale.`);
-    } else {
-      problems.push(`- PATTERN: ${pattern}`);
-    }
-  }
-
-  // 2. Cliché trovato (frase esatta dal sito)
-  const cliche = analysis.cliche_found as string;
-  if (cliche && cliche !== "NESSUNA_CLICHE_TROVATA") {
-    problems.push(`- FRASE CLICHÉ ESATTA DAL SITO: "${cliche}" — Se coprissi il logo con quello di un competitor, funzionerebbe ugualmente.`);
-  }
-
-  // 3. Nota strategica (contiene osservazioni specifiche)
-  const strategicNote = analysis.strategic_note as string;
-  if (strategicNote) {
-    problems.push(`- NOTA STRATEGICA: ${strategicNote}`);
-  }
-
-  // 4. Stato ads (contesto commerciale)
-  const hasActiveAds = analysis.has_active_ads as boolean;
-  const googleAdCopy = analysis.google_ad_copy as string | null;
-  const metaAdsCopy = analysis.meta_ads_copy as string[] | null;
-
-  if (hasActiveAds && googleAdCopy) {
-    problems.push(`- STANNO INVESTENDO IN ADS con questo annuncio: "${googleAdCopy}" — Ma il sito non mantiene la promessa.`);
-  } else if (hasActiveAds) {
-    problems.push(`- STANNO INVESTENDO IN ADS ma il sito non è costruito per convertire il traffico a pagamento.`);
-  } else {
-    problems.push(`- NON FANNO ADVERTISING — Invisibili nelle ricerche a pagamento, i competitor che investono gli rubano clienti.`);
-  }
-
-  if (metaAdsCopy && metaAdsCopy.length > 0) {
-    problems.push(`- META ADS ATTIVE: "${metaAdsCopy[0]}"`);
-  }
-
-  // 5. Osservazioni dall'analisi (se presenti)
-  const observations = analysis.observations as string[] | undefined;
-  if (observations && observations.length > 0) {
-    for (const obs of observations.slice(0, 3)) {
-      problems.push(`- ${obs}`);
-    }
-  }
-
-  if (problems.length === 0) {
-    return "Analisi strategica completata ma nessun problema specifico estratto.";
-  }
-
-  return problems.join("\n");
-}
-
-/**
- * Recupera i testi estratti dal sito.
- * Prima cerca nei dati salvati (analystOutput), se non ci sono ri-estrae dal sito.
- */
-async function getExtractedTexts(
-  lead: { website: string | null; name: string; analystOutput: unknown }
-): Promise<{ home_text: string; about_text: string; services_text: string }> {
-  const analystData = lead.analystOutput as Record<string, unknown> | null;
-
-  // Prova a prendere i testi salvati
-  const savedHome = analystData?.extracted_home_text as string | null;
-  const savedAbout = analystData?.extracted_about_text as string | null;
-  const savedServices = analystData?.extracted_services_text as string | null;
-
-  if (savedHome) {
-    return {
-      home_text: savedHome,
-      about_text: savedAbout || "Non disponibile",
-      services_text: savedServices || "Non disponibile",
-    };
-  }
-
-  // Testi non salvati (lead esistente) → ri-estrai dal sito
-  if (!lead.website) {
-    return {
-      home_text: "Sito non disponibile",
-      about_text: "Non disponibile",
-      services_text: "Non disponibile",
-    };
-  }
-
-  try {
-    console.log(`[reading-script] Ri-estrazione testi da ${lead.website}...`);
-    const html = await fetchSiteHtml(lead.website);
-    const extracted = await extractStrategicData(html, lead.website, lead.name);
-    return {
-      home_text: extracted.home_text || "Non estratto",
-      about_text: extracted.about_text || "Non disponibile",
-      services_text: extracted.services_text || "Non disponibile",
-    };
-  } catch (err) {
-    console.warn(`[reading-script] Impossibile ri-estrarre testi: ${err}`);
-    return {
-      home_text: "Errore nell'estrazione",
-      about_text: "Non disponibile",
-      services_text: "Non disponibile",
-    };
-  }
-}
+import type { AnalystOutput, AnalystPainPoint } from "@/lib/gemini-analyst";
+import type { AuditData } from "@/types";
 
 /**
  * POST /api/leads/[id]/reading-script
  *
- * Genera lo script finale di lettura per il video.
- * Include i PROBLEMI STRATEGICI e i TESTI REALI del sito del prospect.
+ * Genera lo script finale di lettura per il video Tella.
+ * Usa i dati dell'analisi strategica (analystOutput) e dell'audit tecnico.
  */
 export async function POST(
   request: NextRequest,
@@ -144,11 +26,12 @@ export async function POST(
         id: true,
         name: true,
         website: true,
-        geminiAnalysis: true,
-        geminiAnalyzedAt: true,
+        address: true,
+        category: true,
+        segment: true,
         analystOutput: true,
         auditData: true,
-        opportunityScore: true,
+        geminiAnalysis: true,
       },
     });
 
@@ -156,10 +39,11 @@ export async function POST(
       return NextResponse.json({ error: "Lead non trovato" }, { status: 404 });
     }
 
-    const analysis = lead.geminiAnalysis as Record<string, unknown> | null;
-    if (!analysis?.teleprompter_script) {
+    // Serve l'analisi strategica (analystOutput) per i dati del prompt
+    const analystData = lead.analystOutput as unknown as AnalystOutput | null;
+    if (!analystData?.pain_points) {
       return NextResponse.json(
-        { error: "Analisi strategica non ancora eseguita. Genera prima l'analisi Gemini." },
+        { error: "Analisi strategica non ancora eseguita. Genera prima l'analisi." },
         { status: 400 }
       );
     }
@@ -172,16 +56,22 @@ export async function POST(
       );
     }
 
-    const teleprompter = analysis.teleprompter_script as Record<string, string>;
-    const cliche = analysis.cliche_found as string;
-    const errorPattern = analysis.primary_error_pattern as string;
-    const strategicNote = analysis.strategic_note as string;
+    // Estrai dati audit per tracking (Google Ads / Meta Ads)
+    const auditData = lead.auditData as unknown as AuditData | null;
+    const hasGoogleAds = auditData?.tracking?.hasGoogleAdsTag ?? false;
+    const hasMetaAds = auditData?.tracking?.hasFacebookPixel ?? false;
 
-    // Estrai i problemi STRATEGICI (non tecnici) dall'analisi
-    const siteProblems = extractStrategicProblems(analysis);
+    // Sindrome dell'Ego: si/no basato sul pattern
+    const isSindromeEgo = analystData.primary_pattern?.toLowerCase().includes("ego") ?? false;
 
-    // Recupera i TESTI REALI del sito (salvati o ri-estratti)
-    const extractedTexts = await getExtractedTexts(lead);
+    // Pain points high severity (ordinati)
+    const highPainPoints = (analystData.pain_points || [])
+      .filter((pp: AnalystPainPoint) => pp.severity === "high");
+    const pp1 = highPainPoints[0];
+    const pp2 = highPainPoints[1];
+
+    // Estrai città dall'indirizzo (ultima parte dopo la virgola, o tutto l'indirizzo)
+    const city = extractCity(lead.address);
 
     // Leggi il prompt template dai settings (se personalizzato)
     const settings = await db.settings.findUnique({
@@ -193,22 +83,21 @@ export async function POST(
 
     // Sostituisci le variabili nel template
     const prompt = promptTemplate
+      .replace(/\{\{NOME_AZIENDA\}\}/g, lead.name)
+      .replace(/\{\{SETTORE\}\}/g, lead.segment || lead.category || "Non specificato")
+      .replace(/\{\{CITTA\}\}/g, city)
+      .replace(/\{\{SINDROME_EGO\}\}/g, isSindromeEgo ? "si" : "no")
+      .replace(/\{\{BRAND_SCORE\}\}/g, String(analystData.brand_positioning_score ?? "N/A"))
+      .replace(/\{\{CLICHE_TROVATO\}\}/g, analystData.cliche_found || "Nessuna cliche trovata")
+      .replace(/\{\{DEBOLEZZA\}\}/g, analystData.communication_weakness || "Non identificata")
+      .replace(/\{\{PAIN_POINT_1\}\}/g, pp1 ? `${pp1.area} - ${pp1.finding}` : "Nessun pain point high trovato")
+      .replace(/\{\{PAIN_POINT_2\}\}/g, pp2 ? `${pp2.area} - ${pp2.finding}` : "Nessun secondo pain point high")
+      .replace(/\{\{GOOGLE_ADS\}\}/g, hasGoogleAds ? "Si, attivi" : "No, non attivi")
+      .replace(/\{\{META_ADS\}\}/g, hasMetaAds ? "Si, attivi" : "No, non attivi")
+      // Backward compat: vecchi placeholder (ignorati se non presenti nel template)
       .replace(/\{\{CHI_PARLA\}\}/g, "Alessio Loi, fondatore di Karalisweb")
       .replace(/\{\{PROSPECT_NAME\}\}/g, lead.name)
       .replace(/\{\{PROSPECT_WEBSITE\}\}/g, lead.website || "N/A")
-      .replace(/\{\{OPPORTUNITY_SCORE\}\}/g, String(lead.opportunityScore ?? "N/A"))
-      .replace(/\{\{ERROR_PATTERN\}\}/g, errorPattern || "N/A")
-      .replace(/\{\{CLICHE\}\}/g, cliche || "N/A")
-      .replace(/\{\{STRATEGIC_NOTE\}\}/g, strategicNote || "N/A")
-      .replace(/\{\{PROBLEMI_SITO\}\}/g, siteProblems)
-      .replace(/\{\{TESTI_HOMEPAGE\}\}/g, extractedTexts.home_text)
-      .replace(/\{\{TESTI_ABOUT\}\}/g, extractedTexts.about_text)
-      .replace(/\{\{TESTI_SERVIZI\}\}/g, extractedTexts.services_text)
-      .replace(/\{\{ATTO_1\}\}/g, teleprompter.atto_1 || "")
-      .replace(/\{\{ATTO_2\}\}/g, teleprompter.atto_2 || "")
-      .replace(/\{\{ATTO_3\}\}/g, teleprompter.atto_3 || "")
-      .replace(/\{\{ATTO_4\}\}/g, teleprompter.atto_4 || "")
-      .replace(/\{\{ATTO_5\}\}/g, teleprompter.atto_5 || "")
       .replace(/\{\{CUSTOM_INSTRUCTIONS\}\}/g, customInstructions ? `ISTRUZIONI AGGIUNTIVE: ${customInstructions}` : "");
 
     const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
@@ -223,12 +112,12 @@ export async function POST(
 
     const script = result.response.text().trim();
 
-    // Salva lo script nel lead (dentro geminiAnalysis, dove la pagina lo legge)
+    // Salva lo script nel lead
     await db.lead.update({
       where: { id },
       data: {
         geminiAnalysis: {
-          ...(lead.geminiAnalysis as object),
+          ...((lead.geminiAnalysis as object) || {}),
           readingScript: script,
           readingScriptGeneratedAt: new Date().toISOString(),
           readingScriptModel: modelName,
@@ -248,4 +137,27 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+/**
+ * Estrae la città dall'indirizzo del lead.
+ * Formato tipico Google Maps: "Via Roma 1, 28100 Novara NO, Italia"
+ */
+function extractCity(address: string | null): string {
+  if (!address) return "Non disponibile";
+
+  // Rimuovi "Italia" o "Italy" dalla fine
+  const cleaned = address.replace(/,?\s*(Italia|Italy)\s*$/i, "").trim();
+
+  // Prova a prendere l'ultima parte dopo l'ultima virgola
+  const parts = cleaned.split(",").map((p) => p.trim());
+  if (parts.length >= 2) {
+    // L'ultima parte potrebbe essere "28100 Novara NO" → estrai il nome città
+    const lastPart = parts[parts.length - 1];
+    // Rimuovi CAP (5 cifre) e sigla provincia (2 lettere maiuscole alla fine)
+    const cityMatch = lastPart.replace(/^\d{5}\s*/, "").replace(/\s+[A-Z]{2}$/, "").trim();
+    if (cityMatch) return cityMatch;
+  }
+
+  return address;
 }

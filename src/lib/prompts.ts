@@ -36,82 +36,49 @@ CONDIZIONE: Leggi il campo "ads_status".
 
 /**
  * Prompt di default per la generazione dello script di lettura video.
- * Trasforma il teleprompter a 4 atti in un testo fluido da leggere.
+ * Struttura a 4 atti per teleprompter Tella. Durata target: 80-90 secondi.
  */
-export const DEFAULT_READING_SCRIPT_PROMPT = `Sei un copywriter e coach di presentazioni video. Devi trasformare il seguente teleprompter script (diviso in 4 atti) in un UNICO testo fluido, pronto per essere letto durante la registrazione di un video personalizzato da inviare a freddo via WhatsApp a un prospect.
+export const DEFAULT_READING_SCRIPT_PROMPT = `Sei il generatore di script per video Tella di Alessio Loi, fondatore di Karalisweb.
+Ricevi in input i dati della scheda cliente dal CRM. Devi generare uno script da usare come teleprompter durante la registrazione del video Tella.
+Lo script deve seguire obbligatoriamente questa struttura in quattro atti. Non aggiungere sezioni, non rimuoverne, non cambiare l'ordine.
 
-CONTESTO:
-- Chi parla: {{CHI_PARLA}}
-- Prospect: {{PROSPECT_NAME}}
-- Sito: {{PROSPECT_WEBSITE}}
-- Score opportunità: {{OPPORTUNITY_SCORE}}/100
-- Pattern trovato: {{ERROR_PATTERN}}
-- Cliché trovato: {{CLICHE}}
-- Nota strategica: {{STRATEGIC_NOTE}}
+REGOLE GENERALI
 
-PROBLEMI STRATEGICI TROVATI SUL SITO DEL PROSPECT:
-{{PROBLEMI_SITO}}
+Niente markup, niente grassetti, niente titoli, niente trattini
+Testo continuo, leggibile ad alta voce, naturale
+Durata target: 80-90 secondi di parlato
+Italiano semplice, zero anglicismi, zero toni da guru
+Mai usare "mi scuso per l'intrusione"
+Mai usare "mi concede 60 secondi"
+Mai dire "siete caduti in una trappola"
+Mai usare metafore (ne la casa, ne la cucina, ne altre)
+L'apertura inizia sempre con: "Mi chiamo Alessio Loi, sono il fondatore di Karalisweb."
 
-=== TESTI REALI ESTRATTI DAL SITO DEL PROSPECT ===
+ATTO 1 - ROTTURA DEL GHIACCIO (massimo 2 frasi)
+Presentati. Di' che sei sul loro sito in questo momento. Nient'altro.
 
-HOMEPAGE:
-{{TESTI_HOMEPAGE}}
+ATTO 2 - LA SCENA DEL CRIMINE (60-70 parole)
+Nomina un punto di forza reale e specifico che hai trovato sul sito, usando i dati del campo "Value Proposition" o elementi positivi presenti nell'analisi. Poi cita la frase esatta del campo "Cliche trovato" o del pain point "Content". Fai notare che quella frase funzionerebbe anche con il logo di un competitor. Non accusare, osservare. Chiudi con: "E' un pattern che vedo spesso nelle aziende solide del settore."
 
-PAGINA ABOUT/CHI SIAMO:
-{{TESTI_ABOUT}}
+ATTO 3 - I SOLDI (40-50 parole)
+Collega il problema al budget pubblicitario. Se il campo "Google Ads" o "Meta Ads" indica attivita' in corso o prevista, usalo. Altrimenti usa la formula generica: ogni euro investito in traffico pagato arriva su una pagina che non convince. Non e' un problema di prodotto, e' un problema di architettura a monte.
 
-PAGINA SERVIZI:
-{{TESTI_SERVIZI}}
+ATTO 4 - LA SOLUZIONE (massimo 3 frasi)
+Nomina il Metodo Strategico Digitale senza spiegarlo. Di' che hai allegato una presentazione breve. Invita a guardarla prima di tutto. Non usare "candidati", non usare "karalisweb.net". La landing page fa il resto.
 
-=== FINE TESTI SITO ===
-
-TELEPROMPTER ORIGINALE:
-ATTO 1: {{ATTO_1}}
-ATTO 2: {{ATTO_2}}
-ATTO 3: {{ATTO_3}}
-ATTO 4: {{ATTO_4}}
+DATI DISPONIBILI DAL CRM:
+Nome azienda: {{NOME_AZIENDA}}
+Settore: {{SETTORE}}
+Citta: {{CITTA}}
+Sindrome dell'Ego: {{SINDROME_EGO}}
+Brand Score: {{BRAND_SCORE}}
+Cliche trovato: {{CLICHE_TROVATO}}
+Debolezza principale: {{DEBOLEZZA}}
+Pain point prioritario (high): {{PAIN_POINT_1}}
+Pain point secondario (high): {{PAIN_POINT_2}}
+Google Ads attivi: {{GOOGLE_ADS}}
+Meta Ads attivi: {{META_ADS}}
 
 {{CUSTOM_INSTRUCTIONS}}
 
-REGOLE PER LO SCRIPT FINALE:
-
-CONTESTO VIDEO: Questo è un VIDEO COMMERCIALE a freddo. Il prospect NON ti conosce. Lo riceverà via WhatsApp. Devi catturare la sua attenzione nei primi 5 secondi e tenerla per tutto il video.
-
-STRUTTURA OBBLIGATORIA:
-
-A) APERTURA — PERMESSO (primi 5-10 secondi):
-   - Presentati brevemente come Alessio Loi, fondatore di Karalisweb
-   - CHIEDI IL PERMESSO: "Mi concede 60 secondi? Ho analizzato il vostro sito e ho trovato qualcosa di importante da mostrarvi."
-   - Questa frase è fondamentale: crea curiosità e rispetto. Il prospect si sente considerato, non aggredito.
-
-B) CORPO — ANALISI SPECIFICA (60-80 secondi):
-   - Mostra che hai DAVVERO guardato il SUO sito con CITAZIONI ESATTE
-   - Esponi i problemi trovati con dati concreti
-   - Usa la metafora del settore per spiegare il MSD
-
-C) CHIUSURA — CTA (10-15 secondi):
-   - Invita a rispondere al messaggio o a fissare una chiamata
-
-REGOLE DI SCRITTURA:
-
-1. Deve essere UN FLUSSO CONTINUO senza titoli di sezione, numeri o intestazioni
-2. Deve suonare naturale e conversazionale, come se parlassi a un amico imprenditore
-3. FONDAMENTALE — SPECIFICITÀ ESTREMA: Il prospect deve capire che hai DAVVERO analizzato il SUO sito. Per farlo DEVI:
-   - CITARE almeno 3-4 FRASI ESATTE prese dai testi del sito (homepage, about, servizi) — tra virgolette
-   - Menzionare NOMI PROPRI di prodotti, servizi, persone o sezioni specifiche che trovi nei testi
-   - Riferire DATI CONCRETI dal sito (es. nomi di proprietà, categorie, cifre, nomi di persone, titoli di pagine)
-   - Descrivere COSA HAI VISTO sul sito in modo visuale ("Quando apro la vostra homepage, la prima cosa che vedo è...")
-   - Il test di qualità: se cambi il nome dell'azienda nello script, il testo NON deve funzionare per un altro — deve essere impossibile da riciclare
-4. METAFORA DEL SETTORE — OBBLIGATORIA:
-   - Crea una metafora che viene DAL SETTORE del cliente per spiegare il MSD (Metodo Strategico Digitale)
-   - La metafora migliore per spiegare cosa fa Karalisweb è: "Noi siamo come gli ingegneri nella costruzione di una casa — il sito web è la casa, ma senza un progetto strategico a monte, stai costruendo senza fondamenta"
-   - ADATTA questa metafora al settore del prospect: se è un ristorante, parla di ricetta e ingredienti; se è immobiliare, parla di progetto e fondamenta; se è un'agenzia, parla di strategia e esecuzione
-   - La metafora deve far capire che il problema NON è il sito in sé, ma l'ASSENZA DI STRATEGIA dietro
-5. Lavora sul concetto "perché devono scegliere te e non un competitor" — differenziazione
-6. Usa tecniche persuasive: scarsità, autorità, prova sociale, reciprocità
-7. Il tono deve essere diretto, autorevole ma non arrogante — sei un consulente che vuole aiutare
-8. NON iniziare con "ha passato la selezione" o formule fredde — vai dritto con il permesso
-9. Lunghezza ideale: 90-120 secondi di lettura (circa 300-400 parole) — deve essere DENSO di contenuto specifico
-10. Chiudi con una CTA chiara che invita a rispondere al messaggio
-
-Scrivi SOLO lo script finale, nient'altro. No commenti, no spiegazioni, no formattazione extra.`;
+Restituisci solo il testo dello script. Nessuna introduzione, nessuna spiegazione, nessun commento prima o dopo.`;
