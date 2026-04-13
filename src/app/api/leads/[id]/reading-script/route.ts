@@ -29,6 +29,8 @@ export async function POST(
         address: true,
         category: true,
         segment: true,
+        googleRating: true,
+        googleReviewsCount: true,
         analystOutput: true,
         auditData: true,
         geminiAnalysis: true,
@@ -64,11 +66,15 @@ export async function POST(
     // Sindrome dell'Ego: si/no basato sul pattern
     const isSindromeEgo = analystData.primary_pattern?.toLowerCase().includes("ego") ?? false;
 
-    // Pain points high severity (ordinati)
-    const highPainPoints = (analystData.pain_points || [])
-      .filter((pp: AnalystPainPoint) => pp.severity === "high");
-    const pp1 = highPainPoints[0];
-    const pp2 = highPainPoints[1];
+    // Pain points high severity (ordinati), poi medium come fallback
+    const sortedPainPoints = (analystData.pain_points || [])
+      .sort((a: AnalystPainPoint, b: AnalystPainPoint) => {
+        const order = { high: 0, medium: 1, low: 2 };
+        return (order[a.severity] ?? 2) - (order[b.severity] ?? 2);
+      });
+    const pp1 = sortedPainPoints[0];
+    const pp2 = sortedPainPoints[1];
+    const pp3 = sortedPainPoints[2];
 
     // Estrai città dall'indirizzo (ultima parte dopo la virgola, o tutto l'indirizzo)
     const city = extractCity(lead.address);
@@ -90,10 +96,13 @@ export async function POST(
       .replace(/\{\{BRAND_SCORE\}\}/g, String(analystData.brand_positioning_score ?? "N/A"))
       .replace(/\{\{CLICHE_TROVATO\}\}/g, analystData.cliche_found || "Nessuna cliche trovata")
       .replace(/\{\{DEBOLEZZA\}\}/g, analystData.communication_weakness || "Non identificata")
-      .replace(/\{\{PAIN_POINT_1\}\}/g, pp1 ? `${pp1.area} - ${pp1.finding}` : "Nessun pain point high trovato")
-      .replace(/\{\{PAIN_POINT_2\}\}/g, pp2 ? `${pp2.area} - ${pp2.finding}` : "Nessun secondo pain point high")
-      .replace(/\{\{GOOGLE_ADS\}\}/g, hasGoogleAds ? "Si, attivi" : "No, non attivi")
-      .replace(/\{\{META_ADS\}\}/g, hasMetaAds ? "Si, attivi" : "No, non attivi")
+      .replace(/\{\{GOOGLE_RATING\}\}/g, lead.googleRating ? String(Number(lead.googleRating)) : "Non disponibile")
+      .replace(/\{\{NUMERO_RECENSIONI\}\}/g, lead.googleReviewsCount ? String(lead.googleReviewsCount) : "Non disponibile")
+      .replace(/\{\{PAIN_POINT_1\}\}/g, pp1 ? `${pp1.area} - ${pp1.finding}` : "Non disponibile")
+      .replace(/\{\{PAIN_POINT_2\}\}/g, pp2 ? `${pp2.area} - ${pp2.finding}` : "Non disponibile")
+      .replace(/\{\{PAIN_POINT_3\}\}/g, pp3 ? `${pp3.area} - ${pp3.finding}` : "Non disponibile")
+      .replace(/\{\{GOOGLE_ADS\}\}/g, hasGoogleAds ? "Si, attivi" : "Non verificabile")
+      .replace(/\{\{META_ADS\}\}/g, hasMetaAds ? "Si, attivi" : "Non verificabile")
       // Backward compat: vecchi placeholder (ignorati se non presenti nel template)
       .replace(/\{\{CHI_PARLA\}\}/g, "Alessio Loi, fondatore di Karalisweb")
       .replace(/\{\{PROSPECT_NAME\}\}/g, lead.name)

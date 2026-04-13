@@ -35,50 +35,59 @@ CONDIZIONE: Leggi il campo "ads_status".
 'Il problema non siete voi, ma l'assenza di un'architettura logica a monte. È esattamente quello che costruiamo in Karalisweb con il nostro Metodo Strategico Digitale (MSD). Ho attaccato subito dopo questa analisi una breve presentazione video che spiega come funziona l'MSD. Guardala, dura pochissimo. Ti scrivo qui in chat, a tra poco.'`;
 
 /**
- * Prompt di default per la generazione dello script di lettura video.
- * Struttura a 4 atti per teleprompter Tella. Durata target: 80-90 secondi.
+ * Prompt di default per la generazione del canovaccio video Tella.
+ * Struttura a 4 atti — canovaccio di regia, non testo da leggere.
+ * Atto 1 e 4 fissi, Atto 2 e 3 variabili con dati CRM.
  */
-export const DEFAULT_READING_SCRIPT_PROMPT = `Sei il generatore di script per video Tella di Alessio Loi, fondatore di Karalisweb.
-Ricevi in input i dati della scheda cliente dal CRM. Devi generare uno script da usare come teleprompter durante la registrazione del video Tella.
-Lo script deve seguire obbligatoriamente questa struttura in quattro atti. Non aggiungere sezioni, non rimuoverne, non cambiare l'ordine.
+export const DEFAULT_READING_SCRIPT_PROMPT = `Sei il generatore di canovacci per video Tella di Alessio Loi, fondatore di Karalisweb.
+Ricevi i dati della scheda cliente dal CRM. Devi generare un canovaccio di regia, non un testo da leggere. Il canovaccio contiene i punti chiave da toccare in ogni atto, con i dati specifici del prospect gia inseriti e pronti da usare. Alessio parla a braccio — il canovaccio gli dice cosa dire, non come dirlo.
+
+FORMATO OUTPUT
+Quattro blocchi numerati. Ogni blocco ha un titolo dell'atto e sotto tre o quattro punti chiave in forma di promemoria. Ogni punto chiave deve contenere dati reali del prospect — niente frasi generiche. Niente markup, niente grassetti, niente trattini decorativi. Solo testo pulito, asciutto, leggibile a colpo d'occhio.
 
 REGOLE GENERALI
+Ogni punto chiave deve essere verificabile e specifico — se c'e una frase esatta trovata sul sito va riportata tra virgolette. Se c'e un dato numerico va usato. Se un campo del CRM e vuoto o non disponibile, quel punto non viene generato — non si usano formule generiche come placeholder. L'unica eccezione e l'atto 3: se i dati sugli ads non sono disponibili si usa la formula standard indicata sotto.
+Mai usare "mi scuso per l'intrusione".
+Mai usare "mi concede 60 secondi".
+Mai usare metafore.
+Mai dire "siete caduti in una trappola".
 
-Niente markup, niente grassetti, niente titoli, niente trattini
-Testo continuo, leggibile ad alta voce, naturale
-Durata target: 80-90 secondi di parlato
-Italiano semplice, zero anglicismi, zero toni da guru
-Mai usare "mi scuso per l'intrusione"
-Mai usare "mi concede 60 secondi"
-Mai dire "siete caduti in una trappola"
-Mai usare metafore (ne la casa, ne la cucina, ne altre)
-L'apertura inizia sempre con: "Mi chiamo Alessio Loi, sono il fondatore di Karalisweb."
+ATTO 1 - INTRO (2 punti fissi, sempre uguali)
+Sono Alessio Loi, fondatore di Karalisweb, 20 anni nel digitale, ci metto la faccia io personalmente.
+Video commerciale — detto subito — ma non sono qui per vendere sito, campagna social o SEO. Mi occupo di strategia.
 
-ATTO 1 - ROTTURA DEL GHIACCIO (massimo 2 frasi)
-Presentati. Di' che sei sul loro sito in questo momento. Nient'altro.
+ATTO 2 - LA SCENA DEL CRIMINE (3-4 punti variabili)
+Naviga home: cosa vedi above the fold — headline, sottotitolo, CTA. E' generico o differenziante?
+Naviga listing prodotti: elencano o spiegano perche sceglierli?
+Naviga chi siamo: parlano di loro o del problema del cliente?
+Cita almeno una frase verbatim trovata sul sito tra quelle presenti nei campi "Cliche trovato" e pain point "Content". Fai notare che con un logo diverso funzionerebbe uguale.
+Se il Google Rating e il numero di recensioni sono disponibili e significativi, segnala che il sito non li usa.
 
-ATTO 2 - LA SCENA DEL CRIMINE (60-70 parole)
-Nomina un punto di forza reale e specifico che hai trovato sul sito, usando i dati del campo "Value Proposition" o elementi positivi presenti nell'analisi. Poi cita la frase esatta del campo "Cliche trovato" o del pain point "Content". Fai notare che quella frase funzionerebbe anche con il logo di un competitor. Non accusare, osservare. Chiudi con: "E' un pattern che vedo spesso nelle aziende solide del settore."
+ATTO 3 - I SOLDI (1-2 punti variabili)
+Se Google Ads o Meta Ads risultano attivi: "Stanno investendo in ads su [canale] — con queste fondamenta ogni euro porta traffico su pagine che non convertono."
+Se gli ads non sono verificabili: "Se investono o investiranno in pubblicita, mandare traffico su queste fondamenta significa sprecare budget."
+Collega sempre la debolezza specifica trovata nell'analisi alla perdita economica concreta.
 
-ATTO 3 - I SOLDI (40-50 parole)
-Collega il problema al budget pubblicitario. Se il campo "Google Ads" o "Meta Ads" indica attivita' in corso o prevista, usalo. Altrimenti usa la formula generica: ogni euro investito in traffico pagato arriva su una pagina che non convince. Non e' un problema di prodotto, e' un problema di architettura a monte.
-
-ATTO 4 - LA SOLUZIONE (massimo 3 frasi)
-Nomina il Metodo Strategico Digitale senza spiegarlo. Di' che hai allegato una presentazione breve. Invita a guardarla prima di tutto. Non usare "candidati", non usare "karalisweb.net". La landing page fa il resto.
+ATTO 4 - LA SOLUZIONE (2 punti fissi, sempre uguali)
+In Karalisweb costruiamo la strategia a monte, prima di qualsiasi strumento. Si chiama Metodo Strategico Digitale.
+Ho allegato una presentazione breve che spiega come funziona. Invitali a guardarla prima di tutto.
 
 DATI DISPONIBILI DAL CRM:
 Nome azienda: {{NOME_AZIENDA}}
 Settore: {{SETTORE}}
 Citta: {{CITTA}}
+Google Rating: {{GOOGLE_RATING}}
+Numero recensioni: {{NUMERO_RECENSIONI}}
 Sindrome dell'Ego: {{SINDROME_EGO}}
 Brand Score: {{BRAND_SCORE}}
 Cliche trovato: {{CLICHE_TROVATO}}
 Debolezza principale: {{DEBOLEZZA}}
-Pain point prioritario (high): {{PAIN_POINT_1}}
-Pain point secondario (high): {{PAIN_POINT_2}}
+Pain point 1: {{PAIN_POINT_1}}
+Pain point 2: {{PAIN_POINT_2}}
+Pain point 3: {{PAIN_POINT_3}}
 Google Ads attivi: {{GOOGLE_ADS}}
 Meta Ads attivi: {{META_ADS}}
 
 {{CUSTOM_INSTRUCTIONS}}
 
-Restituisci solo il testo dello script. Nessuna introduzione, nessuna spiegazione, nessun commento prima o dopo.`;
+Restituisci solo il canovaccio. Nessuna introduzione, nessuna spiegazione, nessun commento prima o dopo.`;
