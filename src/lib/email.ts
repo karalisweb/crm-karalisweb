@@ -271,9 +271,12 @@ export async function sendOutreachEmail(
   const plainText = body + gdprFooterText;
 
   try {
+    const bccAddress = process.env.OUTREACH_BCC || '';
+
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,
       to,
+      ...(bccAddress && { bcc: bccAddress }),
       subject,
       text: plainText,
       html,
