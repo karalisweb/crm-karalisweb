@@ -12,7 +12,7 @@ import {
   Lock, Check, ChevronDown, ChevronUp,
   Loader2, RefreshCw, Pencil, Copy,
   ExternalLink, MessageCircle, Mail,
-  AlertTriangle, Target, FileText,
+  AlertTriangle, Target, FileText, Trash2,
 } from "lucide-react";
 import type { AnalystOutput, AnalystPainPoint } from "@/lib/gemini-analyst";
 
@@ -854,6 +854,8 @@ function Step3Content({
 }) {
   const [url, setUrl] = useState(videoYoutubeUrl || "");
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const saveUrl = useCallback(async () => {
     if (!url.trim()) return;
@@ -866,6 +868,7 @@ function Step3Content({
       });
       if (!res.ok) throw new Error("Errore nel salvataggio");
       toast.success("URL YouTube salvato");
+      setEditing(false);
       onRefresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore");
@@ -874,9 +877,29 @@ function Step3Content({
     }
   }, [leadId, url, onRefresh]);
 
-  if (videoYoutubeUrl) {
+  const removeUrl = useCallback(async () => {
+    setRemoving(true);
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoYoutubeUrl: null, videoYoutubeId: null }),
+      });
+      if (!res.ok) throw new Error("Errore nella rimozione");
+      toast.success("URL YouTube rimosso");
+      setUrl("");
+      setEditing(false);
+      onRefresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore");
+    } finally {
+      setRemoving(false);
+    }
+  }, [leadId, onRefresh]);
+
+  if (videoYoutubeUrl && !editing) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
           <Check className="h-3 w-3 mr-1" />URL salvato
         </Badge>
@@ -889,6 +912,25 @@ function Step3Content({
           {videoYoutubeUrl}
           <ExternalLink className="h-3 w-3" />
         </a>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => { setUrl(videoYoutubeUrl); setEditing(true); }}
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Modifica
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={removeUrl}
+            disabled={removing}
+          >
+            {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
+            Rimuovi
+          </Button>
+        </div>
       </div>
     );
   }
@@ -896,7 +938,7 @@ function Step3Content({
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Registra il video su Tella, caricalo su YouTube in modalit&agrave; non in elenco, e incolla il link qui.
+        {editing ? "Modifica l'URL YouTube:" : "Registra il video su Tella, caricalo su YouTube in modalità non in elenco, e incolla il link qui."}
       </p>
       <div className="flex gap-2">
         <Input
@@ -909,6 +951,11 @@ function Step3Content({
         <Button onClick={saveUrl} disabled={saving || !url.trim()}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salva"}
         </Button>
+        {editing && (
+          <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+            Annulla
+          </Button>
+        )}
       </div>
     </div>
   );
