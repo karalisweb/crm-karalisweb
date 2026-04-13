@@ -195,13 +195,13 @@ export function MessagingHub({
     [leadId, leadName, workflowSteps, videoWatched],
   );
 
-  // Rigenera quando cambiano steps/canale/tipo
+  // Rigenera quando cambiano steps/canale/tipo o landingUrl
   useEffect(() => {
     if (workflowSteps.length > 0) {
       loadPreview(channel, messageType);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowSteps]);
+  }, [workflowSteps, landingUrl]);
 
   const handleChannelChange = (ch: "WA" | "EMAIL") => {
     setChannel(ch);
