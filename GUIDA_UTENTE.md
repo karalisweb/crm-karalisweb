@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.9.3** | Ultimo aggiornamento: 2026-04-11
+Versione: **3.10.0** | Ultimo aggiornamento: 2026-04-13
 
 > Questa guida spiega come utilizzare il CRM per gestire i lead e il processo commerciale.
 
@@ -285,12 +285,32 @@ Tutte le ricerche effettuate con:
    - **3 errori principali**: I problemi piu gravi con impatto sul business
    - **Script video**: Testo pronto per registrare un video personalizzato (60-90 secondi)
 
-### Script Video
+### Script Video Tella (4 atti)
 
-Lo script generato include:
-- Un complimento iniziale al prospect
-- I problemi trovati sul sito
-- Una CTA morbida per una call conoscitiva
+Lo script generato segue una struttura fissa a 4 atti, pensata per video di 80-90 secondi da usare come teleprompter:
+
+1. **Rottura del ghiaccio** (max 2 frasi) — Presentazione + "sono sul vostro sito"
+2. **La scena del crimine** (60-70 parole) — Punto di forza reale, poi cliche trovato e confronto competitor
+3. **I soldi** (40-50 parole) — Collegamento al budget pubblicitario (Google/Meta Ads se attivi)
+4. **La soluzione** (max 3 frasi) — Nomina il Metodo Strategico Digitale, invita a guardare la presentazione
+
+Lo script usa dati reali dal CRM: cliche trovato sul sito, brand score, pain points, stato ads.
+
+Per generare lo script:
+1. Apri la scheda lead
+2. Vai al tab **"Video Outreach"** → Step 2
+3. Clicca **"Genera Script di Lettura"**
+4. Lo script appare pronto per essere copiato e usato come teleprompter in Tella
+
+> **Nota:** Se vuoi aggiungere istruzioni specifiche (es. "tono piu diretto"), usa il campo "Istruzioni personalizzate" prima di generare.
+
+### Tab Messaggi — Aggiornamento automatico
+
+Quando crei la landing page per un lead (Step 4 del Video Outreach), i messaggi nella tab Messaggi si aggiornano automaticamente:
+- Il placeholder `[link analisi]` viene sostituito con l'URL reale della landing page
+- L'URL include automaticamente il parametro `?utm=client` per il tracking
+- Funziona sia per i messaggi Email che WhatsApp
+- Non serve piu ricaricare la pagina
 
 ### Configurazione
 
@@ -351,4 +371,4 @@ R: Il sistema cerca il numero WhatsApp in due modi: prima nel sito web del prosp
 
 ---
 
-*Documento aggiornato il 2026-04-11 | KW Sales CRM v3.9.3*
+*Documento aggiornato il 2026-04-13 | KW Sales CRM v3.10.0*

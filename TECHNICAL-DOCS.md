@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.1.1** | Ultimo aggiornamento: 2026-04-11
+Versione: **3.10.0** | Ultimo aggiornamento: 2026-04-13
 
 ---
 
@@ -262,6 +262,17 @@ sales-app/
 | GET | `/api/leads/stats` | Statistiche lead |
 | GET | `/api/leads/recalculate-stages` | Ricalcola pipeline |
 | POST | `/api/leads/filter-social` | Filtra URL social |
+| POST | `/api/leads/[id]/reading-script` | Genera script Tella (Gemini, prompt 4 atti) |
+| POST | `/api/leads/[id]/generate-script` | Genera script video (legacy) |
+| POST | `/api/leads/[id]/workflow-preview` | Preview messaggio con placeholder renderizzati |
+| POST | `/api/leads/[id]/workflow-send` | Invio messaggio via workflow (email/WA) |
+| POST | `/api/leads/[id]/send-email` | Invio email diretto |
+| POST | `/api/leads/[id]/run-analyst` | Esegue Prompt 1 (Analista) |
+| POST | `/api/leads/[id]/approve-analyst` | Approva output Prompt 1 |
+| POST | `/api/leads/[id]/run-scriptwriter` | Esegue Prompt 2 (Sceneggiatore) |
+| POST | `/api/leads/[id]/approve-script` | Approva script video |
+| POST | `/api/leads/[id]/create-landing` | Crea landing page WordPress |
+| POST | `/api/leads/[id]/upload-youtube` | Upload video su YouTube |
 
 ### Ricerche
 
@@ -417,6 +428,54 @@ File: `src/lib/gemini-analysis.ts`
 GEMINI_API_KEY="your-key"
 GEMINI_MODEL="gemini-2.5-flash"  # o gemini-2.5-pro, gemini-2.5-flash-lite
 ```
+
+### Script Tella (v3.9.4)
+
+File prompt: `src/lib/prompts.ts` (`DEFAULT_READING_SCRIPT_PROMPT`)
+File route: `src/app/api/leads/[id]/reading-script/route.ts`
+Componente UI: `src/components/leads/reading-script-card.tsx`
+
+Lo script video Tella segue una struttura obbligatoria a 4 atti:
+
+| Atto | Contenuto | Durata |
+|------|-----------|--------|
+| 1 - Rottura del ghiaccio | Presentazione + "sono sul vostro sito" | Max 2 frasi |
+| 2 - La scena del crimine | Punto di forza + cliche + pattern competitor | 60-70 parole |
+| 3 - I soldi | Collegamento al budget ads | 40-50 parole |
+| 4 - La soluzione | Metodo Strategico Digitale + presentazione allegata | Max 3 frasi |
+
+**Placeholder disponibili nel prompt:**
+
+| Placeholder | Fonte dati |
+|-------------|-----------|
+| `{{NOME_AZIENDA}}` | `lead.name` |
+| `{{SETTORE}}` | `lead.segment` o `lead.category` |
+| `{{CITTA}}` | Estratta da `lead.address` |
+| `{{SINDROME_EGO}}` | "si"/"no" da `analystOutput.primary_pattern` |
+| `{{BRAND_SCORE}}` | `analystOutput.brand_positioning_score` |
+| `{{CLICHE_TROVATO}}` | `analystOutput.cliche_found` |
+| `{{DEBOLEZZA}}` | `analystOutput.communication_weakness` |
+| `{{PAIN_POINT_1}}` | Primo pain point high severity |
+| `{{PAIN_POINT_2}}` | Secondo pain point high severity |
+| `{{GOOGLE_ADS}}` | Da `auditData.tracking.hasGoogleAdsTag` |
+| `{{META_ADS}}` | Da `auditData.tracking.hasFacebookPixel` |
+
+**Regole di generazione:**
+- Niente markup, grassetti, titoli o trattini — testo continuo leggibile
+- Durata target: 80-90 secondi
+- Mai metafore, mai "mi concede 60 secondi", mai "siete caduti in una trappola"
+- Apertura fissa: "Mi chiamo Alessio Loi, sono il fondatore di Karalisweb."
+- Il prompt e personalizzabile da Impostazioni > AI (`readingScriptPrompt` nel DB)
+
+### MessagingHub — Aggiornamento automatico messaggi
+
+File: `src/components/leads/messaging-hub.tsx`
+
+Il componente `MessagingHub` (tab Messaggi nella scheda lead) carica i messaggi renderizzati dalla API `workflow-preview`. I messaggi contengono il placeholder `{landingUrl}` che viene sostituito da `renderTemplate()` (`src/lib/workflow-templates.ts`):
+- Se `videoLandingUrl` e null: mostra `[link analisi]`
+- Se `videoLandingUrl` esiste: mostra URL + `?utm=client`
+
+L'useEffect che carica la preview dipende da `workflowSteps` e `landingUrl`. Quando la landing page viene creata e il parent fa refresh, `landingUrl` cambia e i messaggi si rigenerano automaticamente (sia Email che WhatsApp).
 
 ---
 
