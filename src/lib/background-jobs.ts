@@ -6,6 +6,7 @@ import { isGeminiConfigured } from "@/lib/gemini";
 import { runGeminiAnalysis } from "@/lib/gemini-analysis";
 import { runAnalystPrompt } from "@/lib/gemini-analyst";
 import { runScriptwriterPrompt } from "@/lib/gemini-scriptwriter";
+import { generateReadingScriptForLead } from "@/lib/gemini-reading-script";
 import { Prisma, PipelineStage } from "@prisma/client";
 import { validatePublicUrl } from "@/lib/url-validator";
 
@@ -265,6 +266,16 @@ export async function processFullVideoScript(leadId: string): Promise<void> {
         scriptApprovedBy: "auto",
       },
     });
+
+    // 5. Genera anche lo script di lettura per Tella (best-effort)
+    try {
+      console.log(`[VIDEO_SCRIPT] ${lead.name} — step 3: reading script Tella`);
+      await generateReadingScriptForLead(leadId);
+    } catch (err) {
+      // Non bloccare il flusso se reading-script fallisce (es. quota Gemini)
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn(`[VIDEO_SCRIPT] ${lead.name} — reading script fallito (non bloccante): ${errMsg}`);
+    }
 
     console.log(`[VIDEO_SCRIPT] ${lead.name} — completato`);
   } catch (error) {

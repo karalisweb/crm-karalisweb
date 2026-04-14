@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { CallOutcome, Objection, NextStepType, PipelineStage, ActivityType } from "@prisma/client";
 import { enqueueVideoScriptGeneration } from "@/lib/background-jobs";
+import { processLeadWorkflow } from "@/lib/workflow-engine";
 
 /**
  * API multi-action logger per il flusso video outreach
@@ -261,6 +262,14 @@ async function handleAction(leadId: string, body: any) {
   // Auto-genera analista + script quando il lead entra in FARE_VIDEO
   if (newStage === "FARE_VIDEO") {
     enqueueVideoScriptGeneration(leadId);
+  }
+
+  // Trigger immediato del workflow follow-up quando il video viene inviato
+  // (il msg 1 ha delayDays=0 e deve partire subito, senza aspettare il cron notturno)
+  if (action === "VIDEO_SENT") {
+    processLeadWorkflow(leadId).catch((err) => {
+      console.error(`[workflow-engine] Trigger immediato fallito per ${leadId}:`, err);
+    });
   }
 
   return NextResponse.json({

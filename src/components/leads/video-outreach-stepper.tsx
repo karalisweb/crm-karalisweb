@@ -1078,12 +1078,18 @@ function Step4Content({
 
 function Step5Content({
   leadId,
+  leadName,
+  videoLandingUrl,
+  whatsappNumber,
+  phone,
+  email,
   videoSentAt,
   outreachChannel,
   videoViewsCount,
   videoFirstPlayAt,
   videoMaxWatchPercent,
   videoCompletedAt,
+  onRefresh,
 }: {
   leadId: string;
   leadName: string;
@@ -1099,13 +1105,56 @@ function Step5Content({
   videoCompletedAt: string | null;
   onRefresh: () => void;
 }) {
+  const [starting, setStarting] = useState(false);
+
+  const startFollowup = useCallback(async () => {
+    setStarting(true);
+    try {
+      const res = await fetch(`/api/leads/${leadId}/start-video-followup`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(data.message || "Follow-up avviato");
+      onRefresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore");
+    } finally {
+      setStarting(false);
+    }
+  }, [leadId, onRefresh]);
+
+  // Link WhatsApp precompilato (invio manuale, WA non si automatizza)
+  const waNumber = whatsappNumber || phone || "";
+  const cleanPhone = waNumber.replace(/\D/g, "");
+  const landingUrlWithUtm = videoLandingUrl
+    ? videoLandingUrl + (videoLandingUrl.includes("?") ? "&" : "?") + "utm=client"
+    : "";
+  const waMessage = `Ciao, ho preparato un'analisi video per ${leadName}. Puoi vederla qui: ${landingUrlWithUtm}`;
+  const waUrl = cleanPhone
+    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`
+    : null;
+
   if (videoSentAt) {
     return (
       <div className="space-y-3">
         <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
           <Check className="h-3 w-3 mr-1" />
-          Inviato il {new Date(videoSentAt).toLocaleDateString("it-IT")} via {outreachChannel || "—"}
+          Follow-up avviato il {new Date(videoSentAt).toLocaleDateString("it-IT")} via {outreachChannel || "—"}
         </Badge>
+
+        <p className="text-xs text-muted-foreground">
+          Msg 1 inviato. I msg 2 (+3gg) e 3 (+6gg) partiranno automaticamente se il lead non risponde e non prenota la call.
+        </p>
+
+        {waUrl && outreachChannel !== "WA" && (
+          <a href={waUrl} target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline" className="w-full">
+              <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+              Invia anche su WhatsApp (manuale)
+            </Button>
+          </a>
+        )}
 
         {videoViewsCount > 0 && (
           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1136,17 +1185,42 @@ function Step5Content({
     );
   }
 
+  if (!videoLandingUrl) {
+    return (
+      <div className="text-sm text-muted-foreground flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4" />
+        Crea prima la landing page (Step 4).
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3 text-center py-4">
+    <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Per inviare il messaggio, vai alla tab dedicata.
+        Clicca per far partire la sequenza automatica di email (msg 1 subito, msg 2 a T+3, msg 3 a T+6).
+        {!email && " ⚠️ Attenzione: il lead non ha email, l'auto non può partire."}
       </p>
-      <a href={`/leads/${leadId}?tab=messaggi`}>
-        <Button>
-          <Send className="h-4 w-4 mr-2" />
-          Vai a Tab Messaggi
-        </Button>
-      </a>
+
+      <Button
+        onClick={startFollowup}
+        disabled={starting || !email}
+        className="w-full bg-green-600 hover:bg-green-700"
+      >
+        {starting ? (
+          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Invio in corso...</>
+        ) : (
+          <><Send className="h-4 w-4 mr-2" />Avvia Follow-up Email</>
+        )}
+      </Button>
+
+      {waUrl && (
+        <a href={waUrl} target="_blank" rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className="w-full">
+            <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+            Apri WhatsApp (invio manuale)
+          </Button>
+        </a>
+      )}
     </div>
   );
 }
