@@ -143,6 +143,7 @@ model Lead {
   videoTellaUrl       String?     @map("video_tella_url")
   videoLandingUrl     String?     @map("video_landing_url")
   videoLandingSlug    String?     @map("video_landing_slug")
+  videoWpPostId       Int?        @map("video_wp_post_id")  // ID del post WordPress per update/delete
   landingPuntoDolore  String?     @map("landing_punto_dolore") @db.Text
 
   // YouTube player tracking (eventi dalla landing page)

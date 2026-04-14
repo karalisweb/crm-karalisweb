@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { updateLandingPage } from "@/lib/wordpress";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -119,6 +120,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         data: updateData,
       });
     });
+
+    // Sync WordPress: se il video YouTube o il punto di dolore sono cambiati
+    // E la landing page esiste, propaga le modifiche al post WP.
+    const youtubeChanged =
+      body.videoYoutubeUrl !== undefined &&
+      body.videoYoutubeUrl !== existingLead.videoYoutubeUrl;
+    const puntoDoloreChanged =
+      body.landingPuntoDolore !== undefined &&
+      body.landingPuntoDolore !== existingLead.landingPuntoDolore;
+
+    if ((youtubeChanged || puntoDoloreChanged) && existingLead.videoWpPostId) {
+      try {
+        const fields: Parameters<typeof updateLandingPage>[1] = {};
+        if (youtubeChanged) fields.videoYoutubeUrl = body.videoYoutubeUrl || "";
+        if (puntoDoloreChanged) fields.puntoDiDolore = body.landingPuntoDolore || "";
+        await updateLandingPage(existingLead.videoWpPostId, fields);
+        console.log(
+          `[LEAD-PATCH] Landing WP ${existingLead.videoWpPostId} aggiornata (youtube=${youtubeChanged}, dolore=${puntoDoloreChanged})`,
+        );
+      } catch (wpError) {
+        // Non bloccare la PATCH se WordPress fallisce — logga e continua
+        console.error("[LEAD-PATCH] Errore aggiornamento WordPress:", wpError);
+      }
+    }
 
     return NextResponse.json(lead);
   } catch (error) {

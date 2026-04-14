@@ -10,6 +10,27 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ## [3.12.0] - 2026-04-14nn- feat(lead): briefing card con recensioni, ads, tracking, errore strategico e tier settoren
 
+## [3.13.1] - 2026-04-14
+
+### Fix critico: sync video YouTube → landing page WordPress
+Problema: modificando il video YouTube nella tab "Video Outreach" la landing page su WordPress continuava a mostrare il vecchio video, e la tab "Informazioni" non si aggiornava.
+
+- Nuovo campo `videoWpPostId` nel modello Lead per tracciare il post WP
+- Nuova funzione `updateLandingPage(wpPostId, fields)` in `lib/wordpress.ts` (POST a `/wp/v2/prospect/{id}` con campi ACF)
+- `POST /api/leads/[id]/create-landing` ora salva il `wpPostId` restituito da WordPress
+- `PATCH /api/leads/[id]` propaga automaticamente le modifiche di `videoYoutubeUrl` e `landingPuntoDolore` al post WordPress (se la landing esiste)
+- Errori WordPress non bloccano la PATCH (logged, non throw)
+- Step3Content ora chiama `router.refresh()` dopo save/remove → la tab "Informazioni" si aggiorna immediatamente
+
+**Migrazione DB:** I lead con landing gia create prima di questa versione non hanno `videoWpPostId` salvato, quindi il sync automatico non funzionera per loro. Soluzione manuale: ricreare la landing dopo aver eliminato quella vecchia da WordPress.
+
+File modificati:
+- `prisma/schema.prisma`
+- `src/lib/wordpress.ts`
+- `src/app/api/leads/[id]/create-landing/route.ts`
+- `src/app/api/leads/[id]/route.ts`
+- `src/components/leads/video-outreach-stepper.tsx`
+
 ## [3.12.0] - 2026-04-14
 
 ### Notifiche video views configurabili (multi-destinatario)

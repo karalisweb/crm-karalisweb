@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -856,6 +857,7 @@ function Step3Content({
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const router = useRouter();
 
   const saveUrl = useCallback(async () => {
     if (!url.trim()) return;
@@ -867,15 +869,16 @@ function Step3Content({
         body: JSON.stringify({ videoYoutubeUrl: url.trim() }),
       });
       if (!res.ok) throw new Error("Errore nel salvataggio");
-      toast.success("URL YouTube salvato");
+      toast.success("URL YouTube salvato (landing aggiornata se esistente)");
       setEditing(false);
       onRefresh();
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore");
     } finally {
       setSaving(false);
     }
-  }, [leadId, url, onRefresh]);
+  }, [leadId, url, onRefresh, router]);
 
   const removeUrl = useCallback(async () => {
     setRemoving(true);
@@ -890,12 +893,13 @@ function Step3Content({
       setUrl("");
       setEditing(false);
       onRefresh();
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore");
     } finally {
       setRemoving(false);
     }
-  }, [leadId, onRefresh]);
+  }, [leadId, onRefresh, router]);
 
   if (videoYoutubeUrl && !editing) {
     return (

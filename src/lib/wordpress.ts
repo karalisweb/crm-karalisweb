@@ -111,6 +111,44 @@ export async function createLandingPage(params: CreateLandingPageParams): Promis
 }
 
 /**
+ * Aggiorna i campi ACF di un Prospect esistente su WordPress.
+ * Usato quando l'utente modifica il video YouTube o il punto di dolore
+ * dopo aver gia creato la landing page.
+ */
+export async function updateLandingPage(
+  wpPostId: number,
+  fields: Partial<{
+    videoYoutubeUrl: string;
+    puntoDiDolore: string;
+    nomeAzienda: string;
+    nomeTitolare: string;
+  }>,
+): Promise<void> {
+  const acf: Record<string, string> = {};
+  if (fields.videoYoutubeUrl !== undefined) acf.prospect_video_youtube = fields.videoYoutubeUrl;
+  if (fields.puntoDiDolore !== undefined) acf.prospect_punto_di_dolore = fields.puntoDiDolore;
+  if (fields.nomeAzienda !== undefined) acf.prospect_nome_azienda = fields.nomeAzienda;
+  if (fields.nomeTitolare !== undefined) acf.prospect_nome_titolare = fields.nomeTitolare;
+
+  if (Object.keys(acf).length === 0) return;
+
+  const response = await fetch(`${WP_URL}/wp-json/wp/v2/prospect/${wpPostId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: getAuthHeader(),
+    },
+    body: JSON.stringify({ acf }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "Unknown error");
+    throw new Error(`WordPress update error ${response.status}: ${errorText}`);
+  }
+}
+
+/**
  * Elimina un Prospect da WordPress
  */
 export async function deleteLandingPage(wpPostId: number): Promise<void> {

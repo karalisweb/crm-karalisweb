@@ -111,6 +111,7 @@ export async function POST(
         videoYoutubeId: lead.videoYoutubeId,
         videoLandingSlug: wp.slug,
         videoLandingUrl: wp.url,
+        videoWpPostId: wp.wpPostId,
       },
     });
 
