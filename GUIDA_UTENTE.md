@@ -49,6 +49,7 @@ La sidebar a sinistra contiene tutte le sezioni del CRM:
 | **Video Inviati** | Lead a cui e stato inviato il video |
 | **Follow-up** | Lead in attesa di follow-up (lettera, LinkedIn, ecc.) |
 | **Telefonate** | Lead da chiamare o gia chiamati |
+| **Ha Risposto** | Lead che hanno risposto ai tuoi messaggi (WA, email, telefono) |
 | **Call Fissate** | Lead con appuntamento fissato |
 | **Trattative** | Lead in fase di trattativa/offerta |
 | **Clienti** | Lead convertiti in clienti |
@@ -78,7 +79,8 @@ Il flusso del CRM segue questi passaggi:
 4. **Video** → Si registra un video personalizzato per il lead
 5. **Invio** → Si invia il video via WhatsApp/email
 6. **Follow-up** → Lettera, LinkedIn, telefonate di follow-up
-7. **Trattativa** → Call conoscitiva, offerta, chiusura
+7. **Ha Risposto** → Il lead risponde (WA/email/telefono), segnalo nel CRM
+8. **Trattativa** → Call conoscitiva, offerta, chiusura
 
 > **Nota:** Il vecchio concetto di "qualifica" e stato rimosso. Ora il flusso e: Analisi Gemini → Score → HOT/WARM.
 

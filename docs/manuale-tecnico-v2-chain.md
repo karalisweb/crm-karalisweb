@@ -180,6 +180,52 @@ Il reset funziona a cascata:
 
 ---
 
+## Cron Endpoints
+
+| Endpoint | Frequenza | Scopo |
+|----------|-----------|-------|
+| `POST /api/cron/workflow-engine` | Ogni 15 min | Esegue step automatici del workflow (email/WA) |
+| `POST /api/cron/batch-gemini-analysis` | Ogni ora | Batch analisi Gemini sui lead da analizzare |
+| `POST /api/cron/check-recontact` | Ogni giorno 8:00 | Riporta lead archiviati in pipeline |
+| `POST /api/cron/check-video-followup` | Ogni 30 min | Trigger follow-up post-video |
+| `POST /api/cron/recover-stuck-jobs` | Ogni ora | Resetta job RUNNING bloccati >30min |
+| `POST /api/cron/scheduled-searches` | Notturno | Esegue ricerche Apify programmate |
+| `POST /api/cron/sync-calendar` | Ogni 15 min | Sincronizza appuntamenti Google Calendar → CRM |
+
+Tutti protetti da `Authorization: Bearer $CRON_SECRET`.
+
+### Sync Google Calendar (v3.11.0)
+
+Sincronizza automaticamente gli appuntamenti prenotati dai prospect tramite Google Calendar appointment scheduling.
+
+**Come funziona:**
+1. Legge gli eventi delle ultime 24h dal calendario primario
+2. Filtra solo eventi con attendees esterni (prenotati da fuori)
+3. Cerca match nel DB per email, nome o telefono dell'attendee
+4. Se trova un lead → lo sposta a `CALL_FISSATA` con `appointmentAt`
+5. Crea Activity con `type=MEETING` e riferimento eventId per evitare duplicati
+
+**Env vars necessarie:**
+- `GOOGLE_CLIENT_ID` — OAuth2 client ID
+- `GOOGLE_CLIENT_SECRET` — OAuth2 client secret
+- `GOOGLE_REFRESH_TOKEN` — Refresh token con scope `calendar.readonly`
+
+**File:** `src/lib/google-calendar.ts`, `src/app/api/cron/sync-calendar/route.ts`
+
+---
+
+## Action Quick-Log (v3.11.0)
+
+`POST /api/leads/{id}/quick-log` supporta anche:
+
+| Action | Effetto |
+|--------|---------|
+| `RESPONSE_RECEIVED` | Setta `respondedAt` e `respondedVia` (whatsapp/email/telefono), crea Activity `RESPONSE_RECEIVED` |
+
+Parametri: `{ action: "RESPONSE_RECEIVED", respondedVia: "whatsapp" }`
+
+---
+
 ## Come Testare
 
 1. **Step 1**: `curl -X POST http://localhost:3000/api/leads/{id}/run-analyst`

@@ -4,9 +4,35 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
-## [3.11.0] - 2026-04-14nn- feat: visibilita risposte WhatsApp e sync Google Calendar per Francescan
+## [3.11.0] - 2026-04-14
 
-## [3.10.0] - 2026-04-13nn- v3.9.4: nuovo prompt Tella 4 atti + fix messaggi landing + docsn
+### Visibilita risposte WhatsApp per Francesca
+- Nuova voce **"Ha Risposto"** nel sidebar (sezione VENDITA) con badge count
+- Bottone **"Segna come Ha risposto"** nella pagina dettaglio lead (tab Messaggi) con 3 canali: WhatsApp, Email, Telefono
+- Fix pagina `/risposto` che filtrava per uno stage inesistente (`RISPOSTO`), ora usa filtro `respondedAt IS NOT NULL`
+- Nuova action `RESPONSE_RECEIVED` nel quick-log API che setta `respondedAt` e `respondedVia` + crea Activity
+- Nuovo filtro `responded=true` nella API leads
+- Badge count "risposto" aggiunto alla dashboard mission API
+
+### Sync Google Calendar → CRM
+- Nuovo lib `src/lib/google-calendar.ts`: client leggero (fetch HTTP, no SDK googleapis) per leggere eventi dal calendario primario
+- Nuovo cron endpoint `POST /api/cron/sync-calendar`: ogni 15 min cerca appuntamenti prenotati via appointment scheduling, li matcha con lead nel DB (per email, nome, telefono) e aggiorna lo stage a `CALL_FISSATA`
+- Protezione duplicati: skip eventi gia sincronizzati (check eventId nelle notes Activity)
+- Richiede configurazione env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`
+
+### File modificati
+- `src/app/api/leads/[id]/quick-log/route.ts` — nuova action RESPONSE_RECEIVED
+- `src/app/api/leads/route.ts` — filtro `responded=true`
+- `src/app/api/dashboard/mission/route.ts` — badge count risposto
+- `src/app/(dashboard)/risposto/page.tsx` — fix fetch
+- `src/components/layout/sidebar.tsx` — voce "Ha Risposto"
+- `src/components/leads/messaging-hub.tsx` — componente ResponseTracker
+- `src/lib/google-calendar.ts` — NUOVO: client Google Calendar
+- `src/app/api/cron/sync-calendar/route.ts` — NUOVO: cron sync
+
+## [3.10.0] - 2026-04-13
+
+- v3.9.4: nuovo prompt Tella 4 atti + fix messaggi landing + docs
 
 ## [3.9.4] - 2026-04-13
 
