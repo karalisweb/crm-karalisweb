@@ -174,6 +174,13 @@ export async function POST(
     // Inietta tracking tools REALI dallo strategic-extractor
     analysis.ads_networks_found = tracking_tools || [];
 
+    // Persisti evidence box in DB (cliches + ads_status) così la briefing card
+    // sopravvive al refresh pagina.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (analysis as any).cliches_found = cliches_found;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (analysis as any).ads_status = adsStatus;
+
     const cleanDomain = (lead.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "");
     analysis.ad_library_url = buildMetaAdLibraryUrl(lead.name);
     analysis.google_ads_transparency_url = buildGoogleAdsTransparencyUrl(cleanDomain);

@@ -21,6 +21,7 @@ import { VideoOutreachStepperWrapper } from "@/components/leads/video-outreach-s
 import { ContactInfoEditor } from "@/components/leads/contact-info-editor";
 import { MessagingHub } from "@/components/leads/messaging-hub";
 import { WorkflowPendingTasks } from "@/components/leads/workflow-pending-tasks";
+import { LeadBriefingCard } from "@/components/leads/lead-briefing-card";
 
 export const dynamic = "force-dynamic";
 
@@ -145,7 +146,21 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
         </TabsList>
 
         {/* Info Tab */}
-        <TabsContent value="info">
+        <TabsContent value="info" className="space-y-4">
+          <LeadBriefingCard
+            googleRating={lead.googleRating as unknown as number | null}
+            googleReviewsCount={lead.googleReviewsCount}
+            category={lead.category}
+            tierOverride={lead.tierOverride}
+            scoreBreakdown={lead.scoreBreakdown}
+            geminiAnalysis={lead.geminiAnalysis}
+            hasActiveGoogleAds={lead.hasActiveGoogleAds}
+            hasActiveMetaAds={lead.hasActiveMetaAds}
+            googleAdsCopy={lead.googleAdsCopy}
+            metaAdsCopy={lead.metaAdsCopy}
+            adsVerifiedManually={lead.adsVerifiedManually}
+            adsCheckedAt={lead.adsCheckedAt}
+          />
           <Card>
             <CardHeader>
               <CardTitle>Dettagli Contatto</CardTitle>
@@ -229,7 +244,21 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
         </TabsContent>
 
         {/* Video Outreach Tab */}
-        <TabsContent value="video-outreach">
+        <TabsContent value="video-outreach" className="space-y-4">
+          <LeadBriefingCard
+            googleRating={lead.googleRating as unknown as number | null}
+            googleReviewsCount={lead.googleReviewsCount}
+            category={lead.category}
+            tierOverride={lead.tierOverride}
+            scoreBreakdown={lead.scoreBreakdown}
+            geminiAnalysis={lead.geminiAnalysis}
+            hasActiveGoogleAds={lead.hasActiveGoogleAds}
+            hasActiveMetaAds={lead.hasActiveMetaAds}
+            googleAdsCopy={lead.googleAdsCopy}
+            metaAdsCopy={lead.metaAdsCopy}
+            adsVerifiedManually={lead.adsVerifiedManually}
+            adsCheckedAt={lead.adsCheckedAt}
+          />
           <Card>
             <CardHeader>
               <CardTitle>Video Outreach</CardTitle>

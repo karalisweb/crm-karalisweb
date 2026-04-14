@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.12.0] - 2026-04-14nn- feat(lead): briefing card con recensioni, ads, tracking, errore strategico e tier settoren
+
 ## [3.11.0] - 2026-04-14
 
 ### Visibilita risposte WhatsApp per Francesca
