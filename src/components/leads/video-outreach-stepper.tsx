@@ -85,6 +85,7 @@ export function VideoOutreachStepper(props: StepperProps) {
   } = props;
 
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [regenAllLoading, setRegenAllLoading] = useState(false);
 
   // Calculate step statuses
   const stepStatuses: StepStatus[] = [
@@ -99,8 +100,47 @@ export function VideoOutreachStepper(props: StepperProps) {
   const activeStep = stepStatuses.findIndex(s => s === "active") + 1;
   const visibleStep = expandedStep ?? activeStep;
 
+  // "Rifai tutto": rilancia analista + scriptwriter con auto-approvazione
+  const handleRegenerateAll = useCallback(async () => {
+    if (!confirm("Rigenerare analisi + script da zero? Le versioni attuali verranno sostituite.")) return;
+    setRegenAllLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${leadId}/regenerate-video-script`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success("Analisi e script rigenerati");
+      onRefresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore durante la rigenerazione");
+    } finally {
+      setRegenAllLoading(false);
+    }
+  }, [leadId, onRefresh]);
+
+  // Mostra il bottone solo se c'è già qualcosa da rifare
+  const hasGenerated = !!(analystOutput || analystApprovedAt || scriptApprovedAt);
+
   return (
     <div className="space-y-0">
+      {hasGenerated && (
+        <div className="flex justify-end mb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRegenerateAll}
+            disabled={regenAllLoading}
+          >
+            {regenAllLoading ? (
+              <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3 mr-2" />
+            )}
+            Rifai tutto
+          </Button>
+        </div>
+      )}
       {STEPS.map((step, idx) => {
         const status = stepStatuses[idx];
         const isExpanded = visibleStep === step.id;

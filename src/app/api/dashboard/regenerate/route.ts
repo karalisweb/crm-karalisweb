@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { enqueueVideoScriptGeneration } from "@/lib/background-jobs";
 
 const MAX_FARE_VIDEO = 5;
 
@@ -102,6 +103,11 @@ export async function POST() {
       `[REGENERATE] Promossi ${moved} lead a FARE_VIDEO:`,
       allMoved.map((c) => `${c.name} (${c.opportunityScore})`)
     );
+
+    // Auto-genera analista + script per i lead appena promossi
+    for (const c of allMoved) {
+      enqueueVideoScriptGeneration(c.id);
+    }
 
     return NextResponse.json({
       moved,

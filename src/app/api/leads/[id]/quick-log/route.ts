@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { CallOutcome, Objection, NextStepType, PipelineStage, ActivityType } from "@prisma/client";
+import { enqueueVideoScriptGeneration } from "@/lib/background-jobs";
 
 /**
  * API multi-action logger per il flusso video outreach
@@ -256,6 +257,11 @@ async function handleAction(leadId: string, body: any) {
       notes: activityNotes,
     },
   });
+
+  // Auto-genera analista + script quando il lead entra in FARE_VIDEO
+  if (newStage === "FARE_VIDEO") {
+    enqueueVideoScriptGeneration(leadId);
+  }
 
   return NextResponse.json({
     success: true,
