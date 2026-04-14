@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { db } from './db';
 
 // Configurazione SMTP da variabili d'ambiente
 const smtpPort = parseInt(process.env.SMTP_PORT || '587');
@@ -297,7 +298,30 @@ export async function sendVideoViewNotification(
   event: 'play' | 'progress' | 'complete',
   percent?: number
 ): Promise<boolean> {
-  const toEmail = process.env.SMTP_USER || 'alessio@karalisweb.net';
+  // Recupera destinatari da Settings (configurabili da admin), fallback a env/default
+  let recipients: string[] = [];
+  try {
+    const settings = await db.settings.findUnique({
+      where: { id: 'default' },
+      select: { notificationEmails: true },
+    });
+    if (settings?.notificationEmails) {
+      recipients = settings.notificationEmails
+        .split(',')
+        .map((e) => e.trim())
+        .filter((e) => e.length > 0 && e.includes('@'));
+    }
+  } catch (error) {
+    console.error('[EMAIL] Errore lettura notificationEmails:', error);
+  }
+
+  if (recipients.length === 0) {
+    // Fallback: env var SMTP_USER (default storico)
+    const fallback = process.env.SMTP_USER || 'alessio@karalisweb.net';
+    recipients = [fallback];
+  }
+
+  const toEmail = recipients.join(', ');
   const fromEmail = process.env.SMTP_FROM || 'noreply@karalisweb.net';
   const crmUrl = process.env.NEXTAUTH_URL || 'https://crm.karalisdemo.it';
 

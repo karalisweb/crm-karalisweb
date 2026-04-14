@@ -20,6 +20,7 @@ const EMAIL_FIELDS = [
   "gdprVatNumber",
   "gdprFooterText",
   "gdprUnsubscribeText",
+  "notificationEmails",
 ] as const;
 
 // GET - Recupera impostazioni email e messaggi

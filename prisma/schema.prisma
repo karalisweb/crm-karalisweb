@@ -678,6 +678,11 @@ model Settings {
   signatureFrancesca    String?  @map("signature_francesca") @db.Text
   caseStudiesBlock      String?  @map("case_studies_block") @db.Text
 
+  // Notifiche
+  // Email destinatarie delle notifiche video views (separate da virgola)
+  // es. "alessio@karalisweb.net,consulenza@karalisweb.net"
+  notificationEmails    String?  @map("notification_emails") @db.Text
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

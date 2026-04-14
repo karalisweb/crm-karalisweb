@@ -29,6 +29,7 @@ interface EmailSettings {
   gdprVatNumber: string | null;
   gdprFooterText: string | null;
   gdprUnsubscribeText: string | null;
+  notificationEmails: string | null;
 }
 
 const TEMPLATE_FIELDS = [
@@ -60,6 +61,7 @@ const EMPTY_SETTINGS: EmailSettings = {
   gdprVatNumber: null,
   gdprFooterText: null,
   gdprUnsubscribeText: null,
+  notificationEmails: null,
 };
 
 export function EmailMessagingConfigTab() {
@@ -116,6 +118,32 @@ export function EmailMessagingConfigTab() {
 
   return (
     <div className="space-y-6">
+      {/* Notifiche video views */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Notifiche Video Views
+          </CardTitle>
+          <CardDescription>
+            Email destinatarie delle notifiche quando un prospect guarda un video. Separa piu indirizzi con la virgola.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label>Destinatari notifiche</Label>
+            <Input
+              value={settings.notificationEmails || ""}
+              onChange={(e) => updateField("notificationEmails", e.target.value)}
+              placeholder="alessio@karalisweb.net, consulenza@karalisweb.net"
+            />
+            <p className="text-xs text-muted-foreground">
+              Se vuoto, usa il valore di default (SMTP_USER dal .env). Esempio: <code>alessio@karalisweb.net, consulenza@karalisweb.net</code>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Mittente */}
       <Card>
         <CardHeader>

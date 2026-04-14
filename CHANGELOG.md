@@ -4,9 +4,20 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.13.0] - 2026-04-14nn- feat: notifiche video views configurabili (multi-destinatario per Francesca)n
+
 ## [3.12.1] - 2026-04-14nn- feat(scriptwriter): prompt atti + canovaccio Tella con intro Cagliari, recensioni, ads waste, soluzione MSD, chiusura 7minn
 
 ## [3.12.0] - 2026-04-14nn- feat(lead): briefing card con recensioni, ads, tracking, errore strategico e tier settoren
+
+## [3.12.0] - 2026-04-14
+
+### Notifiche video views configurabili (multi-destinatario)
+- Le email di notifica "il prospect ha guardato il video" ora supportano piu destinatari
+- Nuovo campo `notificationEmails` nel modello `Settings` (CSV di email)
+- Nuova sezione "Notifiche Video Views" nelle Impostazioni → Email & Messaggi
+- Default: la notifica va sia ad Alessio (`SMTP_USER`) che a Francesca (`consulenza@karalisweb.net`) — configurabile da admin
+- File modificati: `prisma/schema.prisma`, `src/lib/email.ts`, `src/app/api/settings/email-messaging/route.ts`, `src/components/settings/email-messaging-config-tab.tsx`
 
 ## [3.11.0] - 2026-04-14
 
