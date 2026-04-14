@@ -10,6 +10,18 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ## [3.12.0] - 2026-04-14nn- feat(lead): briefing card con recensioni, ads, tracking, errore strategico e tier settoren
 
+## [3.13.2] - 2026-04-14
+
+### Bottone "Risincronizza Landing" per landing legacy
+Per i lead con landing creata prima della v3.13.1 (senza wpPostId salvato), il sync automatico non funziona. Ora c'e' un bottone per fixarli on-demand.
+
+- Nuova funzione `findLandingPageBySlug(slug)` in `lib/wordpress.ts` (recupera l'ID WP dal slug)
+- Nuovo endpoint `POST /api/leads/[id]/resync-landing`: backfill `videoWpPostId` se mancante + push dei dati attuali (video YouTube, punto di dolore, nome) sulla landing
+- Nuovo bottone **"Risincronizza"** nella tab Video Outreach → Step 4 (Landing) accanto a "Copia URL"
+- `router.refresh()` aggiunto anche dopo `createLanding` per coerenza
+
+**Uso:** se la landing mostra il video sbagliato/vecchio, vai su Video Outreach → Step 4 → clicca "Risincronizza" — pubblichera il video YouTube attualmente impostato nel CRM.
+
 ## [3.13.1] - 2026-04-14
 
 ### Fix critico: sync video YouTube → landing page WordPress

@@ -111,6 +111,28 @@ export async function createLandingPage(params: CreateLandingPageParams): Promis
 }
 
 /**
+ * Cerca un Prospect su WordPress per slug e ritorna il suo ID.
+ * Utile per recuperare il wpPostId di landing create prima della v3.13.1
+ * (quando l'ID non veniva ancora salvato nel CRM).
+ */
+export async function findLandingPageBySlug(slug: string): Promise<number | null> {
+  const response = await fetch(
+    `${WP_URL}/wp-json/wp/v2/prospect?slug=${encodeURIComponent(slug)}&_fields=id`,
+    {
+      headers: { Authorization: getAuthHeader() },
+      signal: AbortSignal.timeout(10000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`WordPress lookup error ${response.status}`);
+  }
+
+  const data = (await response.json()) as Array<{ id: number }>;
+  return data[0]?.id ?? null;
+}
+
+/**
  * Aggiorna i campi ACF di un Prospect esistente su WordPress.
  * Usato quando l'utente modifica il video YouTube o il punto di dolore
  * dopo aver gia creato la landing page.

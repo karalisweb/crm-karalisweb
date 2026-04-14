@@ -979,6 +979,8 @@ function Step4Content({
   onRefresh: () => void;
 }) {
   const [creating, setCreating] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
+  const router = useRouter();
 
   const createLanding = useCallback(async () => {
     setCreating(true);
@@ -988,12 +990,29 @@ function Step4Content({
       if (!res.ok) throw new Error(data.error);
       toast.success("Landing page creata");
       onRefresh();
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore");
     } finally {
       setCreating(false);
     }
-  }, [leadId, onRefresh]);
+  }, [leadId, onRefresh, router]);
+
+  const resyncLanding = useCallback(async () => {
+    setResyncing(true);
+    try {
+      const res = await fetch(`/api/leads/${leadId}/resync-landing`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success("Landing risincronizzata con i dati attuali");
+      onRefresh();
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore");
+    } finally {
+      setResyncing(false);
+    }
+  }, [leadId, onRefresh, router]);
 
   if (videoLandingUrl) {
     return (
@@ -1015,16 +1034,32 @@ function Step4Content({
             Token: <code className="bg-muted px-1 rounded">{videoTrackingToken}</code>
           </div>
         )}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            navigator.clipboard.writeText(videoLandingUrl);
-            toast.success("URL copiato");
-          }}
-        >
-          <Copy className="h-3.5 w-3.5 mr-1.5" />Copia URL
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard.writeText(videoLandingUrl);
+              toast.success("URL copiato");
+            }}
+          >
+            <Copy className="h-3.5 w-3.5 mr-1.5" />Copia URL
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={resyncLanding}
+            disabled={resyncing}
+            title="Forza l'aggiornamento della landing WordPress con il video YouTube e il punto di dolore correnti del CRM"
+          >
+            {resyncing ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Risincronizza
+          </Button>
+        </div>
       </div>
     );
   }
