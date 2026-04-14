@@ -33,19 +33,19 @@ export async function POST(
       // No body — normal flow
     }
 
-    // Verify lead exists and analyst is approved (GATE CHECK)
+    // Verify lead exists; l'analista deve avere output (ma non serve approvazione).
     const lead = await db.lead.findUnique({
       where: { id },
-      select: { id: true, name: true, analystApprovedAt: true },
+      select: { id: true, name: true, analystOutput: true },
     });
 
     if (!lead) {
       return NextResponse.json({ error: "Lead non trovato" }, { status: 404 });
     }
 
-    if (!lead.analystApprovedAt) {
+    if (!lead.analystOutput) {
       return NextResponse.json(
-        { error: "Devi prima approvare l'output dell'analista (Step 1)" },
+        { error: "Manca l'output dell'analista. Rigenera l'analisi del sito (Step 1)." },
         { status: 400 }
       );
     }
@@ -53,14 +53,14 @@ export async function POST(
     // Run scriptwriter prompt
     const scriptOutput = await runScriptwriterPrompt(id, notes);
 
-    // Save to geminiAnalysis (reusing existing field for backward compat)
+    // Auto-approve: salva lo script e marca come approvato.
     await db.lead.update({
       where: { id },
       data: {
         geminiAnalysis: scriptOutput as unknown as import("@prisma/client").Prisma.InputJsonValue,
         geminiAnalyzedAt: new Date(),
-        scriptApprovedAt: null,
-        scriptApprovedBy: null,
+        scriptApprovedAt: new Date(),
+        scriptApprovedBy: "auto",
       },
     });
 

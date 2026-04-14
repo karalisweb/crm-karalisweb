@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.15.0] - 2026-04-14nn- Rimuove approvazioni manuali + compatta 5 atti + sposta punto dolore in Step 2n
+
 ## [3.14.0] - 2026-04-14nn- Auto-generazione video script in background su FARE_VIDEOn
 
 ## [3.13.0] - 2026-04-14nn- feat: notifiche video views configurabili (multi-destinatario per Francesca)n

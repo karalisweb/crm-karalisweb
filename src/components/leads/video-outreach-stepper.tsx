@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -357,11 +357,11 @@ function Step1Content({
 
   return (
     <div className="space-y-4">
-      {/* Approved badge */}
+      {/* Generated badge */}
       {analystApprovedAt && !editing && (
         <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
           <Check className="h-3 w-3 mr-1" />
-          Approvato il {new Date(analystApprovedAt).toLocaleDateString("it-IT")}
+          Generato il {new Date(analystApprovedAt).toLocaleDateString("it-IT")}
         </Badge>
       )}
 
@@ -409,41 +409,6 @@ function Step1Content({
         ))}
       </div>
 
-      {/* Punto di dolore preview */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-          <Target className="h-3 w-3" /> Punto di Dolore
-        </p>
-        <div className="grid gap-2">
-          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Breve (WhatsApp):</p>
-            {editing ? (
-              <Textarea
-                value={editData?.punto_dolore_breve || ""}
-                onChange={(e) => setEditData(prev => prev ? { ...prev, punto_dolore_breve: e.target.value } : prev)}
-                rows={2}
-                className="text-sm"
-              />
-            ) : (
-              <p className="text-sm">{output.punto_dolore_breve}</p>
-            )}
-          </div>
-          <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-            <p className="text-xs font-medium text-purple-700 dark:text-purple-400 mb-1">Lungo (Landing Page):</p>
-            {editing ? (
-              <Textarea
-                value={editData?.punto_dolore_lungo || ""}
-                onChange={(e) => setEditData(prev => prev ? { ...prev, punto_dolore_lungo: e.target.value } : prev)}
-                rows={4}
-                className="text-sm"
-              />
-            ) : (
-              <p className="text-sm">{output.punto_dolore_lungo}</p>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Evidence metadata */}
       <div className="flex gap-3 text-xs text-muted-foreground">
         <span>Home: {output.home_text_length} chars</span>
@@ -457,7 +422,7 @@ function Step1Content({
           <>
             <Button size="sm" onClick={() => approve("edit", editData!)}>
               <Check className="h-3.5 w-3.5 mr-1.5" />
-              Salva e Approva
+              Salva
             </Button>
             <Button size="sm" variant="outline" onClick={() => { setEditing(false); setEditData(null); }}>
               Annulla
@@ -465,12 +430,6 @@ function Step1Content({
           </>
         ) : (
           <>
-            {!analystApprovedAt && (
-              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approve("approve")}>
-                <Check className="h-3.5 w-3.5 mr-1.5" />
-                Approva
-              </Button>
-            )}
             <Button size="sm" variant="outline" onClick={() => { setEditing(true); setEditData({ ...analystOutput }); }}>
               <Pencil className="h-3.5 w-3.5 mr-1.5" />
               Modifica
@@ -663,22 +622,15 @@ function Step2Content({
 
   return (
     <div className="space-y-4">
-      {/* Status badges — stato dei due testi */}
+      {/* Status badges */}
       {!editing && (
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Script 5 atti */}
-          {scriptApprovedAt ? (
+          {scriptApprovedAt && (
             <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
               <Check className="h-3 w-3 mr-1" />
-              5 Atti approvati
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-yellow-600 border-yellow-300 bg-yellow-50">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              5 Atti da approvare
+              Generato il {new Date(scriptApprovedAt).toLocaleDateString("it-IT")}
             </Badge>
           )}
-          {/* Script Tella */}
           {readingScript ? (
             <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
               <FileText className="h-3 w-3 mr-1" />
@@ -693,31 +645,33 @@ function Step2Content({
         </div>
       )}
 
-      {/* 4 Acts — editable when editing mode */}
-      {acts.map(act => (
-        <Card key={act.num}>
-          <CardHeader className="pb-2 pt-3 px-4">
-            <div className="flex items-center gap-2">
-              <Badge className="text-xs">{act.num}</Badge>
-              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">
-                Atto {act.num} — {act.title}
-              </CardTitle>
+      {/* 5 Atti — compatto */}
+      <div className="border rounded-lg divide-y overflow-hidden">
+        {acts.map(act => (
+          <div key={act.num} className="px-3 py-2">
+            <div className="flex items-start gap-2">
+              <Badge variant="secondary" className="text-[10px] h-5 min-w-5 px-1.5 shrink-0 mt-0.5">
+                {act.num}
+              </Badge>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">
+                  {act.title}
+                </div>
+                {editing ? (
+                  <Textarea
+                    value={act.value}
+                    onChange={(e) => act.setter(e.target.value)}
+                    rows={3}
+                    className="text-sm mt-1"
+                  />
+                ) : (
+                  <p className="text-sm leading-snug">{act.text}</p>
+                )}
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
-            {editing ? (
-              <Textarea
-                value={act.value}
-                onChange={(e) => act.setter(e.target.value)}
-                rows={4}
-                className="text-sm"
-              />
-            ) : (
-              <p className="text-sm leading-relaxed">{act.text}</p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+          </div>
+        ))}
+      </div>
 
       {/* Strategic note */}
       {geminiAnalysis?.strategic_note && (
@@ -757,17 +711,12 @@ function Step2Content({
         {editing ? (
           <>
             <Button size="sm" onClick={() => approve("edit")}>
-              <Check className="h-3.5 w-3.5 mr-1.5" />Salva e Approva
+              <Check className="h-3.5 w-3.5 mr-1.5" />Salva
             </Button>
             <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Annulla</Button>
           </>
         ) : (
           <>
-            {!scriptApprovedAt && (
-              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approve("approve")}>
-                <Check className="h-3.5 w-3.5 mr-1.5" />Approva
-              </Button>
-            )}
             <Button size="sm" variant="outline" onClick={() => {
               setEditing(true);
               setEditAtto1(script.atto_1);

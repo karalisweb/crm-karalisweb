@@ -53,14 +53,19 @@ export async function POST(
     // Run analyst prompt (re-scrapes site + calls Gemini)
     const analystOutput = await runAnalystPrompt(id, notes);
 
-    // Save output and reset downstream chain
+    // Auto-approve: nessun gate manuale.
+    // Salva output + pain points, resetta solo lo script downstream (da rigenerare).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const outputData = analystOutput as any;
     await db.lead.update({
       where: { id },
       data: {
         analystOutput: analystOutput as unknown as import("@prisma/client").Prisma.InputJsonValue,
-        analystApprovedAt: null,
-        analystApprovedBy: null,
-        // Reset downstream
+        analystApprovedAt: new Date(),
+        analystApprovedBy: "auto",
+        puntoDoloreBreve: outputData?.punto_dolore_breve || null,
+        puntoDoloreLungo: outputData?.punto_dolore_lungo || null,
+        // Reset downstream: lo script va rigenerato a valle della nuova analisi
         scriptApprovedAt: null,
         scriptApprovedBy: null,
       },

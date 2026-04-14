@@ -235,13 +235,17 @@ export async function processFullVideoScript(leadId: string): Promise<void> {
     console.log(`[VIDEO_SCRIPT] ${lead.name} — step 1: analista`);
     const analystOutput = await runAnalystPrompt(leadId);
 
-    // 2. Auto-approva analista (salta click manuale)
+    // 2. Auto-approva analista + salva pain points
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const analystData = analystOutput as any;
     await db.lead.update({
       where: { id: leadId },
       data: {
         analystOutput: analystOutput as unknown as Prisma.InputJsonValue,
         analystApprovedAt: new Date(),
         analystApprovedBy: "auto",
+        puntoDoloreBreve: analystData?.punto_dolore_breve || null,
+        puntoDoloreLungo: analystData?.punto_dolore_lungo || null,
         scriptApprovedAt: null,
         scriptApprovedBy: null,
       },

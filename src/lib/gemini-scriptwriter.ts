@@ -79,13 +79,9 @@ export async function runScriptwriterPrompt(
     },
   });
 
-  // 2. Gate check: analista deve essere approvato
-  if (!lead.analystApprovedAt) {
-    throw new Error("L'output dell'analista deve essere approvato prima di generare lo script");
-  }
-
+  // 2. Serve solo l'output dell'analista (gate approvazione rimosso)
   if (!lead.analystOutput) {
-    throw new Error("Output analista mancante");
+    throw new Error("Output analista mancante: rigenera l'analisi del sito");
   }
 
   // 3. Gemini client
