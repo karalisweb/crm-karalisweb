@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
     const website = searchParams.get("website");
     const search = searchParams.get("search");
     const includeStageCounts = searchParams.get("stageCounts") === "true";
+    const responded = searchParams.get("responded");
 
     const where: Record<string, unknown> = {};
     // Filtri base senza stage (per i conteggi)
@@ -55,6 +56,11 @@ export async function GET(request: NextRequest) {
       ];
       where.OR = searchCondition;
       baseWhere.OR = searchCondition;
+    }
+
+    // Filtro per lead che hanno risposto
+    if (responded === "true") {
+      where.respondedAt = { not: null };
     }
 
     // Filtro per singolo stage

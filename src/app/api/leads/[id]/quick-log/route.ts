@@ -26,7 +26,8 @@ type ActionType =
   | "MOVE_TO_WARM"
   | "MOVE_TO_COLD"
   | "MOVE_BACK"
-  | "CALL_LOGGED";
+  | "CALL_LOGGED"
+  | "RESPONSE_RECEIVED";
 
 export async function POST(
   request: Request,
@@ -67,7 +68,7 @@ async function handleAction(leadId: string, body: any) {
     "VIDEO_SENT", "FOLLOW_UP", "LINKEDIN_SENT", "TELEFONATA",
     "CALL_SCHEDULED", "IN_TRATTATIVA", "MARK_ARCHIVED",
     "MARK_LOST", "MARK_WON", "MOVE_TO_VIDEO", "MOVE_TO_WARM",
-    "MOVE_TO_COLD", "MOVE_BACK", "CALL_LOGGED",
+    "MOVE_TO_COLD", "MOVE_BACK", "CALL_LOGGED", "RESPONSE_RECEIVED",
   ];
 
   if (!validActions.includes(action)) {
@@ -219,6 +220,20 @@ async function handleAction(leadId: string, body: any) {
       }
       activityType = "STAGE_CHANGE";
       activityNotes = notes || `Rimandato indietro da Fare Video → ${newStage} (score: ${score})`;
+      break;
+    }
+
+    case "RESPONSE_RECEIVED": {
+      const via = respondedVia || "whatsapp";
+      const viaLabel = via === "whatsapp" ? "WhatsApp" : via === "email" ? "Email" : via === "telefono" ? "Telefono" : via;
+      updateData = {
+        respondedAt: now,
+        respondedVia: via,
+      };
+      // Non cambiamo stage automaticamente - il commerciale decide il prossimo step
+      newStage = null;
+      activityType = "RESPONSE_RECEIVED";
+      activityNotes = notes || `Ha risposto via ${viaLabel}`;
       break;
     }
   }

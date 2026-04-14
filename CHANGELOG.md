@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
+## [3.11.0] - 2026-04-14nn- feat: visibilita risposte WhatsApp e sync Google Calendar per Francescan
+
 ## [3.10.0] - 2026-04-13nn- v3.9.4: nuovo prompt Tella 4 atti + fix messaggi landing + docsn
 
 ## [3.9.4] - 2026-04-13

@@ -25,6 +25,7 @@ export async function GET() {
       countCallFissate,
       countInTrattativa,
       countClienti,
+      countRisposto,
     ] = await Promise.all([
       db.lead.count({ where: { pipelineStage: "DA_ANALIZZARE" } }),
       db.lead.count({ where: { pipelineStage: "HOT_LEAD" } }),
@@ -47,6 +48,7 @@ export async function GET() {
       db.lead.count({ where: { pipelineStage: "CALL_FISSATA" } }),
       db.lead.count({ where: { pipelineStage: "IN_TRATTATIVA" } }),
       db.lead.count({ where: { pipelineStage: "CLIENTE" } }),
+      db.lead.count({ where: { respondedAt: { not: null } } }),
     ]);
 
     return NextResponse.json({
@@ -64,6 +66,7 @@ export async function GET() {
         callFissate: countCallFissate,
         inTrattativa: countInTrattativa,
         clienti: countClienti,
+        risposto: countRisposto,
       },
     });
   } catch (error) {

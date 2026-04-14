@@ -94,6 +94,66 @@ const MESSAGE_ACTIVITY_TYPES = [
   "LINKEDIN_SENT",
 ];
 
+function ResponseTracker({ leadId, leadName }: { leadId: string; leadName: string }) {
+  const [loading, setLoading] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+
+  const channels = [
+    { key: "whatsapp", label: "WhatsApp", icon: MessageCircle, color: "bg-green-600 hover:bg-green-700" },
+    { key: "email", label: "Email", icon: Mail, color: "bg-blue-600 hover:bg-blue-700" },
+    { key: "telefono", label: "Telefono", icon: Target, color: "bg-purple-600 hover:bg-purple-700" },
+  ];
+
+  const handleResponse = async (via: string) => {
+    setLoading(true);
+    setSelectedChannel(via);
+    try {
+      const res = await fetch(`/api/leads/${leadId}/quick-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "RESPONSE_RECEIVED", respondedVia: via }),
+      });
+      if (!res.ok) throw new Error("Errore");
+      toast.success(`${leadName} segnato come "ha risposto" via ${via}`);
+      window.location.reload();
+    } catch {
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setLoading(false);
+      setSelectedChannel(null);
+    }
+  };
+
+  return (
+    <Card className="border-green-500/30 bg-green-500/5">
+      <CardContent className="p-4">
+        <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <Check className="h-4 w-4 text-green-500" />
+          Segna come &quot;Ha risposto&quot;
+        </p>
+        <div className="flex gap-2">
+          {channels.map(({ key, label, icon: Icon, color }) => (
+            <Button
+              key={key}
+              size="sm"
+              disabled={loading}
+              className={`flex-1 text-white ${color}`}
+              onClick={() => handleResponse(key)}
+            >
+              {loading && selectedChannel === key ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Icon className="h-4 w-4 mr-1" />
+              )}
+              {label}
+            </Button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function MessagingHub({
   leadId,
   leadName,
@@ -527,6 +587,9 @@ export function MessagingHub({
           )}
         </CardContent>
       </Card>
+
+      {/* Segna risposta */}
+      <ResponseTracker leadId={leadId} leadName={leadName} />
 
       {/* Storico messaggi */}
       {messageActivities.length > 0 && (

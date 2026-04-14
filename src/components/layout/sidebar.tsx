@@ -29,6 +29,7 @@ import {
   Phone,
   Trophy,
   Snowflake,
+  MessageCircle,
 } from "lucide-react";
 
 // Badge types per colore
@@ -81,6 +82,7 @@ const navSections: NavSection[] = [
   {
     title: "VENDITA",
     items: [
+      { href: "/risposto", label: "Ha Risposto", icon: MessageCircle, badgeKey: "risposto", badgeColor: "green" },
       { href: "/call-fissate", label: "Call Fissate", icon: CalendarCheck, badgeKey: "callFissate" },
       { href: "/trattative", label: "In Trattativa", icon: Handshake, badgeKey: "inTrattativa" },
       { href: "/clienti", label: "Clienti", icon: Trophy, badgeKey: "clienti", badgeColor: "green" },
@@ -147,7 +149,7 @@ export function Sidebar() {
             <span className="font-semibold text-[0.95rem] text-[#f5f5f7]">
               KW Sales CRM
             </span>
-            <span className="text-xs text-[#71717a]">v3.10.0</span>
+            <span className="text-xs text-[#71717a]">v3.11.0</span>
           </div>
         )}
       </div>
