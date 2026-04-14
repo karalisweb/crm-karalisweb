@@ -63,6 +63,7 @@ export async function runScriptwriterPrompt(
     where: { id: leadId },
     select: {
       name: true,
+      category: true,
       analystOutput: true,
       analystApprovedAt: true,
       puntoDoloreBreve: true,
@@ -70,6 +71,11 @@ export async function runScriptwriterPrompt(
       hasActiveGoogleAds: true,
       hasActiveMetaAds: true,
       adsVerifiedManually: true,
+      googleAdsCopy: true,
+      metaAdsCopy: true,
+      // Google Business
+      googleRating: true,
+      googleReviewsCount: true,
     },
   });
 
@@ -102,13 +108,24 @@ export async function runScriptwriterPrompt(
   const analystData = lead.analystOutput as any;
 
   // 6. Sostituisci placeholder
+  const googleAdsCopy = lead.googleAdsCopy || "DATA_MISSING";
+  const metaAdsCopy = lead.metaAdsCopy || "DATA_MISSING";
+  const googleAdsOrMeta =
+    lead.googleAdsCopy || lead.metaAdsCopy || "DATA_MISSING";
+
   const prompt = replacePlaceholders(promptTemplate, {
     "{{company_name}}": lead.name,
+    "{{category}}": lead.category || "DATA_MISSING",
     "{{analyst_output}}": JSON.stringify(analystData, null, 2),
     "{{punto_dolore_breve}}": lead.puntoDoloreBreve || analystData.punto_dolore_breve || "DATA_MISSING",
     "{{ads_status}}": adsStatus,
     "{{cliche_found}}": analystData.cliche_found || "NESSUNA_CLICHE_TROVATA",
     "{{primary_error_pattern}}": analystData.primary_pattern || "NESSUNO",
+    "{{google_ads_copy}}": googleAdsCopy,
+    "{{meta_ads_copy}}": metaAdsCopy,
+    "{{google_ads_copy_or_meta}}": googleAdsOrMeta,
+    "{{google_rating}}": lead.googleRating ? String(Number(lead.googleRating).toFixed(1)) : "DATA_MISSING",
+    "{{google_reviews_count}}": lead.googleReviewsCount != null ? String(lead.googleReviewsCount) : "DATA_MISSING",
   });
 
   // 7. Appendi note (se presenti)
