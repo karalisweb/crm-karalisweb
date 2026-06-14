@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { compare } from 'bcryptjs';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +20,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { message: 'Password richiesta' },
         { status: 400 }
+      );
+    }
+
+    // Anti brute-force: max 30 tentativi / 15 min per IP sul controllo credenziali.
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rl = rateLimit(`login:${ip}`, 30, 15 * 60_000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { message: `Troppi tentativi. Riprova tra ${Math.ceil(rl.retryAfterSec / 60)} minuti.` },
+        { status: 429 }
       );
     }
 

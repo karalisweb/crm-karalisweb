@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { recordVideoEvent } from "@/lib/youtube";
 
-function corsHeaders(request: Request) {
-  const origin = request.headers.get("origin") || "*";
+// Endpoint pubblico di tracking, senza cookie/credenziali: Origin "*" è sicuro.
+// NON impostiamo Allow-Credentials (riflettere Origin arbitrario + credenziali
+// è un anti-pattern di sicurezza).
+function corsHeaders() {
   return {
-    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Credentials": "true",
   };
 }
 
@@ -34,8 +35,8 @@ function isIpRateLimited(ip: string): boolean {
 /**
  * OPTIONS /api/public/video-view — CORS preflight
  */
-export async function OPTIONS(request: Request) {
-  return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders() });
 }
 
 /**
@@ -47,7 +48,7 @@ export async function OPTIONS(request: Request) {
  *   { token: string, event: "play" | "progress" | "complete", percent?: number }
  */
 export async function POST(request: Request) {
-  const headers = corsHeaders(request);
+  const headers = corsHeaders();
   try {
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() || "unknown";

@@ -24,16 +24,16 @@
 
 ### Alte
 - [x] 🟠🔧 **SSRF — chiudere i buchi.** ✅ FATTO (in gran parte): `src/lib/url-validator.ts` ora ha `assertPublicUrl()` che **risolve il DNS** e verifica gli IP (anti DNS-rebinding di base), copre IPv6 privati e IPv4 decimale/hex/ottale. Agganciato in `runFullAudit` (`audit/index.ts`, incluso il redirect-hop) e in `leads/manual`. _Residuo:_ TOCTOU (IP-pinning del socket) e i sub-fetch in `seo-checker`/`blog-detector` (stesso host già validato) — nota in fondo.
-- [ ] 🟠⚡ **Relay email autenticato.** `leads/[id]/send-email/route.ts` accetta un `to` arbitrario → forzare `to` = email del lead + rate-limit per utente. _(dietro auth; medio, non ancora fatto)_
+- [x] 🟠⚡ **Relay email autenticato.** ✅ FATTO: `send-email` invia SEMPRE all'email del lead (il `to` arbitrario è ammesso solo al primo contatto), rate-limit 20/min per utente, e logga il vero mittente invece di "sistema".
 - [x] 🟠⚡ **`GET /api/users`** ✅ FATTO: gateato ad ADMIN.
 - [ ] 🟠⚡ **Decisione isolamento dati.** Oggi ogni utente vede/modifica TUTTI i lead. Se resta team unico, ok consapevole; se SaaS multi-cliente, scoping per owner/org su tutte le query.
 
 ### Medie
 - [~] 🟡⚡ **CSP + HSTS** in `next.config.ts`. ✅ HSTS + Permissions-Policy aggiunti. ⏳ CSP rinviata (richiede test mirato: la login page usa stili inline) — da fare in un passaggio dedicato.
-- [ ] 🟡⚡ **Rate-limit / lockout sul login** (oggi brute-force libero; OTP e reset invece sono già limitati).
+- [x] 🟡⚡ **Rate-limit / lockout sul login** ✅ FATTO: `check-2fa` limita 30 tentativi/15min per IP (nuova lib riutilizzabile `src/lib/rate-limit.ts`). _Nota: in-memory, per-istanza._
 - [x] 🟡⚡ **Confronto segreti timing-safe** su cron/internal. ✅ FATTO a livello middleware (`safeEqual` a tempo costante).
-- [ ] 🟡⚡ **Unsubscribe firmato (HMAC)** — `api/public/unsubscribe` usa un token non firmato (IDOR).
-- [ ] 🟡⚡ **CORS `video-view`** non riflettere `Origin` arbitrario con `Allow-Credentials`.
+- [ ] 🟡⚡ **Unsubscribe firmato (HMAC)** — SALTATO per ora: firmarlo romperebbe la disiscrizione delle email GIÀ inviate (regressione GDPR) e il rischio è minimo (UUID non enumerabili). Da fare con accettazione legacy quando si rigenera la lista email.
+- [x] 🟡⚡ **CORS `video-view`** ✅ FATTO: Origin `*` senza `Allow-Credentials`.
 - [ ] 🟡 **Sign-off su next-auth@5 beta + Next 16** in produzione (pin versioni, monitorare advisory).
 
 ---
@@ -41,7 +41,7 @@
 ## FASE 1 — FIX RAPIDI: UX mobile + documentazione 🟠
 
 - [x] 🟠⚡ **Navigazione mobile.** ✅ FATTO: nel `MobileHeader` un bottone 🔍 emette l'evento `open-command-palette` che apre la `CommandPalette` (ascoltata in `command-palette.tsx`) → tutte le ~20 pagine ora raggiungibili da telefono. Rimossi i controlli morti (campanella/Notifiche), voce "Profilo" collegata.
-- [ ] 🟡⚡ **Tap target ≥44px** su `unified-lead-card.tsx` (verifica ads `h-6`, tier pills ~18px) e `contact-info-editor.tsx` (`h-6 w-6`).
+- [~] 🟡⚡ **Tap target.** ✅ `contact-info-editor`: pulsanti matita 24→32px. ⏳ Resta `unified-lead-card` (verifica ads/tier) — da fare con cautela (layout denso).
 - [ ] 🟡⚡ **Densità card lead** su mobile: i 5 campi della riga collassata a 2 colonne sotto `sm:` (`unified-lead-card.tsx:921`).
 - [x] 🟠⚡ **Changelog — riparato + reso durevole.** ✅ Corruzione `nn`/`n` riparata nel `CHANGELOG.md` E corretto **alla radice il generatore in `deploy.sh`** (ora usa `awk` con a-capo reali, testato) → non si corromperà più ad ogni deploy.
 - [ ] 🟡🔧 **Guida utente — sorgente unico.** Eliminare la doppia copia: tenere **una sola fonte** (in-app `/guida` come master, oppure `GUIDA_UTENTE.md` renderizzato) così non possono più divergere. Aggiungere le sezioni mancanti (workflow email automatico, Video Outreach, Ha Risposto, Calendar sync, 2FA/profilo), correggere accenti e incoerenze (soglie Warm 50 vs 60, URL demo vs prod), indicare **dove** sta la checklist di verifica.

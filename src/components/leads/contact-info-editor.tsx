@@ -174,7 +174,7 @@ export function ContactInfoEditor({ lead }: ContactInfoEditorProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => setEditingPhone(true)}
               >
                 <Pencil className="h-3 w-3" />
@@ -224,7 +224,7 @@ export function ContactInfoEditor({ lead }: ContactInfoEditorProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   setWhatsappValue(lead.phone || "");
                   setEditingWhatsapp(true);
@@ -303,7 +303,7 @@ export function ContactInfoEditor({ lead }: ContactInfoEditorProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   setWhatsappValue(lead.whatsappNumber || lead.phone || "");
                   setEditingWhatsapp(true);
@@ -361,7 +361,7 @@ export function ContactInfoEditor({ lead }: ContactInfoEditorProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => setEditingEmail(true)}
               >
                 <Pencil className="h-3 w-3" />
