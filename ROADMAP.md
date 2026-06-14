@@ -105,13 +105,14 @@ Il vincolo di progetto è **max €100/mese** (CLAUDE.md). Le WOW #1 e #4 da sol
 - **Piano deciso (2026-06-14):** prima "tutto il resto" → **Fase 0 → Fase 1 → Fase 1.5**; POI le **WOW come progetto separato**; infine Fase 3.
 - **Branch:** `fix/pre-lancio-sicurezza-ux` · ogni modifica validata con `npm run build` ✅ (compila pulito).
 
-### ✅ Completato (sessione 2026-06-14)
-- **Sicurezza:** C1 2FA server-side · C2 lockdown cron/internal (+health pubblico) · C3 niente segreti nei log · C4 niente fallback secret · SSRF hardening (DNS + IPv6 + IP encoded) · `GET /api/users` solo ADMIN · HSTS/Permissions-Policy · confronto segreti timing-safe.
-- **UX/docs:** navigazione mobile sbloccata (bottone 🔍 → command palette) · changelog riparato.
+### ✅ Completato (sessione 2026-06-14) — 3 commit su branch `fix/pre-lancio-sicurezza-ux`
+- **Sicurezza (critiche):** C1 2FA server-side · C2 lockdown cron/internal (+health pubblico) · C3 niente segreti nei log · C4 niente fallback secret · SSRF hardening (DNS + IPv6 + IP encoded).
+- **Sicurezza (minori):** anti-relay `send-email` + rate-limit · anti brute-force login · `GET /api/users` solo ADMIN · HSTS/Permissions-Policy · CORS video-view · timing-safe · lib `rate-limit.ts`.
+- **Deploy a prova di errore:** rollback automatico · health-check `/api/health` con retry · gate ENV · backup DB pre-migrazione · CI GitHub Actions · fix generatore changelog.
+- **UX/docs:** navigazione mobile sbloccata (🔍 → command palette) · changelog riparato · tap-target contatti.
 
-### ⏳ Da fare subito dopo (resto di "tutto il resto", prima delle WOW)
-1. **Azione MANUALE Alessio:** ruotare password root VPS + SSH key-only + scrub git history (è in `CLAUDE.md`).
-2. **ENV gate** all'avvio (`NEXTAUTH_SECRET`, `CRON_SECRET` obbligatori) — collegato a Fase 1.5.
-3. Fase 1: tap-target ≥44px, densità card mobile, **guida a sorgente unico** + sezioni mancanti, script changelog durevole.
-4. Fase 1.5: **deploy automatico a prova di errore** (CI/CD + health-check + rollback).
-5. Sicurezza minori: relay `send-email`, lockout login, CSP testata, unsubscribe HMAC, CORS video-view, decisione isolamento dati.
+### ⏳ Resta da fare (per chiudere "tutto")
+1. **Azione MANUALE Alessio:** ruotare password root VPS + token GitHub + SSH key-only + scrub git history.
+2. **Guida utente:** sorgente unico + sezioni mancanti (workflow email auto, Ha Risposto, Calendar) + fix incoerenze.
+3. **Decisioni tue (non posso decidere io):** (a) CSP — la abilito ma va testata; (b) isolamento dati multi-utente — serve sapere se è team unico o SaaS multi-cliente.
+4. Polish minori: tap-target `unified-lead-card`, densità card mobile.
