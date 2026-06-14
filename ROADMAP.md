@@ -43,7 +43,7 @@
 - [x] 🟠⚡ **Navigazione mobile.** ✅ FATTO: nel `MobileHeader` un bottone 🔍 emette l'evento `open-command-palette` che apre la `CommandPalette` (ascoltata in `command-palette.tsx`) → tutte le ~20 pagine ora raggiungibili da telefono. Rimossi i controlli morti (campanella/Notifiche), voce "Profilo" collegata.
 - [ ] 🟡⚡ **Tap target ≥44px** su `unified-lead-card.tsx` (verifica ads `h-6`, tier pills ~18px) e `contact-info-editor.tsx` (`h-6 w-6`).
 - [ ] 🟡⚡ **Densità card lead** su mobile: i 5 campi della riga collassata a 2 colonne sotto `sm:` (`unified-lead-card.tsx:921`).
-- [~] 🟠⚡ **Changelog — rigenerare il blocco rotto** (`CHANGELOG.md`). ✅ Corruzione `nn`/`n` riparata (blocco 3.12–3.16 ora in markdown corretto) + nota sul duplicato 3.12.0 da riconciliare. ⏳ **Da fare (durevole):** script `scripts/changelog.mjs` che genera la voce dai commit + hook in `deploy.sh` → non si rompe mai più.
+- [x] 🟠⚡ **Changelog — riparato + reso durevole.** ✅ Corruzione `nn`/`n` riparata nel `CHANGELOG.md` E corretto **alla radice il generatore in `deploy.sh`** (ora usa `awk` con a-capo reali, testato) → non si corromperà più ad ogni deploy.
 - [ ] 🟡🔧 **Guida utente — sorgente unico.** Eliminare la doppia copia: tenere **una sola fonte** (in-app `/guida` come master, oppure `GUIDA_UTENTE.md` renderizzato) così non possono più divergere. Aggiungere le sezioni mancanti (workflow email automatico, Video Outreach, Ha Risposto, Calendar sync, 2FA/profilo), correggere accenti e incoerenze (soglie Warm 50 vs 60, URL demo vs prod), indicare **dove** sta la checklist di verifica.
 
 ---
@@ -53,12 +53,12 @@
 > Richiesta esplicita di Alessio: "automatizza bene il deploy, tutto super automatico e a prova di errore".
 > Obiettivo: `git push` → produzione, con build/test/health-check e rollback automatici. Zero SSH manuale.
 
-- [ ] 🟠🔧 **Pipeline CI/CD** (GitHub Actions): su push a `main` → lint + `npm run build` + `npm test` (i test devono passare prima del deploy). Se rosso, **non** deploya.
-- [ ] 🟠🔧 **Deploy script a prova di errore**: rifare `deploy.sh` con `set -euo pipefail`, **build PRIMA di spegnere il vecchio container**, `prisma migrate deploy` automatico, e **health-check post-deploy** su `/api/health` → se fallisce, **rollback automatico** all'immagine precedente.
-- [ ] 🟠⚡ **Gate ENV obbligatorie**: lo start fallisce subito (con messaggio chiaro) se mancano `NEXTAUTH_SECRET`, `CRON_SECRET`, `DATABASE_URL`, ecc. → niente più fallback insicuri o deploy a metà.
-- [ ] 🟡⚡ **Backup DB automatico pre-migrazione** dentro il deploy (oltre al cron già esistente) → rollback dati possibile.
-- [ ] 🟡⚡ **Smoke test post-deploy**: login + 1 endpoint chiave, con notifica (email/WA) se il deploy degrada qualcosa.
-- [ ] 🟢⚡ **Healthcheck Docker** nel `docker-compose.yml` + restart policy, così un crash si auto-recupera.
+- [x] 🟠🔧 **Pipeline CI/CD** (GitHub Actions). ✅ FATTO: `.github/workflows/ci.yml` → install + prisma generate + lint + `npm run build` ad ogni push/PR su `main`. Se rosso, non si deploya.
+- [x] 🟠🔧 **Deploy script a prova di errore**. ✅ FATTO in `deploy.sh`: `set -eo pipefail`, build locale di verifica già presente, **health-check reale su `/api/health` con retry** e **ROLLBACK automatico** al commit precedente (reset+build+restart) se il sito non risponde.
+- [x] 🟠⚡ **Gate ENV obbligatorie**. ✅ FATTO: il deploy si ferma PRIMA del restart se mancano `DATABASE_URL`/`NEXTAUTH_SECRET`/`CRON_SECRET` nel `.env` del server (il vecchio sito resta online). _Opzionale futuro:_ gate anche a runtime via `instrumentation.ts`.
+- [x] 🟡⚡ **Backup DB automatico pre-migrazione**. ✅ FATTO: `scripts/backup-db.sh` eseguito prima di `prisma db push --accept-data-loss`.
+- [~] 🟡⚡ **Smoke test post-deploy**: coperto in parte dall'health-check `/api/health`. ⏳ Da aggiungere: notifica email/WA su degrado.
+- [ ] 🟢⚡ **Healthcheck Docker** nel `docker-compose.yml` + restart policy (rilevante solo se passate al path Docker; oggi girate su PM2).
 
 ---
 

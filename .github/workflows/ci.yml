@@ -1,0 +1,39 @@
+name: CI
+
+# Build + lint ad ogni push e PR su main.
+# Se questo job fallisce, il codice è rotto → NON va deployato.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dipendenze
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Build
+        env:
+          # Valori fittizi: il build non si connette a nulla, servono solo a
+          # soddisfare eventuali controlli ENV senza esporre segreti reali.
+          NEXTAUTH_SECRET: ci-build-placeholder-secret
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db
+          CRON_SECRET: ci-build-placeholder-cron
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build

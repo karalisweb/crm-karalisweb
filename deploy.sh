@@ -45,7 +45,7 @@
 # 8. Build Next.js sul server
 # 9. Restart PM2 + health check
 
-set -e  # Esci se un comando fallisce
+set -eo pipefail  # Esci se un comando fallisce (anche dentro una pipe)
 
 # Carica nvm se disponibile (necessario per npm su Mac con nvm)
 export NVM_DIR="$HOME/.nvm"
@@ -195,41 +195,28 @@ append_changelog_entry() {
         return
     fi
 
-    # Inserisci dopo la prima riga "---" (separatore dopo header)
-    # Formato: ## [VERSION] - DATE\n\n- commit_msg\n
-    local ENTRY="## [${version}] - ${today}\n\n- ${commit_msg}\n"
-
-    # Trova la prima occorrenza di "---" e inserisci dopo
-    sed -i '' "/^---$/,/^---$/{
-        /^---$/{
-            n
-            i\\
-\\
-${ENTRY}
+    # Inserisci la nuova entry PRIMA della prima riga "## [" esistente.
+    # Usiamo awk (non sed con \n letterali): così gli a-capo sono REALI e non
+    # finiscono più come caratteri "n" nel file (bug che corrompeva il changelog).
+    local TEMP_FILE
+    TEMP_FILE=$(mktemp)
+    awk -v ver="$version" -v date="$today" -v msg="$commit_msg" '
+        !inserted && /^## \[/ {
+            print "## [" ver "] - " date
+            print ""
+            print "- " msg
+            print ""
+            inserted = 1
         }
-    }" "$CHANGELOG" 2>/dev/null
+        { print }
+    ' "$CHANGELOG" > "$TEMP_FILE" && mv "$TEMP_FILE" "$CHANGELOG"
 
-    # Fallback: se sed non ha funzionato (struttura diversa), usa approccio più robusto
+    # Se il changelog non aveva ancora nessuna entry "## [", appendi in fondo.
     if ! grep -q "\[${version}\]" "$CHANGELOG"; then
-        # Cerca la prima riga ## [ e inserisci prima
-        local TEMP_FILE
-        TEMP_FILE=$(mktemp)
-        local inserted=false
-        while IFS= read -r line; do
-            if [ "$inserted" = false ] && echo "$line" | grep -q "^## \["; then
-                echo "" >> "$TEMP_FILE"
-                echo "## [${version}] - ${today}" >> "$TEMP_FILE"
-                echo "" >> "$TEMP_FILE"
-                echo "- ${commit_msg}" >> "$TEMP_FILE"
-                echo "" >> "$TEMP_FILE"
-                inserted=true
-            fi
-            echo "$line" >> "$TEMP_FILE"
-        done < "$CHANGELOG"
-        mv "$TEMP_FILE" "$CHANGELOG"
+        printf '\n## [%s] - %s\n\n- %s\n' "$version" "$today" "$commit_msg" >> "$CHANGELOG"
     fi
 
-    print_success "CHANGELOG.md → aggiunta entry [${version}]"
+    print_success "CHANGELOG.md → aggiunta entry [${version}] (a-capo reali)"
 }
 
 # Auto-update GUIDA_UTENTE.md version e date
@@ -456,6 +443,12 @@ print_success "Push completato"
 # ═══════════════════════════════════════════
 
 print_step "Step 6/9 - Pull sul VPS (con stash + pulizia)..."
+# Salva il commit attuale del server PRIMA del pull: è il punto di ripristino
+# per il rollback automatico se il nuovo deploy non passa l'health check.
+ROLLBACK_COMMIT=$(ssh $VPS_HOST "cd $VPS_PATH && git rev-parse HEAD" 2>/dev/null || echo "")
+if [ -n "$ROLLBACK_COMMIT" ]; then
+    echo -e "  ${CYAN}Punto di rollback: ${ROLLBACK_COMMIT:0:8}${NC}"
+fi
 # Stash modifiche locali + rimuovi file spuri non tracciati nella root
 ssh $VPS_HOST "cd $VPS_PATH && git stash --include-untracked 2>/dev/null; git clean -f -d --exclude=node_modules --exclude=.next --exclude=logs --exclude=.env* 2>/dev/null; git pull origin $BRANCH"
 print_success "Pull completato"
@@ -479,7 +472,14 @@ fi
 # PRIMA sincronizza schema DB (nuovi campi/tabelle)
 SCHEMA_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff HEAD~1 --name-only 2>/dev/null | grep schema.prisma" 2>/dev/null || echo "")
 if [ -n "$SCHEMA_CHANGED" ]; then
-    echo -e "  ${CYAN}schema.prisma modificato → prisma db push${NC}"
+    echo -e "  ${CYAN}schema.prisma modificato → backup DB + prisma db push${NC}"
+    # Backup del DB PRIMA di toccare lo schema (db push usa --accept-data-loss:
+    # può cancellare colonne/dati). Non blocca il deploy se manca lo script.
+    if ssh $VPS_HOST "cd $VPS_PATH && [ -f scripts/backup-db.sh ] && bash scripts/backup-db.sh"; then
+        print_success "Backup DB eseguito prima della migrazione"
+    else
+        print_warning "Backup DB NON eseguito (scripts/backup-db.sh assente o fallito)"
+    fi
     ssh $VPS_HOST "cd $VPS_PATH && npx prisma db push --accept-data-loss"
     print_success "Database sincronizzato"
 else
@@ -502,22 +502,54 @@ print_success "Build completata"
 # STEP 9: Restart PM2 + Health check
 # ═══════════════════════════════════════════
 
-print_step "Step 9/9 - Restart $PM2_PROCESS + health check..."
-ssh $VPS_HOST "pm2 restart $PM2_PROCESS --update-env || pm2 start npm --name '$PM2_PROCESS' -- start -- -p $SERVER_PORT"
+print_step "Step 9/9 - Verifica ENV + Restart $PM2_PROCESS + health check..."
+
+# 9a: Gate ENV — niente restart se mancano i segreti critici (fail fast,
+# il vecchio processo resta su e online).
+MISSING_ENV=$(ssh $VPS_HOST "cd $VPS_PATH && for v in DATABASE_URL NEXTAUTH_SECRET CRON_SECRET; do grep -qE \"^\${v}=.+\" .env 2>/dev/null || echo \$v; done")
+if [ -n "$MISSING_ENV" ]; then
+    print_error "Variabili ENV mancanti/vuote nel .env del server: $MISSING_ENV"
+    print_error "Deploy annullato PRIMA del restart — il sito vecchio resta online."
+    exit 1
+fi
+print_success "ENV critiche presenti (DATABASE_URL, NEXTAUTH_SECRET, CRON_SECRET)"
+
+# 9b: Restart
+ssh $VPS_HOST "cd $VPS_PATH && pm2 restart $PM2_PROCESS --update-env || pm2 start ecosystem.config.cjs"
 ssh $VPS_HOST "pm2 save"
 
-# Health check: attendi avvio e verifica risposta
-echo -e "  ${CYAN}Attendo avvio server...${NC}"
-sleep 5
-HTTP_STATUS=$(ssh $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/login" 2>/dev/null || echo "000")
+# 9c: Health check REALE su /api/health (verifica anche il DB), con retry.
+echo -e "  ${CYAN}Verifico /api/health (max 6 tentativi)...${NC}"
+HEALTH_OK=false
+HTTP_STATUS="000"
+for i in 1 2 3 4 5 6; do
+    sleep 5
+    HTTP_STATUS=$(ssh $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/api/health" 2>/dev/null || echo "000")
+    if [ "$HTTP_STATUS" = "200" ]; then HEALTH_OK=true; break; fi
+    echo -e "  ${YELLOW}tentativo $i/6: HTTP $HTTP_STATUS, riprovo...${NC}"
+done
 
-if [ "$HTTP_STATUS" = "200" ]; then
-    print_success "Health check OK (HTTP $HTTP_STATUS)"
-elif [ "$HTTP_STATUS" = "307" ] || [ "$HTTP_STATUS" = "302" ]; then
-    print_success "Health check OK (HTTP $HTTP_STATUS - redirect)"
+if [ "$HEALTH_OK" = true ]; then
+    print_success "Health check OK (HTTP 200 su /api/health)"
 else
-    print_error "Health check fallito! (HTTP $HTTP_STATUS)"
-    echo -e "  ${YELLOW}Controlla i log: ssh $VPS_HOST \"pm2 logs $PM2_PROCESS --lines 30 --nostream\"${NC}"
+    # 9d: ROLLBACK automatico al commit precedente.
+    print_error "Health check fallito (HTTP $HTTP_STATUS) → ROLLBACK automatico..."
+    if [ -n "$ROLLBACK_COMMIT" ]; then
+        ssh $VPS_HOST "cd $VPS_PATH && git reset --hard $ROLLBACK_COMMIT && npm install && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build && pm2 restart $PM2_PROCESS --update-env && pm2 save" \
+            || print_warning "Errori durante il rollback, verifico comunque lo stato..."
+        sleep 5
+        ROLLBACK_STATUS=$(ssh $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/api/health" 2>/dev/null || echo "000")
+        if [ "$ROLLBACK_STATUS" = "200" ]; then
+            print_success "Rollback OK: sito di nuovo online sulla versione precedente (${ROLLBACK_COMMIT:0:8})."
+        else
+            print_error "Rollback eseguito ma health ancora KO (HTTP $ROLLBACK_STATUS)."
+            echo -e "  ${YELLOW}Log: ssh $VPS_HOST \"pm2 logs $PM2_PROCESS --lines 40 --nostream\"${NC}"
+        fi
+    else
+        print_error "Nessun commit di rollback salvato — intervieni a mano."
+        echo -e "  ${YELLOW}Log: ssh $VPS_HOST \"pm2 logs $PM2_PROCESS --lines 40 --nostream\"${NC}"
+    fi
+    exit 1
 fi
 
 # ═══════════════════════════════════════════
