@@ -129,7 +129,8 @@ export async function requestOtp(
       },
     });
 
-    console.log(`[OTP] Codice generato per ${email}: ${plainCode} (hash: ${hashedCode.substring(0, 8)}...)`);
+    // SICUREZZA: non loggare mai il codice OTP in chiaro (account takeover via log).
+    console.log(`[OTP] Codice generato e salvato per ${email}`);
 
     // Invia email
     const emailSent = await sendOtpEmail(email, plainCode, user.name || undefined);

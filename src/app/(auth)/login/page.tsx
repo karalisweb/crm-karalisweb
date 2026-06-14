@@ -92,30 +92,17 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Verifica OTP
-      const verifyRes = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: otpCode, type: "TWO_FACTOR" }),
-      });
-
-      const verifyData = await verifyRes.json();
-
-      if (!verifyData.success) {
-        setError(verifyData.message || "Codice non valido");
-        return;
-      }
-
-      // OTP verificato - completa il login
+      // Il codice OTP viene verificato SERVER-SIDE dentro authorize() (single-use):
+      // senza un OTP valido la sessione non viene creata. Nessun token intermedio.
       const result = await signIn("credentials", {
         email,
         password,
-        otpVerified: "true",
+        otpCode,
         redirect: false,
       });
 
       if (result?.error) {
-        setError("Errore durante l'accesso");
+        setError("Codice non valido o scaduto. Riprova o richiedi un nuovo codice.");
       } else {
         router.push("/");
         router.refresh();

@@ -124,7 +124,8 @@ export async function requestPasswordReset(
     // Costruisci link di reset
     const resetLink = `${baseUrl}/reset-password?token=${plainToken}&email=${encodeURIComponent(email.toLowerCase())}`;
 
-    console.log(`[PASSWORD-RESET] Token generato per ${email}, link: ${resetLink}`);
+    // SICUREZZA: non loggare mai il token / link di reset in chiaro (account takeover via log).
+    console.log(`[PASSWORD-RESET] Token generato e salvato per ${email}`);
 
     // Invia email
     const emailSent = await sendPasswordResetEmail(

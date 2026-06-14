@@ -3,11 +3,12 @@ import { db } from "@/lib/db";
 import { hash } from "bcryptjs";
 import { auth } from "@/lib/auth";
 
-// GET /api/users - Lista tutti gli utenti
+// GET /api/users - Lista tutti gli utenti (solo ADMIN)
 export async function GET() {
   try {
     const session = await auth();
-    if (!session?.user) {
+    // Solo ADMIN: prima qualsiasi utente loggato poteva leggere email/ruoli di tutti.
+    if (!session?.user || (session.user as { role?: string }).role !== "ADMIN") {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
     }
 

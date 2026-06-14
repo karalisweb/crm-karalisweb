@@ -8,6 +8,7 @@ import { detectEmailMarketing } from "./email-detector";
 import { detectTech } from "./tech-detector";
 import { calculateOpportunityScore } from "./score-calculator";
 import { generateTalkingPoints, flattenTalkingPoints } from "./talking-points";
+import { assertPublicUrl } from "@/lib/url-validator";
 
 interface AuditOptions {
   website: string;
@@ -37,6 +38,10 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = "https://" + url;
   }
+
+  // SSRF: con risoluzione DNS, blocca URL che puntano a risorse interne
+  // (loopback, IP privati, metadata cloud) prima di qualunque fetch.
+  await assertPublicUrl(url);
 
   // Headers completi per evitare blocchi anti-bot (es. SiteGround, Cloudflare)
   const fetchHeaders = {
@@ -85,7 +90,10 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
             headers: fetchHeaders,
           });
         } else {
-          response = await fetch(location, {
+          // Risolvi eventuali redirect relativi e ri-valida l'hop (anti open-redirect → SSRF).
+          const redirectUrl = new URL(location, httpUrl).toString();
+          await assertPublicUrl(redirectUrl);
+          response = await fetch(redirectUrl, {
             signal: AbortSignal.timeout(15000),
             headers: fetchHeaders,
           });

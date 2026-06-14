@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod/v4";
 import { runFullAudit } from "@/lib/audit";
+import { assertPublicUrl } from "@/lib/url-validator";
 
 const manualLeadSchema = z.object({
   website: z.string().min(1).max(500),
@@ -20,6 +21,16 @@ export async function POST(request: NextRequest) {
     let website = data.website.trim();
     if (!website.startsWith("http://") && !website.startsWith("https://")) {
       website = "https://" + website;
+    }
+
+    // SSRF: blocca URL verso risorse interne prima di ogni fetch (title + audit).
+    try {
+      await assertPublicUrl(website);
+    } catch {
+      return NextResponse.json(
+        { error: "URL non valido o non pubblico" },
+        { status: 400 }
+      );
     }
 
     // Controlla se esiste già un lead con questo sito

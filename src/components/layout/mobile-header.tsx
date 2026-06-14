@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { Bell, User, Target } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Search, User, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,6 +35,7 @@ const pageNames: Record<string, string> = {
 
 export function MobileHeader() {
   const pathname = usePathname();
+  const router = useRouter();
 
   // Get page title based on current path
   const getPageTitle = () => {
@@ -55,8 +56,16 @@ export function MobileHeader() {
 
         {/* Actions */}
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <Bell className="h-5 w-5" />
+          {/* Cerca/Naviga: apre la command palette (unico modo per raggiungere
+              tutte le pagine da mobile, dove sidebar e Cmd+K non sono disponibili). */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            aria-label="Cerca e naviga"
+            onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+          >
+            <Search className="h-5 w-5" />
           </Button>
 
           <DropdownMenu>
@@ -66,8 +75,9 @@ export function MobileHeader() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>Profilo</DropdownMenuItem>
-              <DropdownMenuItem>Notifiche</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/profile")}>
+                Profilo
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive"

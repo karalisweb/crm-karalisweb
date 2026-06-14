@@ -58,7 +58,8 @@ export function CommandPalette() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Cmd+K / Ctrl+K listener
+  // Cmd+K / Ctrl+K + evento custom: su mobile non c'è tastiera, quindi la palette
+  // si apre anche da un bottone (vedi MobileHeader) che emette "open-command-palette".
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -66,8 +67,13 @@ export function CommandPalette() {
         setOpen((prev) => !prev);
       }
     };
+    const openFromUI = () => setOpen(true);
     document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
+    window.addEventListener("open-command-palette", openFromUI);
+    return () => {
+      document.removeEventListener("keydown", down);
+      window.removeEventListener("open-command-palette", openFromUI);
+    };
   }, []);
 
   // Search leads with debounce

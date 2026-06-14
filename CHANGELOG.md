@@ -4,17 +4,36 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
 ---
 
-## [3.16.0] - 2026-04-14nn- Workflow follow-up email auto (msg1/2/3A/3B) + batch reading scripts Tella + fix stop su respondedAtn
+<!--
+  NB: le voci 3.12.x–3.13.x più in basso (sezioni dettagliate) hanno una
+  numerazione storica con un duplicato 3.12.0 da riconciliare. Da v3.17.0 in poi
+  usare lo script di generazione changelog (vedi ROADMAP, fase 1) per evitare
+  corruzione degli a-capo e numeri di versione incoerenti.
+-->
 
-## [3.15.0] - 2026-04-14nn- Rimuove approvazioni manuali + compatta 5 atti + sposta punto dolore in Step 2n
+## [3.16.0] - 2026-04-14
 
-## [3.14.0] - 2026-04-14nn- Auto-generazione video script in background su FARE_VIDEOn
+- Workflow follow-up email automatico (msg 1/2/3A/3B) + script di lettura Tella in batch + fix stop su `respondedAt`
 
-## [3.13.0] - 2026-04-14nn- feat: notifiche video views configurabili (multi-destinatario per Francesca)n
+## [3.15.0] - 2026-04-14
 
-## [3.12.1] - 2026-04-14nn- feat(scriptwriter): prompt atti + canovaccio Tella con intro Cagliari, recensioni, ads waste, soluzione MSD, chiusura 7minn
+- Rimosse le approvazioni manuali + compattati i 5 atti + spostato il punto di dolore nello Step 2
 
-## [3.12.0] - 2026-04-14nn- feat(lead): briefing card con recensioni, ads, tracking, errore strategico e tier settoren
+## [3.14.0] - 2026-04-14
+
+- Auto-generazione dello script video in background all'ingresso in `FARE_VIDEO`
+
+## [3.13.0] - 2026-04-14
+
+- feat: notifiche "video visto" configurabili (multi-destinatario per Francesca)
+
+## [3.12.1] - 2026-04-14
+
+- feat(scriptwriter): prompt a atti + canovaccio Tella (intro Cagliari, recensioni, spreco ads, soluzione MSD, chiusura 7 min)
+
+## [3.12.0] - 2026-04-14
+
+- feat(lead): briefing card con recensioni, ads, tracking, errore strategico e tier settore
 
 ## [3.13.2] - 2026-04-14
 
