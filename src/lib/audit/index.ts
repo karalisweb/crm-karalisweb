@@ -9,6 +9,7 @@ import { detectTech } from "./tech-detector";
 import { calculateOpportunityScore } from "./score-calculator";
 import { generateTalkingPoints, flattenTalkingPoints } from "./talking-points";
 import { assertPublicUrl } from "@/lib/url-validator";
+import { safeFetch } from "@/lib/safe-fetch";
 
 interface AuditOptions {
   website: string;
@@ -63,42 +64,22 @@ export async function runFullAudit(options: AuditOptions): Promise<AuditResult> 
     "Upgrade-Insecure-Requests": "1",
   };
 
-  // Fetch HTML della homepage (con fallback HTTP se HTTPS fallisce)
+  // Fetch HTML della homepage (con fallback HTTP se HTTPS fallisce).
+  // safeFetch gestisce i redirect in modo sicuro (ri-valida ogni hop anti-SSRF).
   let response: Response;
   try {
-    response = await fetch(url, {
+    response = await safeFetch(url, {
       signal: AbortSignal.timeout(15000),
       headers: fetchHeaders,
     });
   } catch {
-    // Se HTTPS fallisce (timeout, SSL error), prova HTTP
+    // Se HTTPS fallisce (timeout, SSL error), prova HTTP.
     if (url.startsWith("https://")) {
       const httpUrl = url.replace("https://", "http://");
-      response = await fetch(httpUrl, {
+      response = await safeFetch(httpUrl, {
         signal: AbortSignal.timeout(15000),
-        redirect: "manual", // Non seguire redirect a HTTPS che potrebbe fallire di nuovo
         headers: fetchHeaders,
       });
-      // Se il sito risponde con redirect a HTTPS (che sappiamo non funzionare),
-      // ri-fetch in HTTP seguendo solo redirect HTTP
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get("location") || "";
-        if (location.startsWith("https://")) {
-          // Il redirect va a HTTPS che non funziona, fetch HTTP senza redirect manual
-          response = await fetch(httpUrl, {
-            signal: AbortSignal.timeout(15000),
-            headers: fetchHeaders,
-          });
-        } else {
-          // Risolvi eventuali redirect relativi e ri-valida l'hop (anti open-redirect → SSRF).
-          const redirectUrl = new URL(location, httpUrl).toString();
-          await assertPublicUrl(redirectUrl);
-          response = await fetch(redirectUrl, {
-            signal: AbortSignal.timeout(15000),
-            headers: fetchHeaders,
-          });
-        }
-      }
       url = httpUrl; // Aggiorna url per i check successivi
     } else {
       throw new Error("Failed to fetch website: connection timeout");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { startGoogleMapsSearch, getSearchResults, importSearchResults, checkRunStatus } from "@/lib/apify";
+import { requireSession, enforceUserRateLimit } from "@/lib/api-auth";
 
 export async function GET() {
   try {
@@ -24,6 +25,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const gate = await requireSession();
+    if (!gate.ok) return gate.response;
+    const limited = enforceUserRateLimit("search", gate.userId, 15, 10 * 60_000);
+    if (limited) return limited;
+
     const body = await request.json();
     const { query, location, limit = 50 } = body;
 

@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import type { ContentAudit } from "@/types";
+import { safeFetch } from "@/lib/safe-fetch";
 
 export async function checkBlog(
   html: string,
@@ -33,7 +34,7 @@ export async function checkBlog(
 
   // Prova a recuperare la pagina blog e cercare date
   try {
-    const blogResponse = await fetch(blogUrl, {
+    const blogResponse = await safeFetch(blogUrl, {
       signal: AbortSignal.timeout(10000),
       headers: {
         "User-Agent":

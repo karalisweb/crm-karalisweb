@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { z } from "zod/v4";
 import { runFullAudit } from "@/lib/audit";
 import { assertPublicUrl } from "@/lib/url-validator";
+import { safeFetch } from "@/lib/safe-fetch";
 
 const manualLeadSchema = z.object({
   website: z.string().min(1).max(500),
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     let name = data.name?.trim();
     if (!name) {
       try {
-        const res = await fetch(website, {
+        const res = await safeFetch(website, {
           signal: AbortSignal.timeout(8000),
           headers: {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",

@@ -1,4 +1,17 @@
-# Guida Utente — Catena 2 Prompt (v3.7.0)
+> # ⚠️ OBSOLETO (v3.7) — NON USARE
+> **Questo documento è superato e non riflette più l'app.** Descrive un vecchio
+> flusso a 5 step e dettagli non più attuali. Conservato solo come riferimento storico.
+>
+> **Guida valida e aggiornata:**
+> - Dentro l'app: voce **Guida** nella barra laterale (è la versione di riferimento, il "master").
+> - Versione testuale: **`GUIDA_UTENTE.md`** nella cartella `sales-app/` (allineata al master).
+>
+> Per il flusso video reale (Tella → YouTube non in elenco → landing WordPress) e per
+> tutte le funzioni quotidiane, fai riferimento solo alle due guide qui sopra.
+
+---
+
+# Guida Utente — Catena 2 Prompt (v3.7.0) — ⚠️ ARCHIVIATO / OBSOLETO
 
 ## Cos'e cambiato
 

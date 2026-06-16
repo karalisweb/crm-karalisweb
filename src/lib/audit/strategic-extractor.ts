@@ -282,9 +282,8 @@ function findInternalLink(
 
 async function fetchAndExtractPageText(url: string): Promise<string | null> {
   try {
-    const { validatePublicUrl } = await import("@/lib/url-validator");
-    validatePublicUrl(url);
-    const response = await fetch(url, {
+    const { safeFetch } = await import("@/lib/safe-fetch");
+    const response = await safeFetch(url, {
       signal: AbortSignal.timeout(12000),
       headers: FETCH_HEADERS,
     });

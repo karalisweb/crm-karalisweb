@@ -11,6 +11,7 @@
 import { ApifyClient } from "apify-client";
 import * as cheerio from "cheerio";
 import { db } from "@/lib/db";
+import { safeFetch } from "@/lib/safe-fetch";
 
 // ==========================================
 // CONFIGURAZIONE
@@ -280,7 +281,7 @@ async function scrapeLandingPageText(url: string): Promise<string | null> {
     let finalUrl = url;
     if (!finalUrl.startsWith("http")) finalUrl = "https://" + finalUrl;
 
-    const response = await fetch(finalUrl, {
+    const response = await safeFetch(finalUrl, {
       signal: AbortSignal.timeout(LP_FETCH_TIMEOUT_MS),
       headers: FETCH_HEADERS,
     });

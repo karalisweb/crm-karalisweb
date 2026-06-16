@@ -8,7 +8,7 @@ import { runAnalystPrompt } from "@/lib/gemini-analyst";
 import { runScriptwriterPrompt } from "@/lib/gemini-scriptwriter";
 import { generateReadingScriptForLead } from "@/lib/gemini-reading-script";
 import { Prisma, PipelineStage } from "@prisma/client";
-import { validatePublicUrl } from "@/lib/url-validator";
+import { safeFetch } from "@/lib/safe-fetch";
 
 // Code singleton per concurrency control - sopravvivono nel processo Node
 const auditQueue = new PQueue({ concurrency: 10 });
@@ -75,9 +75,7 @@ async function processLeadAudit(lead: LeadForAudit): Promise<void> {
   }
 
   try {
-    validatePublicUrl(url);
-
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
       signal: AbortSignal.timeout(15000),
       headers: {
         "User-Agent":

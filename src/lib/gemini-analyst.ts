@@ -1,7 +1,7 @@
 import { getGeminiClient } from "./gemini";
 import { SchemaType, type Schema } from "@google/generative-ai";
 import { extractStrategicData } from "./audit/strategic-extractor";
-import { validatePublicUrl } from "./url-validator";
+import { safeFetch } from "./safe-fetch";
 import { db } from "./db";
 import { DEFAULT_ANALYST_PROMPT, replacePlaceholders } from "./prompts-v2";
 
@@ -100,9 +100,7 @@ const ANALYST_RESPONSE_SCHEMA: Schema = {
 // ==========================================
 
 export async function fetchSiteHtml(url: string): Promise<string> {
-  validatePublicUrl(url);
-
-  const response = await fetch(url, {
+  const response = await safeFetch(url, {
     signal: AbortSignal.timeout(15000),
     headers: {
       "User-Agent":

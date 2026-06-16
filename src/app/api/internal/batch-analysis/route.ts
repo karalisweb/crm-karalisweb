@@ -12,7 +12,7 @@ import {
   buildMetaAdLibraryUrl,
   buildGoogleAdsTransparencyUrl,
 } from "@/lib/ads-intelligence";
-import { validatePublicUrl } from "@/lib/url-validator";
+import { safeFetch } from "@/lib/safe-fetch";
 
 const FETCH_HEADERS = {
   "User-Agent":
@@ -130,8 +130,7 @@ export async function POST(request: NextRequest) {
       // STEP 1: Fetch HTML
       let html: string;
       try {
-        validatePublicUrl(url);
-        const response = await fetch(url, {
+        const response = await safeFetch(url, {
           signal: AbortSignal.timeout(15000),
           headers: FETCH_HEADERS,
         });

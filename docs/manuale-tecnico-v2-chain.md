@@ -1,3 +1,6 @@
+> ## ⚠️ OBSOLETO
+> Questo documento è intestato alla **v3.7.0** e non riflette lo stato attuale (la versione corrente è **3.17.0**). Diverse informazioni qui dentro sono superate o in contraddizione con il codice — in particolare la sezione "Protezioni e Security" non esiste qui ma la difesa SSRF/auth è stata centralizzata e rivista nella v3.17.0. **Per la documentazione tecnica aggiornata fai sempre riferimento a [`TECHNICAL-DOCS.md`](../TECHNICAL-DOCS.md)** (vedi in particolare la sezione "Sicurezza — v3.17.0"). Questo file è conservato solo come riferimento storico della catena 2-prompt.
+
 # Manuale Tecnico — Catena 2 Prompt (v3.7.0)
 
 ## Architettura

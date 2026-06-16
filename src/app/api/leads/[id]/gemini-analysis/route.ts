@@ -6,6 +6,8 @@ import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { Prisma } from "@prisma/client";
 import { calculateLeadScore, extractScoreInputFromGeminiAnalysis } from "@/lib/scoring/lead-score";
 import { buildMetaAdLibraryUrl, buildGoogleAdsTransparencyUrl } from "@/lib/ads-intelligence";
+import { safeFetch } from "@/lib/safe-fetch";
+import { requireSession, enforceUserRateLimit } from "@/lib/api-auth";
 
 /**
  * POST /api/leads/[id]/gemini-analysis
@@ -22,6 +24,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireSession();
+    if (!gate.ok) return gate.response;
+    const limited = enforceUserRateLimit("gemini", gate.userId, 40, 10 * 60_000);
+    if (limited) return limited;
+
     const { id } = await params;
 
     // Check manualOverride nel body (opzionale)
@@ -103,7 +110,7 @@ export async function POST(
 
       let html: string;
       try {
-        const response = await fetch(url, {
+        const response = await safeFetch(url, {
           signal: AbortSignal.timeout(15000),
           headers: {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",

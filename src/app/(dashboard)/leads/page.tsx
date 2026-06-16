@@ -910,7 +910,8 @@ function LeadsPageContent() {
 
       {/* Filtri e toggle vista */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Tab per tutti gli stage (escluso NEW) */}
+        {/* Tab stage — scroll orizzontale su mobile, wrap da sm in su */}
+        <div className="flex w-full gap-2 overflow-x-auto scrollbar-hide pb-1 sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0">
         {ACTIVE_STAGES.map((stageKey) => {
           const stage = PIPELINE_STAGES[stageKey as keyof typeof PIPELINE_STAGES];
           const isActive = selectedStages.includes(stageKey);
@@ -921,7 +922,7 @@ function LeadsPageContent() {
               variant={isActive ? "default" : "outline"}
               size="sm"
               onClick={() => toggleStage(stageKey)}
-              className="gap-1.5"
+              className="gap-1.5 shrink-0"
             >
               {stage.label}
               <Badge
@@ -933,6 +934,7 @@ function LeadsPageContent() {
             </Button>
           );
         })}
+        </div>
 
         {/* Spacer */}
         <div className="flex-1" />

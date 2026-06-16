@@ -2,14 +2,61 @@
 
 Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 
+Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il
+progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
+Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifiche),
+**Fixed** (correzioni), **Removed** (rimozioni).
+
+> Nota storica: le voci 3.11–3.13 più in basso hanno date e numerazione ereditate
+> da una vecchia generazione automatica (incluso un duplicato `3.12.0` e date in
+> blocco). Sono conservate come archivio; dalla 3.17.0 in poi si usa il formato qui sopra.
+
 ---
 
-<!--
-  NB: le voci 3.12.x–3.13.x più in basso (sezioni dettagliate) hanno una
-  numerazione storica con un duplicato 3.12.0 da riconciliare. Da v3.17.0 in poi
-  usare lo script di generazione changelog (vedi ROADMAP, fase 1) per evitare
-  corruzione degli a-capo e numeri di versione incoerenti.
--->
+## [3.17.0] - 2026-06-16
+
+Release di **stabilizzazione e sicurezza pre-lancio** (branch `fix/pre-lancio-sicurezza-ux`).
+Consolida l'hardening di sicurezza, le correzioni mobile/UX, il deploy resiliente
+e la documentazione.
+
+### 🔐 Security
+- **SSRF — difesa centralizzata**: nuovo helper `safeFetch` (`src/lib/safe-fetch.ts`)
+  che valida l'URL con risoluzione DNS (`assertPublicUrl`) e segue i redirect in modo
+  manuale **rivalidando ogni hop**, chiudendo il bypass "sito pubblico → 301 → IP interno".
+  Applicato a tutti i 12 punti che scaricano URL esterni (audit, blog, sitemap/robots,
+  landing ads, estrazione pagine, analisi Gemini, import manuale, batch).
+- **2FA server-side non aggirabile**: OTP verificato dentro `authorize()`; codici a 6 cifre
+  hashati a riposo, monouso, con scadenza e limite tentativi.
+- **Anti-brute-force** sul login (rate limit per IP) e **anti-enumeration** degli utenti.
+- **Autorizzazione in profondità**: nuovi `requireSession`/`requireAdmin` (`src/lib/api-auth.ts`)
+  come seconda barriera oltre al middleware, con **rate limit per-utente** su ricerche,
+  audit e analisi Gemini (anti cost-DoS).
+- **Lockdown endpoint cron/internal**: fail-closed su `CRON_SECRET` con confronto a tempo costante.
+- **Content-Security-Policy** aggiunta in `next.config.ts`; `images.remotePatterns` ristretto
+  a un'allowlist (rimosso `hostname: "**"`, che era un open-proxy).
+- **Anti-relay email** e **CORS** del tracking video-view corretti.
+- **Dipendenze aggiornate**: Next.js `16.1.1 → 16.2.9` (advisory middleware / SSRF /
+  request smuggling), `jspdf 4.2.1`, `undici 7.28.0`, `form-data 4.0.6`. `npm audit`
+  runtime: **0 critical, 0 high** (9 moderate residue, build-time).
+- **Bonifica segreti**: rimossa la password root VPS in chiaro dai documenti; aggiunto
+  il runbook `SICUREZZA-ROTAZIONE-SEGRETI.md`.
+
+### 🚀 Changed
+- **Deploy a prova di errore**: rollback automatico, health-check post-deploy, gate sulle
+  variabili d'ambiente obbligatorie, backup DB pre-migrazione, pipeline CI.
+
+### 📱 Fixed (Mobile / UX)
+- `viewport-fit=cover` per le safe-area del notch.
+- Liste di tab scrollabili in orizzontale su schermi stretti.
+- Dialog/modali con altezza massima e scroll interno (pulsanti sempre raggiungibili).
+- Griglie KPI della dashboard responsive (niente più colonne compresse su mobile).
+- Barra dei filtri di stato a scorrimento orizzontale su mobile.
+- Tap-target adeguati al tocco nella navigazione mobile.
+
+### 📚 Docs
+- Manuale utente consolidato in un'unica fonte (guida in-app allineata a `GUIDA_UTENTE.md`).
+- Referenza tecnica (`TECHNICAL-DOCS.md`) aggiornata con la nuova architettura di sicurezza.
+- Documenti tecnici/guide obsolete marcate come tali.
 
 ## [3.16.0] - 2026-04-14
 

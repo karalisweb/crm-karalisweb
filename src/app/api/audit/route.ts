@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { extractStrategicData } from "@/lib/audit/strategic-extractor";
 import { isSocialLink } from "@/lib/url-utils";
 import { Prisma, PipelineStage } from "@prisma/client";
-import { validatePublicUrl } from "@/lib/url-validator";
+import { safeFetch } from "@/lib/safe-fetch";
+import { requireSession, enforceUserRateLimit } from "@/lib/api-auth";
 
 /**
  * POST /api/audit
@@ -14,6 +15,11 @@ import { validatePublicUrl } from "@/lib/url-validator";
  */
 export async function POST(request: NextRequest) {
   try {
+    const gate = await requireSession();
+    if (!gate.ok) return gate.response;
+    const limited = enforceUserRateLimit("audit", gate.userId, 40, 10 * 60_000);
+    if (limited) return limited;
+
     const body = await request.json();
     const { leadId } = body;
 
@@ -77,8 +83,7 @@ export async function POST(request: NextRequest) {
     // 1. Fetch HTML
     let html: string;
     try {
-      validatePublicUrl(url);
-      const response = await fetch(url, {
+      const response = await safeFetch(url, {
         signal: AbortSignal.timeout(15000),
         headers: {
           "User-Agent":
@@ -153,6 +158,11 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    const gate = await requireSession();
+    if (!gate.ok) return gate.response;
+    const limited = enforceUserRateLimit("audit-batch", gate.userId, 10, 10 * 60_000);
+    if (limited) return limited;
+
     const body = await request.json().catch(() => ({}));
     const { searchId, limit = 50 } = body;
 
@@ -227,8 +237,7 @@ export async function PUT(request: NextRequest) {
       }
 
       try {
-        validatePublicUrl(url);
-        const response = await fetch(url, {
+        const response = await safeFetch(url, {
           signal: AbortSignal.timeout(15000),
           headers: {
             "User-Agent":

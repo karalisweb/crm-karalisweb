@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.16.0** | Ultimo aggiornamento: 2026-04-14
+Versione: **3.17.0** | Ultimo aggiornamento: 2026-06-16
 
 ---
 
@@ -14,6 +14,7 @@ Versione: **3.16.0** | Ultimo aggiornamento: 2026-04-14
 6. [Moduli Audit](#moduli-audit)
 7. [Analisi AI (Gemini)](#analisi-ai-gemini)
 8. [Protezioni e Security](#protezioni-e-security)
+   - [Sicurezza — v3.17.0](#sicurezza--v3170)
 9. [Componenti UI](#componenti-ui)
 10. [Tipi e Interfacce](#tipi-e-interfacce)
 11. [Configurazione](#configurazione)
@@ -27,7 +28,7 @@ Versione: **3.16.0** | Ultimo aggiornamento: 2026-04-14
 
 | Layer | Tecnologia | Versione |
 |-------|-----------|----------|
-| **Framework** | Next.js (App Router) | 16.1.1 |
+| **Framework** | Next.js (App Router) | 16.2.9 |
 | **Runtime** | React | 19.2.3 |
 | **Linguaggio** | TypeScript | 5.x |
 | **UI** | Shadcn/ui + Radix UI | latest |
@@ -48,8 +49,10 @@ Versione: **3.16.0** | Ultimo aggiornamento: 2026-04-14
 | **Animations** | Framer Motion | 11.x |
 | **Command Palette** | cmdk | 1.0.4 |
 | **Date Utils** | date-fns | 4.x |
-| **PDF Generation** | jsPDF | 3.x |
+| **PDF Generation** | jsPDF | 4.2.1 |
 | **Process Manager** | PM2 | (server) |
+
+> **Requisito runtime:** Prisma 7 richiede **Node ≥ 20.19**. Sono conformi sia l'immagine Docker `node:20-slim` sia la CI (`node 20`).
 
 ---
 
@@ -104,7 +107,10 @@ sales-app/
 │   │   ├── apify-mock.ts      # Mock data per sviluppo
 │   │   ├── gemini-analysis.ts # Integrazione Gemini AI (timeout 30s)
 │   │   ├── background-jobs.ts # Job queue con p-queue + recovery
-│   │   ├── url-validator.ts   # Protezione SSRF
+│   │   ├── url-validator.ts   # Protezione SSRF (assertPublicUrl + DNS)
+│   │   ├── safe-fetch.ts      # safeFetch(): fetch anti-SSRF con rivalidazione redirect
+│   │   ├── api-auth.ts        # requireSession/requireAdmin/enforceUserRateLimit
+│   │   ├── rate-limit.ts      # Rate limiter in-memory per-processo
 │   │   ├── audit/             # Moduli audit (12 file)
 │   │   │   ├── whatsapp-extractor.ts  # Estrazione WhatsApp
 │   │   │   ├── strategic-extractor.ts # Analisi strategica (limite 5MB)
@@ -132,7 +138,8 @@ sales-app/
 - **Database Access**: Prisma ORM con singleton pattern (`src/lib/db.ts`)
 - **Type Safety**: Full TypeScript, validazione input con Zod
 - **State Management**: React useState + server-side data fetching
-- **SSRF Protection**: Validazione URL prima di ogni fetch esterno
+- **SSRF Protection**: `safeFetch()` centralizzato — valida l'URL via DNS e rivalida ogni redirect prima di seguirlo (vedi [Sicurezza — v3.17.0](#sicurezza--v3170))
+- **Auth in profondità**: middleware (1ª barriera, fail-closed) + helper `api-auth` dentro gli handler (2ª barriera)
 - **Error Boundaries**: error.tsx globale e per dashboard
 
 ---
@@ -399,7 +406,7 @@ Tutti in `src/lib/audit/`:
 ```
 1. Lead importato da Google Maps
 2. Background job avvia analisi (p-queue, max 2 concorrenti)
-3. Fetch HTML homepage (timeout 10s, SSRF check)
+3. Fetch HTML homepage via `safeFetch` (timeout, anti-SSRF con rivalidazione redirect)
 4. Rifiuta HTML > 5MB
 5. Esegue check in parallelo (~5-15s)
 6. Gemini AI analizza strategicamente il sito (timeout 30s)
@@ -481,14 +488,26 @@ L'useEffect che carica la preview dipende da `workflowSteps` e `landingUrl`. Qua
 
 ## Protezioni e Security
 
-### SSRF Protection (v3.1.0)
+### SSRF Protection (v3.1.0 → centralizzata in v3.17.0)
 
-File: `src/lib/url-validator.ts`
+File: `src/lib/url-validator.ts` + `src/lib/safe-fetch.ts`
 
-Tutti i fetch di URL esterni passano per `validatePublicUrl()` che blocca:
-- `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
-- `169.254.169.254` (metadata cloud)
-- `localhost`, `::1`, `0.0.0.0`
+Il validatore `src/lib/url-validator.ts` blocca host privati / non instradabili sia come letterale sia **dopo la risoluzione DNS** (anti DNS-rebinding di base), coprendo IPv4 (dotted, decimale, esadecimale, ottale) e IPv6:
+- `127.0.0.0/8` (loopback), `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
+- `169.254.0.0/16` (link-local + `169.254.169.254` metadata cloud), `100.64.0.0/10` (CGNAT), `0.0.0.0/8`
+- IPv6: `::1`, `::`, `fe80::/10` (link-local), `fc00::/7` (ULA), IPv4-mapped (`::ffff:127.0.0.1`)
+- Hostname: `localhost`, `0.0.0.0`, `[::]`, `[::1]`, `metadata.google.internal`
+- Protocolli diversi da `http:`/`https:` vengono rifiutati
+
+Funzioni esportate:
+
+| Funzione | Tipo | Uso |
+|----------|------|-----|
+| `validatePublicUrl(url)` | sincrona | Controllo sui soli letterali (protocollo, hostname, IP letterale). Firma storica. |
+| `assertPublicUrl(url)` | async | Validazione COMPLETA: letterali **+** risoluzione DNS con verifica che TUTTI gli IP risolti siano pubblici. Da usare prima di ogni fetch non fidato. |
+| `isPrivateAddress(host)` | sincrona | `true` se l'host (IP letterale in qualsiasi forma) è privato/non instradabile. |
+
+Dettagli completi del nuovo wrapper `safeFetch()` nella sezione [Sicurezza — v3.17.0](#1-difesa-ssrf-centralizzata--safefetch).
 
 ### Auth Endpoint Interni
 
@@ -497,15 +516,24 @@ Tutti i fetch di URL esterni passano per `validatePublicUrl()` che blocca:
 
 ### Security Headers
 
-Configurati in `next.config.ts`:
-- `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: DENY`
-- `X-XSS-Protection: 1; mode=block`
-- `Referrer-Policy: strict-origin-when-cross-origin`
+Configurati in `next.config.ts`, applicati a tutte le rotte (`source: "/(.*)"`):
+
+| Header | Valore |
+|--------|--------|
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `DENY` |
+| `X-XSS-Protection` | `1; mode=block` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` (HSTS, 2 anni) |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), interest-cohort=()` |
+| `Content-Security-Policy` | baseline compatibile con Next (vedi sotto) |
+
+Inoltre, `images.remotePatterns` è ora una **allowlist esplicita** (`i.ytimg.com`, `img.youtube.com`, `*.googleusercontent.com`, `*.gstatic.com`): rimosso `hostname: "**"` che rendeva l'Image Optimizer un open-proxy. Dettagli nella sezione [Sicurezza — v3.17.0](#3-security-headers--content-security-policy).
 
 ### Rate Limiting
 
 - `/api/public/video-view`: 1 request/10s per IP (in-memory Map)
+- Rate limit **per-utente** sulle azioni costose autenticate (search, audit, audit-batch, gemini) via `enforceUserRateLimit()` — vedi [Sicurezza — v3.17.0](#2-autorizzazione-in-profondità--rate-limit).
 
 ### Limiti Input
 
@@ -517,6 +545,123 @@ Configurati in `next.config.ts`:
 ### Recovery
 
 - `POST /api/cron/recover-stuck-jobs`: resetta job RUNNING da 30+ min a PENDING
+
+---
+
+## Sicurezza — v3.17.0
+
+Release di sicurezza pre-lancio. Centralizza la difesa SSRF, aggiunge una seconda barriera di autorizzazione + rate limit a livello di handler, irrigidisce gli header HTTP e aggiorna le dipendenze con advisory note.
+
+### 1. Difesa SSRF centralizzata — `safeFetch`
+
+File: `src/lib/safe-fetch.ts`
+
+Nuovo wrapper unico per ogni richiesta verso un URL **non fidato** (sito di un lead). Sostituisce le chiamate dirette a `fetch()`. Garantisce due cose:
+
+1. **Validazione DNS pre-richiesta** — prima di OGNI richiesta chiama `assertPublicUrl(url)` (da `src/lib/url-validator.ts`), che risolve il DNS e blocca host che risolvono a IP privati / loopback / link-local / metadata cloud.
+2. **Redirect seguiti manualmente** — usa `redirect: "manual"` e segue i 3xx in un ciclo (max 5 hop di default, `SafeFetchOptions.maxRedirects`), **rivalidando ogni hop** con `assertPublicUrl` prima di seguirlo. Questo chiude il bypass classico *"sito pubblico → 301 → http://169.254.169.254/..."* o *→ IP interno*: un URL d'ingresso pulito non basta più ad aggirare il controllo.
+
+```typescript
+export async function safeFetch(
+  url: string,
+  init: RequestInit = {},
+  options: SafeFetchOptions = {}   // { maxRedirects?: number }  (default 5)
+): Promise<Response>
+```
+
+Comportamento: ad ogni iterazione valida `currentUrl`, esegue `fetch(currentUrl, { ...init, redirect: "manual" })`, e se la risposta è un 3xx con header `Location` risolve la destinazione (anche relativa) e ricomincia il ciclo; oltre il numero massimo di redirect lancia un errore. Tutti i chiamanti usano GET, quindi metodo e header restano invariati a ogni hop.
+
+**Regola per gli sviluppatori:** ogni fetch verso un URL di un lead / sito esterno **DEVE** passare per `safeFetch`. Non usare mai `fetch()` diretto su URL che provengono, direttamente o indirettamente, dai dati di un lead.
+
+**Call-site che usano `safeFetch` (v3.17.0):**
+
+| File | Punto |
+|------|-------|
+| `src/app/api/audit/route.ts` | Fetch HTML homepage (POST singolo + PUT batch) |
+| `src/lib/audit/index.ts` | Orchestratore audit |
+| `src/lib/audit/blog-detector.ts` | Fetch pagina blog per date/conteggio post |
+| `src/lib/audit/seo-checker.ts` | Fetch `sitemap.xml` e `robots.txt` |
+| `src/lib/audit/strategic-extractor.ts` | Fetch pagine interne (import dinamico) |
+| `src/lib/gemini-analyst.ts` | Scrape sito per Prompt 1 (Analista) |
+| `src/lib/ads-intelligence.ts` | Fetch landing page degli annunci |
+| `src/lib/background-jobs.ts` | Fetch HTML nei job in background |
+| `src/app/api/internal/batch-analysis/route.ts` | Batch analysis manuale |
+| `src/app/api/cron/batch-gemini-analysis/route.ts` | Batch Gemini schedulato |
+| `src/app/api/leads/manual/route.ts` | Inserimento lead manuale (fetch sito) |
+| `src/app/api/leads/[id]/gemini-analysis/route.ts` | Scraping per analisi Gemini |
+
+### 2. Autorizzazione in profondità + rate limit
+
+File: `src/lib/api-auth.ts`
+
+Helper di autorizzazione usati **dentro** gli handler API come SECONDA barriera. Il middleware (`src/middleware.ts`) resta la **PRIMA** barriera (fail-closed: protegge già tutte le rotte `/api` richiedendo una sessione); questi helper garantiscono che una eventuale regressione del matcher del middleware non esponga da sola dati o azioni sensibili.
+
+| Funzione | Ritorna | Scopo |
+|----------|---------|-------|
+| `requireSession()` | `Gate` (`{ ok, userId, role }` \| `{ ok:false, response }` con 401) | Richiede una sessione valida |
+| `requireAdmin()` | `Gate` (401 senza sessione, 403 se non ADMIN) | Richiede sessione **+** ruolo `ADMIN` |
+| `enforceUserRateLimit(scope, userId, max, windowMs)` | `NextResponse` 429 oppure `null` | Rate limit per-utente su azione costosa |
+
+**Pattern d'uso** (vedi `src/app/api/searches/route.ts`, `src/app/api/audit/route.ts`, `src/app/api/leads/[id]/gemini-analysis/route.ts`):
+
+```typescript
+const gate = await requireSession();
+if (!gate.ok) return gate.response;
+const limited = enforceUserRateLimit("search", gate.userId, 15, 10 * 60_000);
+if (limited) return limited;
+// ... gate.userId, gate.role disponibili
+```
+
+La risposta 429 include l'header `Retry-After` (secondi residui della finestra).
+
+**Limiti applicati (per-utente, finestra 10 minuti):**
+
+| Scope | Limite | Rotta |
+|-------|--------|-------|
+| `search` | 15 / 10 min | `POST /api/searches` |
+| `audit` | 40 / 10 min | `POST /api/audit` |
+| `audit-batch` | 10 / 10 min | `PUT /api/audit` (batch) |
+| `gemini` | 40 / 10 min | `POST /api/leads/[id]/gemini-analysis` |
+
+**Store rate limit** (`src/lib/rate-limit.ts`): `rateLimit(key, max, windowMs)` è **in-memory e per-processo** (Map di bucket con auto-pulizia delle chiavi scadute oltre i 5000 elementi). Va bene come freno ad abusi/brute-force con una **singola istanza PM2** (setup attuale). Per un deploy **multi-istanza** servirebbe uno store condiviso (es. **Redis**) — vedi ROADMAP.
+
+### 3. Security headers + Content-Security-Policy
+
+File: `next.config.ts`
+
+Aggiunta una **`Content-Security-Policy`** come ultima linea di difesa contro XSS/clickjacking. Baseline compatibile con Next (script/style inline ancora ammessi); immagini, font, iframe e media solo via HTTPS; `object-src`/`base-uri`/`form-action` blindati. L'irrigidimento a **nonce** per gli script inline è hardening futuro.
+
+```
+default-src 'self'
+base-uri 'self'
+object-src 'none'
+frame-ancestors 'none'
+form-action 'self'
+script-src 'self' 'unsafe-inline' 'unsafe-eval'
+style-src 'self' 'unsafe-inline'
+img-src 'self' data: blob: https:
+font-src 'self' data:
+connect-src 'self' https:
+frame-src 'self' https:
+media-src 'self' https: blob:
+```
+
+Header presenti (tutti su `source: "/(.*)"`): `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Strict-Transport-Security` (HSTS 2 anni, `includeSubDomains; preload`), `Permissions-Policy` (camera/microphone/geolocation/interest-cohort disattivati), `Content-Security-Policy`.
+
+**Image Optimizer non più open-proxy:** `images.remotePatterns` è ora una allowlist esplicita di host (`i.ytimg.com`, `img.youtube.com`, `*.googleusercontent.com`, `*.gstatic.com`). Rimosso il precedente `{ protocol: "https", hostname: "**" }`, che permetteva all'optimizer di proxare immagini da qualsiasi host (vettore SSRF/DoS). Eventuali nuovi host immagine vanno aggiunti qui esplicitamente.
+
+### 4. Dipendenze e advisory
+
+| Pacchetto | Versione | Motivo |
+|-----------|----------|--------|
+| `next` | 16.1.1 → **16.2.9** | Chiude advisory middleware / SSRF / request smuggling |
+| `jspdf` | → **4.2.1** | Patch sicurezza |
+| `undici` | → **7.28.0** | Patch sicurezza (transitiva) |
+| `form-data` | → **4.0.6** | Patch sicurezza (transitiva) |
+
+**Stato `npm audit --omit=dev`:** 0 critical, 0 high, **9 moderate** residue. Tra queste, l'advisory di `next` traccia a `postcss` (XSS in fase di stringify CSS, **build-time**, non sfruttabile a runtime e non risolvibile senza declassare Next); le restanti moderate sono in dipendenze transitive (es. `nodemailer`, `@anthropic-ai/sdk`, `@hono/node-server` via `@prisma/dev`) e non risultano sfruttabili nel contesto d'uso dell'app. Nessuna vulnerabilità critical/high aperta.
+
+**Requisito Node:** Prisma 7 richiede **Node ≥ 20.19**. Conformi sia il Docker `node:20-slim` sia la CI (`node 20`). `package.json` dichiara `engines.node >= 20.0.0`.
 
 ---
 
@@ -581,10 +726,14 @@ interface AuditData {
 {
   output: "standalone",
   poweredByHeader: false,
+  // Allowlist esplicita (niente "**" → no open-proxy). Vedi Sicurezza v3.17.0.
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "**" }
-    ]
+      { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "img.youtube.com" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
+      { protocol: "https", hostname: "*.gstatic.com" },
+    ],
   },
   async headers() {
     return [{
@@ -594,6 +743,9 @@ interface AuditData {
         { key: "X-Frame-Options", value: "DENY" },
         { key: "X-XSS-Protection", value: "1; mode=block" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+        { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+        { key: "Content-Security-Policy", value: "/* baseline — vedi Sicurezza v3.17.0 */" },
       ]
     }]
   }
@@ -602,7 +754,7 @@ interface AuditData {
 
 ### middleware.ts
 
-- Protezione JWT su tutte le route
+- Protezione JWT su tutte le route — **PRIMA barriera** (fail-closed). La SECONDA barriera è negli handler via `src/lib/api-auth.ts` (`requireSession`/`requireAdmin`).
 - Route pubbliche: `/login`, `/forgot-password`, `/reset-password`
 - Route API pubblica: `/api/auth`, `/api/public/*`, `/api/health`
 
@@ -727,4 +879,4 @@ npx prisma generate
 
 ---
 
-*Documentazione aggiornata il 2026-03-15 | KW Sales CRM v3.1.0*
+*Documentazione aggiornata il 2026-06-16 | KW Sales CRM v3.17.0*

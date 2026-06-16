@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import type { SEOAudit } from "@/types";
+import { safeFetch } from "@/lib/safe-fetch";
 
 // Verifica se il meta title è ottimizzato per SEO
 function isMetaTitleOptimized(title: string | null, companyName?: string): {
@@ -188,7 +189,7 @@ export async function checkSEO(html: string, baseUrl: string): Promise<Partial<S
   let hasSitemap = false;
   try {
     const sitemapUrl = new URL("/sitemap.xml", baseUrl).toString();
-    const response = await fetch(sitemapUrl, {
+    const response = await safeFetch(sitemapUrl, {
       method: "HEAD",
       signal: AbortSignal.timeout(5000),
     });
@@ -201,7 +202,7 @@ export async function checkSEO(html: string, baseUrl: string): Promise<Partial<S
   let hasRobotsTxt = false;
   try {
     const robotsUrl = new URL("/robots.txt", baseUrl).toString();
-    const response = await fetch(robotsUrl, {
+    const response = await safeFetch(robotsUrl, {
       method: "HEAD",
       signal: AbortSignal.timeout(5000),
     });

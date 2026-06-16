@@ -149,7 +149,7 @@ export default function MissionPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
           Missione di Oggi
         </h1>
         <p className="text-muted-foreground mt-1">
@@ -161,7 +161,7 @@ export default function MissionPage() {
 
       {/* KPI row compatta */}
       {badges && (
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           <MiniKpi label="Video Pronti" value={badges.daRegistrare} color="red" max={5} />
           <MiniKpi label="Da Analizzare" value={badges.daAnalizzare} color="amber" />
           <MiniKpi label="Follow-up" value={badges.followUp} color="amber" />
@@ -486,7 +486,7 @@ function MissionSkeleton() {
         <Skeleton className="h-9 w-64 mb-2" />
         <Skeleton className="h-5 w-96" />
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-3">
