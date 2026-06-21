@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.17.0** | Ultimo aggiornamento: 2026-06-16
+Versione: **3.18.0** | Ultimo aggiornamento: 2026-06-21
 
 ---
 

@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.18.0] - 2026-06-21
+
+- feat: automazione completa outreach opt-in, scheduler online, email AI con gancio, report giornaliero, sicurezza 3.17
+
 ## [3.17.0] - 2026-06-16
 
 Release di **stabilizzazione e sicurezza pre-lancio** (branch `fix/pre-lancio-sicurezza-ux`).

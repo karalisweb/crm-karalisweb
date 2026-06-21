@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.17.0** | Ultimo aggiornamento: 2026-06-16
+Versione: **3.18.0** | Ultimo aggiornamento: 2026-06-21
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -428,4 +428,4 @@ R: Il sistema cerca il numero WhatsApp prima nel sito del prospect (link wa.me) 
 
 ---
 
-*Documento aggiornato il 2026-06-16 | KW Sales CRM v3.17.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-06-21 | KW Sales CRM v3.18.0. La versione di riferimento è la Guida interattiva dentro l'app.*
