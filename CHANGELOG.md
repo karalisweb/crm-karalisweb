@@ -15,7 +15,26 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ## [3.18.0] - 2026-06-21
 
-- feat: automazione completa outreach opt-in, scheduler online, email AI con gancio, report giornaliero, sicurezza 3.17
+### 🤖 Added — Automazione Outreach Opt-in
+
+- **Email AI personalizzata** (`opt-in-mailer.ts` + `gemini-outreach-email.ts`): invia una mail di primo contatto scritta da Gemini con un "gancio" concreto e VERO estratto dai dati reali dell'azienda (recensioni Google, rating, testo del sito). Niente testo generico.
+- **Raccolta email automatica** (`email-finder.ts`): durante l'audit il sistema cerca l'indirizzo di contatto nella homepage e, come fallback, nella pagina `/contatti`; preferisce email sullo stesso dominio.
+- **Follow-up automatico**: se il prospect non risponde entro N giorni (default 4), invia un promemoria gentile con oggetto `Re: <oggetto-originale>`.
+- **Oggetti a rotazione**: lista configurabile in Impostazioni → Workflow (un oggetto per riga, `{azienda}` come placeholder); il sistema li ruota ad ogni invio per migliorare la deliverability.
+- **Istruzioni AI modificabili**: il prompt che genera il testo è editabile da Impostazioni senza toccare il codice.
+- **Partenza morbida del dominio (warmup)**: nei primi 14 giorni il tetto giornaliero si alza automaticamente (5 → 10 → 20 → cap configurato) per proteggere la reputazione del dominio.
+- **Report giornaliero** (`daily-report.ts` + `/api/cron/daily-report`): ogni mattina alle 6:00 arriva via email un riepilogo — opt-in inviati, follow-up, risposte, visualizzazioni video, nuovi lead, lead caldi da sentire subito.
+- **Scheduler online via GitHub Actions** (`.github/workflows/cron.yml`): nessun SSH necessario per eseguire i cron job; include dispatch manuali (`manual:all`, `manual:<nome>`) per forzare l'esecuzione dalla GitHub UI.
+
+### 🔧 Changed
+
+- `prisma` + `@prisma/client` allineati a `7.8.0` (fix mismatch file wasm che rompeva `prisma generate` in deploy).
+- Remote GitHub passato a SSH con chiave dedicata (`id_ed25519_crm_karalisweb`) per push dei file `.github/workflows/` senza richiedere scope `workflow` nel PAT.
+
+### 📚 Docs
+
+- GUIDA_UTENTE.md: aggiunta sezione 19 "Automazione email opt-in e report mattutino".
+- TECHNICAL-DOCS.md: nuovi cron routes, lib files, schema fields, sezione GitHub Actions scheduler.
 
 ## [3.17.0] - 2026-06-16
 

@@ -28,6 +28,7 @@ Versione: **3.18.0** | Ultimo aggiornamento: 2026-06-21
 16. [Estensioni Chrome utili](#16-estensioni-chrome-utili)
 17. [Ricerche programmate (automatiche)](#17-ricerche-programmate-automatiche)
 18. [FAQ - Domande frequenti](#18-faq---domande-frequenti)
+19. [Automazione email opt-in e report mattutino](#19-automazione-email-opt-in-e-report-mattutino)
 
 ---
 
@@ -425,6 +426,64 @@ R: Vai nella scheda **Messaggi** del lead e usa **"Segna come Ha risposto"** ind
 
 **D: Cosa significa il badge WhatsApp "dal sito" / "da Google Maps"?**
 R: Il sistema cerca il numero WhatsApp prima nel sito del prospect (link wa.me) e, se non lo trova, usa il telefono di Google Maps (con prefisso +39). Il badge ti dice da dove arriva, così sai quanto fidarti.
+
+---
+
+## 19. Automazione email opt-in e report mattutino
+
+Dalla versione 3.18.0 il CRM può **scrivere e inviare da solo la prima email** ai prospect caldi, chiedendo se vogliono ricevere il tuo video audit. Non devi fare nulla: il sistema lavora in sottofondo ogni ora nei giorni feriali.
+
+### Come funziona
+
+1. **Ricerca email**: durante l'analisi del sito, il CRM trova in automatico l'indirizzo email di contatto (cerca nella homepage e nella pagina `/contatti`).
+2. **Lead eleggibili**: solo i lead in stato **Hot** o **Warm** con email trovata, che non hanno ancora ricevuto messaggi e non si sono disiscritti.
+3. **Testo AI su misura**: Gemini scrive una mail breve (max ~120 parole) con **un solo gancio vero** estratto dai dati reali — es. "ho visto che avete solo 8 recensioni su Google" — niente testo generico o inventato.
+4. **Oggetto a rotazione**: il sistema usa la lista di oggetti che hai configurato in Impostazioni → Workflow, ruotandoli per evitare che Gmail li marchi come spam.
+5. **Follow-up automatico**: se dopo 4 giorni (configurabile) non c'è risposta, invia automaticamente un secondo messaggio gentile: "ti era arrivata?"
+6. **Si ferma automaticamente** quando il prospect risponde, si disiscrive, o passa in uno stato avanzato della pipeline.
+
+### Partenza morbida del dominio
+
+Nei primi giorni il sistema invia poche mail per non rischiare il blocco del dominio:
+
+| Giorni attivi | Mail max/giorno |
+|--------------|-----------------|
+| 0-3 | 5 |
+| 3-7 | 10 |
+| 7-14 | 20 |
+| 14+ | Il tuo limite configurato (default: 20) |
+
+### Cosa configurare (Impostazioni → Workflow)
+
+| Campo | Cosa mettere |
+|-------|-------------|
+| **URL LinkedIn** | Il tuo link LinkedIn personale (compare nella mail) |
+| **URL landing Metodo SD** | La pagina dove spieghi il tuo metodo (compare nella mail) |
+| **Oggetti mail** | Uno per riga. Usa `{azienda}` dove vuoi il nome. Es: `Ho guardato il sito di {azienda}` |
+| **Istruzioni per l'AI** | Il prompt che Gemini usa per scrivere la mail — puoi personalizzare tono e contenuto |
+| **Cap giornaliero email** | Quante mail opt-in inviare al massimo in un giorno (default 20) |
+
+### Il report mattutino
+
+Ogni mattina alle 6:00 ricevi via email un riepilogo del giorno precedente:
+
+```
+📧 Mail opt-in inviate: 4
+🔁 Follow-up inviati: 2
+✅ Hanno risposto: 1
+👀 Hanno visto il video: 3
+🆕 Nuovi lead trovati: 18
+🔥 Caldi da sentire adesso: 7
+```
+
+Il report arriva all'indirizzo impostato in Impostazioni → Notifiche. Se non è configurato, va all'email dell'account SMTP.
+
+### Cosa devi fare tu
+
+- **Configurare Impostazioni → Workflow** (URL LinkedIn, URL landing, oggetti, cap).
+- **Verificare che l'SMTP** sia configurato e funzionante (Impostazioni → API).
+- **Registrare il video** quando un prospect risponde "sì" e salvarlo nella scheda lead.
+- Il resto lo fa il sistema.
 
 ---
 

@@ -194,6 +194,12 @@ sales-app/
 | `googleAdsCopy` | String? | Testo annuncio Google |
 | `metaAdsCopy` | String? | Testo annuncio Meta |
 | `adsCheckedAt` | DateTime? | |
+| **Outreach Opt-in (v3.18)** | | |
+| `email` | String? | Email di contatto estratta dal sito |
+| `outreachMailSent` | Json? | `{subject, body, hook, generatedAt}` — mail inviata |
+| `optInSentAt` | DateTime? | Data prima mail opt-in |
+| `optInFollowupAt` | DateTime? | Data follow-up opt-in |
+| `unsubscribed` | Boolean | Ha chiesto di non essere ricontattato |
 
 #### Activity
 
@@ -228,6 +234,22 @@ sales-app/
 | `name` | String? | |
 | `role` | UserRole | ADMIN / USER |
 | `twoFactorEnabled` | Boolean | |
+
+#### Settings (singleton — `id = "default"`)
+
+| Campo | Tipo | Note |
+|-------|------|------|
+| **CRM / Pipeline** | | |
+| `workflowEnabled` | Boolean | Attiva/disattiva workflow engine |
+| `dailyCap` | Int | Max lead/giorno processati dal workflow |
+| `notificationEmails` | String? | Email(s) notifiche (CSV) |
+| `signatureAlessio` | String? | Firma per le mail inviate |
+| **Outreach Opt-in (v3.18)** | | |
+| `emailDailyCap` | Int | Max mail opt-in/giorno (default 20) |
+| `optInSubjects` | String? | Oggetti a rotazione, uno per riga (`{azienda}` = placeholder) |
+| `emailGenPrompt` | String? | Istruzioni AI per generare il testo della mail |
+| `sdLandingUrl` | String? | URL landing Metodo SD (incluso nella mail) |
+| `alessioLinkedinUrl` | String? | URL LinkedIn Alessio (incluso nella mail) |
 
 ---
 
@@ -305,6 +327,8 @@ sales-app/
 | POST | `/api/cron/batch-gemini-analysis` | Batch analisi Gemini |
 | POST | `/api/cron/check-recontact` | Gestione recontact |
 | POST | `/api/cron/recover-stuck-jobs` | Recovery job bloccati (30+ min) |
+| POST | `/api/cron/opt-in-mailer` | Invia mail opt-in AI + follow-up (v3.18) |
+| POST | `/api/cron/daily-report` | Report giornaliero via email (v3.18) |
 
 ### Interni (protetti con CRON_SECRET)
 
@@ -483,6 +507,82 @@ Il componente `MessagingHub` (tab Messaggi nella scheda lead) carica i messaggi 
 - Se `videoLandingUrl` esiste: mostra URL + `?utm=client`
 
 L'useEffect che carica la preview dipende da `workflowSteps` e `landingUrl`. Quando la landing page viene creata e il parent fa refresh, `landingUrl` cambia e i messaggi si rigenerano automaticamente (sia Email che WhatsApp).
+
+---
+
+## Automazione Outreach Opt-in (v3.18.0)
+
+### Overview
+
+Il sistema invia automaticamente una mail personalizzata (scritta da Gemini) ai prospect caldi (HOT/WARM) con email disponibile, chiedendo se vogliono ricevere un video audit. Non richiede azione manuale.
+
+### File coinvolti
+
+| File | Ruolo |
+|------|-------|
+| `src/lib/audit/email-finder.ts` | Estrae l'email di contatto dall'HTML del sito |
+| `src/lib/gemini-outreach-email.ts` | Genera il testo AI della mail con gancio personalizzato |
+| `src/lib/opt-in-mailer.ts` | Motore di invio: warmup, cap, anti-doppione, jitter, follow-up |
+| `src/lib/daily-report.ts` | Calcola statistiche ieri e invia report mattutino |
+| `src/app/api/cron/opt-in-mailer/route.ts` | Endpoint POST protetto da CRON_SECRET |
+| `src/app/api/cron/daily-report/route.ts` | Endpoint POST protetto da CRON_SECRET |
+
+### Flusso di esecuzione
+
+```
+[GitHub Actions ogni ora, lun-ven 7-17]
+     ↓
+POST /api/cron/opt-in-mailer
+     ↓
+runOptInMailer()
+  1. Legge emailDailyCap da Settings
+  2. Calcola warmupCap (5→10→20→full in 14 giorni)
+  3. Conta mail già inviate oggi (Activity.type=EMAIL_OUTREACH)
+  4. PASS 1: follow-up a chi non ha risposto dopo FOLLOWUP_DAYS (default 4)
+  5. PASS 2: prime mail a HOT/WARM con email, optInSentAt NULL
+  6. Per ogni prima mail: genera testo AI → pick oggetto → sendOutreachEmail()
+  7. Salva outreachMailSent (subject+body+hook) + activity log
+  8. Jitter 4-20 secondi tra un invio e l'altro
+```
+
+### Variabili d'ambiente opzionali
+
+| Variabile | Default | Descrizione |
+|-----------|---------|-------------|
+| `OPTIN_PER_RUN_CAP` | `4` | Max mail per singola esecuzione cron |
+| `OPTIN_FOLLOWUP_DAYS` | `4` | Giorni di attesa prima del follow-up |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Modello AI per generazione mail |
+
+---
+
+## Scheduler Online — GitHub Actions (v3.18.0)
+
+Il file `.github/workflows/cron.yml` sostituisce la necessità di configurare crontab sul VPS o fare SSH per schedulare i job.
+
+### Schedule configurato
+
+| Schedule (UTC) | Job eseguiti |
+|---------------|-------------|
+| `0 1 * * *` (notte) | sourcing, recover-stuck-jobs, check-recontact |
+| `5 2,6,10,14 * * *` | batch-gemini-analysis, video script batch |
+| `0 7-17 * * 1-5` (ore feriali) | opt-in-mailer, workflow-engine |
+| `*/30 6-17 * * *` | sync-calendar |
+| `0 6 * * *` | daily-report (report mattutino) |
+
+### Dispatch manuale
+
+Dalla GitHub UI (Actions → Workflow CRM Cron → Run workflow):
+- `manual:all` → esegue tutti i job
+- `manual:opt-in-mailer` → solo opt-in
+- `manual:daily-report` → solo report
+- `manual:<nome>` → qualsiasi job per nome
+
+### Segreti necessari (GitHub → Settings → Secrets)
+
+| Segreto | Valore |
+|---------|--------|
+| `CRON_SECRET` | Stesso valore del `.env` sul VPS |
+| `CRM_BASE_URL` (variabile) | `https://crm.karalisdemo.it` |
 
 ---
 
