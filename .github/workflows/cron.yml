@@ -28,6 +28,7 @@ on:
     - cron: "5 2,6,10,14 * * *" # analisi Gemini in 4 batch
     - cron: "0 7-17 * * 1-5"   # workflow email: ogni ora, giorni feriali (invii distribuiti)
     - cron: "*/30 6-17 * * *"  # sync calendario
+    - cron: "0 6 * * *"        # report giornaliero (mattina IT)
 
 # Un solo run alla volta: niente sovrapposizioni che raddoppierebbero gli invii.
 concurrency:
@@ -93,6 +94,9 @@ jobs:
             "*/30 6-17 * * *")
               hit sync-calendar
               ;;
+            "0 6 * * *")
+              hit daily-report
+              ;;
             manual:all)
               hit scheduled-searches
               hit batch-gemini-analysis
@@ -101,6 +105,7 @@ jobs:
               hit check-video-followup
               hit recover-stuck-jobs
               hit sync-calendar
+              hit daily-report
               hit workflow-engine
               ;;
             manual:*)

@@ -291,6 +291,43 @@ export async function sendOutreachEmail(
   }
 }
 
+// Invia una notifica interna al team (es. report giornaliero) agli indirizzi
+// configurati in Settings.notificationEmails (fallback SMTP_USER).
+export async function sendInternalEmail(subject: string, text: string): Promise<boolean> {
+  let recipients: string[] = [];
+  try {
+    const settings = await db.settings.findUnique({
+      where: { id: 'default' },
+      select: { notificationEmails: true },
+    });
+    if (settings?.notificationEmails) {
+      recipients = settings.notificationEmails
+        .split(',')
+        .map((e) => e.trim())
+        .filter((e) => e.length > 0 && e.includes('@'));
+    }
+  } catch (error) {
+    console.error('[EMAIL] Errore lettura notificationEmails:', error);
+  }
+  if (recipients.length === 0) {
+    recipients = [process.env.SMTP_USER || 'alessio@karalisweb.net'];
+  }
+  const fromEmail = process.env.SMTP_FROM || 'noreply@karalisweb.net';
+  try {
+    const info = await transporter.sendMail({
+      from: `"Sales CRM" <${fromEmail}>`,
+      to: recipients.join(', '),
+      subject,
+      text,
+    });
+    console.log(`[EMAIL] Notifica interna inviata, messageId: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error('[EMAIL] Errore invio notifica interna:', error);
+    return false;
+  }
+}
+
 // Notifica email quando un prospect guarda il video
 export async function sendVideoViewNotification(
   leadName: string,
