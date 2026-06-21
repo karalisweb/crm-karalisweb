@@ -1,6 +1,7 @@
 import PQueue from "p-queue";
 import { db } from "@/lib/db";
 import { extractStrategicData } from "@/lib/audit/strategic-extractor";
+import { extractContactEmail } from "@/lib/audit/email-finder";
 import { extractWhatsAppNumber, normalizePhoneForWhatsApp } from "@/lib/audit/whatsapp-extractor";
 import { isGeminiConfigured } from "@/lib/gemini";
 import { runGeminiAnalysis } from "@/lib/gemini-analysis";
@@ -20,6 +21,7 @@ interface LeadForAudit {
   name: string;
   website: string | null;
   phone: string | null;
+  email: string | null;
 }
 
 /**
@@ -37,6 +39,7 @@ export async function processBatchAudits(searchId: string): Promise<void> {
       name: true,
       website: true,
       phone: true,
+      email: true,
     },
   });
 
@@ -58,7 +61,7 @@ export async function processBatchAudits(searchId: string): Promise<void> {
  * Esegue l'estrazione strategica di un singolo lead.
  */
 async function processLeadAudit(lead: LeadForAudit): Promise<void> {
-  const { id: leadId, website, name: brandName, phone } = lead;
+  const { id: leadId, website, name: brandName, phone, email: existingEmail } = lead;
 
   if (!website) return;
 
@@ -93,6 +96,29 @@ async function processLeadAudit(lead: LeadForAudit): Promise<void> {
     const html = await response.text();
     const baseUrl = new URL(url).origin;
 
+    // Raccolta email dal sito (Google Maps non la fornisce). Solo se manca.
+    let foundEmail: string | null = null;
+    if (!existingEmail) {
+      const host = new URL(url).hostname;
+      foundEmail = extractContactEmail(html, host);
+      if (!foundEmail) {
+        // Fallback best-effort: pagina contatti (comune nei siti italiani).
+        try {
+          const r = await safeFetch(`${baseUrl}/contatti`, {
+            signal: AbortSignal.timeout(8000),
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            },
+          });
+          if (r.ok) foundEmail = extractContactEmail(await r.text(), host);
+        } catch {
+          /* non bloccante */
+        }
+      }
+      if (foundEmail) console.log(`[AUDIT] Email trovata per ${brandName}: ${foundEmail}`);
+    }
+
     const strategicData = await extractStrategicData(
       html,
       baseUrl,
@@ -121,6 +147,7 @@ async function processLeadAudit(lead: LeadForAudit): Promise<void> {
         auditData: strategicData as unknown as Prisma.InputJsonValue,
         pipelineStage: PipelineStage.DA_ANALIZZARE,
         ...(whatsappNumber && { whatsappNumber, whatsappSource }),
+        ...(foundEmail && { email: foundEmail }),
       },
     });
 
