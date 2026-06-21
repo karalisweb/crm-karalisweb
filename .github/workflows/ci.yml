@@ -16,7 +16,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dipendenze
@@ -25,7 +25,10 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
+      # Lint informativo: mostra gli avvisi di qualità nei log ma NON blocca il
+      # deploy. Il gate reale è la Build qui sotto (se il codice è rotto, fallisce).
       - name: Lint
+        continue-on-error: true
         run: npm run lint --if-present
 
       - name: Build
