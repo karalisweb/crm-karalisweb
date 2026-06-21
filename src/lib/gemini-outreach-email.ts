@@ -1,0 +1,123 @@
+import { db } from "@/lib/db";
+import { getGeminiClient } from "@/lib/gemini";
+
+/**
+ * Generazione AI della MAIL 1 (opt-in): chiede al prospect se vuole il video audit.
+ *
+ * Il testo NON è fisso: lo scrive l'AI su misura per ogni azienda, scegliendo UN
+ * solo "gancio" concreto e VERO dai dati reali (recensioni, valutazione, testo
+ * del sito). Le istruzioni (prompt) sono modificabili da Impostazioni → Workflow.
+ *
+ * L'oggetto NON è qui: arriva dalla lista oggetti a rotazione (deliverability).
+ * Qui si produce solo { body, hook }.
+ */
+
+export const DEFAULT_EMAIL_GEN_PROMPT = `Sei Alessio Loi, fondatore di Karalisweb. Scrivi UNA email di primo contatto a un'azienda, in italiano, calda e personale — come la scriveresti tu a mano, non come un venditore.
+
+Obiettivo: chiederle se vuole ricevere un breve VIDEO in cui le mostri cosa hai notato sul suo sito (un "video audit"). NON vendere, NON mettere call-to-action, NON nominare prezzi. La mail finisce chiedendo gentilmente di rispondere "sì".
+
+REGOLE FERREE:
+- Corta: massimo ~120 parole.
+- Inserisci UN SOLO "gancio" concreto e VERO su QUESTA azienda, preso SOLO dai DATI qui sotto (es.: poche recensioni su Google, valutazione bassa, oppure qualcosa di concreto che leggi nel testo del loro sito). NON inventare MAI nulla. Se non c'è un gancio chiaro nei dati, usa un'osservazione onesta e generica sul loro settore, senza fingere di sapere cose che non sai.
+- Niente paroloni da agenzia ("soluzione 360", "gratis", "offerta", "rivoluzionario", "partner di fiducia").
+- Di' che possono vedere chi sei qui: {{LINKEDIN}} e che il tuo metodo è spiegato qui: {{METODO}}.
+- Tono: prima persona, diretto, umano. Niente firma (la aggiungo io dopo).
+
+DATI AZIENDA:
+- Nome: {{AZIENDA}}
+- Settore: {{SETTORE}}
+- Recensioni Google: {{RECENSIONI}} — valutazione {{RATING}}
+- Testo dal loro sito (estratto): {{TESTO_SITO}}
+
+Rispondi SOLO con questo JSON, niente altro testo prima o dopo:
+{"gancio": "il gancio concreto, in una frase", "testo": "il corpo della mail, senza oggetto e senza firma"}`;
+
+export interface OutreachEmailDraft {
+  body: string;
+  hook: string;
+}
+
+export async function generateOutreachEmail(leadId: string): Promise<OutreachEmailDraft> {
+  const lead = await db.lead.findUnique({
+    where: { id: leadId },
+    select: {
+      id: true,
+      name: true,
+      segment: true,
+      category: true,
+      googleRating: true,
+      googleReviewsCount: true,
+      auditData: true,
+    },
+  });
+  if (!lead) throw new Error("Lead non trovato");
+
+  const client = getGeminiClient();
+  if (!client) throw new Error("Gemini non configurato");
+
+  const settings = await db.settings.findUnique({
+    where: { id: "default" },
+    select: { emailGenPrompt: true, sdLandingUrl: true, alessioLinkedinUrl: true },
+  });
+
+  const auditData = lead.auditData as Record<string, unknown> | null;
+  const siteText =
+    auditData && typeof auditData.home_text === "string"
+      ? (auditData.home_text as string).slice(0, 1200)
+      : "(non disponibile)";
+
+  const reviews =
+    lead.googleReviewsCount != null ? String(lead.googleReviewsCount) : "non disponibile";
+  const rating =
+    lead.googleRating != null ? String(Number(lead.googleRating)) : "non disponibile";
+
+  const template = settings?.emailGenPrompt || DEFAULT_EMAIL_GEN_PROMPT;
+  const prompt = template
+    .replace(/\{\{AZIENDA\}\}/g, lead.name)
+    .replace(/\{\{SETTORE\}\}/g, lead.segment || lead.category || "non specificato")
+    .replace(/\{\{RECENSIONI\}\}/g, reviews)
+    .replace(/\{\{RATING\}\}/g, rating)
+    .replace(/\{\{TESTO_SITO\}\}/g, siteText)
+    .replace(/\{\{LINKEDIN\}\}/g, settings?.alessioLinkedinUrl || "")
+    .replace(
+      /\{\{METODO\}\}/g,
+      settings?.sdLandingUrl || "https://www.karalisweb.net/web-marketing"
+    );
+
+  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = client.getGenerativeModel({ model: modelName });
+
+  const result = await Promise.race([
+    model.generateContent(prompt),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout: nessuna risposta in 30 secondi")), 30_000)
+    ),
+  ]);
+
+  const raw = result.response.text().trim();
+  const parsed = parseDraft(raw);
+  const body = (parsed.testo || "").trim();
+  const hook = (parsed.gancio || "").trim();
+  if (!body) throw new Error("L'AI non ha prodotto il testo della mail");
+  return { body, hook };
+}
+
+function parseDraft(raw: string): { gancio?: string; testo?: string } {
+  let t = raw.trim();
+  if (t.startsWith("```")) {
+    t = t.replace(/^```[a-zA-Z]*\n?/, "").replace(/```$/, "").trim();
+  }
+  try {
+    return JSON.parse(t);
+  } catch {
+    const m = t.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        return JSON.parse(m[0]);
+      } catch {
+        /* ignore */
+      }
+    }
+    return { testo: raw };
+  }
+}
