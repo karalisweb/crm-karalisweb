@@ -29,6 +29,7 @@ on:
     - cron: "0 7-17 * * 1-5"   # workflow email: ogni ora, giorni feriali (invii distribuiti)
     - cron: "*/30 6-17 * * *"  # sync calendario
     - cron: "0 6 * * *"        # report giornaliero (mattina IT)
+    - cron: "0 9,15 * * *"     # recover-emails: 2 run diurni extra (150/giorno totale)
 
 # Un solo run alla volta: niente sovrapposizioni che raddoppierebbero gli invii.
 concurrency:
@@ -97,6 +98,9 @@ jobs:
               ;;
             "0 6 * * *")
               hit daily-report
+              ;;
+            "0 9,15 * * *")
+              hit recover-emails
               ;;
             manual:all)
               hit scheduled-searches
