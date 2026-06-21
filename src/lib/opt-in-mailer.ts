@@ -51,6 +51,18 @@ async function jitter(): Promise<void> {
   await sleep(4000 + Math.floor(Math.random() * 16000));
 }
 
+/** Partenza morbida del dominio: alza il tetto gradualmente nei primi giorni. */
+function warmupCap(configuredCap: number, firstSentAt: Date | null): number {
+  if (!firstSentAt) return Math.min(configuredCap, 5);
+  const days = Math.floor((Date.now() - firstSentAt.getTime()) / 86_400_000);
+  let ramp: number;
+  if (days < 3) ramp = 5;
+  else if (days < 7) ramp = 10;
+  else if (days < 14) ramp = 20;
+  else return configuredCap;
+  return Math.min(configuredCap, ramp);
+}
+
 export async function runOptInMailer(): Promise<OptInResult> {
   const res: OptInResult = { firstSent: 0, followupsSent: 0, skipped: 0, capReached: false };
 
@@ -58,7 +70,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
     where: { id: "default" },
     select: { emailDailyCap: true, optInSubjects: true, signatureAlessio: true },
   });
-  const dailyCap = settings?.emailDailyCap ?? 20;
+  const configuredCap = settings?.emailDailyCap ?? 20;
   const firma = settings?.signatureAlessio || "Alessio Loi\nKaralisweb";
   const subjectsField =
     settings?.optInSubjects && settings.optInSubjects.trim()
@@ -75,6 +87,14 @@ export async function runOptInMailer(): Promise<OptInResult> {
       createdAt: { gte: startOfDay },
     },
   });
+
+  // Partenza morbida del dominio: i primi giorni si invia poco, poi si sale.
+  const firstAgg = await db.lead.aggregate({
+    _min: { optInSentAt: true },
+    where: { optInSentAt: { not: null } },
+  });
+  const dailyCap = warmupCap(configuredCap, firstAgg._min.optInSentAt);
+
   let budget = Math.max(0, Math.min(PER_RUN_CAP, dailyCap - sentToday));
   if (budget <= 0) {
     res.capReached = true;
