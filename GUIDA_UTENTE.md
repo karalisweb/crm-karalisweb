@@ -487,4 +487,24 @@ Il report arriva all'indirizzo impostato in Impostazioni → Notifiche. Se non �
 
 ---
 
+### Il registro delle email (menu Follow-up → Registro Email)
+
+Per vedere a colpo d'occhio cosa è stato inviato e a chi, apri **Registro Email** nel menu. Trovi l'elenco di tutte le mail di primo contatto con il loro stato:
+
+| Stato | Significato |
+|-------|-------------|
+| **Inviata · in attesa** | Mail partita, nessuna risposta ancora |
+| **Follow-up · in attesa** | Inviato anche il richiamo, si aspetta ancora |
+| **Ha risposto** | Il prospect ha risposto (verde) |
+| **Archiviato · nessuna risposta** | Uscito dalla pipeline (vedi sotto) |
+| **Disiscritto** | Ha chiesto di non essere più contattato |
+
+In alto hai i contatori (inviate, in attesa, risposte, archiviati) e i filtri rapidi. Per ogni riga vedi l'azienda, l'email, le date e il "gancio" usato nella mail.
+
+### Uscita automatica dopo il follow-up
+
+Se un prospect **non risponde entro 7 giorni dal follow-up**, il sistema lo **archivia da solo**: esce dalla pipeline attiva e smette di essere ricontattato. Non viene segnato come "perso" (non ha rifiutato): resta in **Archivio**, quindi puoi sempre recuperarlo. Così la tua lista di lavoro resta pulita e contiene solo chi è davvero in gioco. Il numero di giorni è configurabile (default 7).
+
+---
+
 *Documento aggiornato il 2026-06-21 | KW Sales CRM v3.19.0. La versione di riferimento è la Guida interattiva dentro l'app.*
