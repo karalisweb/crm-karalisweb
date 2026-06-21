@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.19.0] - 2026-06-21
+
+- feat(registro): registro email outreach (inviate/follow-up/risposte/archiviati) + uscita automatica dopo X giorni dal follow-up senza risposta
+
 ## [3.18.2] - 2026-06-21
 
 - fix(opt-in-mailer): invio in background (202) per non bloccare la richiesta su batch lunghi

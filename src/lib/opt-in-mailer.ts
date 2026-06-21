@@ -26,12 +26,16 @@ const DEFAULT_SUBJECTS = [
 
 const PER_RUN_CAP = Math.max(0, parseInt(process.env.OPTIN_PER_RUN_CAP || "4", 10) || 0);
 const FOLLOWUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP_DAYS || "4", 10) || 4);
+// Giorni dal follow-up dopo i quali, senza risposta, il lead "esce dai giochi"
+// (archiviato). Configurabile con OPTIN_EXPIRY_DAYS.
+const EXPIRY_DAYS = Math.max(1, parseInt(process.env.OPTIN_EXPIRY_DAYS || "7", 10) || 7);
 
 export interface OptInResult {
   firstSent: number;
   followupsSent: number;
   skipped: number;
   capReached: boolean;
+  expired: number;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -63,8 +67,56 @@ function warmupCap(configuredCap: number, firstSentAt: Date | null): number {
   return Math.min(configuredCap, ramp);
 }
 
+/**
+ * "Esce dai giochi": i lead che hanno ricevuto il follow-up ma non hanno risposto
+ * entro EXPIRY_DAYS vengono archiviati (escono dalla pipeline outreach attiva).
+ * Non è un "perso" (non hanno rifiutato): restano in Archivio, recuperabili.
+ */
+async function expireStaleOptIns(): Promise<number> {
+  const cutoff = new Date(Date.now() - EXPIRY_DAYS * 86_400_000);
+  const stale = await db.lead.findMany({
+    where: {
+      optInFollowupAt: { not: null, lte: cutoff },
+      respondedAt: null,
+      unsubscribed: false,
+      pipelineStage: {
+        in: [PipelineStage.HOT_LEAD, PipelineStage.WARM_LEAD, PipelineStage.COLD_LEAD],
+      },
+    },
+    select: { id: true, name: true, email: true },
+    take: 200,
+  });
+
+  let archived = 0;
+  for (const lead of stale) {
+    try {
+      await db.$transaction([
+        db.lead.update({
+          where: { id: lead.id },
+          data: { pipelineStage: PipelineStage.ARCHIVIATO },
+        }),
+        db.activity.create({
+          data: {
+            leadId: lead.id,
+            type: "EMAIL_OUTREACH",
+            notes: `[Opt-in-EXPIRED] nessuna risposta dopo ${EXPIRY_DAYS}gg dal follow-up → archiviato`,
+          },
+        }),
+      ]);
+      archived++;
+    } catch (err) {
+      console.error(`[opt-in] expiry errore ${lead.id}:`, err);
+    }
+  }
+  if (archived > 0) console.log(`[opt-in] archiviati ${archived} lead senza risposta dopo ${EXPIRY_DAYS}gg`);
+  return archived;
+}
+
 export async function runOptInMailer(): Promise<OptInResult> {
-  const res: OptInResult = { firstSent: 0, followupsSent: 0, skipped: 0, capReached: false };
+  const res: OptInResult = { firstSent: 0, followupsSent: 0, skipped: 0, capReached: false, expired: 0 };
+
+  // Prima di inviare: archivia chi non ha risposto dopo il follow-up.
+  res.expired = await expireStaleOptIns();
 
   const settings = await db.settings.findUnique({
     where: { id: "default" },
