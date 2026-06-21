@@ -16,8 +16,11 @@ import {
   Ban,
   ChevronDown,
   ChevronUp,
+  Video,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type Status = "sent" | "followup" | "responded" | "expired" | "unsubscribed";
@@ -201,7 +204,7 @@ export default function RegistroEmailPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((e) => (
-            <RegistroCard key={e.id} entry={e} />
+            <RegistroCard key={e.id} entry={e} onRefresh={fetchData} />
           ))}
         </div>
       )}
@@ -209,10 +212,48 @@ export default function RegistroEmailPage() {
   );
 }
 
-function RegistroCard({ entry: e }: { entry: Entry }) {
+function RegistroCard({ entry: e, onRefresh }: { entry: Entry; onRefresh: () => void }) {
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const meta = STATUS_META[e.status];
   const hasMail = !!(e.subject || e.body);
+  const isWaiting = e.status === "sent" || e.status === "followup";
+
+  const markResponded = async () => {
+    setBusy("responded");
+    try {
+      const res = await fetch(`/api/leads/${e.id}/quick-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "RESPONSE_RECEIVED", respondedVia: "email" }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`${e.name} → Ha risposto`);
+      onRefresh();
+    } catch {
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const changeStage = async (stage: string, label: string) => {
+    setBusy(stage);
+    try {
+      const res = await fetch(`/api/leads/${e.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pipelineStage: stage }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`${e.name} → ${label}`);
+      onRefresh();
+    } catch {
+      toast.error("Errore nello spostamento");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <Card className="card-hover">
@@ -258,6 +299,51 @@ function RegistroCard({ entry: e }: { entry: Entry }) {
             </button>
           )}
         </div>
+
+        {isWaiting && (
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+            <Button
+              onClick={markResponded}
+              disabled={!!busy}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {busy === "responded" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              Ha risposto
+            </Button>
+            <Button
+              onClick={() => changeStage("FARE_VIDEO", "Fare Video")}
+              disabled={!!busy}
+              size="sm"
+              variant="outline"
+            >
+              {busy === "FARE_VIDEO" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Video className="h-4 w-4 mr-2" />
+              )}
+              Fare Video
+            </Button>
+            <Button
+              onClick={() => changeStage("ARCHIVIATO", "Archiviato")}
+              disabled={!!busy}
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground"
+            >
+              {busy === "ARCHIVIATO" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Archive className="h-4 w-4 mr-2" />
+              )}
+              Archivia
+            </Button>
+          </div>
+        )}
 
         {open && hasMail && (
           <div className="mt-3 rounded-lg border bg-muted/30 p-3 space-y-3">

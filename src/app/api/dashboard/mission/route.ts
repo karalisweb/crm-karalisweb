@@ -26,6 +26,8 @@ export async function GET() {
       countInTrattativa,
       countClienti,
       countRisposto,
+      countEmailInviate,
+      countVideoVisti,
     ] = await Promise.all([
       db.lead.count({ where: { pipelineStage: "DA_ANALIZZARE" } }),
       db.lead.count({ where: { pipelineStage: "HOT_LEAD" } }),
@@ -49,6 +51,16 @@ export async function GET() {
       db.lead.count({ where: { pipelineStage: "IN_TRATTATIVA" } }),
       db.lead.count({ where: { pipelineStage: "CLIENTE" } }),
       db.lead.count({ where: { respondedAt: { not: null } } }),
+      // Email opt-in inviate e ancora in attesa di risposta (in gioco)
+      db.lead.count({
+        where: {
+          optInSentAt: { not: null },
+          respondedAt: null,
+          pipelineStage: { in: ["HOT_LEAD", "WARM_LEAD", "COLD_LEAD"] },
+        },
+      }),
+      // Video inviati che sono stati visti dal prospect
+      db.lead.count({ where: { videoViewedAt: { not: null }, pipelineStage: "VIDEO_INVIATO" } }),
     ]);
 
     return NextResponse.json({
@@ -67,6 +79,8 @@ export async function GET() {
         inTrattativa: countInTrattativa,
         clienti: countClienti,
         risposto: countRisposto,
+        emailInviate: countEmailInviate,
+        videoVisti: countVideoVisti,
       },
     });
   } catch (error) {

@@ -25,12 +25,12 @@ import {
   Target,
   ScanSearch,
   Video,
-  Linkedin,
   Phone,
   Trophy,
   Snowflake,
   MessageCircle,
   Mail,
+  Eye,
 } from "lucide-react";
 
 // Badge types per colore
@@ -66,18 +66,13 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: "VIDEO",
+    title: "OUTREACH",
     items: [
+      { href: "/registro-email", label: "Email Inviate", icon: Mail, badgeKey: "emailInviate", badgeColor: "blue" },
+      { href: "/follow-up", label: "Follow-up", icon: Repeat, badgeKey: "followUp", badgeColor: "yellow" },
       { href: "/fare-video", label: "Fare Video", icon: Video, badgeKey: "fareVideo", badgeColor: "red" },
       { href: "/video-inviati", label: "Video Inviati", icon: Send, badgeKey: "videoInviati", badgeColor: "blue" },
-    ],
-  },
-  {
-    title: "FOLLOW-UP",
-    items: [
-      { href: "/follow-up", label: "Follow-up", icon: Repeat, badgeKey: "followUp", badgeColor: "yellow" },
-      { href: "/registro-email", label: "Registro Email", icon: Mail },
-      { href: "/linkedin", label: "LinkedIn", icon: Linkedin, badgeKey: "linkedin", badgeColor: "blue" },
+      { href: "/video-visti", label: "Video Visti", icon: Eye, badgeKey: "videoVisti", badgeColor: "green" },
       { href: "/telefonate", label: "Telefonate", icon: Phone, badgeKey: "telefonate", badgeColor: "default" },
     ],
   },
@@ -151,7 +146,7 @@ export function Sidebar() {
             <span className="font-semibold text-[0.95rem] text-[#f5f5f7]">
               KW Sales CRM
             </span>
-            <span className="text-xs text-[#71717a]">v3.19.1</span>
+            <span className="text-xs text-[#71717a]">v3.20.0</span>
           </div>
         )}
       </div>
