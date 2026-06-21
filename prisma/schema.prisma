@@ -679,6 +679,11 @@ model Settings {
   signatureFrancesca    String?  @map("signature_francesca") @db.Text
   caseStudiesBlock      String?  @map("case_studies_block") @db.Text
 
+  // Outreach opt-in (mail 1: chiede se vuole ricevere il video audit)
+  sdLandingUrl          String?  @map("sd_landing_url")          // Landing Metodo SD (es. karalisweb.net/web-marketing)
+  alessioLinkedinUrl    String?  @map("alessio_linkedin_url")    // Profilo LinkedIn di Alessio (prova sociale)
+  emailDailyCap         Int      @default(20) @map("email_daily_cap") // Quante aziende contattare via mail al giorno
+
   // Notifiche
   // Email destinatarie delle notifiche video views (separate da virgola)
   // es. "alessio@karalisweb.net,consulenza@karalisweb.net"

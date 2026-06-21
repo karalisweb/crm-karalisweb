@@ -16,6 +16,9 @@ export async function GET() {
         signatureAlessio: true,
         signatureFrancesca: true,
         caseStudiesBlock: true,
+        sdLandingUrl: true,
+        alessioLinkedinUrl: true,
+        emailDailyCap: true,
       },
     });
 

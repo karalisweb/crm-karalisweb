@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { renderTemplate } from "@/lib/workflow-templates";
+import { renderTemplate, pickSubjectVariant } from "@/lib/workflow-templates";
 import { sendOutreachEmail } from "@/lib/email";
 import type { WorkflowStep } from "@prisma/client";
 
@@ -29,6 +29,41 @@ interface WorkflowSettings {
   signatureAlessio: string | null;
   signatureFrancesca: string | null;
   caseStudiesBlock: string | null;
+  sdLandingUrl: string | null;
+  alessioLinkedinUrl: string | null;
+}
+
+// ── Limiti & distribuzione invii (anti-spam / reputazione dominio) ──────────
+// Configurabili via env, default prudenti. Il cron gira spesso con un piccolo
+// budget per run: cosi' gli invii si spalmano nella giornata invece di partire
+// tutti insieme. DAILY_CAP=0 o PER_RUN_CAP=0 = kill switch (nessun invio auto).
+const DAILY_CAP = Math.max(0, parseInt(process.env.WORKFLOW_DAILY_CAP || "20", 10) || 0);
+const PER_RUN_CAP = Math.max(0, parseInt(process.env.WORKFLOW_PER_RUN_CAP || "4", 10) || 0);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+interface SendOpts {
+  /** Se false, gli step auto-email vengono rinviati al run successivo (tetto raggiunto). */
+  allowSend: boolean;
+  /** Indice di rotazione per scegliere la variante di oggetto. */
+  rotationSeed: number;
 }
 
 /**
@@ -43,6 +78,9 @@ export async function processLeadWorkflow(leadId: string): Promise<boolean> {
       signatureAlessio: true,
       signatureFrancesca: true,
       caseStudiesBlock: true,
+      sdLandingUrl: true,
+      alessioLinkedinUrl: true,
+      emailDailyCap: true,
     },
   });
 
@@ -95,6 +133,8 @@ export async function processLeadWorkflow(leadId: string): Promise<boolean> {
     signatureAlessio: settings.signatureAlessio,
     signatureFrancesca: settings.signatureFrancesca,
     caseStudiesBlock: settings.caseStudiesBlock,
+    sdLandingUrl: settings.sdLandingUrl,
+    alessioLinkedinUrl: settings.alessioLinkedinUrl,
   };
 
   const executed = await runStepsForLead(lead, steps, templateSettings);
@@ -119,6 +159,9 @@ export async function processBatchWorkflow(): Promise<WorkflowProcessResult> {
       signatureAlessio: true,
       signatureFrancesca: true,
       caseStudiesBlock: true,
+      sdLandingUrl: true,
+      alessioLinkedinUrl: true,
+      emailDailyCap: true,
     },
   });
 
@@ -175,20 +218,38 @@ export async function processBatchWorkflow(): Promise<WorkflowProcessResult> {
     signatureAlessio: settings.signatureAlessio,
     signatureFrancesca: settings.signatureFrancesca,
     caseStudiesBlock: settings.caseStudiesBlock,
+    sdLandingUrl: settings.sdLandingUrl,
+    alessioLinkedinUrl: settings.alessioLinkedinUrl,
   };
 
   result.processed = leads.length;
 
-  for (const lead of leads) {
+  // Tetto giornaliero: conta gli invii reali gia' fatti oggi (UTC).
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const sentToday = await db.workflowExecution.count({
+    where: { status: "sent", sentAt: { gte: startOfDay } },
+  });
+  // Tetto giornaliero: da Impostazioni (settings.emailDailyCap), con fallback all'env.
+  const dailyCap = settings.emailDailyCap ?? DAILY_CAP;
+  const runBudget = Math.max(0, Math.min(PER_RUN_CAP, dailyCap - sentToday));
+
+  // Ordine casuale: distribuisce gli invii tra lead diversi a ogni run.
+  for (const lead of shuffle(leads)) {
     try {
-      const counters = await runStepsForLeadWithCounters(
-        lead,
-        steps,
-        templateSettings
-      );
+      const allowSend = result.autoSent < runBudget;
+      const counters = await runStepsForLeadWithCounters(lead, steps, templateSettings, {
+        allowSend,
+        rotationSeed: sentToday + result.autoSent,
+      });
+      const sentNow = counters.autoSent > 0;
       result.autoSent += counters.autoSent;
       result.tasksCreated += counters.tasksCreated;
       result.skipped += counters.skipped;
+      // Jitter tra un invio reale e il successivo: niente raffiche sul dominio.
+      if (sentNow && result.autoSent < runBudget) {
+        await sleep(4000 + Math.floor(Math.random() * 16000));
+      }
     } catch (err) {
       console.error(`[workflow-engine] Error lead ${lead.id}:`, err);
       result.skipped++;
@@ -209,7 +270,8 @@ async function runStepsForLead(
   const { autoSent, tasksCreated } = await runStepsForLeadWithCounters(
     lead,
     steps,
-    templateSettings
+    templateSettings,
+    { allowSend: true, rotationSeed: hashString(String(lead.id)) }
   );
   return autoSent + tasksCreated;
 }
@@ -217,7 +279,8 @@ async function runStepsForLead(
 async function runStepsForLeadWithCounters(
   lead: LeadForWorkflow,
   steps: WorkflowStep[],
-  templateSettings: WorkflowSettings
+  templateSettings: WorkflowSettings,
+  opts: SendOpts = { allowSend: true, rotationSeed: 0 }
 ): Promise<{ autoSent: number; tasksCreated: number; skipped: number }> {
   const result = { autoSent: 0, tasksCreated: 0, skipped: 0 };
 
@@ -285,12 +348,20 @@ async function runStepsForLeadWithCounters(
     templateSettings,
     step
   );
-  const renderedSubject = step.subject
-    ? renderTemplate(step.subject, lead, templateSettings, step)
+  const subjectVariant = step.subject
+    ? pickSubjectVariant(step.subject, opts.rotationSeed)
+    : null;
+  const renderedSubject = subjectVariant
+    ? renderTemplate(subjectVariant, lead, templateSettings, step)
     : null;
 
   // AUTO + EMAIL → invio diretto
   if (step.mode === "auto" && step.channel === "email" && lead.email) {
+    // Tetto invii raggiunto per questo run: rinvia al prossimo giro (niente task).
+    if (!opts.allowSend) {
+      result.skipped++;
+      return result;
+    }
     const sent = await sendOutreachEmail(
       lead.email,
       renderedSubject || `Analisi per ${lead.name}`,

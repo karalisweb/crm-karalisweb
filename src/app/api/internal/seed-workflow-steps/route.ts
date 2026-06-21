@@ -139,7 +139,12 @@ A presto,
       channel: "email",
       variantLabel: "",
       name: "Invio video analisi",
-      subject: "Ho analizzato il sito di {azienda}",
+      // Varianti di oggetto (una per riga): ruotano a ogni invio per la deliverability.
+      subject:
+        "Ho analizzato il sito di {azienda}\n" +
+        "Un'analisi del sito di {azienda} (10 minuti)\n" +
+        "{azienda}: una cosa che ho notato sul vostro sito\n" +
+        "Ho guardato con attenzione il sito di {azienda}",
       body: STEP_1_BODY,
       delayDays: 0,
       condition: "always",
@@ -155,7 +160,11 @@ A presto,
       channel: "email",
       variantLabel: "",
       name: "Casi studio + dati mercato",
-      subject: "Quello che sta succedendo online (e perché riguarda {azienda})",
+      subject:
+        "Quello che sta succedendo online (e perché riguarda {azienda})\n" +
+        "{azienda} e quello che sta cambiando su Google\n" +
+        "Tre dati che riguardano {azienda}\n" +
+        "Perché oggi farsi trovare online conta di più",
       body: STEP_2_BODY,
       delayDays: 3,
       condition: "always",
@@ -171,7 +180,10 @@ A presto,
       channel: "email",
       variantLabel: "A",
       name: "Francesca — chiusura ciclo (video visto)",
-      subject: "{azienda} — chiusura ciclo",
+      subject:
+        "{azienda} — chiusura ciclo\n" +
+        "{azienda}: prima che chiudiamo l'analisi\n" +
+        "Un ultimo passaggio per {azienda}",
       body: STEP_3A_BODY,
       delayDays: 3,
       condition: "video_watched",
@@ -187,7 +199,10 @@ A presto,
       channel: "email",
       variantLabel: "B",
       name: "Francesca — caso studio settore (video non visto)",
-      subject: "Una cosa che riguarda il vostro settore",
+      subject:
+        "Una cosa che riguarda il vostro settore\n" +
+        "Un dato utile prima che chiudiamo\n" +
+        "Un caso che vale la pena conoscere",
       body: STEP_3B_BODY,
       delayDays: 3,
       condition: "video_not_watched",

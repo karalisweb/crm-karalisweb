@@ -48,6 +48,9 @@ interface WorkflowSettings {
   signatureAlessio?: string | null;
   signatureFrancesca?: string | null;
   caseStudiesBlock?: string | null;
+  sdLandingUrl?: string | null;
+  alessioLinkedinUrl?: string | null;
+  emailDailyCap?: number;
 }
 
 const CONDITION_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -133,6 +136,9 @@ export function WorkflowConfigTab() {
         signatureAlessio: settings.signatureAlessio,
         signatureFrancesca: settings.signatureFrancesca,
         caseStudiesBlock: settings.caseStudiesBlock,
+        sdLandingUrl: settings.sdLandingUrl,
+        alessioLinkedinUrl: settings.alessioLinkedinUrl,
+        emailDailyCap: settings.emailDailyCap,
       });
 
       // Salva step modificati
@@ -224,6 +230,45 @@ export function WorkflowConfigTab() {
                   onChange={(e) => setSettings((p) => ({ ...p, bookingUrl: e.target.value }))}
                   placeholder="https://calendar.app.google/..."
                 />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-2 block">
+                Mail 1 — opt-in video audit (placeholder {"{metodoSD}"} e {"{linkedinAlessio}"})
+              </Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Landing Metodo SD</Label>
+                  <Input
+                    value={settings.sdLandingUrl || ""}
+                    onChange={(e) => setSettings((p) => ({ ...p, sdLandingUrl: e.target.value }))}
+                    placeholder="https://www.karalisweb.net/web-marketing"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>LinkedIn di Alessio</Label>
+                  <Input
+                    value={settings.alessioLinkedinUrl || ""}
+                    onChange={(e) => setSettings((p) => ({ ...p, alessioLinkedinUrl: e.target.value }))}
+                    placeholder="https://www.linkedin.com/in/..."
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 mt-4 max-w-xs">
+                <Label>Aziende da contattare via mail / giorno</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={settings.emailDailyCap ?? 20}
+                  onChange={(e) => setSettings((p) => ({ ...p, emailDailyCap: Number(e.target.value) }))}
+                  placeholder="20"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tetto giornaliero di invii automatici (deliverability). 0 = nessun invio.
+                </p>
               </div>
             </div>
 

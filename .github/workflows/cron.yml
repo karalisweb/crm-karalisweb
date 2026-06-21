@@ -1,0 +1,117 @@
+name: CRM cron (scheduler online)
+
+# Scheduler dei job automatici del CRM. Gira sull'infrastruttura GitHub (nessun
+# SSH al VPS): a ogni orario chiama l'endpoint cron corrispondente sul sito di
+# produzione, autenticandosi col CRON_SECRET.
+#
+# PRECONDIZIONI (una tantum):
+#   1) Repo → Settings → Secrets and variables → Actions:
+#        - Secret  CRON_SECRET   = lo stesso valore del .env del server
+#        - Variable CRM_BASE_URL = https://crm.karalisdemo.it   (opzionale, c'e' il default)
+#   2) Questo file deve stare sul branch di DEFAULT (main): GitHub schedula i cron
+#      solo dal branch default.
+#   3) Per l'invio email automatico: workflowEnabled = ON (Impostazioni → Workflow)
+#      e SPF/DKIM/DMARC a posto sul dominio mittente.
+#
+# Orari in UTC. L'Italia e' UTC+1 (inverno) / UTC+2 (estate): la finestra 07-17 UTC
+# copre ~08:00-19:00 (inverno) / 09:00-20:00 (estate).
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Endpoint da lanciare a mano (es. workflow-engine, scheduled-searches, all)"
+        required: false
+        default: "workflow-engine"
+  schedule:
+    - cron: "0 1 * * *"        # notte: sourcing + manutenzione
+    - cron: "5 2,6,10,14 * * *" # analisi Gemini in 4 batch
+    - cron: "0 7-17 * * 1-5"   # workflow email: ogni ora, giorni feriali (invii distribuiti)
+    - cron: "*/30 6-17 * * *"  # sync calendario
+
+# Un solo run alla volta: niente sovrapposizioni che raddoppierebbero gli invii.
+concurrency:
+  group: crm-cron
+  cancel-in-progress: false
+
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CRM_BASE_URL: ${{ vars.CRM_BASE_URL || 'https://crm.karalisdemo.it' }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      EVENT_SCHEDULE: ${{ github.event.schedule }}
+      DISPATCH_JOB: ${{ github.event.inputs.job }}
+    steps:
+      - name: Esegui job schedulati
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET non configurato nei Secrets del repo."
+            exit 1
+          fi
+
+          FAIL=0
+          hit() {
+            local ep="$1"
+            echo "→ POST ${CRM_BASE_URL}/api/cron/${ep}"
+            local code
+            code=$(curl -sS -o /tmp/resp.txt -w '%{http_code}' --max-time 600 \
+              --retry 2 --retry-delay 15 --retry-all-errors \
+              -X POST "${CRM_BASE_URL}/api/cron/${ep}" \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -H "Content-Type: application/json") || { echo "::warning::curl fallito per ${ep}"; FAIL=1; return; }
+            echo "  HTTP ${code}"
+            head -c 800 /tmp/resp.txt; echo
+            if [ "${code}" -lt 200 ] || [ "${code}" -ge 300 ]; then
+              echo "::warning::${ep} ha risposto ${code}"
+              FAIL=1
+            fi
+          }
+
+          # Cosa lanciare: da schedule (orario) o da trigger manuale.
+          SELECTOR="${EVENT_SCHEDULE:-manual:${DISPATCH_JOB:-workflow-engine}}"
+          echo "Selector: ${SELECTOR}"
+
+          case "${SELECTOR}" in
+            "0 1 * * *")
+              hit scheduled-searches
+              hit check-recontact
+              hit check-video-followup
+              hit recover-stuck-jobs
+              ;;
+            "5 2,6,10,14 * * *")
+              hit batch-gemini-analysis
+              ;;
+            "0 7-17 * * 1-5")
+              hit workflow-engine
+              ;;
+            "*/30 6-17 * * *")
+              hit sync-calendar
+              ;;
+            manual:all)
+              hit scheduled-searches
+              hit batch-gemini-analysis
+              hit check-recontact
+              hit check-video-followup
+              hit recover-stuck-jobs
+              hit sync-calendar
+              hit workflow-engine
+              ;;
+            manual:*)
+              hit "${DISPATCH_JOB}"
+              ;;
+            *)
+              echo "Nessun mapping per '${SELECTOR}', eseguo workflow-engine."
+              hit workflow-engine
+              ;;
+          esac
+
+          if [ "${FAIL}" -ne 0 ]; then
+            echo "::error::Almeno un job cron e' fallito (vedi warning sopra)."
+            exit 1
+          fi
+          echo "Tutti i job richiesti completati."
