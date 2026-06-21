@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const includeStageCounts = searchParams.get("stageCounts") === "true";
     const responded = searchParams.get("responded");
+    const notContacted = searchParams.get("notContacted");
 
     const where: Record<string, unknown> = {};
     // Filtri base senza stage (per i conteggi)
@@ -61,6 +62,12 @@ export async function GET(request: NextRequest) {
     // Filtro per lead che hanno risposto
     if (responded === "true") {
       where.respondedAt = { not: null };
+    }
+
+    // Esclude i lead già contattati via mail opt-in: sono passati al flusso
+    // OUTREACH (Email Inviate), quindi spariscono dalle viste analisi.
+    if (notContacted === "true") {
+      where.optInSentAt = null;
     }
 
     // Filtro per singolo stage

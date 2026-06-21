@@ -21,7 +21,7 @@ export default function DaAnalizzarePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/leads?stage=DA_ANALIZZARE&pageSize=50");
+      const res = await fetch("/api/leads?stage=DA_ANALIZZARE&notContacted=true&pageSize=50");
       if (!res.ok) throw new Error("Errore nel caricamento");
       const json = await res.json();
       setLeads(json.leads || []);

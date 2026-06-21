@@ -21,7 +21,7 @@ export default function WarmLeadsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/leads?stage=WARM_LEAD&pageSize=50");
+      const res = await fetch("/api/leads?stage=WARM_LEAD&notContacted=true&pageSize=50");
       if (!res.ok) throw new Error("Errore nel caricamento");
       const json = await res.json();
       setLeads(json.leads || []);

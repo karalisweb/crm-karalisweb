@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.20.1] - 2026-06-21
+
+- feat(analisi): i lead già contattati via mail escono da Da Analizzare/Hot/Warm/Cold (viste + contatori)
+
 ## [3.20.0] - 2026-06-21
 
 - feat(workflow): menu allineato al flusso (Email Inviate→Follow-up→Fare Video→Video Inviati→Video Visti→Telefonate), pagina Video Visti, azioni cambio stato nel registro, rimosso LinkedIn
