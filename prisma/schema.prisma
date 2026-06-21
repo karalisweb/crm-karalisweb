@@ -76,6 +76,8 @@ model Lead {
   channelHistory    Json?         @map("channel_history") // [{channel, setAt, reason}]
   email             String?       // Email del prospect (per fallback invio)
   outreachMailSent  Json?         @map("outreach_mail_sent") // {subject, body, hook, generatedAt} — cosa ha ricevuto davvero (per registrare il video coerente)
+  optInSentAt       DateTime?     @map("opt_in_sent_at")       // Quando è partita la mail opt-in (dedup + tempistica follow-up)
+  optInFollowupAt   DateTime?     @map("opt_in_followup_at")   // Quando è partito il follow-up gentile
   lostReason        LostReason?   @map("lost_reason")
   lostReasonNotes   String?       @map("lost_reason_notes")
 
@@ -645,6 +647,7 @@ model Settings {
   analystPrompt            String?  @map("analyst_prompt") @db.Text
   scriptwriterPrompt       String?  @map("scriptwriter_prompt") @db.Text
   emailGenPrompt           String?  @map("email_gen_prompt") @db.Text  // Istruzioni AI per scrivere la mail 1 (opt-in)
+  optInSubjects            String?  @map("opt_in_subjects") @db.Text   // Lista oggetti mail opt-in (uno per riga, a rotazione)
 
   // ==========================================
   // EMAIL & MESSAGGI

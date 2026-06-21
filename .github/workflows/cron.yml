@@ -87,6 +87,7 @@ jobs:
               hit batch-gemini-analysis
               ;;
             "0 7-17 * * 1-5")
+              hit opt-in-mailer
               hit workflow-engine
               ;;
             "*/30 6-17 * * *")
@@ -95,6 +96,7 @@ jobs:
             manual:all)
               hit scheduled-searches
               hit batch-gemini-analysis
+              hit opt-in-mailer
               hit check-recontact
               hit check-video-followup
               hit recover-stuck-jobs
