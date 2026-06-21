@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.20.2] - 2026-06-21
+
+- feat(lead): rimosso blocco 'Componi Messaggio' dalla tab Messaggi (vecchio sistema; primo contatto ora automatico via opt-in)
+
 ## [3.20.1] - 2026-06-21
 
 - feat(analisi): i lead già contattati via mail escono da Da Analizzare/Hot/Warm/Cold (viste + contatori)
