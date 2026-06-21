@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.18.2] - 2026-06-21
+
+- fix(opt-in-mailer): invio in background (202) per non bloccare la richiesta su batch lunghi
+
 ## [3.18.1] - 2026-06-21
 
 - feat(deliverability): List-Unsubscribe one-click (RFC 8058) + endpoint POST + fix URL landing redirect
