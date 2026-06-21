@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.18.0** | Ultimo aggiornamento: 2026-06-21
+Versione: **3.18.1** | Ultimo aggiornamento: 2026-06-21
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -487,4 +487,4 @@ Il report arriva all'indirizzo impostato in Impostazioni → Notifiche. Se non �
 
 ---
 
-*Documento aggiornato il 2026-06-21 | KW Sales CRM v3.18.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-06-21 | KW Sales CRM v3.18.1. La versione di riferimento è la Guida interattiva dentro l'app.*

@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.18.1] - 2026-06-21
+
+- feat(deliverability): List-Unsubscribe one-click (RFC 8058) + endpoint POST + fix URL landing redirect
+
 ## [3.18.0] - 2026-06-21
 
 ### 🤖 Added — Automazione Outreach Opt-in

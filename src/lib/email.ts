@@ -274,6 +274,17 @@ export async function sendOutreachEmail(
   try {
     const bccAddress = process.env.OUTREACH_BCC || '';
 
+    // List-Unsubscribe (RFC 8058, one-click): richiesto da Gmail/Outlook per gli
+    // invii di massa. Migliora la deliverability e mostra il pulsante nativo
+    // "Annulla iscrizione" in cima alla mail.
+    const unsubHeaders: Record<string, string> = {};
+    if (leadId) {
+      const baseUrl = process.env.NEXTAUTH_URL || 'https://crm.karalisdemo.it';
+      const token = Buffer.from(leadId).toString('base64url');
+      unsubHeaders['List-Unsubscribe'] = `<${baseUrl}/api/public/unsubscribe?t=${token}>, <mailto:${fromEmail}?subject=Unsubscribe>`;
+      unsubHeaders['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+    }
+
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,
       to,
@@ -281,6 +292,7 @@ export async function sendOutreachEmail(
       subject,
       text: plainText,
       html,
+      ...(Object.keys(unsubHeaders).length > 0 && { headers: unsubHeaders }),
     });
 
     console.log(`[EMAIL] Outreach inviato a ${to}, messageId: ${info.messageId}`);
