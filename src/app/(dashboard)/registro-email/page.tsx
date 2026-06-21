@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Archive,
   Ban,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -30,6 +32,7 @@ interface Entry {
   respondedVia: string | null;
   subject: string | null;
   hook: string | null;
+  body: string | null;
   status: Status;
 }
 
@@ -197,54 +200,93 @@ export default function RegistroEmailPage() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {filtered.map((e) => {
-            const meta = STATUS_META[e.status];
-            return (
-              <Card key={e.id} className="card-hover">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/leads/${e.id}`}>
-                        <h3 className="font-semibold text-sm truncate hover:underline">{e.name}</h3>
-                      </Link>
-                      {e.email && (
-                        <p className="text-xs text-muted-foreground truncate">{e.email}</p>
-                      )}
-                      {e.hook && (
-                        <p className="text-xs text-muted-foreground italic mt-1 line-clamp-2">
-                          “{e.hook}”
-                        </p>
-                      )}
-                    </div>
-                    <Badge className={cn("text-xs shrink-0 flex items-center gap-1", meta.className)}>
-                      {meta.icon}
-                      <span className="hidden sm:inline">{meta.label}</span>
-                    </Badge>
-                  </div>
-
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 pt-3 border-t text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Send className="h-3 w-3" /> Inviata: {fmtDate(e.sentAt)}
-                    </span>
-                    {e.followupAt && (
-                      <span className="flex items-center gap-1">
-                        <Repeat className="h-3 w-3" /> Follow-up: {fmtDate(e.followupAt)}
-                      </span>
-                    )}
-                    {e.respondedAt && (
-                      <span className="flex items-center gap-1 text-green-500">
-                        <CheckCircle2 className="h-3 w-3" /> Risposto: {fmtDate(e.respondedAt)}
-                        {e.respondedVia ? ` (${e.respondedVia})` : ""}
-                      </span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {filtered.map((e) => (
+            <RegistroCard key={e.id} entry={e} />
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+function RegistroCard({ entry: e }: { entry: Entry }) {
+  const [open, setOpen] = useState(false);
+  const meta = STATUS_META[e.status];
+  const hasMail = !!(e.subject || e.body);
+
+  return (
+    <Card className="card-hover">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <Link href={`/leads/${e.id}`}>
+              <h3 className="font-semibold text-sm truncate hover:underline">{e.name}</h3>
+            </Link>
+            {e.email && <p className="text-xs text-muted-foreground truncate">{e.email}</p>}
+            {e.hook && (
+              <p className="text-xs text-muted-foreground italic mt-1 line-clamp-2">“{e.hook}”</p>
+            )}
+          </div>
+          <Badge className={cn("text-xs shrink-0 flex items-center gap-1", meta.className)}>
+            {meta.icon}
+            <span className="hidden sm:inline">{meta.label}</span>
+          </Badge>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 pt-3 border-t text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Send className="h-3 w-3" /> Inviata: {fmtDate(e.sentAt)}
+          </span>
+          {e.followupAt && (
+            <span className="flex items-center gap-1">
+              <Repeat className="h-3 w-3" /> Follow-up: {fmtDate(e.followupAt)}
+            </span>
+          )}
+          {e.respondedAt && (
+            <span className="flex items-center gap-1 text-green-500">
+              <CheckCircle2 className="h-3 w-3" /> Risposto: {fmtDate(e.respondedAt)}
+              {e.respondedVia ? ` (${e.respondedVia})` : ""}
+            </span>
+          )}
+          {hasMail && (
+            <button
+              onClick={() => setOpen((v) => !v)}
+              className="ml-auto flex items-center gap-1 text-primary hover:underline font-medium"
+            >
+              {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              {open ? "Nascondi la mail" : "Vedi la mail inviata"}
+            </button>
+          )}
+        </div>
+
+        {open && hasMail && (
+          <div className="mt-3 rounded-lg border bg-muted/30 p-3 space-y-3">
+            {e.subject && (
+              <div>
+                <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">
+                  Oggetto
+                </p>
+                <p className="text-sm font-medium">{e.subject}</p>
+              </div>
+            )}
+            {e.body && (
+              <div>
+                <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">
+                  Testo realmente inviato
+                </p>
+                <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed text-foreground">
+                  {e.body}
+                </pre>
+              </div>
+            )}
+            <p className="text-[0.7rem] text-muted-foreground pt-2 border-t">
+              Al testo viene aggiunto in automatico il piè di pagina con informativa privacy e link
+              di disiscrizione.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

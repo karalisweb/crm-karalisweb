@@ -33,7 +33,9 @@ export async function GET() {
   });
 
   const entries = leads.map((l) => {
-    const mail = l.outreachMailSent as { subject?: string; hook?: string } | null;
+    const mail = l.outreachMailSent as
+      | { subject?: string; hook?: string; body?: string; generatedAt?: string }
+      | null;
 
     // Stato derivato dal percorso del lead
     let status: "sent" | "followup" | "responded" | "expired" | "unsubscribed";
@@ -53,6 +55,7 @@ export async function GET() {
       respondedVia: l.respondedVia,
       subject: mail?.subject ?? null,
       hook: mail?.hook ?? null,
+      body: mail?.body ?? null,
       status,
     };
   });
