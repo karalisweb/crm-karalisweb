@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.20.3] - 2026-06-21
+
+- chore(lead): pulizia codice morto messaging-hub dopo rimozione composer
+
 ## [3.20.2] - 2026-06-21
 
 - feat(lead): rimosso blocco 'Componi Messaggio' dalla tab Messaggi (vecchio sistema; primo contatto ora automatico via opt-in)

@@ -223,11 +223,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
           <MessagingHub
             leadId={lead.id}
             leadName={lead.name}
-            whatsappNumber={lead.whatsappNumber}
-            email={(lead as Record<string, unknown>).email as string | null}
             outreachChannel={lead.outreachChannel}
-            landingUrl={lead.videoLandingUrl}
-            phone={lead.phone}
             landingPuntoDolore={lead.landingPuntoDolore}
             videoViewsCount={lead.videoViewsCount}
             videoFirstPlayAt={lead.videoFirstPlayAt?.toISOString() ?? null}

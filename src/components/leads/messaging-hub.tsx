@@ -1,21 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   MessageCircle,
   Mail,
   Send,
-  Copy,
   Check,
-  ExternalLink,
   Loader2,
-  AlertCircle,
   AlertTriangle,
   Eye,
   Clock,
@@ -26,11 +20,7 @@ import { toast } from "sonner";
 interface MessagingHubProps {
   leadId: string;
   leadName: string;
-  whatsappNumber: string | null;
-  email: string | null;
   outreachChannel: string | null;
-  landingUrl: string | null;
-  phone: string | null;
   landingPuntoDolore: string | null;
   videoViewsCount: number;
   videoFirstPlayAt: string | null;
@@ -43,43 +33,6 @@ interface MessagingHubProps {
     notes: string | null;
     createdAt: string;
   }>;
-}
-
-type MessageType = "first" | "followup1" | "followup2" | "followup3";
-
-const MESSAGE_TYPE_LABELS: Record<MessageType, string> = {
-  first: "Step 1 — Primo contatto",
-  followup1: "Step 2 — Casi studio",
-  followup2: "Step 3 — Chiusura ciclo",
-  followup3: "Follow-up extra",
-};
-
-// Mappa tipo messaggio → (stepNumber, variantLabel) nel workflow
-// Per step 3 la variante viene scelta automaticamente basandosi su videoViewed
-function getStepFilter(type: MessageType, channel: string, videoWatched: boolean) {
-  switch (type) {
-    case "first":
-      return { stepNumber: 1, channel, variantLabel: "" };
-    case "followup1":
-      return { stepNumber: 2, channel, variantLabel: "" };
-    case "followup2":
-      return { stepNumber: 3, channel, variantLabel: videoWatched ? "A" : "B" };
-    case "followup3":
-      return null; // Non c'è step 4 nel workflow
-  }
-}
-
-interface WorkflowStep {
-  id: string;
-  stepNumber: number;
-  channel: string;
-  name: string;
-  variantLabel: string;
-  subject: string | null;
-  body: string;
-  fromName: string | null;
-  fromEmail: string | null;
-  condition: string;
 }
 
 // Filtra solo activity legate a messaggi
@@ -157,11 +110,7 @@ function ResponseTracker({ leadId, leadName }: { leadId: string; leadName: strin
 export function MessagingHub({
   leadId,
   leadName,
-  whatsappNumber,
-  email,
   outreachChannel,
-  landingUrl,
-  phone,
   landingPuntoDolore,
   videoViewsCount,
   videoFirstPlayAt,
@@ -170,228 +119,9 @@ export function MessagingHub({
   unsubscribed,
   activities,
 }: MessagingHubProps) {
-  const [channel, setChannel] = useState<"WA" | "EMAIL">(
-    (outreachChannel as "WA" | "EMAIL") || (whatsappNumber ? "WA" : "EMAIL")
-  );
-  const [messageType, setMessageType] = useState<MessageType>("first");
-  const [message, setMessage] = useState("");
-  const [emailSubject, setEmailSubject] = useState("");
-  const [leadEmail, setLeadEmail] = useState(email || "");
-  const [copiedMsg, setCopiedMsg] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
-  const [currentStepId, setCurrentStepId] = useState<string | null>(null);
-
-  const waNumber = whatsappNumber || phone;
-  const canWA = !!waNumber;
-  const canEmail = !!leadEmail.trim();
-  const videoWatched = videoViewsCount > 0 || (videoMaxWatchPercent ?? 0) > 0;
-
-  // Carica workflow steps
-  useEffect(() => {
-    fetch("/api/settings/workflow-steps")
-      .then((r) => r.json())
-      .then((data) => {
-        setWorkflowSteps(data.steps || []);
-      })
-      .catch(() => {});
-  }, []);
-
-  // Carica preview renderizzata dallo step workflow
-  const loadPreview = useCallback(
-    async (ch: "WA" | "EMAIL", type: MessageType) => {
-      const wfChannel = ch === "WA" ? "whatsapp" : "email";
-      const filter = getStepFilter(type, wfChannel, videoWatched);
-
-      if (!filter) {
-        // Nessuno step workflow per followup3, usa fallback
-        const firstName = leadName.split(" ")[0];
-        setMessage(
-          ch === "WA"
-            ? `Ciao ${firstName}, se in futuro avessi bisogno di supporto per il sito o il marketing digitale, sono qui.\n\nBuon lavoro!\nAlessio`
-            : `Buongiorno ${firstName},\n\nSe in futuro avesse bisogno di supporto per il sito o il marketing digitale, sarò felice di aiutarla.\n\nCordiali saluti,\nAlessio Loi\nKaralisweb`,
-        );
-        setEmailSubject(`Re: Analisi per ${leadName}`);
-        setCurrentStepId(null);
-        return;
-      }
-
-      // Trova lo step nel workflow
-      const step = workflowSteps.find(
-        (s) =>
-          s.stepNumber === filter.stepNumber &&
-          s.channel === filter.channel &&
-          s.variantLabel === filter.variantLabel,
-      );
-
-      if (!step) {
-        // Fallback se step non trovato
-        setMessage("[Template non configurato. Vai a Impostazioni > Workflow per configurare.]");
-        setEmailSubject(`Analisi per ${leadName}`);
-        setCurrentStepId(null);
-        return;
-      }
-
-      setCurrentStepId(step.id);
-
-      // Chiama preview API per renderizzare con dati reali del lead
-      try {
-        const res = await fetch(`/api/leads/${leadId}/workflow-preview`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stepId: step.id }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setMessage(data.body || "");
-          setEmailSubject(data.subject || `Analisi per ${leadName}`);
-        }
-      } catch {
-        // Fallback: mostra template non renderizzato
-        setMessage(step.body);
-        setEmailSubject(step.subject || `Analisi per ${leadName}`);
-      }
-    },
-    [leadId, leadName, workflowSteps, videoWatched],
-  );
-
-  // Rigenera quando cambiano steps/canale/tipo o landingUrl
-  useEffect(() => {
-    if (workflowSteps.length > 0) {
-      loadPreview(channel, messageType);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowSteps, landingUrl]);
-
-  const handleChannelChange = (ch: "WA" | "EMAIL") => {
-    setChannel(ch);
-    loadPreview(ch, messageType);
-  };
-
-  const handleTypeChange = (type: MessageType) => {
-    setMessageType(type);
-    loadPreview(channel, type);
-  };
-
-  const handleSendWA = async () => {
-    if (!waNumber) return;
-    const cleanNumber = waNumber.replace(/[\s\-\(\)\.]/g, "").replace(/^\+?/, "");
-    const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
-
-    setSending(true);
-    try {
-      // Se c'è uno step workflow, usa workflow-send per tracking coerente
-      if (currentStepId) {
-        await fetch(`/api/leads/${leadId}/workflow-send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stepId: currentStepId, body: message }),
-        });
-      } else {
-        await fetch(`/api/leads/${leadId}/quick-log`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "WHATSAPP_SENT",
-            notes: `Messaggio WA ${MESSAGE_TYPE_LABELS[messageType]} inviato`,
-          }),
-        });
-      }
-
-      if (!outreachChannel) {
-        await fetch(`/api/leads/${leadId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ outreachChannel: "WA" }),
-        });
-      }
-
-      window.open(waUrl, "_blank");
-      toast.success("WhatsApp aperto");
-    } catch {
-      toast.error("Errore nel logging");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleSendEmail = async () => {
-    if (!leadEmail.trim()) {
-      toast.error("Inserisci l'email del prospect");
-      return;
-    }
-
-    setSending(true);
-    try {
-      // Se c'è uno step workflow, usa workflow-send per tracking + fromName coerente
-      if (currentStepId) {
-        const res = await fetch(`/api/leads/${leadId}/workflow-send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            stepId: currentStepId,
-            body: message,
-            subject: emailSubject,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Errore invio email");
-        }
-      } else {
-        const res = await fetch(`/api/leads/${leadId}/send-email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: leadEmail.trim(),
-            subject: emailSubject || `Analisi personalizzata per ${leadName}`,
-            body: message,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Errore invio email");
-        }
-      }
-
-      if (!email) {
-        await fetch(`/api/leads/${leadId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: leadEmail.trim(), outreachChannel: "EMAIL" }),
-        });
-      }
-
-      toast.success("Email inviata con successo!");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore invio");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const copyMessage = async () => {
-    try {
-      await navigator.clipboard.writeText(message);
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = message;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
-    setCopiedMsg(true);
-    setTimeout(() => setCopiedMsg(false), 2000);
-    toast.success("Messaggio copiato!");
-  };
-
   const messageActivities = activities.filter((a) =>
     MESSAGE_ACTIVITY_TYPES.includes(a.type)
   );
-
-  // Trova info step corrente per mostrare variante
-  const currentStep = workflowSteps.find((s) => s.id === currentStepId);
 
   return (
     <div className="space-y-4">
