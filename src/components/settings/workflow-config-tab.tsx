@@ -51,6 +51,8 @@ interface WorkflowSettings {
   sdLandingUrl?: string | null;
   alessioLinkedinUrl?: string | null;
   emailDailyCap?: number;
+  optInSubjects?: string | null;
+  emailGenPrompt?: string | null;
 }
 
 const CONDITION_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -139,6 +141,8 @@ export function WorkflowConfigTab() {
         sdLandingUrl: settings.sdLandingUrl,
         alessioLinkedinUrl: settings.alessioLinkedinUrl,
         emailDailyCap: settings.emailDailyCap,
+        optInSubjects: settings.optInSubjects,
+        emailGenPrompt: settings.emailGenPrompt,
       });
 
       // Salva step modificati
@@ -268,6 +272,32 @@ export function WorkflowConfigTab() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Tetto giornaliero di invii automatici (deliverability). 0 = nessun invio.
+                </p>
+              </div>
+
+              <div className="space-y-2 mt-4">
+                <Label>Oggetti mail (uno per riga — ruotano a ogni invio)</Label>
+                <Textarea
+                  value={settings.optInSubjects ?? ""}
+                  onChange={(e) => setSettings((p) => ({ ...p, optInSubjects: e.target.value }))}
+                  placeholder={"Ho guardato il sito di {azienda}\nUna cosa che ho notato su {azienda}\n{azienda}: posso mandarvi un video?"}
+                  rows={5}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Usa {"{azienda}"} per il nome. Se vuoto, usa una lista di default.
+                </p>
+              </div>
+
+              <div className="space-y-2 mt-4">
+                <Label>Istruzioni per l&apos;AI che scrive la mail</Label>
+                <Textarea
+                  value={settings.emailGenPrompt ?? ""}
+                  onChange={(e) => setSettings((p) => ({ ...p, emailGenPrompt: e.target.value }))}
+                  placeholder="Vuoto = istruzioni di default. Scrivi qui per cambiare tono, lunghezza, come usare il gancio…"
+                  rows={6}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Vuoto = istruzioni di default. L&apos;AI scrive ogni mail su misura con un gancio vero.
                 </p>
               </div>
             </div>

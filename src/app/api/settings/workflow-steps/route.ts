@@ -19,6 +19,8 @@ export async function GET() {
         sdLandingUrl: true,
         alessioLinkedinUrl: true,
         emailDailyCap: true,
+        emailGenPrompt: true,
+        optInSubjects: true,
       },
     });
 
