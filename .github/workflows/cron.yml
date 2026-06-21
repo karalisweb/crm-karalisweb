@@ -83,6 +83,7 @@ jobs:
               hit check-recontact
               hit check-video-followup
               hit recover-stuck-jobs
+              hit recover-emails
               ;;
             "5 2,6,10,14 * * *")
               hit batch-gemini-analysis
@@ -104,6 +105,7 @@ jobs:
               hit check-recontact
               hit check-video-followup
               hit recover-stuck-jobs
+              hit recover-emails
               hit sync-calendar
               hit daily-report
               hit workflow-engine
