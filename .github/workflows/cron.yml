@@ -23,13 +23,21 @@ on:
         description: "Endpoint da lanciare a mano (es. workflow-engine, scheduled-searches, all)"
         required: false
         default: "workflow-engine"
-  schedule:
-    - cron: "0 1 * * *"        # notte: sourcing + manutenzione
-    - cron: "5 2,6,10,14 * * *" # analisi Gemini in 4 batch
-    - cron: "0 7-17 * * 1-5"   # workflow email: ogni ora, giorni feriali (invii distribuiti)
-    - cron: "*/30 6-17 * * *"  # sync calendario
-    - cron: "0 6 * * *"        # report giornaliero (mattina IT)
-    - cron: "0 9,15 * * *"     # recover-emails: 2 run diurni extra (150/giorno totale)
+  # ─────────────────────────────────────────────────────────────────────────
+  # SCHEDULE DISATTIVATO 2026-06-22.
+  # Lo scheduler REALE è il crontab di root sul VPS (/opt/sales-app →
+  # localhost:3003). GitHub Actions schedulava in modo INAFFIDABILE (run saltati)
+  # e creava DOPPIONI con il crontab → rischio doppio invio outreach.
+  # Qui resta solo l'avvio MANUALE (workflow_dispatch) per emergenze/test.
+  # ⚠️ NON riattivare questo schedule senza prima togliere i job corrispondenti
+  #    dal crontab del VPS, altrimenti gli invii si raddoppiano.
+  # schedule:
+  #   - cron: "0 1 * * *"
+  #   - cron: "5 2,6,10,14 * * *"
+  #   - cron: "0 7-17 * * 1-5"
+  #   - cron: "*/30 6-17 * * *"
+  #   - cron: "0 6 * * *"
+  #   - cron: "0 9,15 * * *"
 
 # Un solo run alla volta: niente sovrapposizioni che raddoppierebbero gli invii.
 concurrency:
