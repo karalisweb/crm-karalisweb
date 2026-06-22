@@ -28,6 +28,7 @@ export async function GET() {
       countRisposto,
       countEmailInviate,
       countVideoVisti,
+      countBniDaLavorare,
     ] = await Promise.all([
       db.lead.count({ where: { pipelineStage: "DA_ANALIZZARE", optInSentAt: null } }),
       db.lead.count({ where: { pipelineStage: "HOT_LEAD", optInSentAt: null } }),
@@ -61,6 +62,8 @@ export async function GET() {
       }),
       // Video inviati che sono stati visti dal prospect
       db.lead.count({ where: { videoViewedAt: { not: null }, pipelineStage: "VIDEO_INVIATO" } }),
+      // Opportunità BNI ancora da lavorare
+      db.lead.count({ where: { pipelineStage: "BNI_DA_LAVORARE" } }),
     ]);
 
     return NextResponse.json({
@@ -81,6 +84,7 @@ export async function GET() {
         risposto: countRisposto,
         emailInviate: countEmailInviate,
         videoVisti: countVideoVisti,
+        bniDaLavorare: countBniDaLavorare,
       },
     });
   } catch (error) {

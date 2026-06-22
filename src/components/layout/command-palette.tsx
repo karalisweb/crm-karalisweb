@@ -22,6 +22,7 @@ import {
   BookOpen,
   Flame,
   Plus,
+  Handshake,
 } from "lucide-react";
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/searches", label: "Ricerche", icon: FolderSearch, group: "Navigazione" },
   { href: "/da-analizzare", label: "Da Analizzare", icon: ClipboardCheck, group: "Navigazione" },
   { href: "/hot-leads", label: "Hot Leads", icon: Flame, group: "Navigazione" },
+  { href: "/rete-bni", label: "Rete BNI", icon: Handshake, group: "Navigazione" },
   { href: "/fare-video", label: "Fare Video", icon: Video, group: "Navigazione" },
   { href: "/video-inviati", label: "Video Inviati", icon: Send, group: "Navigazione" },
   { href: "/follow-up", label: "Follow-up", icon: Repeat, group: "Navigazione" },

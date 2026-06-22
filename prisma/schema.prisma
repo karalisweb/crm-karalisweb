@@ -220,6 +220,13 @@ model Lead {
   recontactAt       DateTime?     @map("recontact_at")
 
   // ==========================================
+  // RETE BNI (referenze / interesse membri)
+  // ==========================================
+  // "referral" = persona presentata da un membro | "member_interest" = il membro stesso e' interessato
+  bniOriginType     String?       @map("bni_origin_type")
+  referralNeed      String?       @map("referral_need")    // Di cosa ha bisogno il referito / servizio d'interesse
+
+  // ==========================================
   // CRM MINIMALE per logging chiamate
   // ==========================================
   // Ultimo esito chiamata
@@ -252,6 +259,12 @@ model Lead {
   tasks               Task[]
   workflowExecutions  WorkflowExecution[]
 
+  // Relazioni BNI
+  referredByMembroId String?    @map("referred_by_membro_id")
+  referredByMembro   BniMembro? @relation("BniReferral", fields: [referredByMembroId], references: [id])
+  oneToOneId         String?    @map("one_to_one_id")
+  oneToOne           OneToOne?  @relation("OneToOneLeads", fields: [oneToOneId], references: [id])
+
   @@index([opportunityScore(sort: Desc)], name: "idx_leads_score")
   @@index([pipelineStage], name: "idx_leads_stage")
   @@index([auditStatus], name: "idx_leads_audit_status")
@@ -273,6 +286,10 @@ model Lead {
   @@index([qualificationScore(sort: Desc)], name: "idx_leads_qualification_score")
   @@index([qualificationPriority], name: "idx_leads_qualification_priority")
   @@index([segment], name: "idx_leads_segment")
+  // Indici per rete BNI
+  @@index([source], name: "idx_leads_source")
+  @@index([referredByMembroId], name: "idx_leads_referred_by")
+  @@index([oneToOneId], name: "idx_leads_one_to_one")
   @@map("leads")
 }
 
@@ -403,6 +420,81 @@ model PasswordReset {
 }
 
 // ==========================================
+// RETE BNI - Membri dei capitoli
+// ==========================================
+// Un membro BNI ha doppia natura: possibile cliente diretto E fonte di referenze.
+// Le opportunita' (interesse del membro o referenze ricevute) diventano Lead
+// con source="bni", collegati qui via Lead.referredByMembroId / Lead.oneToOneId.
+model BniMembro {
+  id          String   @id @default(uuid())
+
+  name        String                                  // Nome e cognome
+  profession  String?                                 // Professione / categoria BNI
+  company     String?                                 // Azienda
+  chapter     String?                                 // Capitolo BNI (campo libero, autocompletato)
+  phone       String?
+  email       String?
+  website     String?
+  notes       String?  @db.Text
+
+  status      BniMemberStatus @default(ATTIVO)
+  knownSince  DateTime?        @map("known_since")     // Membro / conosciuto dal
+
+  // Denormalizzati per dashboard veloce (aggiornati a ogni 121)
+  oneToOneCount  Int       @default(0) @map("one_to_one_count")
+  lastOneToOneAt DateTime? @map("last_one_to_one_at")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relazioni
+  oneToOnes     OneToOne[]
+  referredLeads Lead[]     @relation("BniReferral")
+
+  @@index([chapter], name: "idx_bni_membro_chapter")
+  @@index([lastOneToOneAt], name: "idx_bni_membro_last121")
+  @@map("bni_membri")
+}
+
+// ==========================================
+// 121 - Incontro uno-a-uno con un membro BNI
+// ==========================================
+// L'evento centrale: salvarlo genera 0..N Lead (interesse del membro + referenze).
+model OneToOne {
+  id        String   @id @default(uuid())
+
+  membroId  String    @map("membro_id")
+  membro    BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  date      DateTime                                  // Data del 121
+  location  String?                                   // Dove (caffe', ufficio, online)
+  notes     String?  @db.Text                         // Cosa fa / cosa cerca / come aiutarlo
+
+  // Esito 1: interesse diretto del membro per i miei servizi
+  memberInterested Boolean @default(false) @map("member_interested")
+  interestService  String? @map("interest_service")   // SEO / Ads / Sito / ...
+
+  // Esito 2: referenze ricevute (i Lead generati sono collegati via Lead.oneToOneId)
+  referralsCount   Int     @default(0) @map("referrals_count")
+
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Lead generati da questo 121 (referenze + eventuale interesse del membro)
+  generatedLeads Lead[] @relation("OneToOneLeads")
+
+  @@index([membroId], name: "idx_121_membro")
+  @@index([date], name: "idx_121_date")
+  @@map("one_to_ones")
+}
+
+enum BniMemberStatus {
+  ATTIVO      // Membro attivo del capitolo
+  VISITATORE  // Ospite / visitatore (non membro)
+  EX_MEMBRO   // Uscito dal capitolo
+}
+
+// ==========================================
 // ENUMS
 // ==========================================
 
@@ -424,6 +516,9 @@ enum PipelineStage {
   HOT_LEAD            // Score ≥80, analizzato
   WARM_LEAD           // Score 50-79, analizzato
   COLD_LEAD           // Score <50, basso potenziale
+
+  // === RETE BNI ===
+  BNI_DA_LAVORARE     // Opportunita' da BNI (referenza o interesse membro) da lavorare
 
   // === VIDEO ===
   FARE_VIDEO          // Video da registrare

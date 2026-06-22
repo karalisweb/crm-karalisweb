@@ -167,6 +167,9 @@ export const PIPELINE_STAGES = {
   WARM_LEAD: { label: "Warm Lead", icon: "sun", color: "yellow", group: "analisi" },
   COLD_LEAD: { label: "Cold Lead", icon: "snowflake", color: "blue", group: "analisi" },
 
+  // === RETE BNI ===
+  BNI_DA_LAVORARE: { label: "Da BNI", icon: "handshake", color: "emerald", group: "bni" },
+
   // === VIDEO ===
   FARE_VIDEO: { label: "Fare Video", icon: "video", color: "purple", group: "video" },
   VIDEO_INVIATO: { label: "Video Inviato", icon: "send", color: "indigo", group: "video" },
@@ -206,6 +209,7 @@ export const STAGE_ROUTES: Record<string, string> = {
   HOT_LEAD: "/hot-leads",
   WARM_LEAD: "/warm-leads",
   COLD_LEAD: "/warm-leads",
+  BNI_DA_LAVORARE: "/rete-bni",
   FARE_VIDEO: "/fare-video",
   VIDEO_INVIATO: "/video-inviati",
   FOLLOW_UP_1: "/follow-up",
@@ -227,6 +231,7 @@ export const STAGE_ROUTES: Record<string, string> = {
 // Gruppi di stage per navigazione e filtri
 export const STAGE_GROUPS = {
   analisi: ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD", "COLD_LEAD"] as PipelineStageKey[],
+  bni: ["BNI_DA_LAVORARE"] as PipelineStageKey[],
   video: ["FARE_VIDEO", "VIDEO_INVIATO"] as PipelineStageKey[],
   followup: ["FOLLOW_UP_1", "FOLLOW_UP_2", "FOLLOW_UP_3"] as PipelineStageKey[],
   linkedin: ["LINKEDIN"] as PipelineStageKey[],

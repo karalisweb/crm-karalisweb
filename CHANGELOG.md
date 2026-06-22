@@ -13,6 +13,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.21.0] - 2026-06-22
+
+### Added
+- **Rete BNI**: nuovo modulo per tracciare i 121 (incontri uno-a-uno) con i membri dei capitoli e le opportunità che ne derivano — interesse diretto del membro e referenze ricevute.
+- Modelli `BniMembro` e `OneToOne`; nuovo stato pipeline `BNI_DA_LAVORARE` e campi `Lead` (`bniOriginType`, `referralNeed`, `referredByMembroId`, `oneToOneId`, `source="bni"`).
+- Registrazione 121 (`POST /api/bni/one-to-one`): genera in automatico i lead in pipeline (referenze + eventuale interesse del membro), con creazione membro al volo e referenze multiple, in transazione.
+- Pagina **Rete BNI** con metriche (121 del mese/totali, referenze ricevute, membri interessati, clienti da BNI, opportunità aperte, membri da ricoltivare), lista membri con valore generato e timeline degli ultimi 121.
+- Voce "Rete BNI" in sidebar, command palette e header mobile; badge "opportunità BNI da lavorare". Lo stato `BNI_DA_LAVORARE` resta fuori dai cron di outreach a freddo.
+
 ## [3.20.3] - 2026-06-21
 
 - chore(lead): pulizia codice morto messaging-hub dopo rimozione composer

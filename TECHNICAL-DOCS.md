@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.20.3** | Ultimo aggiornamento: 2026-06-21
+Versione: **3.21.0** | Ultimo aggiornamento: 2026-06-22
 
 ---
 
@@ -13,14 +13,15 @@ Versione: **3.20.3** | Ultimo aggiornamento: 2026-06-21
 5. [Pagine Dashboard](#pagine-dashboard)
 6. [Moduli Audit](#moduli-audit)
 7. [Analisi AI (Gemini)](#analisi-ai-gemini)
-8. [Protezioni e Security](#protezioni-e-security)
+8. [Rete BNI (v3.21.0)](#rete-bni-v3210)
+9. [Protezioni e Security](#protezioni-e-security)
    - [Sicurezza — v3.17.0](#sicurezza--v3170)
-9. [Componenti UI](#componenti-ui)
-10. [Tipi e Interfacce](#tipi-e-interfacce)
-11. [Configurazione](#configurazione)
-12. [Variabili d'Ambiente](#variabili-dambiente)
-13. [Docker e Deploy](#docker-e-deploy)
-14. [Troubleshooting](#troubleshooting)
+10. [Componenti UI](#componenti-ui)
+11. [Tipi e Interfacce](#tipi-e-interfacce)
+12. [Configurazione](#configurazione)
+13. [Variabili d'Ambiente](#variabili-dambiente)
+14. [Docker e Deploy](#docker-e-deploy)
+15. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -583,6 +584,37 @@ Dalla GitHub UI (Actions → Workflow CRM Cron → Run workflow):
 |---------|--------|
 | `CRON_SECRET` | Stesso valore del `.env` sul VPS |
 | `CRM_BASE_URL` (variabile) | `https://crm.karalisdemo.it` |
+
+---
+
+## Rete BNI (v3.21.0)
+
+Modulo per tracciare i 121 (incontri uno-a-uno) con i membri dei capitoli BNI e le opportunità che ne derivano. È un canale **warm**, tenuto separato dallo scouting a freddo.
+
+### Modello dati
+
+- **`BniMembro`** (`bni_membri`): anagrafica del membro — `name`, `profession`, `company`, `chapter`, contatti, `status` (`ATTIVO|VISITATORE|EX_MEMBRO`). Campi denormalizzati `oneToOneCount` e `lastOneToOneAt`, aggiornati a ogni 121.
+- **`OneToOne`** (`one_to_ones`): l'evento 121 — `membroId`, `date`, `location`, `notes`, `memberInterested`, `interestService`, `referralsCount`.
+- **`Lead`** (campi aggiunti): `source = "bni"`, `bniOriginType` (`referral` | `member_interest`), `referralNeed`, `referredByMembroId` (→ `BniMembro`), `oneToOneId` (→ `OneToOne`).
+- **`PipelineStage`**: nuovo stato **`BNI_DA_LAVORARE`**, bucket d'ingresso delle opportunità BNI. Non è referenziato da alcun cron "cold" (Gemini/video): le referenze calde restano fuori dall'outreach automatico.
+
+### Flusso
+
+`POST /api/bni/one-to-one` esegue in **transazione**: crea il record `OneToOne`; crea un `Lead` per l'interesse del membro (se presente) e un `Lead` per ogni referenza; aggiunge un'`Activity` di tipo `NOTE` per tracciabilità; incrementa i contatori del membro. I lead nascono in `BNI_DA_LAVORARE` con `auditStatus = NO_WEBSITE` (o `PENDING` se è presente un sito).
+
+### API (tutte protette da `requireSession()`)
+
+| Endpoint | Scopo |
+|----------|-------|
+| `GET/POST /api/bni/membri` | Lista membri (+ capitoli distinti) / creazione membro |
+| `GET/POST /api/bni/one-to-one` | Ultimi 121 / registrazione 121 (genera i lead) |
+| `GET /api/bni/stats` | Metriche: 121 mese/totali, referenze, interessati, clienti, opportunità aperte, membri da ricoltivare |
+
+### UI
+
+- Pagina hub `src/app/(dashboard)/rete-bni/page.tsx` (metriche + lista membri + timeline ultimi 121).
+- Componenti `src/components/bni/add-membro-dialog.tsx` e `register-121-dialog.tsx` (mobile-first, creazione membro al volo, referenze dinamiche).
+- Navigazione: voce "Rete BNI" in `sidebar.tsx`, `command-palette.tsx`, `mobile-header.tsx`; badge `bniDaLavorare` esposto da `/api/dashboard/mission`.
 
 ---
 

@@ -17,6 +17,7 @@ const pageNames: Record<string, string> = {
   "/da-analizzare": "Da Analizzare",
   "/hot-leads": "Hot Leads",
   "/warm-leads": "Warm Leads",
+  "/rete-bni": "Rete BNI",
   "/fare-video": "Fare Video",
   "/video-inviati": "Video Inviati",
   "/follow-up": "Follow-up",

@@ -66,6 +66,12 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    title: "RETE BNI",
+    items: [
+      { href: "/rete-bni", label: "Rete BNI", icon: Handshake, badgeKey: "bniDaLavorare", badgeColor: "green" },
+    ],
+  },
+  {
     title: "OUTREACH",
     items: [
       { href: "/registro-email", label: "Email Inviate", icon: Mail, badgeKey: "emailInviate", badgeColor: "blue" },
@@ -146,7 +152,7 @@ export function Sidebar() {
             <span className="font-semibold text-[0.95rem] text-[#f5f5f7]">
               KW Sales CRM
             </span>
-            <span className="text-xs text-[#71717a]">v3.20.3</span>
+            <span className="text-xs text-[#71717a]">v3.21.0</span>
           </div>
         )}
       </div>

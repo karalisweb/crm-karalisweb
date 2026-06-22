@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.20.3** | Ultimo aggiornamento: 2026-06-21
+Versione: **3.21.0** | Ultimo aggiornamento: 2026-06-22
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -29,6 +29,7 @@ Versione: **3.20.3** | Ultimo aggiornamento: 2026-06-21
 17. [Ricerche programmate (automatiche)](#17-ricerche-programmate-automatiche)
 18. [FAQ - Domande frequenti](#18-faq---domande-frequenti)
 19. [Automazione email opt-in e report mattutino](#19-automazione-email-opt-in-e-report-mattutino)
+20. [Rete BNI (121 e referenze)](#20-rete-bni-121-e-referenze)
 
 ---
 
@@ -507,4 +508,37 @@ Se un prospect **non risponde entro 7 giorni dal follow-up**, il sistema lo **ar
 
 ---
 
-*Documento aggiornato il 2026-06-21 | KW Sales CRM v3.20.3. La versione di riferimento è la Guida interattiva dentro l'app.*
+## 20. Rete BNI (121 e referenze)
+
+La maggior parte delle opportunità nasce dal BNI. Questa sezione serve a tracciare **quanti 121 (incontri uno-a-uno) fai** con i membri dei capitoli e soprattutto **cosa ne esce**: il membro è interessato a un tuo servizio, oppure ti ha presentato qualcuno? La trovi nel menu **Rete BNI**.
+
+### I membri
+
+Sono le persone della tua rete BNI. Per ognuno vedi quanti 121 hai fatto, **quante opportunità ha generato** e da quanto non lo senti. Aggiungine uno con **Aggiungi membro** (nome, professione, azienda, capitolo, contatti).
+
+### Registrare un 121 (la cosa che conta)
+
+Dopo un incontro premi **Registra 121** — è pensato per il telefono:
+
+1. Scegli il membro (o **creane uno nuovo al volo**)
+2. Data e due note (cosa fa, cosa cerca, come puoi aiutarlo)
+3. Se è **interessato a un tuo servizio**, attiva l'interruttore e scrivi quale
+4. Aggiungi le **referenze** ricevute (nome, contatto, di cosa ha bisogno) — quante vuoi
+5. Salva
+
+Cosa succede: ogni referenza e l'eventuale interesse del membro **diventano lead nella pipeline** (stato **"Da BNI"**), già pronti da lavorare come gli altri — ma **fuori dal flusso video a freddo**. Su ogni lead resta scritto da chi è arrivato.
+
+### Cosa ne esce (le metriche in alto)
+
+- **121 questo mese** e totali
+- **Referenze ricevute** e **Membri interessati**
+- **Clienti da BNI** e **Opportunità aperte**
+- **Da ricoltivare**: membri che non senti da più di 4 mesi
+
+Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona per persona.
+
+> Per ora si tracciano le referenze **ricevute**. Le referenze che dai tu (la reciprocità "Chi dà, riceve") arriveranno in una fase successiva.
+
+---
+
+*Documento aggiornato il 2026-06-22 | KW Sales CRM v3.21.0. La versione di riferimento è la Guida interattiva dentro l'app.*
