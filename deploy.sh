@@ -473,12 +473,19 @@ fi
 SCHEMA_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff HEAD~1 --name-only 2>/dev/null | grep schema.prisma" 2>/dev/null || echo "")
 if [ -n "$SCHEMA_CHANGED" ]; then
     echo -e "  ${CYAN}schema.prisma modificato → backup DB + prisma db push${NC}"
-    # Backup del DB PRIMA di toccare lo schema (db push usa --accept-data-loss:
-    # può cancellare colonne/dati). Non blocca il deploy se manca lo script.
+    # Backup del DB PRIMA di toccare lo schema: `db push --accept-data-loss` può
+    # cancellare colonne/dati. Il backup è il paracadute → se NON si apre, NON
+    # eseguiamo la migrazione distruttiva (stesso principio del gate ENV allo step 9a).
     if ssh $VPS_HOST "cd $VPS_PATH && [ -f scripts/backup-db.sh ] && bash scripts/backup-db.sh"; then
         print_success "Backup DB eseguito prima della migrazione"
+    elif [ "${ALLOW_UNSAFE_MIGRATION:-}" = "1" ]; then
+        print_warning "Backup DB FALLITO ma ALLOW_UNSAFE_MIGRATION=1 → proseguo SENZA backup (rischio perdita dati)"
     else
-        print_warning "Backup DB NON eseguito (scripts/backup-db.sh assente o fallito)"
+        print_error "Backup DB fallito/assente → migrazione distruttiva ANNULLATA (nessun --accept-data-loss eseguito)."
+        print_error "Il sito vecchio resta online e i dati sono intatti. Risolvi il backup e ri-deploya."
+        echo -e "  ${YELLOW}Test backup a mano: ssh $VPS_HOST \"cd $VPS_PATH && bash scripts/backup-db.sh\"${NC}"
+        echo -e "  ${YELLOW}Forzare di proposito (sconsigliato): ALLOW_UNSAFE_MIGRATION=1 ./deploy.sh ...${NC}"
+        exit 1
     fi
     ssh $VPS_HOST "cd $VPS_PATH && npx prisma db push --accept-data-loss"
     print_success "Database sincronizzato"
