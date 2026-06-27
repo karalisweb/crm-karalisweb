@@ -8,145 +8,146 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   RefreshCw,
   Loader2,
-  Clock,
   AlertTriangle,
-  ChevronRight,
   Repeat,
-  MessageCircle,
+  Send,
+  CheckCircle2,
+  Video,
   Archive,
-  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-interface Lead {
+interface Entry {
   id: string;
   name: string;
-  website: string | null;
-  category: string | null;
-  opportunityScore: number | null;
-  pipelineStage: string;
-  outreachChannel: string | null;
-  videoSentAt: string | null;
+  email: string | null;
+  sentAt: string | null;
+  followupAt: string | null;
+  hook: string | null;
+  status: string;
 }
 
-function daysSince(date: string | null): number | null {
-  if (!date) return null;
-  return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("it-IT", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-function stageLabel(stage: string): string {
-  switch (stage) {
-    case "FOLLOW_UP_1": return "Follow-up 1";
-    case "FOLLOW_UP_2": return "Follow-up 2";
-    case "FOLLOW_UP_3": return "Follow-up 3";
-    default: return stage;
-  }
-}
+function FollowUpCard({ entry: e, onRefresh }: { entry: Entry; onRefresh: () => void }) {
+  const [busy, setBusy] = useState<string | null>(null);
 
-function FollowUpCard({
-  lead,
-  onAction,
-}: {
-  lead: Lead;
-  onAction: () => void;
-}) {
-  const [loading, setLoading] = useState<string | null>(null);
-
-  const handleAction = async (action: string) => {
-    setLoading(action);
+  const markResponded = async () => {
+    setBusy("responded");
     try {
-      const res = await fetch(`/api/leads/${lead.id}/quick-log`, {
+      const res = await fetch(`/api/leads/${e.id}/quick-log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action: "RESPONSE_RECEIVED", respondedVia: "email" }),
       });
-      if (!res.ok) throw new Error("Errore");
-      const labels: Record<string, string> = {
-        FOLLOW_UP: "Follow-up avanzato",
-        MARK_ARCHIVED: "Lead archiviato",
-      };
-      toast.success(labels[action] || "Azione completata");
-      onAction();
+      if (!res.ok) throw new Error();
+      toast.success(`${e.name} → Ha risposto`);
+      onRefresh();
     } catch {
-      toast.error("Errore nell'azione");
+      toast.error("Errore nel salvataggio");
     } finally {
-      setLoading(null);
+      setBusy(null);
     }
   };
 
-  const videoAge = daysSince(lead.videoSentAt);
+  const changeStage = async (stage: string, label: string) => {
+    setBusy(stage);
+    try {
+      const res = await fetch(`/api/leads/${e.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pipelineStage: stage }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`${e.name} → ${label}`);
+      onRefresh();
+    } catch {
+      toast.error("Errore nello spostamento");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <Card className="card-hover">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <Link href={`/leads/${lead.id}`}>
-              <h3 className="font-semibold text-sm truncate hover:underline">{lead.name}</h3>
+            <Link href={`/leads/${e.id}`}>
+              <h3 className="font-semibold text-sm truncate hover:underline">{e.name}</h3>
             </Link>
-            <p className="text-xs text-muted-foreground">
-              {lead.category}
-              {lead.opportunityScore && ` · Score: ${lead.opportunityScore}`}
-            </p>
-            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-              {lead.outreachChannel && (
-                <Badge variant="outline" className="text-[10px]">
-                  {lead.outreachChannel === "WA" ? "WhatsApp" : "Email"}
-                </Badge>
-              )}
-              {lead.videoSentAt && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Video {videoAge}g fa
-                </span>
-              )}
-            </div>
+            {e.email && <p className="text-xs text-muted-foreground truncate">{e.email}</p>}
+            {e.hook && (
+              <p className="text-xs text-muted-foreground italic mt-1 line-clamp-2">“{e.hook}”</p>
+            )}
           </div>
-          <Badge variant="secondary" className="text-xs flex-shrink-0">
-            {stageLabel(lead.pipelineStage)}
+          <Badge className="text-xs shrink-0 flex items-center gap-1 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+            <Repeat className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">In attesa</span>
           </Badge>
         </div>
 
-        <div className="flex gap-2 mt-3 pt-3 border-t">
-          {/* Avanza al prossimo follow-up */}
-          {lead.pipelineStage !== "FOLLOW_UP_3" && (
-            <Button
-              onClick={() => handleAction("FOLLOW_UP")}
-              disabled={!!loading}
-              className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white"
-              size="sm"
-            >
-              {loading === "FOLLOW_UP" ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <ArrowRight className="h-4 w-4 mr-2" />
-              )}
-              Avanza Follow-up
-            </Button>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 pt-3 border-t text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Send className="h-3 w-3" /> 1ª mail: {fmtDate(e.sentAt)}
+          </span>
+          {e.followupAt && (
+            <span className="flex items-center gap-1 text-yellow-500">
+              <Repeat className="h-3 w-3" /> Richiamo: {fmtDate(e.followupAt)}
+            </span>
           )}
+        </div>
 
-          {/* Archivia */}
+        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
           <Button
-            onClick={() => handleAction("MARK_ARCHIVED")}
-            disabled={!!loading}
-            variant="outline"
-            className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10"
+            onClick={markResponded}
+            disabled={!!busy}
             size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {loading === "MARK_ARCHIVED" ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            {busy === "responded" ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+            )}
+            Ha risposto
+          </Button>
+          <Button
+            onClick={() => changeStage("FARE_VIDEO", "Fare Video")}
+            disabled={!!busy}
+            size="sm"
+            variant="outline"
+          >
+            {busy === "FARE_VIDEO" ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Video className="h-4 w-4 mr-2" />
+            )}
+            Fare Video
+          </Button>
+          <Button
+            onClick={() => changeStage("ARCHIVIATO", "Archiviato")}
+            disabled={!!busy}
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground"
+          >
+            {busy === "ARCHIVIATO" ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Archive className="h-4 w-4 mr-2" />
             )}
             Archivia
-          </Button>
-
-          <Button asChild variant="ghost" size="sm">
-            <Link href={`/leads/${lead.id}`}>
-              <ChevronRight className="h-4 w-4" />
-            </Link>
           </Button>
         </div>
       </CardContent>
@@ -155,7 +156,7 @@ function FollowUpCard({
 }
 
 export default function FollowUpPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -163,12 +164,12 @@ export default function FollowUpPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        "/api/leads?stages=FOLLOW_UP_1,FOLLOW_UP_2,FOLLOW_UP_3&pageSize=100"
-      );
+      const res = await fetch("/api/outreach-log");
       if (!res.ok) throw new Error("Errore nel caricamento");
       const json = await res.json();
-      setLeads(json.leads || []);
+      const all: Entry[] = json.entries || [];
+      // Solo chi ha ricevuto la mail di richiamo ed è ancora in attesa di risposta
+      setEntries(all.filter((e) => e.status === "followup"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore sconosciuto");
     } finally {
@@ -178,24 +179,17 @@ export default function FollowUpPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Group by stage
-  const fu1 = leads.filter((l) => l.pipelineStage === "FOLLOW_UP_1");
-  const fu2 = leads.filter((l) => l.pipelineStage === "FOLLOW_UP_2");
-  const fu3 = leads.filter((l) => l.pipelineStage === "FOLLOW_UP_3");
-
-  const totalCount = leads.length;
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Follow-up Video</h1>
+          <h1 className="text-2xl font-bold">Follow-up</h1>
           <p className="text-sm text-muted-foreground">
-            Lead da riseguire dopo l&apos;invio del video
+            Lead a cui è partita la mail di richiamo dopo qualche giorno, in attesa di risposta
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">{totalCount} lead</Badge>
+          <Badge variant="secondary">{entries.length} lead</Badge>
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
             Aggiorna
@@ -214,50 +208,26 @@ export default function FollowUpPage() {
 
       {loading ? (
         <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-28 w-full" />
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
           ))}
         </div>
-      ) : totalCount === 0 ? (
+      ) : entries.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <Repeat className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Nessun follow-up video</h3>
+            <h3 className="font-semibold text-lg mb-2">Nessun follow-up in corso</h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Qui appaiono i lead a cui hai inviato il <strong>video</strong> e che metti in
-              follow-up perché non hanno ancora risposto.
-            </p>
-            <p className="text-xs text-muted-foreground mt-2 max-w-md mx-auto">
-              I follow-up delle <strong>email di primo contatto</strong> (opt-in) si seguono invece
-              nella pagina <strong>Email Inviate</strong>.
+              Qui appaiono i lead a cui è stata inviata la mail di richiamo (“ti era arrivata la mail
+              di qualche giorno fa?”) e che non hanno ancora risposto.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {[
-            { leads: fu1, label: "Follow-up 1", color: "text-cyan-500" },
-            { leads: fu2, label: "Follow-up 2", color: "text-blue-500" },
-            { leads: fu3, label: "Follow-up 3", color: "text-indigo-500" },
-          ].map(
-            (section) =>
-              section.leads.length > 0 && (
-                <div key={section.label}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <MessageCircle className={cn("h-4 w-4", section.color)} />
-                    <h2 className="font-semibold text-sm">{section.label}</h2>
-                    <Badge variant="secondary" className="text-xs">
-                      {section.leads.length}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
-                    {section.leads.map((lead) => (
-                      <FollowUpCard key={lead.id} lead={lead} onAction={fetchData} />
-                    ))}
-                  </div>
-                </div>
-              )
-          )}
+        <div className="space-y-2">
+          {entries.map((e) => (
+            <FollowUpCard key={e.id} entry={e} onRefresh={fetchData} />
+          ))}
         </div>
       )}
     </div>
