@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.21.0** | Ultimo aggiornamento: 2026-06-22
+Versione: **3.22.0** | Ultimo aggiornamento: 2026-06-27
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -541,4 +541,4 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 
 ---
 
-*Documento aggiornato il 2026-06-22 | KW Sales CRM v3.21.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-06-27 | KW Sales CRM v3.22.0. La versione di riferimento è la Guida interattiva dentro l'app.*
