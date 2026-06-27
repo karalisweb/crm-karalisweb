@@ -37,9 +37,14 @@ export async function GET() {
       db.lead.count({ where: { pipelineStage: "FARE_VIDEO" } }),
       db.lead.count({ where: { pipelineStage: "FARE_VIDEO", scriptRegeneratedAt: { not: null } } }),
       db.lead.count({ where: { pipelineStage: "VIDEO_INVIATO" } }),
+      // Follow-up = richiami email opt-in partiti dopo qualche giorno, in attesa di risposta
       db.lead.count({
         where: {
-          pipelineStage: { in: ["FOLLOW_UP_1", "FOLLOW_UP_2", "FOLLOW_UP_3"] },
+          optInSentAt: { not: null },
+          optInFollowupAt: { not: null },
+          respondedAt: null,
+          unsubscribed: false,
+          pipelineStage: { not: "ARCHIVIATO" },
         },
       }),
       db.lead.count({ where: { pipelineStage: "LINKEDIN" } }),
