@@ -13,6 +13,20 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.22.0] - 2026-06-27
+
+### Removed
+- **Secondo motore email `workflow-engine` (Step 1/2/3)**: in produzione aveva 0 esecuzioni di sempre pur essendo schedulato. Rimossi libreria, cron, route `/api/leads/[id]/workflow-*`, `/api/settings/workflow-steps`, seed, modelli `WorkflowStep`/`WorkflowExecution` e UI degli step. L'unico motore di outreach resta **opt-in-mailer** (intatto).
+- **18 campi `Settings` morti** (mai letti a runtime): `workflowEnabled`, `bookingUrl`, `signatureFrancesca`, `caseStudiesBlock`, `scoreThreshold`, `ghostOfferDays`, `maxCallAttempts`, `followUpDaysLetter`, `emailSubjectFirst/Followup` e gli 8 template `tplFirst*/tplFollowup*`. Rimossi da schema, API e UI; colonne e tabelle droppate dal DB.
+- Pagina orfana `/video-da-fare` e documentazione obsoleta `manuale-tecnico-v2-chain.md`.
+
+### Changed
+- Scheda Impostazioni **"Workflow" → "Invio Mail"**: ora configura solo l'invio automatico opt-in (nuovo endpoint `/api/settings/outreach-mail`).
+- Corretta la copy fuorviante nel flusso video (niente più promesse di "msg 1/2/3 automatici"): il video si segna come inviato e l'invio del link è manuale.
+
+### Added
+- `docs/FLUSSO-OUTREACH.md`: descrizione dell'unico flusso outreach + tabella dei cron reali (fonte di verità).
+
 ## [3.21.0] - 2026-06-22
 
 ### Added
