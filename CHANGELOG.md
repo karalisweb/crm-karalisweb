@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.22.1] - 2026-06-27
+
+- fix(outreach): scheda Disiscritti in Email Inviate + Follow-up coi richiami email (4gg)
+
 ## [3.22.0] - 2026-06-27
 
 ### Removed
