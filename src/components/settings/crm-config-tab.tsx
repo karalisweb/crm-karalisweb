@@ -8,14 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw, Target, Clock, AlertTriangle, PlayCircle, RefreshCw, Wrench, CheckCircle2, Video, Mail, CalendarClock } from "lucide-react";
+import { Loader2, Save, RotateCcw, PlayCircle, RefreshCw, Wrench, CheckCircle2, Video, CalendarClock } from "lucide-react";
 
 interface CrmSettings {
-  scoreThreshold: number;
-  ghostOfferDays: number;
-  maxCallAttempts: number;
   followUpDaysVideo: number;
-  followUpDaysLetter: number;
   recontactMonths: number;
 }
 
@@ -29,11 +25,7 @@ interface AuditStats {
 
 export function CrmConfigTab() {
   const [settings, setSettings] = useState<CrmSettings>({
-    scoreThreshold: 60,
-    ghostOfferDays: 20,
-    maxCallAttempts: 3,
     followUpDaysVideo: 7,
-    followUpDaysLetter: 7,
     recontactMonths: 6,
   });
   const [loading, setLoading] = useState(true);
@@ -59,11 +51,7 @@ export function CrmConfigTab() {
   useEffect(() => {
     if (originalSettings) {
       const changed =
-        settings.scoreThreshold !== originalSettings.scoreThreshold ||
-        settings.ghostOfferDays !== originalSettings.ghostOfferDays ||
-        settings.maxCallAttempts !== originalSettings.maxCallAttempts ||
         settings.followUpDaysVideo !== originalSettings.followUpDaysVideo ||
-        settings.followUpDaysLetter !== originalSettings.followUpDaysLetter ||
         settings.recontactMonths !== originalSettings.recontactMonths;
       setHasChanges(changed);
     }
@@ -112,11 +100,7 @@ export function CrmConfigTab() {
 
   function resetToDefaults() {
     setSettings({
-      scoreThreshold: 60,
-      ghostOfferDays: 20,
-      maxCallAttempts: 3,
       followUpDaysVideo: 7,
-      followUpDaysLetter: 7,
       recontactMonths: 6,
     });
   }
@@ -281,37 +265,6 @@ export function CrmConfigTab() {
 
   return (
     <div className="space-y-4">
-      {/* Score Threshold */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            <CardTitle>Soglia Score</CardTitle>
-          </div>
-          <CardDescription>
-            Soglia informativa per prioritizzare i lead. La classificazione avviene automaticamente dopo l&apos;analisi Gemini.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="scoreThreshold">Score minimo (0-100)</Label>
-              <Input
-                id="scoreThreshold"
-                type="number"
-                min={0}
-                max={100}
-                value={settings.scoreThreshold}
-                onChange={(e) => setSettings({ ...settings, scoreThreshold: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="pt-6 text-sm text-muted-foreground">
-              Score di riferimento per la classificazione
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Follow-up Days Video */}
       <Card>
         <CardHeader>
@@ -320,7 +273,7 @@ export function CrmConfigTab() {
             <CardTitle>Follow-up dopo Video</CardTitle>
           </div>
           <CardDescription>
-            Giorni dopo l&apos;invio del video prima di suggerire l&apos;invio della lettera.
+            Se dopo questi giorni il prospect non ha ancora guardato il video, il sistema crea un promemoria di follow-up.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -337,38 +290,7 @@ export function CrmConfigTab() {
               />
             </div>
             <div className="pt-6 text-sm text-muted-foreground">
-              Suggerisci lettera dopo {settings.followUpDaysVideo} giorni
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Follow-up Days Letter */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
-            <CardTitle>Follow-up dopo Lettera</CardTitle>
-          </div>
-          <CardDescription>
-            Giorni dopo l&apos;invio della lettera prima di suggerire il contatto LinkedIn.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="followUpDaysLetter">Giorni dopo la lettera</Label>
-              <Input
-                id="followUpDaysLetter"
-                type="number"
-                min={1}
-                max={60}
-                value={settings.followUpDaysLetter}
-                onChange={(e) => setSettings({ ...settings, followUpDaysLetter: parseInt(e.target.value) || 7 })}
-              />
-            </div>
-            <div className="pt-6 text-sm text-muted-foreground">
-              Suggerisci LinkedIn dopo {settings.followUpDaysLetter} giorni
+              Promemoria follow-up dopo {settings.followUpDaysVideo} giorni
             </div>
           </div>
         </CardContent>
@@ -400,69 +322,6 @@ export function CrmConfigTab() {
             </div>
             <div className="pt-6 text-sm text-muted-foreground">
               Ricontatto automatico dopo {settings.recontactMonths} mesi
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Max Call Attempts */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-primary" />
-            <CardTitle>Tentativi Chiamata Massimi</CardTitle>
-          </div>
-          <CardDescription>
-            Dopo questo numero di chiamate senza risposta, il lead viene spostato in archivio.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="maxCallAttempts">Tentativi massimi</Label>
-              <Input
-                id="maxCallAttempts"
-                type="number"
-                min={1}
-                max={10}
-                value={settings.maxCallAttempts}
-                onChange={(e) => setSettings({ ...settings, maxCallAttempts: parseInt(e.target.value) || 1 })}
-              />
-            </div>
-            <div className="pt-6 text-sm text-muted-foreground">
-              Dopo {settings.maxCallAttempts} tentativi senza risposta
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Ghost Offer Days */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            <CardTitle>Giorni Ghost Proposta</CardTitle>
-          </div>
-          <CardDescription>
-            Se un lead con proposta inviata non risponde dopo questo numero di giorni,
-            viene considerato &quot;ghost&quot; e segnalato per follow-up.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="ghostOfferDays">Giorni senza risposta</Label>
-              <Input
-                id="ghostOfferDays"
-                type="number"
-                min={1}
-                max={90}
-                value={settings.ghostOfferDays}
-                onChange={(e) => setSettings({ ...settings, ghostOfferDays: parseInt(e.target.value) || 1 })}
-              />
-            </div>
-            <div className="pt-6 text-sm text-muted-foreground">
-              Ghost dopo {settings.ghostOfferDays} giorni
             </div>
           </div>
         </CardContent>

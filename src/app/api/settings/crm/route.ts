@@ -19,11 +19,7 @@ export async function GET() {
       settings = await db.settings.create({
         data: {
           id: "default",
-          scoreThreshold: 60,
-          ghostOfferDays: 20,
-          maxCallAttempts: 3,
           followUpDaysVideo: 7,
-          followUpDaysLetter: 7,
           recontactMonths: 6,
           scheduledSearchesPerRun: 1,
           scheduledSearchHour: 2,
@@ -33,11 +29,7 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      scoreThreshold: settings.scoreThreshold,
-      ghostOfferDays: settings.ghostOfferDays,
-      maxCallAttempts: settings.maxCallAttempts,
       followUpDaysVideo: settings.followUpDaysVideo,
-      followUpDaysLetter: settings.followUpDaysLetter,
       recontactMonths: settings.recontactMonths,
       scheduledSearchesPerRun: settings.scheduledSearchesPerRun,
       scheduledSearchHour: settings.scheduledSearchHour,
@@ -79,11 +71,7 @@ export async function PUT(request: Request) {
 
     const body = await request.json();
     const {
-      scoreThreshold,
-      ghostOfferDays,
-      maxCallAttempts,
       followUpDaysVideo,
-      followUpDaysLetter,
       recontactMonths,
       scheduledSearchesPerRun,
       scheduledSearchHour,
@@ -99,37 +87,9 @@ export async function PUT(request: Request) {
     } = body;
 
     // Validazione
-    if (scoreThreshold !== undefined && (scoreThreshold < 0 || scoreThreshold > 100)) {
-      return NextResponse.json(
-        { error: "Score threshold deve essere tra 0 e 100" },
-        { status: 400 }
-      );
-    }
-
-    if (ghostOfferDays !== undefined && ghostOfferDays < 1) {
-      return NextResponse.json(
-        { error: "Giorni ghost offerta deve essere almeno 1" },
-        { status: 400 }
-      );
-    }
-
-    if (maxCallAttempts !== undefined && maxCallAttempts < 1) {
-      return NextResponse.json(
-        { error: "Tentativi massimi chiamata deve essere almeno 1" },
-        { status: 400 }
-      );
-    }
-
     if (followUpDaysVideo !== undefined && followUpDaysVideo < 1) {
       return NextResponse.json(
         { error: "Giorni follow-up video deve essere almeno 1" },
-        { status: 400 }
-      );
-    }
-
-    if (followUpDaysLetter !== undefined && followUpDaysLetter < 1) {
-      return NextResponse.json(
-        { error: "Giorni follow-up lettera deve essere almeno 1" },
         { status: 400 }
       );
     }
@@ -165,11 +125,7 @@ export async function PUT(request: Request) {
     const settings = await db.settings.upsert({
       where: { id: "default" },
       update: {
-        ...(scoreThreshold !== undefined && { scoreThreshold }),
-        ...(ghostOfferDays !== undefined && { ghostOfferDays }),
-        ...(maxCallAttempts !== undefined && { maxCallAttempts }),
         ...(followUpDaysVideo !== undefined && { followUpDaysVideo }),
-        ...(followUpDaysLetter !== undefined && { followUpDaysLetter }),
         ...(recontactMonths !== undefined && { recontactMonths }),
         ...(scheduledSearchesPerRun !== undefined && { scheduledSearchesPerRun }),
         ...(scheduledSearchHour !== undefined && { scheduledSearchHour }),
@@ -186,11 +142,7 @@ export async function PUT(request: Request) {
       },
       create: {
         id: "default",
-        scoreThreshold: scoreThreshold ?? 60,
-        ghostOfferDays: ghostOfferDays ?? 20,
-        maxCallAttempts: maxCallAttempts ?? 3,
         followUpDaysVideo: followUpDaysVideo ?? 7,
-        followUpDaysLetter: followUpDaysLetter ?? 7,
         recontactMonths: recontactMonths ?? 6,
         scheduledSearchesPerRun: scheduledSearchesPerRun ?? 1,
         scheduledSearchHour: scheduledSearchHour ?? 2,
@@ -199,11 +151,7 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json({
-      scoreThreshold: settings.scoreThreshold,
-      ghostOfferDays: settings.ghostOfferDays,
-      maxCallAttempts: settings.maxCallAttempts,
       followUpDaysVideo: settings.followUpDaysVideo,
-      followUpDaysLetter: settings.followUpDaysLetter,
       recontactMonths: settings.recontactMonths,
       scheduledSearchesPerRun: settings.scheduledSearchesPerRun,
       scheduledSearchHour: settings.scheduledSearchHour,

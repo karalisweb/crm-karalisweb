@@ -241,8 +241,7 @@ sales-app/
 | Campo | Tipo | Note |
 |-------|------|------|
 | **CRM / Pipeline** | | |
-| `workflowEnabled` | Boolean | Attiva/disattiva workflow engine |
-| `dailyCap` | Int | Max lead/giorno processati dal workflow |
+| `emailDailyCap` | Int | Max mail opt-in inviate al giorno |
 | `notificationEmails` | String? | Email(s) notifiche (CSV) |
 | `signatureAlessio` | String? | Firma per le mail inviate |
 | **Outreach Opt-in (v3.18)** | | |
@@ -566,7 +565,7 @@ Il file `.github/workflows/cron.yml` sostituisce la necessità di configurare cr
 |---------------|-------------|
 | `0 1 * * *` (notte) | sourcing, recover-stuck-jobs, check-recontact |
 | `5 2,6,10,14 * * *` | batch-gemini-analysis, video script batch |
-| `0 7-17 * * 1-5` (ore feriali) | opt-in-mailer, workflow-engine |
+| `0 9-18 * * 1-5` (ore feriali) | opt-in-mailer (unico motore email) |
 | `*/30 6-17 * * *` | sync-calendar |
 | `0 6 * * *` | daily-report (report mattutino) |
 

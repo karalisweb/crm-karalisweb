@@ -257,7 +257,6 @@ model Lead {
   search            Search?     @relation(fields: [searchId], references: [id])
   activities          Activity[]
   tasks               Task[]
-  workflowExecutions  WorkflowExecution[]
 
   // Relazioni BNI
   referredByMembroId String?    @map("referred_by_membro_id")
@@ -707,20 +706,8 @@ model ScheduledSearch {
 model Settings {
   id        String   @id @default("default")
 
-  // Soglia score per prioritizzazione (informativa, Daniela decide)
-  scoreThreshold    Int      @default(60) @map("score_threshold")
-
-  // Giorni dopo offerta per considerare ghost (default 20)
-  ghostOfferDays    Int      @default(20) @map("ghost_offer_days")
-
-  // Max tentativi chiamata prima di considerare perso (default 3)
-  maxCallAttempts   Int      @default(3) @map("max_call_attempts")
-
-  // Giorni dopo video prima di suggerire lettera (default 7)
+  // Giorni dopo invio video: se non guardato, crea promemoria follow-up (default 7)
   followUpDaysVideo   Int    @default(7) @map("follow_up_days_video")
-
-  // Giorni dopo lettera prima di suggerire LinkedIn (default 7)
-  followUpDaysLetter  Int    @default(7) @map("follow_up_days_letter")
 
   // Mesi prima di ricontattare DA_RICHIAMARE_6M (default 6)
   recontactMonths     Int    @default(6) @map("recontact_months")
@@ -751,20 +738,6 @@ model Settings {
   emailFromAddress    String?  @map("email_from_address")    // default: env SMTP_FROM_OUTREACH
   emailFromName       String?  @map("email_from_name")       // default: env SMTP_FROM_NAME
 
-  // Oggetti email
-  emailSubjectFirst   String?  @map("email_subject_first")   @db.Text // "Analisi gratuita per {azienda}"
-  emailSubjectFollowup String? @map("email_subject_followup") @db.Text // "Re: Analisi per {azienda}"
-
-  // Template messaggi (8 template: primo/followup1-3 x WA/Email)
-  tplFirstWa          String?  @map("tpl_first_wa")          @db.Text
-  tplFirstEmail       String?  @map("tpl_first_email")       @db.Text
-  tplFollowup1Wa      String?  @map("tpl_followup1_wa")      @db.Text
-  tplFollowup1Email   String?  @map("tpl_followup1_email")   @db.Text
-  tplFollowup2Wa      String?  @map("tpl_followup2_wa")      @db.Text
-  tplFollowup2Email   String?  @map("tpl_followup2_email")   @db.Text
-  tplFollowup3Wa      String?  @map("tpl_followup3_wa")      @db.Text
-  tplFollowup3Email   String?  @map("tpl_followup3_email")   @db.Text
-
   // Footer GDPR
   gdprCompanyName     String?  @map("gdpr_company_name")
   gdprAddress         String?  @map("gdpr_address")
@@ -772,12 +745,8 @@ model Settings {
   gdprFooterText      String?  @map("gdpr_footer_text")      @db.Text // "Hai ricevuto questa email..."
   gdprUnsubscribeText String?  @map("gdpr_unsubscribe_text") // "Non desidero ricevere..."
 
-  // Workflow Engine
-  workflowEnabled       Boolean  @default(false) @map("workflow_enabled")
-  bookingUrl            String?  @map("booking_url")
+  // Firma usata nelle mail di outreach opt-in
   signatureAlessio      String?  @map("signature_alessio") @db.Text
-  signatureFrancesca    String?  @map("signature_francesca") @db.Text
-  caseStudiesBlock      String?  @map("case_studies_block") @db.Text
 
   // Outreach opt-in (mail 1: chiede se vuole ricevere il video audit)
   sdLandingUrl          String?  @map("sd_landing_url")          // Landing Metodo SD (es. karalisweb.net/web-marketing)
@@ -793,53 +762,4 @@ model Settings {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("settings")
-}
-
-// ==========================================
-// WORKFLOW ENGINE - Automazione email/WA
-// ==========================================
-model WorkflowStep {
-  id            String   @id @default(uuid())
-  stepNumber    Int      @map("step_number")       // 1, 2, 3
-  channel       String                              // "email" | "whatsapp"
-  name          String                              // Label leggibile
-  variantLabel  String   @default("") @map("variant_label") // "" | "A" | "B"
-  subject       String?  @db.Text                   // Oggetto email (null per WA)
-  body          String   @db.Text                   // Template body con {placeholder}
-  delayDays     Int      @default(0) @map("delay_days") // Giorni di attesa dopo step precedente
-  condition     String   @default("always")         // "always" | "video_watched" | "video_not_watched"
-  mode          String   @default("manual")         // "manual" | "auto"
-  active        Boolean  @default(true)
-  fromName      String?  @map("from_name")          // Override mittente (es. "Francesca")
-  fromEmail     String?  @map("from_email")         // Override email mittente
-  triggerStage  String?  @map("trigger_stage")      // PipelineStage che attiva questo step
-  nextStage     String?  @map("next_stage")         // PipelineStage dopo invio
-
-  executions    WorkflowExecution[]
-
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  @@unique([stepNumber, channel, variantLabel], name: "uq_step_channel_variant")
-  @@map("workflow_steps")
-}
-
-model WorkflowExecution {
-  id        String    @id @default(uuid())
-  stepId    String    @map("step_id")
-  leadId    String    @map("lead_id")
-  status    String    @default("pending") // "pending" | "sent" | "skipped" | "failed"
-  sentAt    DateTime? @map("sent_at")
-  error     String?
-  taskId    String?   @map("task_id")
-
-  step      WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
-  lead      Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@unique([stepId, leadId], name: "uq_execution_step_lead")
-  @@index([leadId], name: "idx_exec_lead")
-  @@index([status], name: "idx_exec_status")
-  @@map("workflow_executions")
 }

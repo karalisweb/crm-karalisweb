@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { processLeadWorkflow } from "@/lib/workflow-engine";
 
 /**
  * POST /api/leads/[id]/start-video-followup
  *
- * Avvia l'intera sequenza follow-up email dopo che la landing page e' pronta.
+ * Segna che il video è stato inviato dopo che la landing page è pronta.
  * - Setta videoSentAt + outreachChannel=EMAIL + pipelineStage=VIDEO_INVIATO
- * - Triggera il workflow-engine: invia subito msg 1 via email auto
- * - I msg 2 (T+3) e 3 (T+6) partiranno dal cron giornaliero
+ * - Registra l'attività VIDEO_SENT
  *
- * Il canale WhatsApp resta manuale (non si puo' automatizzare): l'utente apre
- * il link wa.me dalla UI quando vuole.
+ * L'invio effettivo del link video è manuale (WhatsApp/email): l'utente apre
+ * il link wa.me o invia dalla UI. Il cron `check-video-followup` creerà un
+ * promemoria se il prospect non guarda il video entro N giorni.
  */
 export async function POST(
   _request: Request,
@@ -77,20 +76,14 @@ export async function POST(
         data: {
           leadId: id,
           type: "VIDEO_SENT",
-          notes: `Follow-up avviato: msg 1 email auto → ${lead.email}`,
+          notes: `Video segnato come inviato → ${lead.email}`,
         },
       }),
     ]);
 
-    // Trigger immediato: esegue il step 1 del workflow (delayDays=0)
-    const executed = await processLeadWorkflow(id);
-
     return NextResponse.json({
       success: true,
-      executed,
-      message: executed
-        ? "Email msg 1 inviata, msg 2 partira' a T+3, msg 3 a T+6"
-        : "Follow-up avviato ma nessuno step pronto (controlla la configurazione workflow)",
+      message: "Video segnato come inviato. Invia il link al prospect (WhatsApp/email).",
     });
   } catch (error) {
     console.error("[start-video-followup] Error:", error);

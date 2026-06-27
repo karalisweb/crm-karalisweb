@@ -6,80 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import {
-  ChevronDown,
-  ChevronRight,
-  Mail,
-  MessageSquare,
-  Save,
-  Info,
-  Zap,
-  Clock,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { Mail, Save, Info } from "lucide-react";
 import { AVAILABLE_PLACEHOLDERS } from "@/lib/workflow-templates";
 
-interface WorkflowStep {
-  id: string;
-  stepNumber: number;
-  channel: string;
-  name: string;
-  variantLabel: string;
-  subject: string | null;
-  body: string;
-  delayDays: number;
-  condition: string;
-  mode: string;
-  active: boolean;
-  fromName: string | null;
-  fromEmail: string | null;
-  triggerStage: string | null;
-  nextStage: string | null;
-}
-
-interface WorkflowSettings {
-  workflowEnabled?: boolean;
-  bookingUrl?: string | null;
-  signatureAlessio?: string | null;
-  signatureFrancesca?: string | null;
-  caseStudiesBlock?: string | null;
+interface OutreachSettings {
   sdLandingUrl?: string | null;
   alessioLinkedinUrl?: string | null;
   emailDailyCap?: number;
   optInSubjects?: string | null;
   emailGenPrompt?: string | null;
+  signatureAlessio?: string | null;
 }
 
-const CONDITION_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  always: { label: "Sempre", icon: <Zap className="h-3 w-3" />, color: "bg-blue-100 text-blue-700" },
-  video_watched: { label: "Video visto", icon: <Eye className="h-3 w-3" />, color: "bg-green-100 text-green-700" },
-  video_not_watched: { label: "Video NON visto", icon: <EyeOff className="h-3 w-3" />, color: "bg-orange-100 text-orange-700" },
-};
-
 export function WorkflowConfigTab() {
-  const [steps, setSteps] = useState<WorkflowStep[]>([]);
-  const [settings, setSettings] = useState<WorkflowSettings>({});
+  const [settings, setSettings] = useState<OutreachSettings>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
-  const [showVariables, setShowVariables] = useState(false);
-  const [dirty, setDirty] = useState<Set<string>>(new Set()); // Step IDs modificati
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch("/api/settings/workflow-steps");
+      const res = await fetch("/api/settings/outreach-mail");
       if (res.ok) {
         const data = await res.json();
-        setSteps(data.steps || []);
         setSettings(data.settings || {});
       }
     } catch {
-      toast.error("Errore caricamento workflow");
+      toast.error("Errore caricamento impostazioni");
     } finally {
       setLoading(false);
     }
@@ -87,72 +42,16 @@ export function WorkflowConfigTab() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  function toggleExpand(key: string) {
-    setExpandedSteps((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-  }
-
-  function updateStep(id: string, field: string, value: unknown) {
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
-    setDirty((prev) => new Set(prev).add(id));
-  }
-
-  async function saveSettings(data: Partial<WorkflowSettings>) {
-    const res = await fetch("/api/settings/workflow-steps", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "settings", ...data }),
-    });
-    if (!res.ok) throw new Error("Errore salvataggio settings");
-    setSettings((prev) => ({ ...prev, ...data }));
-  }
-
-  async function saveStep(step: WorkflowStep) {
-    const res = await fetch("/api/settings/workflow-steps", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: step.id,
-        name: step.name,
-        subject: step.subject,
-        body: step.body,
-        delayDays: step.delayDays,
-        mode: step.mode,
-        active: step.active,
-        fromName: step.fromName,
-        fromEmail: step.fromEmail,
-      }),
-    });
-    if (!res.ok) throw new Error("Errore salvataggio step");
-  }
-
   async function saveAll() {
     setSaving(true);
     try {
-      // Salva settings
-      await saveSettings({
-        bookingUrl: settings.bookingUrl,
-        signatureAlessio: settings.signatureAlessio,
-        signatureFrancesca: settings.signatureFrancesca,
-        caseStudiesBlock: settings.caseStudiesBlock,
-        sdLandingUrl: settings.sdLandingUrl,
-        alessioLinkedinUrl: settings.alessioLinkedinUrl,
-        emailDailyCap: settings.emailDailyCap,
-        optInSubjects: settings.optInSubjects,
-        emailGenPrompt: settings.emailGenPrompt,
+      const res = await fetch("/api/settings/outreach-mail", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
       });
-
-      // Salva step modificati
-      for (const id of dirty) {
-        const step = steps.find((s) => s.id === id);
-        if (step) await saveStep(step);
-      }
-
-      setDirty(new Set());
-      toast.success("Workflow salvato");
+      if (!res.ok) throw new Error();
+      toast.success("Impostazioni salvate");
     } catch {
       toast.error("Errore nel salvataggio");
     } finally {
@@ -160,327 +59,116 @@ export function WorkflowConfigTab() {
     }
   }
 
-  // Raggruppa per stepNumber
-  const stepGroups = [1, 2, 3].map((num) => ({
-    stepNumber: num,
-    steps: steps.filter((s) => s.stepNumber === num),
-  }));
-
   if (loading) {
-    return <div className="flex items-center justify-center py-12 text-muted-foreground">Caricamento workflow...</div>;
+    return <div className="flex items-center justify-center py-12 text-muted-foreground">Caricamento...</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Header con switch globale */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-primary" />
-              Workflow Automazione
-            </CardTitle>
-            <CardDescription>Gestisci il flusso email/WhatsApp con invio automatico o manuale per ogni step</CardDescription>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge variant={settings.workflowEnabled ? "default" : "secondary"} className={settings.workflowEnabled ? "bg-green-600" : ""}>
-              {settings.workflowEnabled ? "Attivo" : "Disattivato"}
-            </Badge>
-            <Switch
-              checked={settings.workflowEnabled || false}
-              onCheckedChange={async (v) => {
-                setSettings((prev) => ({ ...prev, workflowEnabled: v }));
-                await saveSettings({ workflowEnabled: v });
-                toast.success(v ? "Workflow attivato" : "Workflow disattivato");
-              }}
-            />
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Variabili & Firme */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer flex flex-row items-center justify-between pb-3"
-          onClick={() => setShowVariables(!showVariables)}
-        >
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Info className="h-4 w-4" />
-            Variabili, Firme & Casi Studio
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            Invio Mail Automatico
           </CardTitle>
-          {showVariables ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          <CardDescription>
+            Mail di primo contatto opt-in scritte dall&apos;AI, inviate in modo distribuito nei giorni feriali,
+            con oggetti che ruotano e un follow-up automatico. Quando il prospect risponde, si passa al video.
+          </CardDescription>
         </CardHeader>
-        {showVariables && (
-          <CardContent className="space-y-4">
-            {/* Placeholder legend */}
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-2 block">Placeholder disponibili</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {AVAILABLE_PLACEHOLDERS.map((p) => (
-                  <Badge key={p.key} variant="outline" className="text-xs cursor-help" title={p.description}>
-                    {p.key}
-                  </Badge>
-                ))}
-              </div>
+        <CardContent className="space-y-4">
+          {/* Placeholder legend */}
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+              <Info className="h-3.5 w-3.5" />
+              Placeholder disponibili
+            </Label>
+            <div className="flex flex-wrap gap-1.5">
+              {AVAILABLE_PLACEHOLDERS.map((p) => (
+                <Badge key={p.key} variant="outline" className="text-xs cursor-help" title={p.description}>
+                  {p.key}
+                </Badge>
+              ))}
             </div>
+          </div>
 
-            <Separator />
+          <Separator />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Link Prenotazione (Google Calendar)</Label>
-                <Input
-                  value={settings.bookingUrl || ""}
-                  onChange={(e) => setSettings((p) => ({ ...p, bookingUrl: e.target.value }))}
-                  placeholder="https://calendar.app.google/..."
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-2 block">
-                Mail 1 — opt-in video audit (placeholder {"{metodoSD}"} e {"{linkedinAlessio}"})
-              </Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Landing Metodo SD</Label>
-                  <Input
-                    value={settings.sdLandingUrl || ""}
-                    onChange={(e) => setSettings((p) => ({ ...p, sdLandingUrl: e.target.value }))}
-                    placeholder="https://www.karalisweb.net/web-marketing"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>LinkedIn di Alessio</Label>
-                  <Input
-                    value={settings.alessioLinkedinUrl || ""}
-                    onChange={(e) => setSettings((p) => ({ ...p, alessioLinkedinUrl: e.target.value }))}
-                    placeholder="https://www.linkedin.com/in/..."
-                  />
-                </div>
-              </div>
-              <div className="space-y-2 mt-4 max-w-xs">
-                <Label>Aziende da contattare via mail / giorno</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={settings.emailDailyCap ?? 20}
-                  onChange={(e) => setSettings((p) => ({ ...p, emailDailyCap: Number(e.target.value) }))}
-                  placeholder="20"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Tetto giornaliero di invii automatici (deliverability). 0 = nessun invio.
-                </p>
-              </div>
-
-              <div className="space-y-2 mt-4">
-                <Label>Oggetti mail (uno per riga — ruotano a ogni invio)</Label>
-                <Textarea
-                  value={settings.optInSubjects ?? ""}
-                  onChange={(e) => setSettings((p) => ({ ...p, optInSubjects: e.target.value }))}
-                  placeholder={"Ho guardato il sito di {azienda}\nUna cosa che ho notato su {azienda}\n{azienda}: posso mandarvi un video?"}
-                  rows={5}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Usa {"{azienda}"} per il nome. Se vuoto, usa una lista di default.
-                </p>
-              </div>
-
-              <div className="space-y-2 mt-4">
-                <Label>Istruzioni per l&apos;AI che scrive la mail</Label>
-                <Textarea
-                  value={settings.emailGenPrompt ?? ""}
-                  onChange={(e) => setSettings((p) => ({ ...p, emailGenPrompt: e.target.value }))}
-                  placeholder="Vuoto = istruzioni di default. Scrivi qui per cambiare tono, lunghezza, come usare il gancio…"
-                  rows={6}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Vuoto = istruzioni di default. L&apos;AI scrive ogni mail su misura con un gancio vero.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Firma Alessio</Label>
-                <Textarea
-                  value={settings.signatureAlessio || ""}
-                  onChange={(e) => setSettings((p) => ({ ...p, signatureAlessio: e.target.value }))}
-                  placeholder="Alessio Loi&#10;Karalisweb"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Firma Francesca</Label>
-                <Textarea
-                  value={settings.signatureFrancesca || ""}
-                  onChange={(e) => setSettings((p) => ({ ...p, signatureFrancesca: e.target.value }))}
-                  placeholder="Francesca&#10;Karalisweb"
-                  rows={3}
-                />
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Casi Studio (blocco riutilizzabile)</Label>
-              <Textarea
-                value={settings.caseStudiesBlock || ""}
-                onChange={(e) => setSettings((p) => ({ ...p, caseStudiesBlock: e.target.value }))}
-                placeholder="Inserisci qui i casi studio da includere nelle email con {casiStudio}..."
-                rows={4}
+              <Label>Landing Metodo SD (placeholder {"{metodoSD}"})</Label>
+              <Input
+                value={settings.sdLandingUrl || ""}
+                onChange={(e) => setSettings((p) => ({ ...p, sdLandingUrl: e.target.value }))}
+                placeholder="https://www.karalisweb.net/web-marketing"
               />
             </div>
-          </CardContent>
-        )}
+            <div className="space-y-2">
+              <Label>LinkedIn di Alessio (placeholder {"{linkedinAlessio}"})</Label>
+              <Input
+                value={settings.alessioLinkedinUrl || ""}
+                onChange={(e) => setSettings((p) => ({ ...p, alessioLinkedinUrl: e.target.value }))}
+                placeholder="https://www.linkedin.com/in/..."
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2 max-w-xs">
+            <Label>Aziende da contattare via mail / giorno</Label>
+            <Input
+              type="number"
+              min={0}
+              value={settings.emailDailyCap ?? 20}
+              onChange={(e) => setSettings((p) => ({ ...p, emailDailyCap: Number(e.target.value) }))}
+              placeholder="20"
+            />
+            <p className="text-xs text-muted-foreground">
+              Tetto giornaliero di invii automatici (deliverability). 0 = nessun invio.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Oggetti mail (uno per riga — ruotano a ogni invio)</Label>
+            <Textarea
+              value={settings.optInSubjects ?? ""}
+              onChange={(e) => setSettings((p) => ({ ...p, optInSubjects: e.target.value }))}
+              placeholder={"Ho guardato il sito di {azienda}\nUna cosa che ho notato su {azienda}\n{azienda}: posso mandarvi un video?"}
+              rows={5}
+            />
+            <p className="text-xs text-muted-foreground">
+              Usa {"{azienda}"} per il nome. Se vuoto, usa una lista di default.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Istruzioni per l&apos;AI che scrive la mail</Label>
+            <Textarea
+              value={settings.emailGenPrompt ?? ""}
+              onChange={(e) => setSettings((p) => ({ ...p, emailGenPrompt: e.target.value }))}
+              placeholder="Vuoto = istruzioni di default. Scrivi qui per cambiare tono, lunghezza, come usare il gancio…"
+              rows={6}
+            />
+            <p className="text-xs text-muted-foreground">
+              Vuoto = istruzioni di default. L&apos;AI scrive ogni mail su misura con un gancio vero.
+            </p>
+          </div>
+
+          <div className="space-y-2 md:max-w-md">
+            <Label>Firma Alessio</Label>
+            <Textarea
+              value={settings.signatureAlessio || ""}
+              onChange={(e) => setSettings((p) => ({ ...p, signatureAlessio: e.target.value }))}
+              placeholder="Alessio Loi&#10;Karalisweb"
+              rows={3}
+            />
+          </div>
+        </CardContent>
       </Card>
 
-      {/* Step del workflow */}
-      {stepGroups.map(({ stepNumber, steps: groupSteps }) => {
-        if (groupSteps.length === 0) return null;
-        const stepKey = `step_${stepNumber}`;
-        const isExpanded = expandedSteps.has(stepKey);
-        const delay = groupSteps[0]?.delayDays || 0;
-
-        return (
-          <Card key={stepKey}>
-            <CardHeader
-              className="cursor-pointer flex flex-row items-center justify-between pb-3"
-              onClick={() => toggleExpand(stepKey)}
-            >
-              <div className="flex items-center gap-3">
-                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <CardTitle className="text-base">Step {stepNumber}</CardTitle>
-                {delay > 0 && (
-                  <Badge variant="outline" className="text-xs gap-1">
-                    <Clock className="h-3 w-3" />
-                    dopo {delay} giorni
-                  </Badge>
-                )}
-              </div>
-              <div className="flex gap-1.5">
-                {groupSteps.some((s) => s.channel === "email") && (
-                  <Badge variant="secondary" className="text-xs gap-1">
-                    <Mail className="h-3 w-3" /> Email
-                  </Badge>
-                )}
-                {groupSteps.some((s) => s.channel === "whatsapp") && (
-                  <Badge variant="secondary" className="text-xs gap-1">
-                    <MessageSquare className="h-3 w-3" /> WA
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-
-            {isExpanded && (
-              <CardContent className="space-y-4">
-                {groupSteps.map((step) => {
-                  const condInfo = CONDITION_LABELS[step.condition] || CONDITION_LABELS.always;
-                  const isDirty = dirty.has(step.id);
-
-                  return (
-                    <div key={step.id} className={`border rounded-lg p-4 space-y-3 ${!step.active ? "opacity-50" : ""}`}>
-                      {/* Header step */}
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          {step.channel === "email" ? (
-                            <Mail className="h-4 w-4 text-blue-600" />
-                          ) : (
-                            <MessageSquare className="h-4 w-4 text-green-600" />
-                          )}
-                          <span className="font-medium text-sm">{step.name}</span>
-                          {step.variantLabel && (
-                            <Badge variant="outline" className="text-xs">
-                              Variante {step.variantLabel}
-                            </Badge>
-                          )}
-                          <Badge className={`text-xs gap-1 ${condInfo.color}`}>
-                            {condInfo.icon} {condInfo.label}
-                          </Badge>
-                          {isDirty && <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">Modificato</Badge>}
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            <Label className="text-xs text-muted-foreground">Attivo</Label>
-                            <Switch
-                              checked={step.active}
-                              onCheckedChange={(v) => updateStep(step.id, "active", v)}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Label className="text-xs text-muted-foreground">
-                              {step.mode === "auto" ? "Auto" : "Manuale"}
-                            </Label>
-                            <Switch
-                              checked={step.mode === "auto"}
-                              onCheckedChange={(v) => updateStep(step.id, "mode", v ? "auto" : "manual")}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* From (solo email) */}
-                      {step.channel === "email" && (
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Da (nome)</Label>
-                            <Input
-                              value={step.fromName || ""}
-                              onChange={(e) => updateStep(step.id, "fromName", e.target.value || null)}
-                              placeholder="Default da impostazioni"
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Da (email)</Label>
-                            <Input
-                              value={step.fromEmail || ""}
-                              onChange={(e) => updateStep(step.id, "fromEmail", e.target.value || null)}
-                              placeholder="Default da impostazioni"
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Oggetto (solo email) */}
-                      {step.channel === "email" && (
-                        <div className="space-y-1">
-                          <Label className="text-xs">Oggetto</Label>
-                          <Input
-                            value={step.subject || ""}
-                            onChange={(e) => updateStep(step.id, "subject", e.target.value)}
-                            placeholder="Oggetto email..."
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      )}
-
-                      {/* Body */}
-                      <div className="space-y-1">
-                        <Label className="text-xs">Messaggio</Label>
-                        <Textarea
-                          value={step.body}
-                          onChange={(e) => updateStep(step.id, "body", e.target.value)}
-                          rows={8}
-                          className="text-sm font-mono"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            )}
-          </Card>
-        );
-      })}
-
-      {/* Salva */}
       <div className="flex justify-end">
         <Button onClick={saveAll} disabled={saving} className="gap-2">
           <Save className="h-4 w-4" />
-          {saving ? "Salvataggio..." : "Salva tutto"}
+          {saving ? "Salvataggio..." : "Salva"}
         </Button>
       </div>
     </div>

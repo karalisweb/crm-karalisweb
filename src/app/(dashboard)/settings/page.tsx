@@ -302,7 +302,7 @@ export default function SettingsPage() {
           {/* Programmate ora dentro tab Ricerca */}
           <TabsTrigger value="workflow" className="gap-2">
             <GitBranch className="h-4 w-4" />
-            Workflow
+            Invio Mail
           </TabsTrigger>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />

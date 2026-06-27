@@ -1140,11 +1140,11 @@ function Step5Content({
       <div className="space-y-3">
         <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
           <Check className="h-3 w-3 mr-1" />
-          Follow-up avviato il {new Date(videoSentAt).toLocaleDateString("it-IT")} via {outreachChannel || "—"}
+          Video inviato il {new Date(videoSentAt).toLocaleDateString("it-IT")} via {outreachChannel || "—"}
         </Badge>
 
         <p className="text-xs text-muted-foreground">
-          Msg 1 inviato. I msg 2 (+3gg) e 3 (+6gg) partiranno automaticamente se il lead non risponde e non prenota la call.
+          Video segnato come inviato. Se il prospect non lo guarda entro i giorni configurati, ricevi un promemoria di follow-up.
         </p>
 
         {waUrl && outreachChannel !== "WA" && (
@@ -1197,8 +1197,8 @@ function Step5Content({
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Clicca per far partire la sequenza automatica di email (msg 1 subito, msg 2 a T+3, msg 3 a T+6).
-        {!email && " ⚠️ Attenzione: il lead non ha email, l'auto non può partire."}
+        Clicca quando hai inviato il video al prospect: lo segna come inviato e attiva il tracking delle visualizzazioni.
+        {!email && " ⚠️ Attenzione: il lead non ha email."}
       </p>
 
       <Button
@@ -1207,9 +1207,9 @@ function Step5Content({
         className="w-full bg-green-600 hover:bg-green-700"
       >
         {starting ? (
-          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Invio in corso...</>
+          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvataggio...</>
         ) : (
-          <><Send className="h-4 w-4 mr-2" />Avvia Follow-up Email</>
+          <><Send className="h-4 w-4 mr-2" />Segna video come inviato</>
         )}
       </Button>
 
