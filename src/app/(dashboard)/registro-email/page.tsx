@@ -89,7 +89,7 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-type Filter = "all" | "waiting" | "responded" | "expired";
+type Filter = "all" | "waiting" | "responded" | "expired" | "unsubscribed";
 
 export default function RegistroEmailPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -123,6 +123,7 @@ export default function RegistroEmailPage() {
     if (filter === "waiting") return e.status === "sent" || e.status === "followup";
     if (filter === "responded") return e.status === "responded";
     if (filter === "expired") return e.status === "expired";
+    if (filter === "unsubscribed") return e.status === "unsubscribed";
     return true;
   });
 
@@ -131,6 +132,7 @@ export default function RegistroEmailPage() {
     { key: "waiting", label: "In attesa", count: (stats?.sent ?? 0) + (stats?.followup ?? 0) },
     { key: "responded", label: "Hanno risposto", count: stats?.responded ?? 0 },
     { key: "expired", label: "Archiviati", count: stats?.expired ?? 0 },
+    { key: "unsubscribed", label: "Disiscritti", count: stats?.unsubscribed ?? 0 },
   ];
 
   return (

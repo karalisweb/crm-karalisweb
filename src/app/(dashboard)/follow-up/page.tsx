@@ -189,9 +189,9 @@ export default function FollowUpPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Follow-up</h1>
+          <h1 className="text-2xl font-bold">Follow-up Video</h1>
           <p className="text-sm text-muted-foreground">
-            Seguiti dopo l&apos;invio del video
+            Lead da riseguire dopo l&apos;invio del video
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -222,9 +222,14 @@ export default function FollowUpPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <Repeat className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Nessun follow-up</h3>
-            <p className="text-sm text-muted-foreground">
-              I lead in follow-up appariranno qui.
+            <h3 className="font-semibold text-lg mb-2">Nessun follow-up video</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Qui appaiono i lead a cui hai inviato il <strong>video</strong> e che metti in
+              follow-up perché non hanno ancora risposto.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2 max-w-md mx-auto">
+              I follow-up delle <strong>email di primo contatto</strong> (opt-in) si seguono invece
+              nella pagina <strong>Email Inviate</strong>.
             </p>
           </CardContent>
         </Card>
