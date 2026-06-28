@@ -31,6 +31,7 @@ import {
   MessageCircle,
   Mail,
   Eye,
+  ClipboardCheck,
 } from "lucide-react";
 
 // Badge types per colore
@@ -74,6 +75,7 @@ const navSections: NavSection[] = [
   {
     title: "OUTREACH",
     items: [
+      { href: "/approvazione", label: "Approvazione", icon: ClipboardCheck, badgeKey: "daApprovare", badgeColor: "yellow" },
       { href: "/registro-email", label: "Email Inviate", icon: Mail, badgeKey: "emailInviate", badgeColor: "blue" },
       { href: "/follow-up", label: "Follow-up", icon: Repeat, badgeKey: "followUp", badgeColor: "yellow" },
       { href: "/fare-video", label: "Fare Video", icon: Video, badgeKey: "fareVideo", badgeColor: "red" },

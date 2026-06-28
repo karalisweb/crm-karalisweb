@@ -120,11 +120,21 @@ export async function runOptInMailer(): Promise<OptInResult> {
 
   const settings = await db.settings.findUnique({
     where: { id: "default" },
-    select: { emailDailyCap: true, optInSubjects: true, signatureAlessio: true, questionnaireUrl: true },
+    select: {
+      emailDailyCap: true,
+      optInSubjects: true,
+      signatureAlessio: true,
+      questionnaireUrl: true,
+      outreachRequireApproval: true,
+    },
   });
   const configuredCap = settings?.emailDailyCap ?? 20;
   const firma = settings?.signatureAlessio || "Alessio Loi\nKaralisweb";
   const questionnaireUrl = (settings?.questionnaireUrl || "").trim();
+  // Gate di approvazione: se attivo (default), le PRIME mail NON partono in automatico —
+  // passano dalla coda di approvazione (Alessio approva/ritocca → /approve-outreach).
+  // I follow-up e l'expiry restano automatici.
+  const requireApproval = settings?.outreachRequireApproval ?? true;
   const subjectsField =
     settings?.optInSubjects && settings.optInSubjects.trim()
       ? settings.optInSubjects
@@ -203,14 +213,17 @@ export async function runOptInMailer(): Promise<OptInResult> {
   }
 
   // 2) PRIME mail a chi è caldo/tiepido, ha email, e non l'ha ancora ricevuta.
-  // La mail 1 invita al questionario: senza il link configurato non si invia
-  // (eviterei di spedire una mail con un link vuoto). I follow-up sopra valgono lo stesso.
-  if (budget > 0 && !questionnaireUrl) {
+  // La mail 1 invita al questionario: senza il link configurato non si invia.
+  // Se il gate di approvazione è attivo, le prime mail le manda la schermata di
+  // approvazione (non il cron). I follow-up sopra valgono lo stesso.
+  if (budget > 0 && requireApproval) {
+    console.log("[opt-in] gate approvazione attivo: prime mail gestite dalla coda di approvazione, non in automatico.");
+  } else if (budget > 0 && !questionnaireUrl) {
     console.warn(
       "[opt-in] Link questionario non configurato (Impostazioni → questionnaireUrl): salto le prime mail."
     );
   }
-  if (budget > 0 && questionnaireUrl) {
+  if (budget > 0 && questionnaireUrl && !requireApproval) {
     const newLeads = await db.lead.findMany({
       where: {
         pipelineStage: { in: [PipelineStage.HOT_LEAD, PipelineStage.WARM_LEAD] },

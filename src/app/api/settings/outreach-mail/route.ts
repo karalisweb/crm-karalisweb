@@ -17,6 +17,8 @@ const FIELDS = {
   optInSubjects: true,
   emailGenPrompt: true,
   signatureAlessio: true,
+  outreachRequireApproval: true,
+  outreachApprovalMinScore: true,
 } as const;
 
 export async function GET() {

@@ -83,6 +83,9 @@ model Lead {
   questionnaireCompletedAt DateTime? @map("questionnaire_completed_at")
   questionnaireResponses   Json?     @map("questionnaire_responses")
   questionnaireScore       Int?      @map("questionnaire_score") // punteggio self-assessment (smistamento per fascia)
+
+  // Bozza mail 1 pre-generata in attesa di approvazione ({subject, body, hook, generatedAt})
+  outreachDraft     Json?         @map("outreach_draft")
   lostReason        LostReason?   @map("lost_reason")
   lostReasonNotes   String?       @map("lost_reason_notes")
 
@@ -762,6 +765,11 @@ model Settings {
   alessioLinkedinUrl    String?  @map("alessio_linkedin_url")    // Profilo LinkedIn di Alessio (prova sociale)
   questionnaireUrl      String?  @map("questionnaire_url")       // Link self-assessment/questionario ({{QUESTIONARIO}}) — unico link della mail 1
   emailDailyCap         Int      @default(20) @map("email_daily_cap") // Quante aziende contattare via mail al giorno
+
+  // Gate di approvazione: se true, la mail 1 NON parte in automatico → coda di approvazione (Alessio approva/ritocca)
+  outreachRequireApproval Boolean @default(true) @map("outreach_require_approval")
+  // Soglia score per entrare nella coda di approvazione (sotto = lasciati da parte)
+  outreachApprovalMinScore Int    @default(60) @map("outreach_approval_min_score")
 
   // Notifiche
   // Email destinatarie delle notifiche video views (separate da virgola)

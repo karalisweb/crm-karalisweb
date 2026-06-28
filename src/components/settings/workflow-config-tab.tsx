@@ -20,6 +20,8 @@ interface OutreachSettings {
   optInSubjects?: string | null;
   emailGenPrompt?: string | null;
   signatureAlessio?: string | null;
+  outreachRequireApproval?: boolean;
+  outreachApprovalMinScore?: number;
 }
 
 export function WorkflowConfigTab() {
@@ -134,6 +136,34 @@ export function WorkflowConfigTab() {
             <p className="text-xs text-muted-foreground">
               Tetto giornaliero di invii automatici (deliverability). 0 = nessun invio.
             </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={settings.outreachRequireApproval ?? true}
+                  onChange={(e) => setSettings((p) => ({ ...p, outreachRequireApproval: e.target.checked }))}
+                />
+                Approva la prima mail prima di inviarla
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Se attivo, la mail 1 NON parte da sola: finisce nella coda &quot;Approvazione&quot;.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Soglia score per la coda di approvazione</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={settings.outreachApprovalMinScore ?? 60}
+                onChange={(e) => setSettings((p) => ({ ...p, outreachApprovalMinScore: Number(e.target.value) }))}
+                placeholder="60"
+              />
+              <p className="text-xs text-muted-foreground">Sotto questo score i lead restano da parte.</p>
+            </div>
           </div>
 
           <div className="space-y-2">
