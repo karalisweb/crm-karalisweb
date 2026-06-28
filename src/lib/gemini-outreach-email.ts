@@ -1,12 +1,18 @@
 import { db } from "@/lib/db";
 import { getGeminiClient } from "@/lib/gemini";
+import { checkCopy } from "@/lib/copy-guard";
 
 /**
- * Generazione AI della MAIL 1 (opt-in): chiede al prospect se vuole il video audit.
+ * Generazione AI della MAIL 1 (primo contatto): parte da UN gancio di dolore vero e
+ * invita a compilare un breve QUESTIONARIO (self-assessment). NON propone il video:
+ * il video è il primo passo del trattamento CALDO, non della sequenza fredda.
  *
  * Il testo NON è fisso: lo scrive l'AI su misura per ogni azienda, scegliendo UN
  * solo "gancio" concreto e VERO dai dati reali (recensioni, valutazione, testo
- * del sito). Le istruzioni (prompt) sono modificabili da Impostazioni → Workflow.
+ * del sito). Le istruzioni (prompt) sono modificabili da Impostazioni.
+ *
+ * UN SOLO link in tutta la mail: il questionario ({{QUESTIONARIO}}) — più link da
+ * dominio giovane peggiorano la deliverability.
  *
  * L'oggetto NON è qui: arriva dalla lista oggetti a rotazione (deliverability).
  * Qui si produce solo { body, hook }.
@@ -14,14 +20,15 @@ import { getGeminiClient } from "@/lib/gemini";
 
 export const DEFAULT_EMAIL_GEN_PROMPT = `Sei Alessio Loi, fondatore di Karalisweb. Scrivi UNA email di primo contatto a un'azienda, in italiano, calda e personale — come la scriveresti tu a mano, non come un venditore.
 
-Obiettivo: chiederle se vuole ricevere un breve VIDEO in cui le mostri cosa hai notato sul suo sito (un "video audit"). NON vendere, NON mettere call-to-action, NON nominare prezzi. La mail finisce chiedendo gentilmente di rispondere "sì".
+Obiettivo: parti da UNA cosa concreta e vera che hai notato su questa azienda (il "gancio di dolore") e invitala a compilare un breve questionario di pochi minuti, il cui link è: {{QUESTIONARIO}}. Serve a TE per capire in che direzione vogliono portare l'azienda prima di dire se e come puoi aiutarli. NON proporre un video. NON vendere, NON nominare prezzi.
 
 REGOLE FERREE:
 - Corta: massimo ~120 parole.
-- Inserisci UN SOLO "gancio" concreto e VERO su QUESTA azienda, preso SOLO dai DATI qui sotto (es.: poche recensioni su Google, valutazione bassa, oppure qualcosa di concreto che leggi nel testo del loro sito). NON inventare MAI nulla. Se non c'è un gancio chiaro nei dati, usa un'osservazione onesta e generica sul loro settore, senza fingere di sapere cose che non sai.
-- Niente paroloni da agenzia ("soluzione 360", "gratis", "offerta", "rivoluzionario", "partner di fiducia").
-- Di' che possono vedere chi sei qui: {{LINKEDIN}} e che il tuo metodo è spiegato qui: {{METODO}}.
-- Tono: prima persona, diretto, umano. Niente firma (la aggiungo io dopo).
+- UN SOLO link in tutta la mail: il questionario ({{QUESTIONARIO}}). Nessun altro link.
+- Inserisci UN SOLO "gancio" concreto e VERO su QUESTA azienda, preso SOLO dai DATI qui sotto (poche recensioni, valutazione bassa, o qualcosa nel testo del loro sito). NON inventare MAI nulla. Se non c'è un gancio chiaro, usa un'osservazione onesta e generica sul settore.
+- Parla di DIREZIONE, non di "analisi" o "audit" del sito (non definirti così).
+- VIETATE queste parole/frasi: "trasformazione digitale", "soluzione 360"/"a 360", "partner di fiducia", "ROI garantito", "innovativo", "rivoluzionario", "gratis", "offerta". Non ripetere mai frasi-cliché del prospect.
+- Tono: prima persona, diretto, umano. Niente firma (la aggiungo io dopo). Chiudi invitando gentilmente a compilare il questionario.
 
 DATI AZIENDA:
 - Nome: {{AZIENDA}}
@@ -57,7 +64,7 @@ export async function generateOutreachEmail(leadId: string): Promise<OutreachEma
 
   const settings = await db.settings.findUnique({
     where: { id: "default" },
-    select: { emailGenPrompt: true, sdLandingUrl: true, alessioLinkedinUrl: true },
+    select: { emailGenPrompt: true, sdLandingUrl: true, alessioLinkedinUrl: true, questionnaireUrl: true },
   });
 
   const auditData = lead.auditData as Record<string, unknown> | null;
@@ -78,6 +85,7 @@ export async function generateOutreachEmail(leadId: string): Promise<OutreachEma
     .replace(/\{\{RECENSIONI\}\}/g, reviews)
     .replace(/\{\{RATING\}\}/g, rating)
     .replace(/\{\{TESTO_SITO\}\}/g, siteText)
+    .replace(/\{\{QUESTIONARIO\}\}/g, settings?.questionnaireUrl || "")
     .replace(/\{\{LINKEDIN\}\}/g, settings?.alessioLinkedinUrl || "")
     .replace(
       /\{\{METODO\}\}/g,
@@ -99,6 +107,17 @@ export async function generateOutreachEmail(leadId: string): Promise<OutreachEma
   const body = (parsed.testo || "").trim();
   const hook = (parsed.gancio || "").trim();
   if (!body) throw new Error("L'AI non ha prodotto il testo della mail");
+
+  // Filtro "Carta": segnala (non blocca) eventuali termini vietati sfuggiti all'AI.
+  const guard = checkCopy(body);
+  if (!guard.ok) {
+    console.warn(
+      `[copy-guard] ${lead.name}: termini vietati nella mail → ${guard.violations
+        .map((v) => `"${v.match}"`)
+        .join(", ")}`
+    );
+  }
+
   return { body, hook };
 }
 

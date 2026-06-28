@@ -748,9 +748,10 @@ model Settings {
   // Firma usata nelle mail di outreach opt-in
   signatureAlessio      String?  @map("signature_alessio") @db.Text
 
-  // Outreach opt-in (mail 1: chiede se vuole ricevere il video audit)
+  // Outreach opt-in (mail 1: invita a compilare il questionario / self-assessment)
   sdLandingUrl          String?  @map("sd_landing_url")          // Landing Metodo SD (es. karalisweb.net/web-marketing)
   alessioLinkedinUrl    String?  @map("alessio_linkedin_url")    // Profilo LinkedIn di Alessio (prova sociale)
+  questionnaireUrl      String?  @map("questionnaire_url")       // Link self-assessment/questionario ({{QUESTIONARIO}}) — unico link della mail 1
   emailDailyCap         Int      @default(20) @map("email_daily_cap") // Quante aziende contattare via mail al giorno
 
   // Notifiche

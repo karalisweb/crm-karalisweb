@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 const FIELDS = {
   sdLandingUrl: true,
   alessioLinkedinUrl: true,
+  questionnaireUrl: true,
   emailDailyCap: true,
   optInSubjects: true,
   emailGenPrompt: true,

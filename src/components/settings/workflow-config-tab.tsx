@@ -15,6 +15,7 @@ import { AVAILABLE_PLACEHOLDERS } from "@/lib/workflow-templates";
 interface OutreachSettings {
   sdLandingUrl?: string | null;
   alessioLinkedinUrl?: string | null;
+  questionnaireUrl?: string | null;
   emailDailyCap?: number;
   optInSubjects?: string | null;
   emailGenPrompt?: string | null;
@@ -109,6 +110,14 @@ export function WorkflowConfigTab() {
                 value={settings.alessioLinkedinUrl || ""}
                 onChange={(e) => setSettings((p) => ({ ...p, alessioLinkedinUrl: e.target.value }))}
                 placeholder="https://www.linkedin.com/in/..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Link Questionario (placeholder {"{{QUESTIONARIO}}"})</Label>
+              <Input
+                value={settings.questionnaireUrl || ""}
+                onChange={(e) => setSettings((p) => ({ ...p, questionnaireUrl: e.target.value }))}
+                placeholder="https://forms.gle/... (unico link della mail 1)"
               />
             </div>
           </div>

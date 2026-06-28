@@ -17,11 +17,11 @@ import { PipelineStage, Prisma } from "@prisma/client";
  */
 
 const DEFAULT_SUBJECTS = [
-  "Ho guardato il sito di {azienda}",
   "Una cosa che ho notato su {azienda}",
-  "Un'idea veloce per {azienda}",
-  "{azienda}: posso mandarvi un video?",
-  "Due cose sul vostro sito",
+  "{azienda}: una domanda veloce",
+  "Ho guardato il sito di {azienda}",
+  "Due minuti per {azienda}?",
+  "Un'osservazione su {azienda}",
 ];
 
 const PER_RUN_CAP = Math.max(0, parseInt(process.env.OPTIN_PER_RUN_CAP || "4", 10) || 0);
@@ -120,10 +120,11 @@ export async function runOptInMailer(): Promise<OptInResult> {
 
   const settings = await db.settings.findUnique({
     where: { id: "default" },
-    select: { emailDailyCap: true, optInSubjects: true, signatureAlessio: true },
+    select: { emailDailyCap: true, optInSubjects: true, signatureAlessio: true, questionnaireUrl: true },
   });
   const configuredCap = settings?.emailDailyCap ?? 20;
   const firma = settings?.signatureAlessio || "Alessio Loi\nKaralisweb";
+  const questionnaireUrl = (settings?.questionnaireUrl || "").trim();
   const subjectsField =
     settings?.optInSubjects && settings.optInSubjects.trim()
       ? settings.optInSubjects
@@ -172,9 +173,11 @@ export async function runOptInMailer(): Promise<OptInResult> {
     if (!lead.email) continue;
     const prev = lead.outreachMailSent as { subject?: string } | null;
     const subject = prev?.subject ? `Re: ${prev.subject}` : `Re: ${lead.name}`;
-    const body =
-      `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
-      `Se ti va, ti mando volentieri quel breve video: rispondi pure "sì".\n\nUn saluto,\n${firma}`;
+    const body = questionnaireUrl
+      ? `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
+        `Se ti va, qui ci sono le poche domande che ti dicevo (cinque minuti): ${questionnaireUrl}\n\nUn saluto,\n${firma}`
+      : `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
+        `Se ti va, rispondi pure a questa mail.\n\nUn saluto,\n${firma}`;
     try {
       const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
       if (!ok) {
@@ -200,7 +203,14 @@ export async function runOptInMailer(): Promise<OptInResult> {
   }
 
   // 2) PRIME mail a chi è caldo/tiepido, ha email, e non l'ha ancora ricevuta.
-  if (budget > 0) {
+  // La mail 1 invita al questionario: senza il link configurato non si invia
+  // (eviterei di spedire una mail con un link vuoto). I follow-up sopra valgono lo stesso.
+  if (budget > 0 && !questionnaireUrl) {
+    console.warn(
+      "[opt-in] Link questionario non configurato (Impostazioni → questionnaireUrl): salto le prime mail."
+    );
+  }
+  if (budget > 0 && questionnaireUrl) {
     const newLeads = await db.lead.findMany({
       where: {
         pipelineStage: { in: [PipelineStage.HOT_LEAD, PipelineStage.WARM_LEAD] },

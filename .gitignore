@@ -42,3 +42,17 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Duplicati creati da iCloud/Finder (es. "file 2.ts", "file 3.tsx")
+*[ ][0-9].ts
+*[ ][0-9].tsx
+*[ ][0-9].js
+*[ ][0-9].prisma
+*[ ][0-9].tsx
+*[ ][0-9].jsx
+*[ ][0-9].mjs
+*[ ][0-9].cjs
+*[ ][0-9].json
+*[ ][0-9].md
+*[ ][0-9].css
+*[ ][0-9].prisma

@@ -32,6 +32,42 @@ console.log('[EMAIL] Configurazione SMTP:', {
 // Crea il transporter
 const transporter = nodemailer.createTransport(smtpConfig);
 
+// ============================================================================
+// TRASPORTO DEDICATO OUTREACH (dominio separato)
+// L'outreach di volume NON deve partire dal dominio principale (login/OTP/reset/
+// clienti): erode la reputazione. Se sono valorizzate le env OUTREACH_SMTP_*, le
+// mail di outreach partono da questa casella dedicata; altrimenti si ricade sul
+// transporter principale (comportamento attuale). Le mail di SISTEMA usano sempre
+// il principale. Il mittente resta da Settings.emailFromAddress.
+// ============================================================================
+let outreachTransporter: nodemailer.Transporter | null = null;
+if (process.env.OUTREACH_SMTP_HOST) {
+  const oPort = parseInt(process.env.OUTREACH_SMTP_PORT || '587');
+  outreachTransporter = nodemailer.createTransport({
+    host: process.env.OUTREACH_SMTP_HOST,
+    port: oPort,
+    secure: process.env.OUTREACH_SMTP_SECURE === 'true' || oPort === 465,
+    auth: {
+      user: process.env.OUTREACH_SMTP_USER || '',
+      pass: process.env.OUTREACH_SMTP_PASSWORD || '',
+    },
+    tls: { rejectUnauthorized: false },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+  });
+  console.log('[EMAIL] Trasporto OUTREACH dedicato attivo:', {
+    host: process.env.OUTREACH_SMTP_HOST,
+    port: oPort,
+    user: process.env.OUTREACH_SMTP_USER,
+  });
+}
+
+/** Transporter per l'outreach: dedicato se configurato, altrimenti il principale. */
+function getOutreachTransporter(): nodemailer.Transporter {
+  return outreachTransporter ?? transporter;
+}
+
 // Verifica la connessione SMTP
 export async function verifySmtpConnection(): Promise<boolean> {
   try {
@@ -285,7 +321,8 @@ export async function sendOutreachEmail(
       unsubHeaders['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
     }
 
-    const info = await transporter.sendMail({
+    // Outreach: usa il trasporto dedicato (dominio separato) se configurato.
+    const info = await getOutreachTransporter().sendMail({
       from: `"${fromName}" <${fromEmail}>`,
       to,
       ...(bccAddress && { bcc: bccAddress }),
