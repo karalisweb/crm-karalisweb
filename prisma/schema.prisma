@@ -78,6 +78,10 @@ model Lead {
   outreachMailSent  Json?         @map("outreach_mail_sent") // {subject, body, hook, generatedAt} — cosa ha ricevuto davvero (per registrare il video coerente)
   optInSentAt       DateTime?     @map("opt_in_sent_at")       // Quando è partita la mail opt-in (dedup + tempistica follow-up)
   optInFollowupAt   DateTime?     @map("opt_in_followup_at")   // Quando è partito il follow-up gentile
+
+  // Questionario / self-assessment (segnale di calore → CALDO_REATTIVO)
+  questionnaireCompletedAt DateTime? @map("questionnaire_completed_at")
+  questionnaireResponses   Json?     @map("questionnaire_responses")
   lostReason        LostReason?   @map("lost_reason")
   lostReasonNotes   String?       @map("lost_reason_notes")
 
@@ -518,6 +522,10 @@ enum PipelineStage {
 
   // === RETE BNI ===
   BNI_DA_LAVORARE     // Opportunita' da BNI (referenza o interesse membro) da lavorare
+
+  // === SEGNALE DI CALORE (questionario compilato / risposta / interesse) ===
+  CALDO_REATTIVO      // Ha dato un segnale → esce dalla sequenza fredda, va al video
+  NURTURING           // Non reattivo a fine sequenza: stop solleciti, tocchi lenti e radi
 
   // === VIDEO ===
   FARE_VIDEO          // Video da registrare

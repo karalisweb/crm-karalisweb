@@ -231,8 +231,12 @@ async function handleAction(leadId: string, body: any) {
         respondedAt: now,
         respondedVia: via,
       };
-      // Non cambiamo stage automaticamente - il commerciale decide il prossimo step
-      newStage = null;
+      // Una risposta è un segnale di calore: se il lead era nella sequenza fredda
+      // (pool freddo/da-lavorare), viene promosso a CALDO_REATTIVO ed esce dalla
+      // fredda. Negli altri stati (vendita/chiusura) decide il commerciale.
+      const respStage = currentLead?.pipelineStage;
+      const coldPool = ["DA_ANALIZZARE", "HOT_LEAD", "WARM_LEAD", "COLD_LEAD", "ARCHIVIATO", "NURTURING"];
+      newStage = respStage && coldPool.includes(respStage) ? "CALDO_REATTIVO" : null;
       activityType = "RESPONSE_RECEIVED";
       activityNotes = notes || `Ha risposto via ${viaLabel}`;
       break;
