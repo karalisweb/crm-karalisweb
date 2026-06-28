@@ -82,6 +82,7 @@ model Lead {
   // Questionario / self-assessment (segnale di calore → CALDO_REATTIVO)
   questionnaireCompletedAt DateTime? @map("questionnaire_completed_at")
   questionnaireResponses   Json?     @map("questionnaire_responses")
+  questionnaireScore       Int?      @map("questionnaire_score") // punteggio self-assessment (smistamento per fascia)
   lostReason        LostReason?   @map("lost_reason")
   lostReasonNotes   String?       @map("lost_reason_notes")
 

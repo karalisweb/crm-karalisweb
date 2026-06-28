@@ -8,13 +8,22 @@ import { db } from "@/lib/db";
  * self-assessment. La compilazione è un segnale di calore: promuove il lead a
  * CALDO_REATTIVO e ferma la sequenza fredda (opt-in-mailer si ferma su respondedAt).
  *
- * Body JSON: { secret, email?, leadId?, responses? }
+ * Body JSON: { secret, email?, leadId?, responses?, score? }
  * Mappatura lead: per `leadId` se presente, altrimenti per `email` (match più recente,
  * non disiscritto). Protetto da QUESTIONNAIRE_WEBHOOK_SECRET (se configurato).
  * Risponde sempre 200 anche se non aggancia: il Form non deve mostrare errori.
+ *
+ * SMISTAMENTO per punteggio (self-assessment a 10 domande, max 30):
+ *  - ≥ ALTA_MIN  → CALDO_REATTIVO, priorità 1 (video subito)
+ *  - ≥ MEDIA_MIN → CALDO_REATTIVO, priorità 2 (video, ma dopo gli alti)
+ *  - < MEDIA_MIN → NURTURING (compilato ma poco in target: niente video ora, tocchi lenti)
+ *  - score assente → CALDO_REATTIVO senza priorità (vale la sola compilazione)
  */
 
-// Stati "freddi/da-lavorare" da cui ha senso promuovere a caldo (non tocca vendita/chiusura)
+const SCORE_ALTA_MIN = 24; // fascia alta
+const SCORE_MEDIA_MIN = 17; // fascia media (sotto = bassa)
+
+// Stati "freddi/da-lavorare" da cui ha senso smistare (non tocca vendita/chiusura)
 const PROMOTABLE_STAGES = new Set([
   "DA_ANALIZZARE",
   "HOT_LEAD",
@@ -27,12 +36,15 @@ const PROMOTABLE_STAGES = new Set([
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { secret, email, leadId, responses } = body as {
+    const { secret, email, leadId, responses, score } = body as {
       secret?: string;
       email?: string;
       leadId?: string;
       responses?: unknown;
+      score?: number | string;
     };
+    const numScore =
+      score == null || score === "" || Number.isNaN(Number(score)) ? null : Math.round(Number(score));
 
     const expected = process.env.QUESTIONNAIRE_WEBHOOK_SECRET;
     if (expected && secret !== expected) {
@@ -62,7 +74,24 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date();
-    const promote = PROMOTABLE_STAGES.has(lead.pipelineStage);
+    const canRoute = PROMOTABLE_STAGES.has(lead.pipelineStage);
+
+    // Smistamento per fascia di punteggio (se disponibile).
+    let targetStage: "CALDO_REATTIVO" | "NURTURING" | null = null;
+    let priority: number | null = null;
+    let band = "n/d";
+    if (canRoute) {
+      if (numScore == null) {
+        targetStage = "CALDO_REATTIVO"; // vale la sola compilazione
+        band = "senza punteggio";
+      } else if (numScore >= SCORE_ALTA_MIN) {
+        targetStage = "CALDO_REATTIVO"; priority = 1; band = "ALTA";
+      } else if (numScore >= SCORE_MEDIA_MIN) {
+        targetStage = "CALDO_REATTIVO"; priority = 2; band = "MEDIA";
+      } else {
+        targetStage = "NURTURING"; band = "BASSA";
+      }
+    }
 
     await db.lead.update({
       where: { id: lead.id },
@@ -70,25 +99,28 @@ export async function POST(request: NextRequest) {
         questionnaireCompletedAt: now,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         questionnaireResponses: (responses ?? null) as any,
-        // Segnale di calore: ferma la sequenza fredda (respondedAt) e promuove
+        ...(numScore != null ? { questionnaireScore: numScore } : {}),
+        // Segnale di calore: ferma la sequenza fredda (respondedAt) e smista per fascia
         respondedAt: now,
         respondedVia: "questionario",
-        ...(promote ? { pipelineStage: "CALDO_REATTIVO" as const } : {}),
+        ...(targetStage ? { pipelineStage: targetStage } : {}),
+        ...(priority != null ? { commercialPriority: priority } : {}),
       },
     });
 
+    const noteScore = numScore != null ? ` (punteggio ${numScore}, fascia ${band})` : "";
     await db.activity.create({
       data: {
         leadId: lead.id,
         type: "RESPONSE_RECEIVED",
-        notes: promote
-          ? "Questionario compilato → promosso a CALDO_REATTIVO"
-          : "Questionario compilato (stato non modificato)",
+        notes: targetStage
+          ? `Questionario compilato${noteScore} → ${targetStage}`
+          : `Questionario compilato${noteScore} (stato non modificato)`,
       },
     });
 
-    console.log(`[QUESTIONNAIRE] ${lead.name}: compilato${promote ? " → CALDO_REATTIVO" : ""}`);
-    return NextResponse.json({ ok: true, matched: true, promoted: promote });
+    console.log(`[QUESTIONNAIRE] ${lead.name}: compilato${noteScore}${targetStage ? ` → ${targetStage}` : ""}`);
+    return NextResponse.json({ ok: true, matched: true, stage: targetStage, score: numScore, band });
   } catch (error) {
     console.error("[QUESTIONNAIRE] Errore:", error);
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
