@@ -76,8 +76,11 @@ model Lead {
   channelHistory    Json?         @map("channel_history") // [{channel, setAt, reason}]
   email             String?       // Email del prospect (per fallback invio)
   outreachMailSent  Json?         @map("outreach_mail_sent") // {subject, body, hook, generatedAt} — cosa ha ricevuto davvero (per registrare il video coerente)
-  optInSentAt       DateTime?     @map("opt_in_sent_at")       // Quando è partita la mail opt-in (dedup + tempistica follow-up)
-  optInFollowupAt   DateTime?     @map("opt_in_followup_at")   // Quando è partito il follow-up gentile
+  optInSentAt       DateTime?     @map("opt_in_sent_at")       // T1: prima mail (dedup + tempistica follow-up)
+  optInFollowupAt   DateTime?     @map("opt_in_followup_at")   // T2: primo follow-up
+  optInFollowup2At  DateTime?     @map("opt_in_followup2_at")  // T3: secondo follow-up
+  coldCallTaskAt    DateTime?     @map("cold_call_task_at")    // T4: task telefonata creato (solo lead caldi/HOT)
+  coldBreakupAt     DateTime?     @map("cold_breakup_at")      // T5: break-up inviato → NURTURING
 
   // Questionario / self-assessment (segnale di calore → CALDO_REATTIVO)
   questionnaireCompletedAt DateTime? @map("questionnaire_completed_at")

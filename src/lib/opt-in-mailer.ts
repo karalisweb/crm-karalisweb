@@ -5,15 +5,17 @@ import { pickSubjectVariant } from "@/lib/workflow-templates";
 import { PipelineStage, Prisma } from "@prisma/client";
 
 /**
- * Macchina dedicata alla MAIL 1 (opt-in): chiede al prospect se vuole il video.
+ * Sequenza fredda verso il QUESTIONARIO — 5 tocchi.
  *
- * Separata dal workflow engine del video (così non rischia di romperlo). Riusa:
- *  - generateOutreachEmail()  → testo AI con gancio vero
- *  - sendOutreachEmail()      → invio SMTP + footer GDPR/unsubscribe
- *  - pickSubjectVariant()     → oggetto a rotazione (deliverability)
+ *  T1 mail 1 (gancio di dolore + questionario). Auto solo se gate approvazione OFF;
+ *     altrimenti la manda la schermata di approvazione (/approve-outreach).
+ *  T2 follow-up 1 (email, +FOLLOWUP_DAYS)
+ *  T3 follow-up 2 (email, +FOLLOWUP2_DAYS, angolo diverso)
+ *  T4 telefonata (TASK, +CALL_DAYS, solo lead HOT) — non consuma budget email
+ *  T5 break-up (email, +BREAKUP_DAYS) → stato NURTURING (stop solleciti)
  *
- * Protezioni: tetto giornaliero (settings.emailDailyCap), invii distribuiti
- * (poche mail/run + jitter), niente doppioni / disiscritti / chi ha già risposto.
+ * La sequenza si ferma su respondedAt / unsubscribed (gestito altrove: la risposta
+ * promuove a CALDO_REATTIVO). Protezioni: tetto giornaliero + warmup + jitter.
  */
 
 const DEFAULT_SUBJECTS = [
@@ -25,23 +27,24 @@ const DEFAULT_SUBJECTS = [
 ];
 
 const PER_RUN_CAP = Math.max(0, parseInt(process.env.OPTIN_PER_RUN_CAP || "4", 10) || 0);
-const FOLLOWUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP_DAYS || "4", 10) || 4);
-// Giorni dal follow-up dopo i quali, senza risposta, il lead "esce dai giochi"
-// (archiviato). Configurabile con OPTIN_EXPIRY_DAYS.
-const EXPIRY_DAYS = Math.max(1, parseInt(process.env.OPTIN_EXPIRY_DAYS || "7", 10) || 7);
+const FOLLOWUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP_DAYS || "3", 10) || 3);   // T2
+const FOLLOWUP2_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP2_DAYS || "4", 10) || 4); // T3 (da T2)
+const CALL_DAYS = Math.max(1, parseInt(process.env.OPTIN_CALL_DAYS || "3", 10) || 3);           // T4 (da T3)
+const BREAKUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_BREAKUP_DAYS || "7", 10) || 7);     // T5 (da T3)
 
 export interface OptInResult {
   firstSent: number;
   followupsSent: number;
+  followup2Sent: number;
+  callTasks: number;
+  breakups: number;
   skipped: number;
   capReached: boolean;
-  expired: number;
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
-
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -50,7 +53,6 @@ function shuffle<T>(arr: T[]): T[] {
   }
   return a;
 }
-
 async function jitter(): Promise<void> {
   await sleep(4000 + Math.floor(Math.random() * 16000));
 }
@@ -67,56 +69,15 @@ function warmupCap(configuredCap: number, firstSentAt: Date | null): number {
   return Math.min(configuredCap, ramp);
 }
 
-/**
- * "Esce dai giochi": i lead che hanno ricevuto il follow-up ma non hanno risposto
- * entro EXPIRY_DAYS vengono archiviati (escono dalla pipeline outreach attiva).
- * Non è un "perso" (non hanno rifiutato): restano in Archivio, recuperabili.
- */
-async function expireStaleOptIns(): Promise<number> {
-  const cutoff = new Date(Date.now() - EXPIRY_DAYS * 86_400_000);
-  const stale = await db.lead.findMany({
-    where: {
-      optInFollowupAt: { not: null, lte: cutoff },
-      respondedAt: null,
-      unsubscribed: false,
-      pipelineStage: {
-        in: [PipelineStage.HOT_LEAD, PipelineStage.WARM_LEAD, PipelineStage.COLD_LEAD],
-      },
-    },
-    select: { id: true, name: true, email: true },
-    take: 200,
-  });
-
-  let archived = 0;
-  for (const lead of stale) {
-    try {
-      await db.$transaction([
-        db.lead.update({
-          where: { id: lead.id },
-          data: { pipelineStage: PipelineStage.ARCHIVIATO },
-        }),
-        db.activity.create({
-          data: {
-            leadId: lead.id,
-            type: "EMAIL_OUTREACH",
-            notes: `[Opt-in-EXPIRED] nessuna risposta dopo ${EXPIRY_DAYS}gg dal follow-up → archiviato`,
-          },
-        }),
-      ]);
-      archived++;
-    } catch (err) {
-      console.error(`[opt-in] expiry errore ${lead.id}:`, err);
-    }
-  }
-  if (archived > 0) console.log(`[opt-in] archiviati ${archived} lead senza risposta dopo ${EXPIRY_DAYS}gg`);
-  return archived;
+function daysAgo(n: number): Date {
+  return new Date(Date.now() - n * 86_400_000);
 }
 
 export async function runOptInMailer(): Promise<OptInResult> {
-  const res: OptInResult = { firstSent: 0, followupsSent: 0, skipped: 0, capReached: false, expired: 0 };
-
-  // Prima di inviare: archivia chi non ha risposto dopo il follow-up.
-  res.expired = await expireStaleOptIns();
+  const res: OptInResult = {
+    firstSent: 0, followupsSent: 0, followup2Sent: 0, callTasks: 0, breakups: 0,
+    skipped: 0, capReached: false,
+  };
 
   const settings = await db.settings.findUnique({
     where: { id: "default" },
@@ -131,102 +92,193 @@ export async function runOptInMailer(): Promise<OptInResult> {
   const configuredCap = settings?.emailDailyCap ?? 20;
   const firma = settings?.signatureAlessio || "Alessio Loi\nKaralisweb";
   const questionnaireUrl = (settings?.questionnaireUrl || "").trim();
-  // Gate di approvazione: se attivo (default), le PRIME mail NON partono in automatico —
-  // passano dalla coda di approvazione (Alessio approva/ritocca → /approve-outreach).
-  // I follow-up e l'expiry restano automatici.
   const requireApproval = settings?.outreachRequireApproval ?? true;
   const subjectsField =
     settings?.optInSubjects && settings.optInSubjects.trim()
       ? settings.optInSubjects
       : DEFAULT_SUBJECTS.join("\n");
 
-  // Mail opt-in (prime + follow-up) già inviate oggi → quanto budget resta.
+  const inSequence = [PipelineStage.HOT_LEAD, PipelineStage.WARM_LEAD];
+
+  // Budget email del run (tetto giornaliero - già inviate oggi, con warmup).
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
   const sentToday = await db.activity.count({
-    where: {
-      type: "EMAIL_OUTREACH",
-      notes: { startsWith: "[Opt-in" },
-      createdAt: { gte: startOfDay },
-    },
+    where: { type: "EMAIL_OUTREACH", notes: { startsWith: "[Opt-in" }, createdAt: { gte: startOfDay } },
   });
-
-  // Partenza morbida del dominio: i primi giorni si invia poco, poi si sale.
   const firstAgg = await db.lead.aggregate({
     _min: { optInSentAt: true },
     where: { optInSentAt: { not: null } },
   });
   const dailyCap = warmupCap(configuredCap, firstAgg._min.optInSentAt);
-
   let budget = Math.max(0, Math.min(PER_RUN_CAP, dailyCap - sentToday));
-  if (budget <= 0) {
-    res.capReached = true;
-    return res;
-  }
 
-  // 1) FOLLOW-UP gentile a chi non ha risposto dopo FOLLOWUP_DAYS giorni.
-  const followupCutoff = new Date(Date.now() - FOLLOWUP_DAYS * 24 * 60 * 60 * 1000);
-  const followupLeads = await db.lead.findMany({
+  // ── T4 — TELEFONATA (task, solo lead HOT): non consuma budget email ──────────
+  const callLeads = await db.lead.findMany({
     where: {
-      optInSentAt: { not: null, lte: followupCutoff },
-      optInFollowupAt: null,
+      pipelineStage: PipelineStage.HOT_LEAD,
+      optInFollowup2At: { not: null, lte: daysAgo(CALL_DAYS) },
+      coldCallTaskAt: null,
       respondedAt: null,
       unsubscribed: false,
-      email: { not: null },
     },
-    select: { id: true, name: true, email: true, outreachMailSent: true },
-    take: budget * 3,
+    select: { id: true, name: true, phone: true, outreachMailSent: true },
+    take: 100,
   });
-
-  for (const lead of shuffle(followupLeads)) {
-    if (budget <= 0) break;
-    if (!lead.email) continue;
-    const prev = lead.outreachMailSent as { subject?: string } | null;
-    const subject = prev?.subject ? `Re: ${prev.subject}` : `Re: ${lead.name}`;
-    const body = questionnaireUrl
-      ? `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
-        `Se ti va, qui ci sono le poche domande che ti dicevo (cinque minuti): ${questionnaireUrl}\n\nUn saluto,\n${firma}`
-      : `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
-        `Se ti va, rispondi pure a questa mail.\n\nUn saluto,\n${firma}`;
+  for (const lead of callLeads) {
     try {
-      const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
-      if (!ok) {
-        res.skipped++;
-        continue;
-      }
+      const hook = (lead.outreachMailSent as { hook?: string } | null)?.hook || "";
+      const desc =
+        `Chiama ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}.\n` +
+        (hook ? `Gancio: ${hook}\n` : "") +
+        `Obiettivo: sbloccare via voce ("ti ho scritto, forse è finita in spam") e portarlo al questionario` +
+        (questionnaireUrl ? `: ${questionnaireUrl}` : ".") +
+        `\nSe mostra interesse, segna "Ha risposto" (diventa CALDO).`;
       await db.$transaction([
-        db.lead.update({
-          where: { id: lead.id },
-          data: { optInFollowupAt: new Date(), lastContactedAt: new Date() },
-        }),
-        db.activity.create({
-          data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in-FU] follow-up → ${lead.email}` },
-        }),
+        db.task.create({ data: { leadId: lead.id, title: `📞 Chiama — ${lead.name}`, description: desc, dueAt: new Date() } }),
+        db.lead.update({ where: { id: lead.id }, data: { coldCallTaskAt: new Date() } }),
+        db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Cold-CALL] task telefonata creato` } }),
       ]);
-      res.followupsSent++;
-      budget--;
-      if (budget > 0) await jitter();
+      res.callTasks++;
     } catch (err) {
-      console.error(`[opt-in] follow-up errore ${lead.id}:`, err);
+      console.error(`[opt-in] call-task errore ${lead.id}:`, err);
       res.skipped++;
     }
   }
 
-  // 2) PRIME mail a chi è caldo/tiepido, ha email, e non l'ha ancora ricevuta.
-  // La mail 1 invita al questionario: senza il link configurato non si invia.
-  // Se il gate di approvazione è attivo, le prime mail le manda la schermata di
-  // approvazione (non il cron). I follow-up sopra valgono lo stesso.
+  // ── T5 — BREAK-UP (email) → NURTURING ───────────────────────────────────────
+  if (budget > 0) {
+    const breakupLeads = await db.lead.findMany({
+      where: {
+        pipelineStage: { in: inSequence },
+        optInFollowup2At: { not: null, lte: daysAgo(BREAKUP_DAYS) },
+        coldBreakupAt: null,
+        respondedAt: null,
+        unsubscribed: false,
+        email: { not: null },
+      },
+      select: { id: true, name: true, email: true },
+      take: budget * 3,
+    });
+    for (const lead of shuffle(breakupLeads)) {
+      if (budget <= 0) break;
+      if (!lead.email) continue;
+      const subject = `Chiudo il cerchio, ${lead.name}`;
+      const body = questionnaireUrl
+        ? `Ciao,\n\nnon avendo avuto un tuo riscontro smetto di scriverti: non voglio disturbare.\n` +
+          `Se in futuro vuoi capire dove sta ${lead.name}, le domande restano qui: ${questionnaireUrl}\n\nIn bocca al lupo,\n${firma}`
+        : `Ciao,\n\nnon avendo avuto un tuo riscontro smetto di scriverti: non voglio disturbare.\n` +
+          `Se cambi idea, rispondi pure a questa mail.\n\nIn bocca al lupo,\n${firma}`;
+      try {
+        const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
+        if (!ok) { res.skipped++; continue; }
+        await db.$transaction([
+          db.lead.update({
+            where: { id: lead.id },
+            data: { coldBreakupAt: new Date(), lastContactedAt: new Date(), pipelineStage: PipelineStage.NURTURING },
+          }),
+          db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in-BREAKUP] break-up → NURTURING (${lead.email})` } }),
+        ]);
+        res.breakups++;
+        budget--;
+        if (budget > 0) await jitter();
+      } catch (err) {
+        console.error(`[opt-in] break-up errore ${lead.id}:`, err);
+        res.skipped++;
+      }
+    }
+  }
+
+  // ── T2 — FOLLOW-UP 1 (email) ────────────────────────────────────────────────
+  if (budget > 0) {
+    const fu1Leads = await db.lead.findMany({
+      where: {
+        pipelineStage: { in: inSequence },
+        optInSentAt: { not: null, lte: daysAgo(FOLLOWUP_DAYS) },
+        optInFollowupAt: null,
+        respondedAt: null,
+        unsubscribed: false,
+        email: { not: null },
+      },
+      select: { id: true, name: true, email: true, outreachMailSent: true },
+      take: budget * 3,
+    });
+    for (const lead of shuffle(fu1Leads)) {
+      if (budget <= 0) break;
+      if (!lead.email) continue;
+      const prev = lead.outreachMailSent as { subject?: string } | null;
+      const subject = prev?.subject ? `Re: ${prev.subject}` : `Re: ${lead.name}`;
+      const body = questionnaireUrl
+        ? `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
+          `Se ti va, qui ci sono le poche domande che ti dicevo (cinque minuti): ${questionnaireUrl}\n\nUn saluto,\n${firma}`
+        : `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
+          `Se ti va, rispondi pure a questa mail.\n\nUn saluto,\n${firma}`;
+      try {
+        const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
+        if (!ok) { res.skipped++; continue; }
+        await db.$transaction([
+          db.lead.update({ where: { id: lead.id }, data: { optInFollowupAt: new Date(), lastContactedAt: new Date() } }),
+          db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in-FU] follow-up 1 → ${lead.email}` } }),
+        ]);
+        res.followupsSent++;
+        budget--;
+        if (budget > 0) await jitter();
+      } catch (err) {
+        console.error(`[opt-in] follow-up errore ${lead.id}:`, err);
+        res.skipped++;
+      }
+    }
+  }
+
+  // ── T3 — FOLLOW-UP 2 (email, angolo "visibilità") ───────────────────────────
+  if (budget > 0) {
+    const fu2Leads = await db.lead.findMany({
+      where: {
+        pipelineStage: { in: inSequence },
+        optInFollowupAt: { not: null, lte: daysAgo(FOLLOWUP2_DAYS) },
+        optInFollowup2At: null,
+        respondedAt: null,
+        unsubscribed: false,
+        email: { not: null },
+      },
+      select: { id: true, name: true, email: true },
+      take: budget * 3,
+    });
+    for (const lead of shuffle(fu2Leads)) {
+      if (budget <= 0) break;
+      if (!lead.email) continue;
+      const subject = `Ultima cosa su ${lead.name}`;
+      const body = questionnaireUrl
+        ? `Ciao,\n\nultima cosa e poi ti lascio in pace: prova a cercare su Google (o a chiederlo a ChatGPT) un'attività come la vostra nella vostra zona, e guarda chi compare per primo.\n` +
+          `Le poche domande che ti ho mandato servono proprio a capire dove si trova ${lead.name} rispetto a questo: ${questionnaireUrl}\n\nUn saluto,\n${firma}`
+        : `Ciao,\n\nultima cosa e poi ti lascio in pace: se ti va di capire dove si trova ${lead.name} rispetto ai concorrenti online, rispondi pure a questa mail.\n\nUn saluto,\n${firma}`;
+      try {
+        const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
+        if (!ok) { res.skipped++; continue; }
+        await db.$transaction([
+          db.lead.update({ where: { id: lead.id }, data: { optInFollowup2At: new Date(), lastContactedAt: new Date() } }),
+          db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in-FU2] follow-up 2 → ${lead.email}` } }),
+        ]);
+        res.followup2Sent++;
+        budget--;
+        if (budget > 0) await jitter();
+      } catch (err) {
+        console.error(`[opt-in] follow-up2 errore ${lead.id}:`, err);
+        res.skipped++;
+      }
+    }
+  }
+
+  // ── T1 — PRIME mail (solo se gate approvazione OFF) ─────────────────────────
   if (budget > 0 && requireApproval) {
     console.log("[opt-in] gate approvazione attivo: prime mail gestite dalla coda di approvazione, non in automatico.");
   } else if (budget > 0 && !questionnaireUrl) {
-    console.warn(
-      "[opt-in] Link questionario non configurato (Impostazioni → questionnaireUrl): salto le prime mail."
-    );
+    console.warn("[opt-in] Link questionario non configurato: salto le prime mail.");
   }
   if (budget > 0 && questionnaireUrl && !requireApproval) {
     const newLeads = await db.lead.findMany({
       where: {
-        pipelineStage: { in: [PipelineStage.HOT_LEAD, PipelineStage.WARM_LEAD] },
+        pipelineStage: { in: inSequence },
         email: { not: null },
         optInSentAt: null,
         unsubscribed: false,
@@ -235,39 +287,22 @@ export async function runOptInMailer(): Promise<OptInResult> {
       select: { id: true, name: true, email: true },
       take: budget * 3,
     });
-
     for (const lead of shuffle(newLeads)) {
-      if (budget <= 0) {
-        res.capReached = true;
-        break;
-      }
+      if (budget <= 0) { res.capReached = true; break; }
       if (!lead.email) continue;
       try {
         const draft = await generateOutreachEmail(lead.id);
         const subjectTpl = pickSubjectVariant(subjectsField, sentToday + res.firstSent + res.followupsSent);
         const subject = subjectTpl.replace(/\{azienda\}/g, lead.name);
         const body = `${draft.body}\n\n${firma}`;
-
         const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
-        if (!ok) {
-          res.skipped++;
-          continue;
-        }
-
+        if (!ok) { res.skipped++; continue; }
         const sentRecord: Prisma.InputJsonValue = {
-          subject,
-          body,
-          hook: draft.hook || "",
-          generatedAt: new Date().toISOString(),
+          subject, body, hook: draft.hook || "", generatedAt: new Date().toISOString(),
         };
         await db.$transaction([
-          db.lead.update({
-            where: { id: lead.id },
-            data: { outreachMailSent: sentRecord, optInSentAt: new Date(), lastContactedAt: new Date() },
-          }),
-          db.activity.create({
-            data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in] mail inviata → ${lead.email}` },
-          }),
+          db.lead.update({ where: { id: lead.id }, data: { outreachMailSent: sentRecord, optInSentAt: new Date(), lastContactedAt: new Date() } }),
+          db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in] mail inviata → ${lead.email}` } }),
         ]);
         res.firstSent++;
         budget--;
@@ -279,5 +314,6 @@ export async function runOptInMailer(): Promise<OptInResult> {
     }
   }
 
+  if (budget <= 0) res.capReached = true;
   return res;
 }
