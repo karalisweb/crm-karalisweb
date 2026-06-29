@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.23.1] - 2026-06-29
+
+- feat(approvazione): link diretti a Google Ads Transparency e Meta Ad Library nel Verdetto Ads; fix deploy.sh range diff su ROLLBACK_COMMIT..HEAD
+
 ## [3.23.0] - 2026-06-29
 
 - feat(outreach): pipeline v2 — sequenza fredda verso questionario, schermata approvazione, webhook self-assessment a punteggio, filtro Carta, SMTP outreach dedicato

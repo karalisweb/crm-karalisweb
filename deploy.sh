@@ -459,8 +459,24 @@ print_success "Pull completato"
 
 print_step "Step 7/9 - Dipendenze + Prisma (schema → client)..."
 
+# Range di diff per rilevare le modifiche: confrontiamo lo stato del server PRIMA
+# del pull (ROLLBACK_COMMIT, catturato allo Step 6) con HEAD dopo il pull. Così
+# copriamo TUTTI i commit portati dal pull, anche quando si deploya un MERGE in cui
+# l'ULTIMO commit (es. bump di versione) non tocca i file che ci interessano.
+# Bug storico: `git diff HEAD~1` guardava solo l'ultimo commit → su un merge con bump
+# finale, le modifiche a schema.prisma nei commit precedenti venivano IGNORATE →
+# `db push` saltato → "column ... does not exist" in produzione (capitato col v3.23.0).
+# Fallback a HEAD~1 se per qualche motivo non abbiamo il commit di rollback.
+if [ -n "$ROLLBACK_COMMIT" ]; then
+    DIFF_RANGE="${ROLLBACK_COMMIT}..HEAD"
+    echo -e "  ${CYAN}Rilevo modifiche su range ${ROLLBACK_COMMIT:0:8}..HEAD${NC}"
+else
+    DIFF_RANGE="HEAD~1"
+    print_warning "ROLLBACK_COMMIT assente → fallback a 'git diff HEAD~1' (solo ultimo commit)"
+fi
+
 # npm install solo se package.json è cambiato
-PACKAGE_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff HEAD~1 --name-only 2>/dev/null | grep package.json" 2>/dev/null || echo "")
+PACKAGE_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff $DIFF_RANGE --name-only 2>/dev/null | grep package.json" 2>/dev/null || echo "")
 if [ -n "$PACKAGE_CHANGED" ]; then
     echo -e "  ${CYAN}package.json modificato → npm install${NC}"
     ssh $VPS_HOST "cd $VPS_PATH && npm install"
@@ -470,7 +486,7 @@ else
 fi
 
 # PRIMA sincronizza schema DB (nuovi campi/tabelle)
-SCHEMA_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff HEAD~1 --name-only 2>/dev/null | grep schema.prisma" 2>/dev/null || echo "")
+SCHEMA_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff $DIFF_RANGE --name-only 2>/dev/null | grep schema.prisma" 2>/dev/null || echo "")
 if [ -n "$SCHEMA_CHANGED" ]; then
     echo -e "  ${CYAN}schema.prisma modificato → backup DB + prisma db push${NC}"
     # Backup del DB PRIMA di toccare lo schema: `db push --accept-data-loss` può

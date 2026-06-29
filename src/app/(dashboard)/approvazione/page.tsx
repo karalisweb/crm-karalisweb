@@ -48,15 +48,22 @@ function scoreColor(s: number | null): string {
   return "bg-yellow-600";
 }
 
-function AdsRow({ label, confirmed, confirmedValue, suggestion, busy, onSet }: {
+function AdsRow({ label, confirmed, confirmedValue, suggestion, busy, onSet, href, hrefTitle }: {
   label: string; confirmed: boolean; confirmedValue: boolean; suggestion: boolean | null;
-  busy: boolean; onSet: (v: boolean) => void;
+  busy: boolean; onSet: (v: boolean) => void; href?: string; hrefTitle?: string;
 }) {
   const showHint = !confirmed && suggestion !== null;
   return (
     <div className="flex items-center justify-between gap-2 py-1.5">
       <div className="flex items-center gap-2 min-w-0">
         <span className="text-sm font-medium">{label}</span>
+        {href && (
+          <a href={href} target="_blank" rel="noopener noreferrer" title={hrefTitle}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-400 hover:text-amber-300 hover:underline">
+            <ExternalLink className="h-2.5 w-2.5" /> verifica
+          </a>
+        )}
         {confirmed ? (
           <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-bold",
             confirmedValue ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-500/20 text-gray-400")}>
@@ -215,8 +222,14 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
 
             <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">Verdetto Ads</p>
-              <AdsRow label="Google Ads" confirmed={adsVerified} confirmedValue={googleAds} suggestion={lead.googleAdsActive} busy={adsBusy} onSet={(v) => setAds("google", v)} />
-              <AdsRow label="Meta Ads" confirmed={adsVerified} confirmedValue={metaAds} suggestion={lead.metaAdsActive} busy={adsBusy} onSet={(v) => setAds("meta", v)} />
+              <AdsRow label="Google Ads" confirmed={adsVerified} confirmedValue={googleAds} suggestion={lead.googleAdsActive} busy={adsBusy} onSet={(v) => setAds("google", v)}
+                href={lead.website
+                  ? `https://adstransparency.google.com/?domain=${encodeURIComponent(lead.website.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])}&region=IT`
+                  : `https://adstransparency.google.com/?region=IT&query=${encodeURIComponent(lead.name)}`}
+                hrefTitle="Apri Google Ads Transparency Center" />
+              <AdsRow label="Meta Ads" confirmed={adsVerified} confirmedValue={metaAds} suggestion={lead.metaAdsActive} busy={adsBusy} onSet={(v) => setAds("meta", v)}
+                href={`https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=IT&q=${encodeURIComponent(lead.name)}&search_type=keyword_unordered`}
+                hrefTitle="Apri Meta Ad Library" />
             </div>
 
             <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
