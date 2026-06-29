@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.24.1] - 2026-06-29
+
+- fix(approvazione): verifica ads per-piattaforma (confermare Google non marca più Meta) + link 'Verifica' sempre visibile su riga propria (non più nascosto dal badge su mobile)
+
 ## [3.24.0] - 2026-06-29
 
 - outreach: mail 1 con fatti verificati dall'audit, niente tono da venditore; video promesso e garantito a chiunque compila il questionario; pulsante Rigenera in Approvazione

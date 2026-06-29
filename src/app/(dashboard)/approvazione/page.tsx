@@ -17,6 +17,7 @@ import { useSidebar } from "@/components/layout/sidebar-context";
 interface GeminiAnalysis {
   primary_error_pattern?: string;
   strategic_note?: string;
+  ads_override?: { googleAds?: boolean | null; metaAds?: boolean | null; verifiedAt?: string };
 }
 interface Lead {
   id: string;
@@ -48,47 +49,49 @@ function scoreColor(s: number | null): string {
   return "bg-yellow-600";
 }
 
-function AdsRow({ label, confirmed, confirmedValue, suggestion, busy, onSet, href, hrefTitle }: {
+function AdsRow({ label, confirmed, confirmedValue, suggestion, busy, onSet, href, linkLabel }: {
   label: string; confirmed: boolean; confirmedValue: boolean; suggestion: boolean | null;
-  busy: boolean; onSet: (v: boolean) => void; href?: string; hrefTitle?: string;
+  busy: boolean; onSet: (v: boolean) => void; href?: string; linkLabel?: string;
 }) {
   const showHint = !confirmed && suggestion !== null;
   return (
-    <div className="flex items-center justify-between gap-2 py-1.5">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-sm font-medium">{label}</span>
-        {href && (
-          <a href={href} target="_blank" rel="noopener noreferrer" title={hrefTitle}
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-400 hover:text-amber-300 hover:underline">
-            <ExternalLink className="h-2.5 w-2.5" /> verifica
-          </a>
-        )}
-        {confirmed ? (
-          <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-bold",
-            confirmedValue ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-500/20 text-gray-400")}>
-            {confirmedValue ? "SÌ" : "NO"}
-          </span>
-        ) : showHint ? (
-          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-            ipotesi: {suggestion ? "SÌ" : "NO"} · da confermare
-          </span>
-        ) : (
-          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-500/10 text-gray-500">da verificare</span>
-        )}
+    <div className="py-1.5 space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-medium flex-shrink-0">{label}</span>
+          {confirmed ? (
+            <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-bold flex-shrink-0",
+              confirmedValue ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-500/20 text-gray-400")}>
+              {confirmedValue ? "SÌ" : "NO"}
+            </span>
+          ) : showHint ? (
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30 truncate">
+              ipotesi: {suggestion ? "SÌ" : "NO"} · da confermare
+            </span>
+          ) : (
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-500/10 text-gray-500 flex-shrink-0">da verificare</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Button onClick={() => onSet(true)} disabled={busy} size="sm" variant="outline"
+            className={cn("h-7 px-3 text-xs",
+              confirmed && confirmedValue ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+              : showHint && suggestion === true ? "border-amber-500/50 text-amber-400"
+              : "border-gray-500/30 text-gray-400 hover:border-emerald-500/50 hover:text-emerald-400")}>Sì</Button>
+          <Button onClick={() => onSet(false)} disabled={busy} size="sm" variant="outline"
+            className={cn("h-7 px-3 text-xs",
+              confirmed && !confirmedValue ? "border-red-500/50 bg-red-500/10 text-red-400"
+              : showHint && suggestion === false ? "border-amber-500/50 text-amber-400"
+              : "border-gray-500/30 text-gray-400 hover:border-red-500/50 hover:text-red-400")}>No</Button>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <Button onClick={() => onSet(true)} disabled={busy} size="sm" variant="outline"
-          className={cn("h-7 px-3 text-xs",
-            confirmed && confirmedValue ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-            : showHint && suggestion === true ? "border-amber-500/50 text-amber-400"
-            : "border-gray-500/30 text-gray-400 hover:border-emerald-500/50 hover:text-emerald-400")}>Sì</Button>
-        <Button onClick={() => onSet(false)} disabled={busy} size="sm" variant="outline"
-          className={cn("h-7 px-3 text-xs",
-            confirmed && !confirmedValue ? "border-red-500/50 bg-red-500/10 text-red-400"
-            : showHint && suggestion === false ? "border-amber-500/50 text-amber-400"
-            : "border-gray-500/30 text-gray-400 hover:border-red-500/50 hover:text-red-400")}>No</Button>
-      </div>
+      {href && (
+        <a href={href} target="_blank" rel="noopener noreferrer" title={linkLabel}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300 hover:underline">
+          <ExternalLink className="h-3 w-3 flex-shrink-0" /> {linkLabel || "Verifica"}
+        </a>
+      )}
     </div>
   );
 }
@@ -102,10 +105,15 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
   const [questionnaireConfigured, setQuestionnaireConfigured] = useState(true);
-  const [adsVerified, setAdsVerified] = useState(lead.adsVerifiedManually);
+  // Verifica ads PER-PIATTAFORMA: confermare Google non deve toccare Meta (e viceversa).
+  // Lo stato "confermato" di ciascuna piattaforma vive in geminiAnalysis.ads_override
+  // (null = non ancora confermata); adsVerifiedManually è solo "toccato almeno una volta".
+  const adsOverride = lead.geminiAnalysis?.ads_override;
+  const [googleConfirmed, setGoogleConfirmed] = useState(adsOverride?.googleAds != null);
+  const [metaConfirmed, setMetaConfirmed] = useState(adsOverride?.metaAds != null);
   const [googleAds, setGoogleAds] = useState(lead.hasActiveGoogleAds);
   const [metaAds, setMetaAds] = useState(lead.hasActiveMetaAds);
-  const [adsBusy, setAdsBusy] = useState(false);
+  const [adsBusy, setAdsBusy] = useState<"google" | "meta" | null>(null);
 
   const pattern = lead.geminiAnalysis?.primary_error_pattern || null;
   const pain = lead.puntoDoloreBreve || lead.geminiAnalysis?.strategic_note || null;
@@ -151,16 +159,17 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
   }, [lead.id, draftLoading]);
 
   const setAds = async (platform: "google" | "meta", value: boolean) => {
-    setAdsBusy(true);
+    setAdsBusy(platform);
     try {
       const res = await fetch(`/api/leads/${lead.id}/ads-override`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(platform === "google" ? { googleAds: value } : { metaAds: value }),
       });
       if (!res.ok) throw new Error();
-      setAdsVerified(true);
-      if (platform === "google") setGoogleAds(value); else setMetaAds(value);
-    } catch { toast.error("Errore verifica ads"); } finally { setAdsBusy(false); }
+      // Conferma SOLO la piattaforma cliccata, lascia l'altra com'è.
+      if (platform === "google") { setGoogleAds(value); setGoogleConfirmed(true); }
+      else { setMetaAds(value); setMetaConfirmed(true); }
+    } catch { toast.error("Errore verifica ads"); } finally { setAdsBusy(null); }
   };
 
   const approve = async () => {
@@ -216,7 +225,7 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
             {pattern ? (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-800/40 font-medium">{pattern}</span>
             ) : <span className="italic">Nessun pattern</span>}
-            <span className="ml-auto">{adsVerified ? "Ads ✓" : "Ads da confermare"}</span>
+            <span className="ml-auto">{googleConfirmed && metaConfirmed ? "Ads ✓" : "Ads da confermare"}</span>
           </div>
         )}
 
@@ -242,14 +251,14 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
 
             <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">Verdetto Ads</p>
-              <AdsRow label="Google Ads" confirmed={adsVerified} confirmedValue={googleAds} suggestion={lead.googleAdsActive} busy={adsBusy} onSet={(v) => setAds("google", v)}
+              <AdsRow label="Google Ads" confirmed={googleConfirmed} confirmedValue={googleAds} suggestion={lead.googleAdsActive} busy={adsBusy === "google"} onSet={(v) => setAds("google", v)}
                 href={lead.website
                   ? `https://adstransparency.google.com/?domain=${encodeURIComponent(lead.website.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])}&region=IT`
                   : `https://adstransparency.google.com/?region=IT&query=${encodeURIComponent(lead.name)}`}
-                hrefTitle="Apri Google Ads Transparency Center" />
-              <AdsRow label="Meta Ads" confirmed={adsVerified} confirmedValue={metaAds} suggestion={lead.metaAdsActive} busy={adsBusy} onSet={(v) => setAds("meta", v)}
+                linkLabel="Verifica su Google Ads Transparency" />
+              <AdsRow label="Meta Ads" confirmed={metaConfirmed} confirmedValue={metaAds} suggestion={lead.metaAdsActive} busy={adsBusy === "meta"} onSet={(v) => setAds("meta", v)}
                 href={`https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=IT&q=${encodeURIComponent(lead.name)}&search_type=keyword_unordered`}
-                hrefTitle="Apri Meta Ad Library" />
+                linkLabel="Verifica su Meta Ad Library" />
             </div>
 
             <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
