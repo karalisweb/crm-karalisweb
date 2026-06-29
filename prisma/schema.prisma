@@ -769,6 +769,7 @@ model Settings {
   alessioLinkedinUrl    String?  @map("alessio_linkedin_url")    // Profilo LinkedIn di Alessio (prova sociale)
   questionnaireUrl      String?  @map("questionnaire_url")       // Link self-assessment/questionario ({{QUESTIONARIO}}) — unico link della mail 1
   emailDailyCap         Int      @default(20) @map("email_daily_cap") // Quante aziende contattare via mail al giorno
+  pausedSegments        String?  @map("paused_segments")          // Settori (segment key, separati da virgola) da NON contattare ora: esclusi da coda e mailer
 
   // Gate di approvazione: se true, la mail 1 NON parte in automatico → coda di approvazione (Alessio approva/ritocca)
   outreachRequireApproval Boolean @default(true) @map("outreach_require_approval")

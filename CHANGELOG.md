@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.27.0] - 2026-06-29
+
+- feat(outreach): pausa per settore — escludi settori (es. immobiliare) da coda di approvazione e invii automatici (mail 1/follow-up/break-up) senza scartare i lead; toggle a chip in Impostazioni→Outreach, nota nella coda
+
 ## [3.26.0] - 2026-06-29
 
 - feat(outreach): contatore email inviate oggi (T1+follow-up+break-up vs cap, con warmup) nella pagina Approvazione; recover-emails con cooldown anti-ritenta (campo emailCheckedAt) così ogni notte avanza su lead nuovi

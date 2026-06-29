@@ -9,14 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Mail, Save, Info } from "lucide-react";
+import { Mail, Save, Info, PauseCircle } from "lucide-react";
 import { AVAILABLE_PLACEHOLDERS } from "@/lib/workflow-templates";
+import { SEGMENTS, parsePausedSegments } from "@/lib/segments";
 
 interface OutreachSettings {
   sdLandingUrl?: string | null;
   alessioLinkedinUrl?: string | null;
   questionnaireUrl?: string | null;
   emailDailyCap?: number;
+  pausedSegments?: string | null;
   optInSubjects?: string | null;
   emailGenPrompt?: string | null;
   signatureAlessio?: string | null;
@@ -136,6 +138,46 @@ export function WorkflowConfigTab() {
             <p className="text-xs text-muted-foreground">
               Tetto giornaliero di invii automatici (deliverability). 0 = nessun invio.
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <PauseCircle className="h-4 w-4 text-amber-500" /> Settori in pausa (non contattare ora)
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              I settori spuntati vengono esclusi dalla coda di approvazione e dagli invii automatici
+              (mail 1, follow-up, break-up). Restano in pipeline: togli la spunta per riprenderli.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {(() => {
+                const paused = new Set(parsePausedSegments(settings.pausedSegments));
+                const toggle = (key: string) => {
+                  const next = new Set(paused);
+                  if (next.has(key)) next.delete(key); else next.add(key);
+                  setSettings((p) => ({ ...p, pausedSegments: Array.from(next).join(",") }));
+                };
+                return SEGMENTS.map((seg) => {
+                  const on = paused.has(seg.key);
+                  return (
+                    <button
+                      type="button"
+                      key={seg.key}
+                      onClick={() => toggle(seg.key)}
+                      className={
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors " +
+                        (on
+                          ? "border-amber-500/60 bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                          : "border-border bg-muted/30 text-muted-foreground hover:border-amber-500/40")
+                      }
+                    >
+                      <span>{seg.icon}</span>
+                      {seg.label}
+                      {on && <span className="ml-0.5 font-bold">⏸</span>}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

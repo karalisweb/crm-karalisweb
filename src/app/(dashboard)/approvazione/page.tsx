@@ -13,6 +13,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { detectFranchise } from "@/lib/franchise-brands";
+import { parsePausedSegments, getSegmentLabel } from "@/lib/segments";
 import { useSidebar } from "@/components/layout/sidebar-context";
 
 interface GeminiAnalysis {
@@ -396,6 +397,8 @@ export default function ApprovazionePage() {
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
   const [hiddenBelow, setHiddenBelow] = useState(0);
   const [hiddenFranchise, setHiddenFranchise] = useState(0);
+  const [pausedLabels, setPausedLabels] = useState<string[]>([]);
+  const [hiddenPaused, setHiddenPaused] = useState(0);
   const [sent, setSent] = useState<{
     total: number; cap: number; remaining: number; inWarmup: boolean;
     byType: { first: number; followup1: number; followup2: number; breakup: number };
@@ -406,15 +409,18 @@ export default function ApprovazionePage() {
     setError(null);
     try {
       let thr = DEFAULT_THRESHOLD;
+      let pausedKeys: string[] = [];
       try {
         const sres = await fetch("/api/settings/outreach-mail");
         if (sres.ok) {
           const s = await sres.json();
           const v = s?.settings?.outreachApprovalMinScore;
           if (typeof v === "number") thr = v;
+          pausedKeys = parsePausedSegments(s?.settings?.pausedSegments);
         }
       } catch { /* default */ }
       setThreshold(thr);
+      setPausedLabels(pausedKeys.map((k) => getSegmentLabel(k)));
 
       try {
         const cres = await fetch("/api/outreach/sent-today");
@@ -428,8 +434,12 @@ export default function ApprovazionePage() {
         (l: Lead) => !l.unsubscribed && !l.respondedAt && !l.optInSentAt
       );
       // Rete di sicurezza: nascondi i franchising eventualmente sfuggiti al blocco a monte.
-      const all = base.filter((l) => !detectFranchise(l.name));
-      setHiddenFranchise(base.length - all.length);
+      const noFranchise = base.filter((l) => !detectFranchise(l.name));
+      setHiddenFranchise(base.length - noFranchise.length);
+      // Settori in pausa: escludili dalla coda finché restano in pausa.
+      const pausedSet = new Set(pausedKeys);
+      const all = pausedSet.size > 0 ? noFranchise.filter((l) => !l.segment || !pausedSet.has(l.segment)) : noFranchise;
+      setHiddenPaused(noFranchise.length - all.length);
       const above = all.filter((l) => (l.opportunityScore ?? 0) >= thr);
       setLeads(above);
       setHiddenBelow(all.length - above.length);
@@ -483,6 +493,12 @@ export default function ApprovazionePage() {
       )}
       {hiddenFranchise > 0 && (
         <p className="text-xs text-muted-foreground">{hiddenFranchise} franchising/catene nascosti (fuori target).</p>
+      )}
+      {pausedLabels.length > 0 && (
+        <p className="text-xs text-amber-500/90">
+          ⏸ Settori in pausa: {pausedLabels.join(", ")}
+          {hiddenPaused > 0 ? ` — ${hiddenPaused} lead nascosti.` : "."} Riattivali in Impostazioni → Outreach.
+        </p>
       )}
 
       {error && (

@@ -154,3 +154,15 @@ export function getSegmentLabel(segmentKey: string | null): string {
   if (!segmentKey) return "";
   return SEGMENT_MAP.get(segmentKey)?.label ?? segmentKey;
 }
+
+/**
+ * Parsa `Settings.pausedSegments` (chiavi separate da virgola) in un array di key.
+ * Usato sia dal mailer (esclude questi settori) sia dalla UI/coda di approvazione.
+ */
+export function parsePausedSegments(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}

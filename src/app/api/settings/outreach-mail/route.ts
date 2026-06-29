@@ -14,6 +14,7 @@ const FIELDS = {
   alessioLinkedinUrl: true,
   questionnaireUrl: true,
   emailDailyCap: true,
+  pausedSegments: true,
   optInSubjects: true,
   emailGenPrompt: true,
   signatureAlessio: true,

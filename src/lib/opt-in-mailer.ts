@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { sendOutreachEmail } from "@/lib/email";
 import { generateOutreachEmail } from "@/lib/gemini-outreach-email";
 import { pickSubjectVariant } from "@/lib/workflow-templates";
+import { parsePausedSegments } from "@/lib/segments";
 import { PipelineStage, Prisma } from "@prisma/client";
 
 /**
@@ -87,9 +88,14 @@ export async function runOptInMailer(): Promise<OptInResult> {
       signatureAlessio: true,
       questionnaireUrl: true,
       outreachRequireApproval: true,
+      pausedSegments: true,
     },
   });
   const configuredCap = settings?.emailDailyCap ?? 20;
+  // Settori in pausa ("non contattare ora"): esclusi da TUTTI i tocchi finché restano in pausa.
+  const pausedKeys = parsePausedSegments(settings?.pausedSegments);
+  const segmentFilter: Prisma.LeadWhereInput =
+    pausedKeys.length > 0 ? { segment: { notIn: pausedKeys } } : {};
   const firma = settings?.signatureAlessio || "Alessio Loi\nKaralisweb";
   const questionnaireUrl = (settings?.questionnaireUrl || "").trim();
   const requireApproval = settings?.outreachRequireApproval ?? true;
@@ -121,6 +127,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
       coldCallTaskAt: null,
       respondedAt: null,
       unsubscribed: false,
+      ...segmentFilter,
     },
     select: { id: true, name: true, phone: true, outreachMailSent: true },
     take: 100,
@@ -156,6 +163,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
         respondedAt: null,
         unsubscribed: false,
         email: { not: null },
+        ...segmentFilter,
       },
       select: { id: true, name: true, email: true },
       take: budget * 3,
@@ -199,6 +207,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
         respondedAt: null,
         unsubscribed: false,
         email: { not: null },
+        ...segmentFilter,
       },
       select: { id: true, name: true, email: true, outreachMailSent: true },
       take: budget * 3,
@@ -240,6 +249,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
         respondedAt: null,
         unsubscribed: false,
         email: { not: null },
+        ...segmentFilter,
       },
       select: { id: true, name: true, email: true },
       take: budget * 3,
@@ -283,6 +293,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
         optInSentAt: null,
         unsubscribed: false,
         respondedAt: null,
+        ...segmentFilter,
       },
       select: { id: true, name: true, email: true },
       take: budget * 3,
