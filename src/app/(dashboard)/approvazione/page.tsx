@@ -130,6 +130,26 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
 
   useEffect(() => { if (expanded) loadDraft(); }, [expanded, loadDraft]);
 
+  // Rigenera la mail da zero (bypassa la bozza cachata) e sovrascrive subject/body.
+  const regenerate = useCallback(async () => {
+    if (draftLoading) return;
+    setDraftLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/first-touch-draft?regenerate=1`);
+      if (!res.ok) throw new Error();
+      const j = await res.json();
+      setSubject(j.subject || "");
+      setBody(j.body || "");
+      setQuestionnaireConfigured(!!j.questionnaireConfigured);
+      setDraftLoaded(true);
+      toast.success("Mail rigenerata");
+    } catch {
+      toast.error("Errore nel rigenerare la mail");
+    } finally {
+      setDraftLoading(false);
+    }
+  }, [lead.id, draftLoading]);
+
   const setAds = async (platform: "google" | "meta", value: boolean) => {
     setAdsBusy(true);
     try {
@@ -235,7 +255,18 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
             <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> Mail primo tocco</p>
-                {draftLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                <button
+                  type="button"
+                  onClick={regenerate}
+                  disabled={draftLoading || !!loading}
+                  title="Rigenera la mail da zero"
+                  className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary disabled:opacity-50 transition-colors"
+                >
+                  {draftLoading
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <RefreshCw className="h-3.5 w-3.5" />}
+                  Rigenera
+                </button>
               </div>
               {!questionnaireConfigured && (
                 <p className="text-[11px] text-amber-400 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Link questionario non impostato (Impostazioni)</p>

@@ -20,7 +20,7 @@ const FALLBACK_SUBJECTS = [
 ];
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const gate = await requireSession();
@@ -28,6 +28,8 @@ export async function GET(
 
   try {
     const { id } = await params;
+    // ?regenerate=1 → ignora la bozza cachata e rigenera da zero (la sovrascrive).
+    const regenerate = new URL(request.url).searchParams.get("regenerate") === "1";
     const lead = await db.lead.findUnique({
       where: { id },
       select: { id: true, name: true, outreachDraft: true },
@@ -40,9 +42,9 @@ export async function GET(
     });
     const questionnaireConfigured = !!(settings?.questionnaireUrl && settings.questionnaireUrl.trim());
 
-    // Bozza già pronta → ritornala (Alessio la rivede)
+    // Bozza già pronta → ritornala (Alessio la rivede), salvo richiesta esplicita di rigenerare.
     const cached = lead.outreachDraft as { subject?: string; body?: string } | null;
-    if (cached?.subject && cached?.body) {
+    if (!regenerate && cached?.subject && cached?.body) {
       return NextResponse.json({ subject: cached.subject, body: cached.body, questionnaireConfigured, cached: true });
     }
 

@@ -210,7 +210,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
       const subject = prev?.subject ? `Re: ${prev.subject}` : `Re: ${lead.name}`;
       const body = questionnaireUrl
         ? `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
-          `Se ti va, qui ci sono le poche domande che ti dicevo (cinque minuti): ${questionnaireUrl}\n\nUn saluto,\n${firma}`
+          `Sono le poche domande che ti dicevo: cinque minuti, e in base alle tue risposte ti registro un video di 2-3 minuti con le cose concrete che ho notato su ${lead.name}. Lo trovi qui: ${questionnaireUrl}\n\nUn saluto,\n${firma}`
         : `Ciao,\n\nqualche giorno fa ti ho scritto a proposito di ${lead.name} — ti era arrivata?\n` +
           `Se ti va, rispondi pure a questa mail.\n\nUn saluto,\n${firma}`;
       try {
@@ -250,7 +250,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
       const subject = `Ultima cosa su ${lead.name}`;
       const body = questionnaireUrl
         ? `Ciao,\n\nultima cosa e poi ti lascio in pace: prova a cercare su Google (o a chiederlo a ChatGPT) un'attività come la vostra nella vostra zona, e guarda chi compare per primo.\n` +
-          `Le poche domande che ti ho mandato servono proprio a capire dove si trova ${lead.name} rispetto a questo: ${questionnaireUrl}\n\nUn saluto,\n${firma}`
+          `Le poche domande che ti ho mandato servono proprio a capire dove si trova ${lead.name} rispetto a questo — e in cambio ti registro il video di 2-3 minuti di cui ti parlavo: ${questionnaireUrl}\n\nUn saluto,\n${firma}`
         : `Ciao,\n\nultima cosa e poi ti lascio in pace: se ti va di capire dove si trova ${lead.name} rispetto ai concorrenti online, rispondi pure a questa mail.\n\nUn saluto,\n${firma}`;
       try {
         const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);

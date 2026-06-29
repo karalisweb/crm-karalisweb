@@ -30,6 +30,10 @@ const BANNED: Array<{ label: string; pattern: RegExp; reason: string }> = [
   { label: "rivoluzionario", pattern: /\brivoluzionari\w+\b/gi, reason: "Iperbole da venditore." },
   { label: "gratis/offerta", pattern: /\bgratis\b|\bofferta\b/gi, reason: "Linguaggio promozionale: evita." },
   { label: "analisi/audit come autodefinizione", pattern: /\bla\s+mia\s+analisi\b|\bun['’\s]?audit\b|\baudit\s+(gratuit\w+|del\s+sito)\b|\banalisi\s+(gratuit\w+|del\s+sito)\b/gi, reason: "Il copy parla di DIREZIONE, non di 'analisi/audit del sito'." },
+  { label: "esservi/potervi utile", pattern: /\b(?:esserv|esservi|potervi|potermi)\s*\w*\s*util\w+|\bcome\s+potrei\s+esserv\w+/gi, reason: "Frame da venditore centrato su di te: la mail resta su DI LORO." },
+  { label: "aiutarvi/aiutarti", pattern: /\b(?:potrei|posso|possiamo|vorrei)\s+aiutar\w+|\bcome\s+(?:posso|potrei)\s+aiutar\w+/gi, reason: "Tono da venditore: parla di cosa hai notato, non di 'aiuto'." },
+  { label: "propormi/proporvi", pattern: /\bpropor(?:mi|vi|re)\b/gi, reason: "Sposta il focus sulla vendita: evita." },
+  { label: "soluzioni", pattern: /\bsoluzion[ei]\b/gi, reason: "Gergo da venditore: di' la cosa concreta, non 'la soluzione'." },
 ];
 
 export function checkCopy(text: string | null | undefined): CopyCheckResult {

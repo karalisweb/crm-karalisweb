@@ -14,9 +14,11 @@ import { db } from "@/lib/db";
  * Risponde sempre 200 anche se non aggancia: il Form non deve mostrare errori.
  *
  * SMISTAMENTO per punteggio (self-assessment a 10 domande, max 30):
+ * CHIUNQUE compila riceve il video (lo promettiamo nella mail di outreach): la fascia
+ * decide solo la PRIORITÀ in coda, non SE il video arriva. → tutti CALDO_REATTIVO.
  *  - ≥ ALTA_MIN  → CALDO_REATTIVO, priorità 1 (video subito)
- *  - ≥ MEDIA_MIN → CALDO_REATTIVO, priorità 2 (video, ma dopo gli alti)
- *  - < MEDIA_MIN → NURTURING (compilato ma poco in target: niente video ora, tocchi lenti)
+ *  - ≥ MEDIA_MIN → CALDO_REATTIVO, priorità 2 (video, dopo gli alti)
+ *  - < MEDIA_MIN → CALDO_REATTIVO, priorità 3 (video comunque, in coda agli altri)
  *  - score assente → CALDO_REATTIVO senza priorità (vale la sola compilazione)
  */
 
@@ -89,7 +91,8 @@ export async function POST(request: NextRequest) {
       } else if (numScore >= SCORE_MEDIA_MIN) {
         targetStage = "CALDO_REATTIVO"; priority = 2; band = "MEDIA";
       } else {
-        targetStage = "NURTURING"; band = "BASSA";
+        // Fascia bassa: riceve comunque il video (promesso nella mail), ma in coda.
+        targetStage = "CALDO_REATTIVO"; priority = 3; band = "BASSA";
       }
     }
 
