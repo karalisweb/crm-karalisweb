@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.26.0] - 2026-06-29
+
+- feat(outreach): contatore email inviate oggi (T1+follow-up+break-up vs cap, con warmup) nella pagina Approvazione; recover-emails con cooldown anti-ritenta (campo emailCheckedAt) così ogni notte avanza su lead nuovi
+
 ## [3.25.0] - 2026-06-29
 
 - feat(target): esclusione automatica franchising/catene — lista marchi deterministica (franchise-brands.ts), blocco all'import in NON_TARGET (no audit), giro retroattivo /api/internal/flag-franchises (con dryRun), rete di sicurezza nella coda Approvazione

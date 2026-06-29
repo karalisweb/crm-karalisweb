@@ -58,7 +58,7 @@ async function jitter(): Promise<void> {
 }
 
 /** Partenza morbida del dominio: alza il tetto gradualmente nei primi giorni. */
-function warmupCap(configuredCap: number, firstSentAt: Date | null): number {
+export function warmupCap(configuredCap: number, firstSentAt: Date | null): number {
   if (!firstSentAt) return Math.min(configuredCap, 5);
   const days = Math.floor((Date.now() - firstSentAt.getTime()) / 86_400_000);
   let ramp: number;

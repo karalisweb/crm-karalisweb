@@ -66,10 +66,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
 
     if (!email) {
+      // Stampiglia il tentativo fallito → il cron lo mette in cooldown.
+      await db.lead.update({ where: { id: lead.id }, data: { emailCheckedAt: new Date() } });
       return NextResponse.json({ email: null });
     }
 
-    await db.lead.update({ where: { id: lead.id }, data: { email } });
+    await db.lead.update({ where: { id: lead.id }, data: { email, emailCheckedAt: new Date() } });
     console.log(`[FIND-EMAIL] ${lead.name}: ${email}`);
     return NextResponse.json({ email });
   } catch (error) {

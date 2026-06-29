@@ -145,6 +145,7 @@ model Lead {
   landingPageText       String?     @map("landing_page_text") @db.Text
   adsCheckedAt          DateTime?   @map("ads_checked_at")
   adsCoherenceWarning   String?     @map("ads_coherence_warning")
+  emailCheckedAt        DateTime?   @map("email_checked_at") // ultimo tentativo di trovare l'email (cooldown recover-emails)
 
   // ==========================================
   // VIDEO / SCRIPT TELLA

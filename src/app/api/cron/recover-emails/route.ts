@@ -20,9 +20,20 @@ import { PipelineStage } from "@prisma/client";
 
 const DEFAULT_BATCH = 50;
 const FETCH_TIMEOUT_MS = 10_000;
+// Quanti giorni aspettare prima di RITENTARE un lead già provato senza successo.
+// Evita che i lead "senza email pubblica" in cima alla lista vengano ritentati ogni
+// notte bloccando tutti gli altri: dopo un tentativo fallito restano in cooldown.
+const RETRY_COOLDOWN_DAYS = Math.max(
+  1,
+  parseInt(process.env.EMAIL_RETRY_COOLDOWN_DAYS || "14", 10) || 14
+);
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function cooldownCutoff(): Date {
+  return new Date(Date.now() - RETRY_COOLDOWN_DAYS * 86_400_000);
 }
 
 export async function POST(request: NextRequest) {
@@ -48,17 +59,23 @@ export async function POST(request: NextRequest) {
     PipelineStage.DA_ANALIZZARE,
   ];
 
+  // Solo lead MAI provati, o provati prima del cooldown. Così ogni notte si avanza
+  // su lead nuovi invece di sbattere sempre sui soliti "senza email pubblica".
+  const cutoff = cooldownCutoff();
+  const selectable = {
+    email: null,
+    website: { not: null },
+    auditStatus: "COMPLETED" as const,
+    pipelineStage: { in: PRIORITY_STAGES },
+    OR: [{ emailCheckedAt: null }, { emailCheckedAt: { lt: cutoff } }],
+  };
+
   const leads = await db.lead.findMany({
-    where: {
-      email: null,
-      website: { not: null },
-      auditStatus: "COMPLETED",
-      pipelineStage: { in: PRIORITY_STAGES },
-    },
+    where: selectable,
     select: { id: true, name: true, website: true },
     orderBy: [
-      // HACK: ordina per pipelineStage con priorità manuale → fatta con raw query
-      // Prisma non ha orderBy su enum, usiamo createdAt come tie-break
+      // Mai provati prima (null) in cima, poi i provati più vecchi.
+      { emailCheckedAt: { sort: "asc", nulls: "first" } },
       { pipelineStage: "asc" }, // HOT < WARM < DA_ANALIZZARE alfabeticamente
       { createdAt: "asc" },
     ],
@@ -130,10 +147,12 @@ export async function POST(request: NextRequest) {
       }
 
       if (email) {
-        await db.lead.update({ where: { id: lead.id }, data: { email } });
+        await db.lead.update({ where: { id: lead.id }, data: { email, emailCheckedAt: new Date() } });
         stats.found++;
         console.log(`[RECOVER-EMAIL] ${lead.name}: ${email}`);
       } else {
+        // Tentativo fallito: stampiglia comunque per mandarlo in cooldown.
+        await db.lead.update({ where: { id: lead.id }, data: { emailCheckedAt: new Date() } });
         stats.notFound++;
       }
 
@@ -145,11 +164,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    ok: true,
-    batchSize,
-    ...stats,
-    remaining: await db.lead.count({
+  // "remaining" = lead ancora tentabili ORA (rispetta il cooldown). I lead in cooldown
+  // non sono persi: tornano tentabili dopo RETRY_COOLDOWN_DAYS.
+  const [attemptableNow, totalWithoutEmail] = await Promise.all([
+    db.lead.count({ where: selectable }),
+    db.lead.count({
       where: {
         email: null,
         website: { not: null },
@@ -157,5 +176,14 @@ export async function POST(request: NextRequest) {
         pipelineStage: { in: PRIORITY_STAGES },
       },
     }),
+  ]);
+
+  return NextResponse.json({
+    ok: true,
+    batchSize,
+    ...stats,
+    remaining: attemptableNow,
+    totalWithoutEmail,
+    cooldownDays: RETRY_COOLDOWN_DAYS,
   });
 }

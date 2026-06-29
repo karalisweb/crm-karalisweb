@@ -396,6 +396,10 @@ export default function ApprovazionePage() {
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
   const [hiddenBelow, setHiddenBelow] = useState(0);
   const [hiddenFranchise, setHiddenFranchise] = useState(0);
+  const [sent, setSent] = useState<{
+    total: number; cap: number; remaining: number; inWarmup: boolean;
+    byType: { first: number; followup1: number; followup2: number; breakup: number };
+  } | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -411,6 +415,11 @@ export default function ApprovazionePage() {
         }
       } catch { /* default */ }
       setThreshold(thr);
+
+      try {
+        const cres = await fetch("/api/outreach/sent-today");
+        if (cres.ok) setSent(await cres.json());
+      } catch { /* contatore non critico */ }
 
       const res = await fetch("/api/leads?stages=HOT_LEAD,WARM_LEAD&notContacted=true&pageSize=200");
       if (!res.ok) throw new Error("Errore nel caricamento");
@@ -445,6 +454,23 @@ export default function ApprovazionePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {sent && (
+            <span
+              title={`Oggi: ${sent.byType.first} mail 1 · ${sent.byType.followup1} follow-up · ${sent.byType.followup2} follow-up 2 · ${sent.byType.breakup} break-up${sent.inWarmup ? " · cap ridotto (warmup dominio)" : ""}`}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border",
+                sent.remaining <= 0
+                  ? "bg-red-500/15 text-red-400 border-red-500/40"
+                  : sent.total >= sent.cap * 0.8
+                  ? "bg-amber-500/15 text-amber-400 border-amber-500/40"
+                  : "bg-emerald-500/15 text-emerald-400 border-emerald-500/40"
+              )}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              {sent.total}/{sent.cap} oggi
+              {sent.remaining <= 0 ? " · cap raggiunto" : ` · ne restano ${sent.remaining}`}
+            </span>
+          )}
           <Badge variant="secondary">{leads.length} da approvare</Badge>
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} /> Aggiorna
