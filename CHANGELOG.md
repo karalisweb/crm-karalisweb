@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.23.0] - 2026-06-29
+
+- feat(outreach): pipeline v2 — sequenza fredda verso questionario, schermata approvazione, webhook self-assessment a punteggio, filtro Carta, SMTP outreach dedicato
+
 ## [3.22.2] - 2026-06-27
 
 - fix(badge): numeretto Follow-up allineato ai richiami email
