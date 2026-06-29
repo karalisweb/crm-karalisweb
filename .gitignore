@@ -56,3 +56,6 @@ next-env.d.ts
 *[ ][0-9].md
 *[ ][0-9].css
 *[ ][0-9].prisma
+
+# Config locale Claude Code (non va in produzione)
+.claude/
