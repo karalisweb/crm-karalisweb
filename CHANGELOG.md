@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.24.0] - 2026-06-29
+
+- outreach: mail 1 con fatti verificati dall'audit, niente tono da venditore; video promesso e garantito a chiunque compila il questionario; pulsante Rigenera in Approvazione
+
 ## [3.23.1] - 2026-06-29
 
 - feat(approvazione): link diretti a Google Ads Transparency e Meta Ad Library nel Verdetto Ads; fix deploy.sh range diff su ROLLBACK_COMMIT..HEAD
