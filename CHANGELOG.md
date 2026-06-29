@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.24.2] - 2026-06-29
+
+- feat(approvazione): gestione email mancante — badge 'manca email', pulsante 'Cerca email' on-demand (home+/contatti+varianti) e inserimento manuale; 'Approva e invia' bloccato finché manca un'email valida
+
 ## [3.24.1] - 2026-06-29
 
 - fix(approvazione): verifica ads per-piattaforma (confermare Google non marca più Meta) + link 'Verifica' sempre visibile su riga propria (non più nascosto dal badge su mobile)

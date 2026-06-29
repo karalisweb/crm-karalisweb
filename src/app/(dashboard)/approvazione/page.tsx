@@ -115,6 +115,12 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
   const [metaAds, setMetaAds] = useState(lead.hasActiveMetaAds);
   const [adsBusy, setAdsBusy] = useState<"google" | "meta" | null>(null);
 
+  // Email: può mancare (l'estrazione durante l'audit non sempre la trova). `persistedEmail`
+  // è ciò che è salvato sul lead; `email` è il valore nel campo (modificabile a mano).
+  const [persistedEmail, setPersistedEmail] = useState(lead.email || "");
+  const [email, setEmail] = useState(lead.email || "");
+  const [emailBusy, setEmailBusy] = useState<"find" | "save" | null>(null);
+
   const pattern = lead.geminiAnalysis?.primary_error_pattern || null;
   const pain = lead.puntoDoloreBreve || lead.geminiAnalysis?.strategic_note || null;
 
@@ -172,7 +178,48 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
     } catch { toast.error("Errore verifica ads"); } finally { setAdsBusy(null); }
   };
 
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+
+  // Cerca l'email sul momento (homepage → /contatti → /contattaci) e la salva.
+  const findEmail = async () => {
+    setEmailBusy("find");
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/find-email`, { method: "POST" });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Errore");
+      if (j.email) {
+        setEmail(j.email); setPersistedEmail(j.email);
+        toast.success(`Email trovata: ${j.email}`);
+      } else {
+        toast.warning("Nessuna email trovata sul sito — inseriscila a mano");
+      }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Errore nella ricerca email"); }
+    finally { setEmailBusy(null); }
+  };
+
+  // Salva l'email digitata a mano sul lead.
+  const saveEmail = async () => {
+    const e = email.trim();
+    if (!isValidEmail(e)) { toast.error("Email non valida"); return; }
+    setEmailBusy("save");
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e }),
+      });
+      if (!res.ok) throw new Error();
+      setPersistedEmail(e);
+      toast.success("Email salvata");
+    } catch { toast.error("Errore nel salvare l'email"); } finally { setEmailBusy(null); }
+  };
+
   const approve = async () => {
+    // Se l'email digitata non è ancora salvata, salvala prima di inviare.
+    const e = email.trim();
+    if (e && e !== persistedEmail) {
+      if (!isValidEmail(e)) { toast.error("Email non valida"); return; }
+      await saveEmail();
+    }
     setLoading("approve");
     try {
       const res = await fetch(`/api/leads/${lead.id}/approve-outreach`, {
@@ -225,6 +272,11 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
             {pattern ? (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-800/40 font-medium">{pattern}</span>
             ) : <span className="italic">Nessun pattern</span>}
+            {!persistedEmail && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-900/30 text-amber-300 border border-amber-800/40 font-medium">
+                <AlertTriangle className="h-3 w-3" /> manca email
+              </span>
+            )}
             <span className="ml-auto">{googleConfirmed && metaConfirmed ? "Ads ✓" : "Ads da confermare"}</span>
           </div>
         )}
@@ -261,6 +313,38 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
                 linkLabel="Verifica su Meta Ad Library" />
             </div>
 
+            <div className={cn("rounded-lg border p-3 space-y-2",
+              persistedEmail ? "border-border bg-muted/20" : "border-amber-500/40 bg-amber-950/20")}>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                  <Mail className="h-3 w-3" /> Email destinatario
+                </p>
+                <button
+                  type="button"
+                  onClick={findEmail}
+                  disabled={!!emailBusy || !lead.website}
+                  title={lead.website ? "Cerca l'email sul sito (home, /contatti)" : "Nessun sito da cui cercare"}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300 disabled:opacity-50 transition-colors"
+                >
+                  {emailBusy === "find" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Cerca email
+                </button>
+              </div>
+              {!persistedEmail && (
+                <p className="text-[11px] text-amber-400 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3 flex-shrink-0" /> Email non trovata in automatico: cercala o inseriscila per poter inviare.
+                </p>
+              )}
+              <div className="flex items-center gap-2">
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@azienda.it"
+                  className="flex-1 min-w-0 text-sm rounded-md border border-border bg-background px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary" />
+                <Button onClick={saveEmail} disabled={!!emailBusy || !email.trim() || email.trim() === persistedEmail}
+                  size="sm" variant="outline" className="flex-shrink-0 h-9">
+                  {emailBusy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salva"}
+                </Button>
+              </div>
+            </div>
+
             <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> Mail primo tocco</p>
@@ -287,7 +371,7 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={approve} disabled={!!loading || !draftLoaded || !questionnaireConfigured} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" size="sm">
+              <Button onClick={approve} disabled={!!loading || !!emailBusy || !draftLoaded || !questionnaireConfigured || !isValidEmail(email)} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" size="sm">
                 {loading === "approve" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                 Approva e invia
               </Button>
