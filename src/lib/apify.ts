@@ -5,6 +5,7 @@ import { generateMockResults, simulateApiDelay, isMockMode } from "./apify-mock"
 import { processBatchAudits } from "@/lib/background-jobs";
 import { isRealWebsite } from "./url-utils";
 import { detectSegment } from "./segments";
+import { detectFranchise } from "./franchise-brands";
 import type { AuditStatus, PipelineStage } from "@prisma/client";
 
 const apifyClient = new ApifyClient({
@@ -175,6 +176,14 @@ export async function importSearchResults(
       withWebsite++;
     }
 
+    // Franchising / catena → fuori target: lo scartiamo subito in NON_TARGET e non lo
+    // mandiamo in audit (il batch salta i NON_TARGET). Un punto vendita affiliato non
+    // decide il proprio marketing.
+    const franchiseBrand = detectFranchise(result.title);
+    if (franchiseBrand) {
+      pipelineStage = "NON_TARGET";
+    }
+
     // Upsert lead usando placeId come chiave
     const existingLead = result.placeId
       ? await db.lead.findUnique({ where: { placeId: result.placeId } })
@@ -190,6 +199,10 @@ export async function importSearchResults(
           // Non sovrascrivere un website reale con un social URL o null
           ...(realWebsite && { website: realWebsite }),
           ...(socialUrl && !existingLead.socialUrl && { socialUrl }),
+          // Se è un franchising e non è ancora scartato, mettilo in NON_TARGET.
+          ...(franchiseBrand && existingLead.pipelineStage !== "NON_TARGET" && {
+            pipelineStage: "NON_TARGET",
+          }),
         },
       });
       updated++;
@@ -211,6 +224,9 @@ export async function importSearchResults(
           searchId,
           auditStatus,
           ...(pipelineStage && { pipelineStage }),
+          ...(franchiseBrand && {
+            notes: `Franchising rilevato (${franchiseBrand}) — fuori target, scartato in automatico.`,
+          }),
           source: "google_maps",
         },
       });

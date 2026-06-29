@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { detectFranchise } from "@/lib/franchise-brands";
 import { useSidebar } from "@/components/layout/sidebar-context";
 
 interface GeminiAnalysis {
@@ -394,6 +395,7 @@ export default function ApprovazionePage() {
   const [error, setError] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
   const [hiddenBelow, setHiddenBelow] = useState(0);
+  const [hiddenFranchise, setHiddenFranchise] = useState(0);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -413,9 +415,12 @@ export default function ApprovazionePage() {
       const res = await fetch("/api/leads?stages=HOT_LEAD,WARM_LEAD&notContacted=true&pageSize=200");
       if (!res.ok) throw new Error("Errore nel caricamento");
       const json = await res.json();
-      const all: Lead[] = (json.leads || []).filter(
+      const base: Lead[] = (json.leads || []).filter(
         (l: Lead) => !l.unsubscribed && !l.respondedAt && !l.optInSentAt
       );
+      // Rete di sicurezza: nascondi i franchising eventualmente sfuggiti al blocco a monte.
+      const all = base.filter((l) => !detectFranchise(l.name));
+      setHiddenFranchise(base.length - all.length);
       const above = all.filter((l) => (l.opportunityScore ?? 0) >= thr);
       setLeads(above);
       setHiddenBelow(all.length - above.length);
@@ -449,6 +454,9 @@ export default function ApprovazionePage() {
 
       {hiddenBelow > 0 && (
         <p className="text-xs text-muted-foreground">{hiddenBelow} lead sotto soglia (score &lt; {threshold}) lasciati da parte.</p>
+      )}
+      {hiddenFranchise > 0 && (
+        <p className="text-xs text-muted-foreground">{hiddenFranchise} franchising/catene nascosti (fuori target).</p>
       )}
 
       {error && (

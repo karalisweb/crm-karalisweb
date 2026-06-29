@@ -33,6 +33,7 @@ export async function processBatchAudits(searchId: string): Promise<void> {
       searchId,
       website: { not: null },
       auditStatus: "PENDING",
+      pipelineStage: { not: "NON_TARGET" }, // i franchising scartati non vanno auditati
     },
     select: {
       id: true,

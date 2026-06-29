@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.25.0] - 2026-06-29
+
+- feat(target): esclusione automatica franchising/catene — lista marchi deterministica (franchise-brands.ts), blocco all'import in NON_TARGET (no audit), giro retroattivo /api/internal/flag-franchises (con dryRun), rete di sicurezza nella coda Approvazione
+
 ## [3.24.2] - 2026-06-29
 
 - feat(approvazione): gestione email mancante — badge 'manca email', pulsante 'Cerca email' on-demand (home+/contatti+varianti) e inserimento manuale; 'Approva e invia' bloccato finché manca un'email valida

@@ -154,7 +154,7 @@ export function Sidebar() {
             <span className="font-semibold text-[0.95rem] text-[#f5f5f7]">
               KW Sales CRM
             </span>
-            <span className="text-xs text-[#71717a]">v3.24.2</span>
+            <span className="text-xs text-[#71717a]">v3.25.0</span>
           </div>
         )}
       </div>
