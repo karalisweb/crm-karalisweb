@@ -1,91 +1,81 @@
-# Self-assessment (Google Form) + collegamento al CRM
+# Self-assessment — script che CREA il Form da solo
 
-Il questionario è un **self-assessment a 10 domande**: ogni risposta vale dei punti.
-Il totale smista il lead nel CRM:
+Niente copia-incolla a mano. Incolli **un solo script**, premi **Esegui una volta**, e lui:
+- crea il Google Form con tutte le 10 domande e le 3 risposte ciascuna,
+- collega il Form al CRM (al momento dell'invio manda punteggio + email),
+- ti stampa il **link del Form** da mettere in *Impostazioni → Link Questionario*.
 
-| Fascia | Punteggio | Dove finisce nel CRM |
-|--------|-----------|----------------------|
-| **ALTA** | 24–30 | `CALDO_REATTIVO`, priorità 1 → video subito |
-| **MEDIA** | 17–23 | `CALDO_REATTIVO`, priorità 2 → video, dopo gli alti |
-| **BASSA** | 10–16 | `NURTURING` → niente video ora, tocchi lenti |
+## Come si usa (5 minuti)
+1. Vai su **script.google.com** → **Nuovo progetto**.
+2. Cancella tutto e incolla lo script qui sotto.
+3. In alto scegli la funzione **`createForm`** e premi **Esegui** (Google chiederà l'autorizzazione: concedila).
+4. Apri il menu **Esecuzioni / Log**: troverai stampato il **link del Form**. Copialo (e mandamelo, o mettilo in Impostazioni).
 
-(Le soglie 24/17 sono in `src/app/api/public/questionnaire/route.ts`, facilmente modificabili.)
+Fatto. Da quel momento, chi compila il Form viene agganciato e smistato nel CRM in automatico.
 
----
-
-## Passo 1 — crea il Form come QUIZ
-Nel Google Form: **Impostazioni → Quiz → "Rendi un quiz" ON**. Così a ogni risposta puoi
-assegnare i punti. Attiva anche **"Raccogli indirizzi email"** (serve a riconoscere il lead).
-
-## Passo 2 — le 10 domande (con punti per risposta)
-
-Tono: parla di **direzione/obiettivi**, non di "analisi del sito". Punti: 1 = poco in target, 3 = molto in target per noi.
-
-1. **Quanti nuovi clienti arrivano oggi dai canali online (sito, Google, social)?**
-   - Quasi nessuno, è quasi tutto passaparola — **3**
-   - Qualcuno, ma in modo discontinuo — **2**
-   - Una quota costante e prevedibile — **1**
-
-2. **Se un cliente cerca su Google un'attività come la vostra nella vostra zona, vi trova?**
-   - Non lo so / credo di no — **3**
-   - Forse, ma non in alto — **2**
-   - Sì, siamo tra i primi — **1**
-
-3. **Sapete quanti contatti vi arrivano dal sito ogni mese?**
-   - No, non lo misuriamo — **3**
-   - In modo approssimativo — **2**
-   - Sì, con precisione — **1**
-
-4. **Quanto è chiaro, sul vostro sito, perché un cliente dovrebbe scegliere voi e non un concorrente?**
-   - Poco / non saprei — **3**
-   - Abbastanza, ma migliorabile — **2**
-   - Molto chiaro — **1**
-
-5. **State investendo in pubblicità online (Google/Meta)?**
-   - Sì, ma senza risultati chiari — **3**
-   - No, mai provato — **2**
-   - Sì, e funziona bene — **1**
-
-6. **Quanto è una priorità, nei prossimi 6 mesi, aumentare i clienti dai canali digitali?**
-   - È una priorità concreta — **3**
-   - Ci interessa, ma senza fretta — **2**
-   - Per ora non è una priorità — **1**
-
-7. **Chi segue oggi il marketing digitale dell'azienda?**
-   - Nessuno, ce ne occupiamo quando capita — **3**
-   - Un collaboratore saltuario / part-time — **2**
-   - Un'agenzia o una persona dedicata — **1**
-
-8. **Se ci fosse un piano chiaro per portare più clienti, avreste un budget da dedicarci?**
-   - Sì, se i numeri tornano — **3**
-   - Forse, dipende — **2**
-   - No, non in questo periodo — **1**
-
-9. **Chi decide sugli investimenti di marketing in azienda?**
-   - Io, direttamente — **3**
-   - Io con un socio/responsabile — **2**
-   - Deve passare da altri — **1**
-
-10. **Quanto siete soddisfatti della vostra presenza online oggi?**
-    - Poco, sappiamo di essere indietro — **3**
-    - Così così — **2**
-    - Molto soddisfatti — **1**
-
-> Min 10 punti, max 30. (Sono una bozza: cambia pure testo/punti nel Form, lo smistamento non si rompe — il punteggio lo calcola il Form.)
-
-## Passo 3 — lo script (Apps Script)
-Menu **⋮ → Editor di script**, incolla, salva, poi crea il trigger.
+> Il punteggio NON usa la "modalità Quiz": lo calcola lo script dalle risposte (più affidabile). Le risposte valgono 3 / 2 / 1 punti come indicato nell'array `QUESTIONS`: cambia testi o punti lì dentro, e funziona tutto lo stesso.
 
 ```javascript
-// === CONFIG ===
-const CRM_WEBHOOK_URL = "https://IL-TUO-DOMINIO-CRM/api/public/questionnaire";
-const SECRET = "INCOLLA-QUI-LO-STESSO-SECRET-DEL-SERVER";
+// ============ CONFIG (già compilato — non toccare) ============
+const CRM_WEBHOOK_URL = "https://crm.karalisdemo.it/api/public/questionnaire";
+const SECRET = "kw_quest_2026_x7Qm9pLdRt4v"; // password Form↔CRM: lasciala così
 
+// Le 10 domande: testo + [risposta, punti]. 3 = molto in target, 1 = poco.
+const QUESTIONS = [
+  { q: "Quanti nuovi clienti arrivano oggi dai canali online (sito, Google, social)?",
+    a: [["Quasi nessuno, è quasi tutto passaparola", 3], ["Qualcuno, ma in modo discontinuo", 2], ["Una quota costante e prevedibile", 1]] },
+  { q: "Se un cliente cerca su Google un'attività come la vostra nella vostra zona, vi trova?",
+    a: [["Non lo so / credo di no", 3], ["Forse, ma non in alto", 2], ["Sì, siamo tra i primi", 1]] },
+  { q: "Sapete quanti contatti vi arrivano dal sito ogni mese?",
+    a: [["No, non lo misuriamo", 3], ["In modo approssimativo", 2], ["Sì, con precisione", 1]] },
+  { q: "Quanto è chiaro, sul vostro sito, perché un cliente dovrebbe scegliere voi e non un concorrente?",
+    a: [["Poco / non saprei", 3], ["Abbastanza, ma migliorabile", 2], ["Molto chiaro", 1]] },
+  { q: "State investendo in pubblicità online (Google/Meta)?",
+    a: [["Sì, ma senza risultati chiari", 3], ["No, mai provato", 2], ["Sì, e funziona bene", 1]] },
+  { q: "Quanto è una priorità, nei prossimi 6 mesi, aumentare i clienti dai canali digitali?",
+    a: [["È una priorità concreta", 3], ["Ci interessa, ma senza fretta", 2], ["Per ora non è una priorità", 1]] },
+  { q: "Chi segue oggi il marketing digitale dell'azienda?",
+    a: [["Nessuno, ce ne occupiamo quando capita", 3], ["Un collaboratore saltuario / part-time", 2], ["Un'agenzia o una persona dedicata", 1]] },
+  { q: "Se ci fosse un piano chiaro per portare più clienti, avreste un budget da dedicarci?",
+    a: [["Sì, se i numeri tornano", 3], ["Forse, dipende", 2], ["No, non in questo periodo", 1]] },
+  { q: "Chi decide sugli investimenti di marketing in azienda?",
+    a: [["Io, direttamente", 3], ["Io con un socio/responsabile", 2], ["Deve passare da altri", 1]] },
+  { q: "Quanto siete soddisfatti della vostra presenza online oggi?",
+    a: [["Poco, sappiamo di essere indietro", 3], ["Così così", 2], ["Molto soddisfatti", 1]] },
+];
+
+// ============ Crea il Form (eseguire UNA volta) ============
+function createForm() {
+  const form = FormApp.create("Self-assessment — Karalisweb");
+  form.setDescription("Poche domande per capire in che direzione vuoi portare l'azienda. Bastano 5 minuti.");
+  form.setCollectEmail(true);
+
+  QUESTIONS.forEach(function (item) {
+    const mc = form.addMultipleChoiceItem();
+    mc.setTitle(item.q);
+    mc.setRequired(true);
+    mc.setChoiceValues(item.a.map(function (x) { return x[0]; }));
+  });
+
+  ScriptApp.newTrigger("onFormSubmit").forForm(form).onFormSubmit().create();
+
+  Logger.log("✅ FORM PRONTO");
+  Logger.log("LINK da mettere in Impostazioni → Link Questionario:");
+  Logger.log(form.getPublishedUrl());
+  Logger.log("Link per modificarlo a mano: " + form.getEditUrl());
+}
+
+// ============ All'invio: calcola punteggio e manda al CRM ============
 function onFormSubmit(e) {
   try {
     const resp = e.response;
     let email = "";
     try { email = resp.getRespondentEmail() || ""; } catch (err) {}
+
+    const pointsByAnswer = {};
+    QUESTIONS.forEach(function (item) {
+      item.a.forEach(function (x) { pointsByAnswer[x[0]] = x[1]; });
+    });
 
     const responses = {};
     let score = 0;
@@ -93,8 +83,7 @@ function onFormSubmit(e) {
     for (let i = 0; i < items.length; i++) {
       const ans = items[i].getResponse();
       responses[items[i].getItem().getTitle()] = ans;
-      const s = items[i].getScore();           // punti (Form in modalità Quiz)
-      if (typeof s === "number") score += s;
+      if (typeof ans === "string" && pointsByAnswer[ans] != null) score += pointsByAnswer[ans];
       if (!email && typeof ans === "string" && ans.indexOf("@") > 0) email = ans.trim();
     }
 
@@ -104,20 +93,15 @@ function onFormSubmit(e) {
       payload: JSON.stringify({ secret: SECRET, email: email, responses: responses, score: score }),
       muteHttpExceptions: true,
     });
-  } catch (err) { console.error("Errore invio al CRM: " + err); }
+  } catch (err) { Logger.log("Errore invio al CRM: " + err); }
 }
 ```
 
-## Passo 4 — il trigger
-Editor di script → **orologio (Trigger)** → **Aggiungi trigger** → funzione `onFormSubmit`,
-evento **All'invio del modulo**. Salva e concedi l'autorizzazione.
+## Smistamento nel CRM (in base al punteggio)
+| Fascia | Punteggio (su 30) | Dove va il lead |
+|--------|------|-----------------|
+| ALTA | 24–30 | Caldo, priorità 1 → video subito |
+| MEDIA | 17–23 | Caldo, priorità 2 → video, dopo gli alti |
+| BASSA | 10–16 | Nurturing → niente video ora |
 
-## Prova
-Compila il Form con l'email di un lead presente nel CRM. In pochi secondi:
-- punteggio alto → compare in caldi con priorità 1; medio → priorità 2; basso → Nurturing.
-- Il punteggio e la fascia restano scritti nello storico del lead.
-
-## Note
-- Match **per email**: se il lead non ha email nel CRM, la compilazione resta loggata come "non agganciata".
-- Il link del Form va incollato in **Impostazioni → Link Questionario** (placeholder `{{QUESTIONARIO}}` nelle mail).
-- Se il Form NON è in modalità Quiz, il punteggio arriva 0 e il lead va comunque in `CALDO_REATTIVO` (vale la sola compilazione).
+(Soglie modificabili in `src/app/api/public/questionnaire/route.ts`.)
