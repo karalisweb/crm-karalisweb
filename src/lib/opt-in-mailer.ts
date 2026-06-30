@@ -27,7 +27,11 @@ const DEFAULT_SUBJECTS = [
   "Un'osservazione su {azienda}",
 ];
 
-const PER_RUN_CAP = Math.max(0, parseInt(process.env.OPTIN_PER_RUN_CAP || "4", 10) || 0);
+// Tetto per singola esecuzione (sicurezza anti-burst): col drip ogni ~10' basta poco.
+const PER_RUN_CAP = Math.max(0, parseInt(process.env.OPTIN_PER_RUN_CAP || "2", 10) || 0);
+// Finestra oraria (ora di Roma) su cui spalmare il tetto giornaliero.
+const WINDOW_START_H = Math.max(0, Math.min(23, parseInt(process.env.OPTIN_WINDOW_START || "7", 10) || 7));
+const WINDOW_END_H = Math.max(1, Math.min(24, parseInt(process.env.OPTIN_WINDOW_END || "19", 10) || 19));
 const FOLLOWUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP_DAYS || "3", 10) || 3);   // T2
 const FOLLOWUP2_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP2_DAYS || "4", 10) || 4); // T3 (da T2)
 const CALL_DAYS = Math.max(1, parseInt(process.env.OPTIN_CALL_DAYS || "3", 10) || 3);           // T4 (da T3)
@@ -74,6 +78,30 @@ function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 86_400_000);
 }
 
+/** Ora corrente di Roma in formato decimale (es. 14.5 = 14:30), robusto al TZ del server. */
+function romeHourDecimal(): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Rome", hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(new Date());
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return (h % 24) + m / 60;
+}
+
+/**
+ * Pacing: quante email "dovremmo" aver già inviato fin qui per spalmare uniformemente
+ * `dailyCap` sulla finestra [WINDOW_START_H, WINDOW_END_H]. Evita il front-loading al
+ * mattino: ogni run può colmare solo il divario rispetto al ritmo ideale.
+ */
+function pacedAllowance(dailyCap: number): number {
+  if (dailyCap <= 0) return 0;
+  const now = romeHourDecimal();
+  if (now < WINDOW_START_H) return 0;
+  if (now >= WINDOW_END_H) return dailyCap;
+  const frac = (now - WINDOW_START_H) / (WINDOW_END_H - WINDOW_START_H);
+  return Math.ceil(dailyCap * frac);
+}
+
 export async function runOptInMailer(): Promise<OptInResult> {
   const res: OptInResult = {
     firstSent: 0, followupsSent: 0, followup2Sent: 0, callTasks: 0, breakups: 0,
@@ -98,7 +126,13 @@ export async function runOptInMailer(): Promise<OptInResult> {
     pausedKeys.length > 0 ? { segment: { notIn: pausedKeys } } : {};
   const firma = settings?.signatureAlessio || "Alessio Loi\nKaralisweb";
   const questionnaireUrl = (settings?.questionnaireUrl || "").trim();
-  const requireApproval = settings?.outreachRequireApproval ?? true;
+  // MASTER PAUSE: se attivo, il drip non manda NULLA (né prime mail né follow-up).
+  // (Riusa il vecchio flag outreachRequireApproval, ora interpretato come "pausa totale".)
+  const autoSendPaused = settings?.outreachRequireApproval ?? true;
+  if (autoSendPaused) {
+    console.log("[opt-in] invii automatici in PAUSA (master). Nessun invio.");
+    return res;
+  }
   const subjectsField =
     settings?.optInSubjects && settings.optInSubjects.trim()
       ? settings.optInSubjects
@@ -117,7 +151,11 @@ export async function runOptInMailer(): Promise<OptInResult> {
     where: { optInSentAt: { not: null } },
   });
   const dailyCap = warmupCap(configuredCap, firstAgg._min.optInSentAt);
-  let budget = Math.max(0, Math.min(PER_RUN_CAP, dailyCap - sentToday));
+  // Budget del run = quanto siamo "indietro" rispetto al ritmo ideale (pacing), con
+  // tetto per-run di sicurezza. Così gli invii si spalmano su 07–19 invece di partire
+  // tutti al mattino fino a saturare il tetto.
+  const allowedByNow = pacedAllowance(dailyCap);
+  let budget = Math.max(0, Math.min(PER_RUN_CAP, allowedByNow - sentToday, dailyCap - sentToday));
 
   // ── T4 — TELEFONATA (task, solo lead HOT): non consuma budget email ──────────
   const callLeads = await db.lead.findMany({
@@ -279,40 +317,62 @@ export async function runOptInMailer(): Promise<OptInResult> {
     }
   }
 
-  // ── T1 — PRIME mail (solo se gate approvazione OFF) ─────────────────────────
-  if (budget > 0 && requireApproval) {
-    console.log("[opt-in] gate approvazione attivo: prime mail gestite dalla coda di approvazione, non in automatico.");
-  } else if (budget > 0 && !questionnaireUrl) {
+  // ── T1 — PRIME mail (drip): WARM in autonomia + HOT solo se APPROVATI da Alessio ─
+  // La temperatura decide il comportamento: gli HOT (score≥80) li sblocca l'approvazione
+  // (usano la bozza approvata); i WARM (50-79) partono da soli con mail generata al volo.
+  if (budget > 0 && !questionnaireUrl) {
     console.warn("[opt-in] Link questionario non configurato: salto le prime mail.");
   }
-  if (budget > 0 && questionnaireUrl && !requireApproval) {
+  if (budget > 0 && questionnaireUrl) {
     const newLeads = await db.lead.findMany({
       where: {
-        pipelineStage: { in: inSequence },
         email: { not: null },
         optInSentAt: null,
         unsubscribed: false,
         respondedAt: null,
         ...segmentFilter,
+        OR: [
+          // WARM: invio autonomo, nessuna approvazione.
+          { pipelineStage: PipelineStage.WARM_LEAD },
+          // HOT: solo dopo l'approvazione di Alessio (in coda di drip).
+          { pipelineStage: PipelineStage.HOT_LEAD, outreachApprovedAt: { not: null } },
+        ],
       },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, pipelineStage: true, outreachDraft: true },
       take: budget * 3,
     });
     for (const lead of shuffle(newLeads)) {
       if (budget <= 0) { res.capReached = true; break; }
       if (!lead.email) continue;
       try {
-        const draft = await generateOutreachEmail(lead.id);
-        const subjectTpl = pickSubjectVariant(subjectsField, sentToday + res.firstSent + res.followupsSent);
-        const subject = subjectTpl.replace(/\{azienda\}/g, lead.name);
-        const body = `${draft.body}\n\n${firma}`;
+        let subject: string;
+        let body: string;
+        let hook = "";
+        const approved = lead.outreachDraft as { subject?: string; body?: string } | null;
+
+        if (lead.pipelineStage === PipelineStage.HOT_LEAD && approved?.subject && approved?.body) {
+          // HOT approvato → usa ESATTAMENTE la mail che Alessio ha approvato (firma inclusa).
+          subject = approved.subject;
+          body = approved.body;
+        } else {
+          // WARM (o HOT senza bozza valida) → genera la mail al volo + oggetto a rotazione + firma.
+          const draft = await generateOutreachEmail(lead.id);
+          const subjectTpl = pickSubjectVariant(subjectsField, sentToday + res.firstSent + res.followupsSent);
+          subject = subjectTpl.replace(/\{azienda\}/g, lead.name);
+          body = `${draft.body}\n\n${firma}`;
+          hook = draft.hook || "";
+        }
+
         const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
         if (!ok) { res.skipped++; continue; }
         const sentRecord: Prisma.InputJsonValue = {
-          subject, body, hook: draft.hook || "", generatedAt: new Date().toISOString(),
+          subject, body, hook, generatedAt: new Date().toISOString(),
         };
         await db.$transaction([
-          db.lead.update({ where: { id: lead.id }, data: { outreachMailSent: sentRecord, optInSentAt: new Date(), lastContactedAt: new Date() } }),
+          db.lead.update({
+            where: { id: lead.id },
+            data: { outreachMailSent: sentRecord, outreachDraft: Prisma.DbNull, optInSentAt: new Date(), lastContactedAt: new Date() },
+          }),
           db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in] mail inviata → ${lead.email}` } }),
         ]);
         res.firstSent++;

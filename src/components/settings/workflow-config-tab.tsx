@@ -126,20 +126,6 @@ export function WorkflowConfigTab() {
             </div>
           </div>
 
-          <div className="space-y-2 max-w-xs">
-            <Label>Aziende da contattare via mail / giorno</Label>
-            <Input
-              type="number"
-              min={0}
-              value={settings.emailDailyCap ?? 20}
-              onChange={(e) => setSettings((p) => ({ ...p, emailDailyCap: Number(e.target.value) }))}
-              placeholder="20"
-            />
-            <p className="text-xs text-muted-foreground">
-              Tetto giornaliero di invii automatici (deliverability). 0 = nessun invio.
-            </p>
-          </div>
-
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <PauseCircle className="h-4 w-4 text-amber-500" /> Settori in pausa (non contattare ora)
@@ -181,30 +167,33 @@ export function WorkflowConfigTab() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
+            <div className="space-y-2 rounded-lg border border-red-500/30 bg-red-950/10 p-3">
+              <Label className="flex items-center gap-2 font-semibold">
                 <input
                   type="checkbox"
                   checked={settings.outreachRequireApproval ?? true}
                   onChange={(e) => setSettings((p) => ({ ...p, outreachRequireApproval: e.target.checked }))}
                 />
-                Approva la prima mail prima di inviarla
+                ⏸ Pausa invii automatici (master)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Se attivo, la mail 1 NON parte da sola: finisce nella coda &quot;Approvazione&quot;.
+                Se attivo, il sistema NON invia nulla (né WARM automatici né HOT approvati). Interruttore
+                generale di sicurezza: togli la spunta per far partire il drip.
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Soglia score per la coda di approvazione</Label>
+              <Label>Tetto invii / giorno (lo spalma su 07–19)</Label>
               <Input
                 type="number"
                 min={0}
-                max={100}
-                value={settings.outreachApprovalMinScore ?? 60}
-                onChange={(e) => setSettings((p) => ({ ...p, outreachApprovalMinScore: Number(e.target.value) }))}
-                placeholder="60"
+                value={settings.emailDailyCap ?? 20}
+                onChange={(e) => setSettings((p) => ({ ...p, emailDailyCap: Number(e.target.value) }))}
+                placeholder="20"
               />
-              <p className="text-xs text-muted-foreground">Sotto questo score i lead restano da parte.</p>
+              <p className="text-xs text-muted-foreground">
+                È la tua manopola: cambialo quando vuoi. Il drip distribuisce questo numero nell&apos;arco
+                della giornata (warmup graduale nei primi giorni). 0 = nessun invio.
+              </p>
             </div>
           </div>
 

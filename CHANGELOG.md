@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.28.0] - 2026-06-30
+
+- feat(outreach): drip per temperatura — HOT (score>=80) richiedono approvazione poi vanno in coda e il sistema li invia diluiti su 07-19 (pacing del cap); WARM (50-79) inviati in autonomia; master-pause + cap come manopola giornaliera; approvazione mette in coda invece di inviare subito
+
 ## [3.27.0] - 2026-06-29
 
 - feat(outreach): pausa per settore — escludi settori (es. immobiliare) da coda di approvazione e invii automatici (mail 1/follow-up/break-up) senza scartare i lead; toggle a chip in Impostazioni→Outreach, nota nella coda

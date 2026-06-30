@@ -33,6 +33,7 @@ interface Lead {
   puntoDoloreBreve: string | null;
   email: string | null;
   optInSentAt: string | null;
+  outreachApprovedAt: string | null;
   respondedAt: string | null;
   unsubscribed: boolean;
   hasActiveGoogleAds: boolean;
@@ -232,7 +233,7 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || "Errore");
       }
-      toast.success(`${lead.name}: mail approvata e inviata`);
+      toast.success(`${lead.name}: approvato — in coda di invio`);
       refreshBadges(); onAction();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Errore nell'approvazione"); }
     finally { setLoading(null); }
@@ -375,7 +376,7 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
             <div className="flex gap-2">
               <Button onClick={approve} disabled={!!loading || !!emailBusy || !draftLoaded || !questionnaireConfigured || !isValidEmail(email)} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" size="sm">
                 {loading === "approve" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                Approva e invia
+                Approva (in coda)
               </Button>
               <Button onClick={discard} disabled={!!loading} variant="outline" size="sm" className="border-gray-500/50 text-gray-400 hover:bg-gray-500/10">
                 {loading === "discard" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
@@ -427,11 +428,13 @@ export default function ApprovazionePage() {
         if (cres.ok) setSent(await cres.json());
       } catch { /* contatore non critico */ }
 
-      const res = await fetch("/api/leads?stages=HOT_LEAD,WARM_LEAD&notContacted=true&pageSize=200");
+      // Solo HOT (score≥80): sono quelli che richiedono la tua approvazione.
+      // I WARM partono in autonomia (drip), non passano da qui.
+      const res = await fetch("/api/leads?stages=HOT_LEAD&notContacted=true&pageSize=200");
       if (!res.ok) throw new Error("Errore nel caricamento");
       const json = await res.json();
       const base: Lead[] = (json.leads || []).filter(
-        (l: Lead) => !l.unsubscribed && !l.respondedAt && !l.optInSentAt
+        (l: Lead) => !l.unsubscribed && !l.respondedAt && !l.optInSentAt && !l.outreachApprovedAt
       );
       // Rete di sicurezza: nascondi i franchising eventualmente sfuggiti al blocco a monte.
       const noFranchise = base.filter((l) => !detectFranchise(l.name));
@@ -460,7 +463,7 @@ export default function ApprovazionePage() {
             <ClipboardCheck className="h-6 w-6 text-emerald-400" /> Approvazione
           </h1>
           <p className="text-sm text-muted-foreground">
-            Score · pattern · mail già pronta · ads. Approva, scarta o ritocca: ~2 minuti a lead.
+            Solo HOT (score≥80). Approvi → vanno in coda e il sistema li invia diluiti nella giornata. I WARM partono da soli.
           </p>
         </div>
         <div className="flex items-center gap-2">

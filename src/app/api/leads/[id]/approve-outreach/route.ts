@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/api-auth";
-import { sendOutreachEmail } from "@/lib/email";
 import { Prisma } from "@prisma/client";
 
 /**
  * POST /api/leads/[id]/approve-outreach
  *
- * Approvazione della mail 1: invia la mail (eventualmente ritoccata) tramite il
- * trasporto outreach e segna il lead come contattato (optInSentAt). È il "gate"
- * che sostituisce l'auto-invio: niente parte senza il via di Alessio.
+ * Approvazione della mail 1 di un lead HOT: NON invia subito, mette in CODA DI DRIP.
+ * Salva la bozza (eventualmente ritoccata) e segna outreachApprovedAt; sarà il motore
+ * drip (opt-in-mailer, cron ogni ~10') a inviarla diluendola nell'arco della giornata
+ * rispettando il tetto giornaliero. Così Alessio approva ~100 lead in blocco e il
+ * sistema li spalma in autonomia. I WARM non passano di qui: partono da soli.
  *
  * Body: { subject, body }
  */
@@ -32,14 +33,14 @@ export async function POST(
 
     const lead = await db.lead.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, optInSentAt: true, unsubscribed: true },
+      select: { id: true, name: true, email: true, optInSentAt: true, outreachApprovedAt: true, unsubscribed: true },
     });
     if (!lead) return NextResponse.json({ error: "Lead non trovato" }, { status: 404 });
     if (!lead.email) return NextResponse.json({ error: "Il lead non ha un'email" }, { status: 400 });
     if (lead.unsubscribed) return NextResponse.json({ error: "Lead disiscritto" }, { status: 400 });
     if (lead.optInSentAt) return NextResponse.json({ error: "Mail già inviata a questo lead" }, { status: 409 });
 
-    // La mail 1 invita al questionario: senza link non si invia.
+    // La mail 1 invita al questionario: senza link non ha senso approvare.
     const settings = await db.settings.findUnique({
       where: { id: "default" },
       select: { questionnaireUrl: true },
@@ -51,12 +52,8 @@ export async function POST(
       );
     }
 
-    const ok = await sendOutreachEmail(lead.email, subject, text, lead.id);
-    if (!ok) {
-      return NextResponse.json({ error: "Invio SMTP fallito" }, { status: 502 });
-    }
-
-    const sentRecord: Prisma.InputJsonValue = {
+    // Salva la bozza approvata e mette in coda di drip (NON invia): l'invio lo fa il mailer.
+    const approvedDraft: Prisma.InputJsonValue = {
       subject,
       body: text,
       approvedAt: new Date().toISOString(),
@@ -65,18 +62,16 @@ export async function POST(
       db.lead.update({
         where: { id: lead.id },
         data: {
-          outreachMailSent: sentRecord,
-          outreachDraft: Prisma.DbNull,
-          optInSentAt: new Date(),
-          lastContactedAt: new Date(),
+          outreachDraft: approvedDraft,
+          outreachApprovedAt: new Date(),
         },
       }),
       db.activity.create({
-        data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in] mail approvata e inviata → ${lead.email}` },
+        data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Approvato] mail in coda di invio → ${lead.email}` },
       }),
     ]);
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, queued: true });
   } catch (error) {
     console.error("[API] approve-outreach error:", error);
     return NextResponse.json({ error: "Errore nell'approvazione" }, { status: 500 });

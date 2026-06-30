@@ -76,6 +76,7 @@ model Lead {
   channelHistory    Json?         @map("channel_history") // [{channel, setAt, reason}]
   email             String?       // Email del prospect (per fallback invio)
   outreachMailSent  Json?         @map("outreach_mail_sent") // {subject, body, hook, generatedAt} — cosa ha ricevuto davvero (per registrare il video coerente)
+  outreachApprovedAt DateTime?    @map("outreach_approved_at") // HOT approvato da Alessio → in coda di drip (non ancora inviato)
   optInSentAt       DateTime?     @map("opt_in_sent_at")       // T1: prima mail (dedup + tempistica follow-up)
   optInFollowupAt   DateTime?     @map("opt_in_followup_at")   // T2: primo follow-up
   optInFollowup2At  DateTime?     @map("opt_in_followup2_at")  // T3: secondo follow-up
