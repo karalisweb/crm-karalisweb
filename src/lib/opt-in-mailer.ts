@@ -324,24 +324,32 @@ export async function runOptInMailer(): Promise<OptInResult> {
     console.warn("[opt-in] Link questionario non configurato: salto le prime mail.");
   }
   if (budget > 0 && questionnaireUrl) {
-    const newLeads = await db.lead.findMany({
-      where: {
-        email: { not: null },
-        optInSentAt: null,
-        unsubscribed: false,
-        respondedAt: null,
-        ...segmentFilter,
-        OR: [
-          // WARM: invio autonomo, nessuna approvazione.
-          { pipelineStage: PipelineStage.WARM_LEAD },
-          // HOT: solo dopo l'approvazione di Alessio (in coda di drip).
-          { pipelineStage: PipelineStage.HOT_LEAD, outreachApprovedAt: { not: null } },
-        ],
-      },
-      select: { id: true, name: true, email: true, pipelineStage: true, outreachDraft: true },
+    const common: Prisma.LeadWhereInput = {
+      email: { not: null },
+      optInSentAt: null,
+      unsubscribed: false,
+      respondedAt: null,
+      ...segmentFilter,
+    };
+    const selectFields = { id: true, name: true, email: true, pipelineStage: true, outreachDraft: true } as const;
+
+    // PRIORITÀ: prima gli HOT che HAI approvato tu (FIFO, chi è in coda da più tempo),
+    // poi i WARM in autonomia riempiono il budget rimasto. Così il tuo lavoro di
+    // selezione parte sempre prima dell'invio automatico.
+    const hotApproved = await db.lead.findMany({
+      where: { ...common, pipelineStage: PipelineStage.HOT_LEAD, outreachApprovedAt: { not: null } },
+      select: selectFields,
+      orderBy: { outreachApprovedAt: "asc" },
+      take: budget,
+    });
+    const warm = await db.lead.findMany({
+      where: { ...common, pipelineStage: PipelineStage.WARM_LEAD },
+      select: selectFields,
       take: budget * 3,
     });
-    for (const lead of shuffle(newLeads)) {
+    const ordered = [...hotApproved, ...shuffle(warm)];
+
+    for (const lead of ordered) {
       if (budget <= 0) { res.capReached = true; break; }
       if (!lead.email) continue;
       try {
