@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.28.2] - 2026-06-30
+
+- chore(franchise): aggiunge Iperceramica alla lista franchising
+
 ## [3.28.1] - 2026-06-30
 
 - feat(outreach): priorità invio — prima gli HOT approvati da Alessio (FIFO), poi i WARM in autonomia riempiono il budget rimasto

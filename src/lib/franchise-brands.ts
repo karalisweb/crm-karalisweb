@@ -33,9 +33,10 @@ export const FRANCHISE_BRANDS: string[] = [
   "Foot Locker", "Cisalfa", "Decathlon", "Calliope", "Oviesse",
   // — Ottica / udito —
   "Salmoiraghi & Viganò", "GrandVision", "Ottica Avanzi", "Amplifon", "Clinica Baviera",
-  // — Casa / arredo / fai da te —
+  // — Casa / arredo / fai da te / ceramiche —
   "Mondo Convenienza", "Maisons du Monde", "Leroy Merlin", "Bricoman", "Brico io",
   "Poltronesofà", "Chateau d'Ax", "Kasanova", "Flying Tiger", "Semeraro", "Aiazzone",
+  "Iperceramica",
   // — Elettronica —
   "MediaWorld", "Unieuro", "Euronics", "Trony", "Comet",
   // — Telefonia (rivenditori insegna) —
