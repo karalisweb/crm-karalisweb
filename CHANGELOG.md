@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.28.3] - 2026-06-30
+
+- fix(approvazione): contatore mostra il cap impostato (non quello ridotto dal warmup) + warmup esplicitato + nuovo chip 'in coda' (HOT approvati in attesa di invio)
+
 ## [3.28.2] - 2026-06-30
 
 - chore(franchise): aggiunge Iperceramica alla lista franchising

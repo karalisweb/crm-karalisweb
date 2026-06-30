@@ -26,11 +26,13 @@ export async function GET() {
     createdAt: { gte: startOfDay },
   };
 
-  const [total, followup1, followup2, breakup, settings, firstAgg] = await Promise.all([
+  const [total, followup1, followup2, breakup, queued, settings, firstAgg] = await Promise.all([
     db.activity.count({ where: { ...baseWhere, notes: { startsWith: "[Opt-in" } } }),
     db.activity.count({ where: { ...baseWhere, notes: { startsWith: "[Opt-in-FU]" } } }),
     db.activity.count({ where: { ...baseWhere, notes: { startsWith: "[Opt-in-FU2]" } } }),
     db.activity.count({ where: { ...baseWhere, notes: { startsWith: "[Opt-in-BREAKUP]" } } }),
+    // HOT approvati da Alessio, in coda di drip (ancora da inviare).
+    db.lead.count({ where: { outreachApprovedAt: { not: null }, optInSentAt: null, respondedAt: null, unsubscribed: false } }),
     db.settings.findUnique({ where: { id: "default" }, select: { emailDailyCap: true } }),
     db.lead.aggregate({ _min: { optInSentAt: true }, where: { optInSentAt: { not: null } } }),
   ]);
@@ -45,6 +47,7 @@ export async function GET() {
   return NextResponse.json({
     total,
     byType: { first, followup1, followup2, breakup },
+    queued, // HOT approvati in coda di invio
     cap: effectiveCap,
     configuredCap,
     inWarmup,

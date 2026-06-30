@@ -401,7 +401,7 @@ export default function ApprovazionePage() {
   const [pausedLabels, setPausedLabels] = useState<string[]>([]);
   const [hiddenPaused, setHiddenPaused] = useState(0);
   const [sent, setSent] = useState<{
-    total: number; cap: number; remaining: number; inWarmup: boolean;
+    total: number; cap: number; configuredCap: number; remaining: number; inWarmup: boolean; queued: number;
     byType: { first: number; followup1: number; followup2: number; breakup: number };
   } | null>(null);
 
@@ -469,7 +469,7 @@ export default function ApprovazionePage() {
         <div className="flex items-center gap-2">
           {sent && (
             <span
-              title={`Oggi: ${sent.byType.first} mail 1 · ${sent.byType.followup1} follow-up · ${sent.byType.followup2} follow-up 2 · ${sent.byType.breakup} break-up${sent.inWarmup ? " · cap ridotto (warmup dominio)" : ""}`}
+              title={`Oggi: ${sent.byType.first} mail 1 · ${sent.byType.followup1} follow-up · ${sent.byType.followup2} follow-up 2 · ${sent.byType.breakup} break-up${sent.inWarmup ? `\nWarmup attivo: oggi il sistema invia al massimo ${sent.cap} (sale gradualmente fino a ${sent.configuredCap})` : ""}`}
               className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border",
                 sent.remaining <= 0
@@ -480,8 +480,17 @@ export default function ApprovazionePage() {
               )}
             >
               <Mail className="h-3.5 w-3.5" />
-              {sent.total}/{sent.cap} oggi
-              {sent.remaining <= 0 ? " · cap raggiunto" : ` · ne restano ${sent.remaining}`}
+              {sent.total}/{sent.configuredCap} oggi
+              {sent.inWarmup ? ` · oggi max ${sent.cap} (warmup)` : sent.remaining <= 0 ? " · cap raggiunto" : ` · ne restano ${sent.remaining}`}
+            </span>
+          )}
+          {sent && sent.queued > 0 && (
+            <span
+              title="HOT approvati da te, in coda: il sistema li invia diluiti nei prossimi giorni"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border bg-sky-500/15 text-sky-400 border-sky-500/40"
+            >
+              <Send className="h-3.5 w-3.5" />
+              {sent.queued} in coda
             </span>
           )}
           <Badge variant="secondary">{leads.length} da approvare</Badge>
