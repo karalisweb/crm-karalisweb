@@ -437,7 +437,7 @@ export default function ApprovazionePage() {
         (l: Lead) => !l.unsubscribed && !l.respondedAt && !l.optInSentAt && !l.outreachApprovedAt
       );
       // Rete di sicurezza: nascondi i franchising eventualmente sfuggiti al blocco a monte.
-      const noFranchise = base.filter((l) => !detectFranchise(l.name));
+      const noFranchise = base.filter((l) => !detectFranchise(l.name, l.website));
       setHiddenFranchise(base.length - noFranchise.length);
       // Settori in pausa: escludili dalla coda finché restano in pausa.
       const pausedSet = new Set(pausedKeys);

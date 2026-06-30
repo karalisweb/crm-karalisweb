@@ -179,7 +179,7 @@ export async function importSearchResults(
     // Franchising / catena → fuori target: lo scartiamo subito in NON_TARGET e non lo
     // mandiamo in audit (il batch salta i NON_TARGET). Un punto vendita affiliato non
     // decide il proprio marketing.
-    const franchiseBrand = detectFranchise(result.title);
+    const franchiseBrand = detectFranchise(result.title, result.website);
     if (franchiseBrand) {
       pipelineStage = "NON_TARGET";
     }

@@ -13,6 +13,10 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.28.4] - 2026-06-30
+
+- feat(franchise): esclude anche i domini-piattaforma a sottodomini (krossbooking.com) — match sul website oltre che sul nome
+
 ## [3.28.3] - 2026-06-30
 
 - fix(approvazione): contatore mostra il cap impostato (non quello ridotto dal warmup) + warmup esplicitato + nuovo chip 'in coda' (HOT approvati in attesa di invio)

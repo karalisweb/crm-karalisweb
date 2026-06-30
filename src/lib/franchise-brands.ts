@@ -59,6 +59,27 @@ export const FRANCHISE_BRANDS: string[] = [
   "Prénatal", "Prenatal", "Toys Center", "Bimbo Store", "Chicco Store",
 ];
 
+/**
+ * Domini "piattaforma" che generano siti su SOTTODOMINI di 3° livello (es.
+ * nomehotel.krossbooking.com): il cliente non controlla il proprio sito/marketing,
+ * quindi è fuori target come un franchising. Si matcha sul WEBSITE del lead, non sul nome.
+ * Estendi con criterio (solo domini-piattaforma veri).
+ */
+export const FRANCHISE_PLATFORM_DOMAINS: string[] = [
+  "krossbooking.com", // booking engine che crea siti su sottodomini di 3° livello
+];
+
+/** Estrae l'host (senza www) da un website grezzo; null se non parsabile. */
+function hostFromWebsite(website: string | null | undefined): string | null {
+  if (!website) return null;
+  try {
+    const u = website.startsWith("http") ? website : `https://${website}`;
+    return new URL(u).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 /** Normalizza per il confronto: minuscole, via accenti/punteggiatura, spazi singoli. */
 function normalize(s: string): string {
   return s
@@ -79,11 +100,23 @@ const NORM_BRANDS: Array<{ brand: string; norm: string }> = FRANCHISE_BRANDS.map
  * Match per TOKEN interi: il marchio normalizzato deve comparire come sequenza di parole
  * intere dentro il nome (evita falsi positivi su parti di parola).
  */
-export function detectFranchise(name: string | null | undefined): string | null {
-  if (!name) return null;
-  const padded = ` ${normalize(name)} `;
-  for (const { brand, norm } of NORM_BRANDS) {
-    if (padded.includes(` ${norm} `)) return brand;
+export function detectFranchise(
+  name: string | null | undefined,
+  website?: string | null
+): string | null {
+  // 1) Match per nome (insegne note).
+  if (name) {
+    const padded = ` ${normalize(name)} `;
+    for (const { brand, norm } of NORM_BRANDS) {
+      if (padded.includes(` ${norm} `)) return brand;
+    }
+  }
+  // 2) Match per dominio-piattaforma (sottodomini di 3° livello).
+  const host = hostFromWebsite(website);
+  if (host) {
+    for (const d of FRANCHISE_PLATFORM_DOMAINS) {
+      if (host === d || host.endsWith(`.${d}`)) return d;
+    }
   }
   return null;
 }

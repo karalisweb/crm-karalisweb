@@ -46,12 +46,12 @@ export async function POST(request: NextRequest) {
       pipelineStage: { in: SCAN_STAGES },
       respondedAt: null,
     },
-    select: { id: true, name: true, pipelineStage: true, notes: true },
+    select: { id: true, name: true, website: true, pipelineStage: true, notes: true },
     take: limit,
   });
 
   const matches = leads
-    .map((l) => ({ lead: l, brand: detectFranchise(l.name) }))
+    .map((l) => ({ lead: l, brand: detectFranchise(l.name, l.website) }))
     .filter((m): m is { lead: (typeof leads)[number]; brand: string } => m.brand !== null);
 
   if (!dryRun) {
