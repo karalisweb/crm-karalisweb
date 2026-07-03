@@ -60,10 +60,17 @@ export interface OutreachEmailDraft {
  * "ganci" inesistenti. La mail può citarne più di uno (es. "fate già Google Ads" + "sito
  * pieno di frasi generiche"). Se la lista è vuota, l'AI ripiega su un'osservazione generica.
  */
+interface AdsVerification {
+  manually: boolean;
+  googleAds: boolean;
+  metaAds: boolean;
+}
+
 function buildVerifiedFacts(
   auditData: Record<string, unknown> | null,
   reviewsCount: number | null,
-  rating: number | null
+  rating: number | null,
+  adsVerification?: AdsVerification | null
 ): string[] {
   const facts: string[] = [];
 
@@ -73,28 +80,46 @@ function buildVerifiedFacts(
         (t): t is string => typeof t === "string"
       )
     : [];
-  const hasGoogleAds = tracking.some((t) => /google ads/i.test(t));
-  const hasMetaPixel = tracking.some((t) => /meta pixel|facebook/i.test(t));
+  const tagGoogleAds = tracking.some((t) => /google ads/i.test(t));
+  const tagMetaPixel = tracking.some((t) => /meta pixel|facebook/i.test(t));
   const hasAnalytics = tracking.some((t) =>
     /analytics|ga4|tag manager|clarity|hotjar|linkedin|tiktok/i.test(t)
   );
 
+  // Se Alessio ha verificato PERSONALMENTE (Google Ads Transparency / Meta Ad
+  // Library) nella schermata di Approvazione, quel dato è più affidabile del
+  // solo tag rilevato sul sito (un'agenzia può gestire ads senza pixel visibile,
+  // o il pixel può essere presente ma la campagna spenta) e ha la precedenza.
+  const manuallyVerified = adsVerification?.manually === true;
+  const hasGoogleAds = manuallyVerified ? adsVerification!.googleAds : tagGoogleAds;
+  const hasMetaAds = manuallyVerified ? adsVerification!.metaAds : tagMetaPixel;
+
   if (hasGoogleAds) {
     facts.push(
-      "Sul loro sito è installato il TAG DI CONVERSIONE GOOGLE ADS: stanno già investendo soldi in pubblicità su Google. Il tema non è 'iniziare', ma capire se quella spesa è indirizzata bene."
+      manuallyVerified
+        ? "Ho controllato su Google Ads Transparency: hanno ATTUALMENTE inserzioni Google Ads attive. Stanno già investendo, il tema non è 'iniziare' ma capire se quella spesa è indirizzata bene."
+        : "Sul loro sito è installato il TAG DI CONVERSIONE GOOGLE ADS: stanno già investendo soldi in pubblicità su Google. Il tema non è 'iniziare', ma capire se quella spesa è indirizzata bene."
     );
   }
-  if (hasMetaPixel) {
+  if (hasMetaAds) {
     facts.push(
-      "Sul loro sito è attivo il META PIXEL: tracciano i visitatori per campagne / remarketing su Facebook e Instagram (quindi investono, o vogliono investire, su Meta)."
+      manuallyVerified
+        ? "Ho controllato sulla Meta Ad Library: hanno ATTUALMENTE inserzioni attive su Facebook/Instagram. Anche qui, investono già — il tema è l'efficacia."
+        : "Sul loro sito è attivo il META PIXEL: tracciano i visitatori per campagne / remarketing su Facebook e Instagram (quindi investono, o vogliono investire, su Meta)."
     );
   }
-  if (!hasGoogleAds && !hasMetaPixel && hasAnalytics) {
+  if (!hasGoogleAds && !hasMetaAds && hasAnalytics) {
     facts.push(
-      "Hanno strumenti di sola misurazione (analytics) ma NESSUN tag pubblicitario: misurano il traffico ma non stanno facendo — o non tracciano — campagne a pagamento."
+      manuallyVerified
+        ? "Ho verificato: al momento non risultano inserzioni Google Ads o Meta Ads attive. Hanno solo strumenti di misurazione, non stanno spendendo in pubblicità a pagamento."
+        : "Hanno strumenti di sola misurazione (analytics) ma NESSUN tag pubblicitario: misurano il traffico ma non stanno facendo — o non tracciano — campagne a pagamento."
     );
   }
-  if (tracking.length === 0) {
+  // "Nessuno strumento sul sito" resta valido anche se le ads sono verificate
+  // manualmente (parla di misurazione, non di campagne), tranne quando la
+  // verifica manuale ha già confermato ads attive: in quel caso il tag mancante
+  // sul sito è irrilevante e ripeterlo confonderebbe il messaggio.
+  if (tracking.length === 0 && !(manuallyVerified && (hasGoogleAds || hasMetaAds))) {
     facts.push(
       "NESSUNO strumento di misurazione sul sito: non sanno quanti visitatori ricevono né da dove arrivano."
     );
@@ -135,6 +160,9 @@ export async function generateOutreachEmail(leadId: string): Promise<OutreachEma
       googleRating: true,
       googleReviewsCount: true,
       auditData: true,
+      adsVerifiedManually: true,
+      hasActiveGoogleAds: true,
+      hasActiveMetaAds: true,
     },
   });
   if (!lead) throw new Error("Lead non trovato");
@@ -161,7 +189,12 @@ export async function generateOutreachEmail(leadId: string): Promise<OutreachEma
   const facts = buildVerifiedFacts(
     auditData,
     lead.googleReviewsCount ?? null,
-    lead.googleRating != null ? Number(lead.googleRating) : null
+    lead.googleRating != null ? Number(lead.googleRating) : null,
+    {
+      manually: lead.adsVerifiedManually,
+      googleAds: lead.hasActiveGoogleAds,
+      metaAds: lead.hasActiveMetaAds,
+    }
   );
   const verifiche =
     facts.length > 0

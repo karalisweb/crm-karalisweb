@@ -178,6 +178,9 @@ function ApprovalCard({ lead, index, onAction }: { lead: Lead; index: number; on
       // Conferma SOLO la piattaforma cliccata, lascia l'altra com'è.
       if (platform === "google") { setGoogleAds(value); setGoogleConfirmed(true); }
       else { setMetaAds(value); setMetaConfirmed(true); }
+      // La mail generata deve riflettere il dato appena verificato, non un tag
+      // indovinato: rigenera se una bozza era già a schermo.
+      if (draftLoaded) await regenerate();
     } catch { toast.error("Errore verifica ads"); } finally { setAdsBusy(null); }
   };
 

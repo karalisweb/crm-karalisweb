@@ -435,3 +435,19 @@ Ogni step **blocca** il successivo finche non completato. Nessuna scorciatoia.
 - I prompt Legacy v3.1 sono ancora configurabili nelle impostazioni
 
 ---
+
+## [3.29.0] - 2026-07-03
+
+- feat(outreach): riduce il gap trovati/contattati e collega la verifica ads manuale al testo mail HOT
+
+- opt-in-mailer: coda WARM ordinata dal lead piu' vecchio (prima non garantiva
+  di smaltire l'arretrato cronologicamente, rischio lead mai contattati)
+- gemini-outreach-email: la mail HOT approvata ora usa il verdetto ads
+  verificato manualmente da Alessio in /approvazione (Google Ads Transparency
+  / Meta Ad Library) al posto del solo tag rilevato sul sito, con tono piu'
+  assertivo; i WARM restano su rilevamento automatico, senza verifica
+  manuale, come richiesto
+- approvazione: confermare Google/Meta Ads rigenera subito la bozza cosi'
+  il testo riflette davvero la verifica appena fatta
+- daily-report: aggiunta riga arretrato mai contattato (warm pronti + hot da
+  approvare) per rendere visibile il gap invece di due numeri scollegati

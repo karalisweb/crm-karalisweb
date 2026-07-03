@@ -1,6 +1,6 @@
 {
   "name": "sales-crm-karalisweb",
-  "version": "3.28.4",
+  "version": "3.29.0",
   "private": true,
   "engines": {
     "node": ">=20.0.0"

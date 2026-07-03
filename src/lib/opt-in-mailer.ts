@@ -342,9 +342,14 @@ export async function runOptInMailer(): Promise<OptInResult> {
       orderBy: { outreachApprovedAt: "asc" },
       take: budget,
     });
+    // Ordinati dal più vecchio: senza orderBy la selezione non ha garanzia di
+    // avanzare cronologicamente nell'arretrato (rischio che alcuni lead restino
+    // in coda a tempo indeterminato). Lo shuffle sotto resta per variare l'ordine
+    // di invio all'interno del lotto selezionato (deliverability).
     const warm = await db.lead.findMany({
       where: { ...common, pipelineStage: PipelineStage.WARM_LEAD },
       select: selectFields,
+      orderBy: { createdAt: "asc" },
       take: budget * 3,
     });
     const ordered = [...hotApproved, ...shuffle(warm)];
