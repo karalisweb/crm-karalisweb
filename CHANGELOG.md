@@ -13,6 +13,19 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.30.0] - 2026-07-19
+
+### Fixed
+- **outreach: le mail di primo contatto (T1) non partivano più.** Break-up e follow-up girano prima del T1 e condividono lo stesso tetto giornaliero: il drenaggio dei lead già toccati saturava il cap ogni giorno, lasciando **0 nuovi contatti dal 10 luglio** (venerdì 17: 50 mail inviate, tutte follow-up/break-up, 0 nuove). Diagnosi confermata su DB e log di produzione.
+
+### Added
+- **outreach: quota giornaliera riservata ai nuovi contatti.** Il tetto giornaliero (invariato, es. 50) viene ora ripartito: `newReserve` slot sono garantiti alle prime mail (T1), il resto (`maintDailyCap`) va a break-up + follow-up. La manutenzione è plafonata a livello giornaliero così non può più affamare l'acquisizione. La riserva non supera i nuovi lead realmente in coda: se non ci sono nuovi da contattare, la manutenzione riprende l'intero tetto (nessuno spreco di deliverability). Il volume totale/giorno resta invariato.
+- Nuova env `OPTIN_NEW_RESERVE_FRAC` (default `0.5` = metà tetto ai nuovi; es. `0.6` = 60% ai nuovi). Log diagnostico `[opt-in] budget=… maintBudget=… newReserve=… pendingNew=…` a ogni run.
+
+## [3.29.0] - 2026-07-18
+
+- feat(outreach): riduce il gap trovati/contattati e collega la verifica ads manuale al testo mail HOT
+
 ## [3.28.4] - 2026-06-30
 
 - feat(franchise): esclude anche i domini-piattaforma a sottodomini (krossbooking.com) — match sul website oltre che sul nome

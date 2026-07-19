@@ -36,6 +36,10 @@ const FOLLOWUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP_DAYS || "3
 const FOLLOWUP2_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP2_DAYS || "4", 10) || 4); // T3 (da T2)
 const CALL_DAYS = Math.max(1, parseInt(process.env.OPTIN_CALL_DAYS || "3", 10) || 3);           // T4 (da T3)
 const BREAKUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_BREAKUP_DAYS || "7", 10) || 7);     // T5 (da T3)
+// Frazione del tetto giornaliero RISERVATA alle prime mail (T1). Break-up + follow-up
+// girano PRIMA del T1 sullo stesso budget: senza riserva il drenaggio dei lead già toccati
+// satura il tetto e i nuovi contatti restano a 0. Con 0.5 metà tetto è garantita ai nuovi.
+const NEW_RESERVE_FRAC = Math.min(1, Math.max(0, parseFloat(process.env.OPTIN_NEW_RESERVE_FRAC || "0.5") || 0.5));
 
 export interface OptInResult {
   firstSent: number;
@@ -157,6 +161,40 @@ export async function runOptInMailer(): Promise<OptInResult> {
   const allowedByNow = pacedAllowance(dailyCap);
   let budget = Math.max(0, Math.min(PER_RUN_CAP, allowedByNow - sentToday, dailyCap - sentToday));
 
+  // ── QUOTA RISERVATA AI NUOVI CONTATTI (T1) ───────────────────────────────────
+  // Break-up + follow-up (manutenzione dei lead già toccati) girano PRIMA del T1 e
+  // condividono lo stesso `budget`. Per evitare che il drenaggio dei vecchi saturi il
+  // tetto lasciando 0 ai nuovi, plafoniamo la manutenzione a `maintDailyCap` al giorno,
+  // così `newReserve` slot/giorno restano sempre al T1. La riserva non supera i nuovi
+  // lead realmente in coda: se non ci sono nuovi da contattare, la manutenzione riprende
+  // tutto il tetto (nessuno spreco di deliverability). Il tetto TOTALE resta invariato.
+  const newSentToday = await db.activity.count({
+    where: { type: "EMAIL_OUTREACH", notes: { startsWith: "[Opt-in]" }, createdAt: { gte: startOfDay } },
+  });
+  const maintSentToday = Math.max(0, sentToday - newSentToday);
+  const pendingNew = await db.lead.count({
+    where: {
+      email: { not: null },
+      optInSentAt: null,
+      unsubscribed: false,
+      respondedAt: null,
+      ...segmentFilter,
+      OR: [
+        { pipelineStage: PipelineStage.HOT_LEAD, outreachApprovedAt: { not: null } },
+        { pipelineStage: PipelineStage.WARM_LEAD },
+      ],
+    },
+  });
+  const newReserve = Math.min(Math.ceil(dailyCap * NEW_RESERVE_FRAC), pendingNew);
+  const maintDailyCap = Math.max(0, dailyCap - newReserve);
+  // Budget di manutenzione per QUESTO run: limitato dal budget complessivo del run E da
+  // quanto manca al tetto giornaliero di manutenzione (accumulo su tutti i run del giorno).
+  let maintBudget = Math.max(0, Math.min(budget, maintDailyCap - maintSentToday));
+  console.log(
+    `[opt-in] budget=${budget} maintBudget=${maintBudget} (maintDailyCap=${maintDailyCap}, maintSentToday=${maintSentToday}) ` +
+      `newReserve=${newReserve} pendingNew=${pendingNew} dailyCap=${dailyCap} sentToday=${sentToday}`,
+  );
+
   // ── T4 — TELEFONATA (task, solo lead HOT): non consuma budget email ──────────
   const callLeads = await db.lead.findMany({
     where: {
@@ -192,7 +230,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
   }
 
   // ── T5 — BREAK-UP (email) → NURTURING ───────────────────────────────────────
-  if (budget > 0) {
+  if (maintBudget > 0) {
     const breakupLeads = await db.lead.findMany({
       where: {
         pipelineStage: { in: inSequence },
@@ -204,10 +242,10 @@ export async function runOptInMailer(): Promise<OptInResult> {
         ...segmentFilter,
       },
       select: { id: true, name: true, email: true },
-      take: budget * 3,
+      take: maintBudget * 3,
     });
     for (const lead of shuffle(breakupLeads)) {
-      if (budget <= 0) break;
+      if (maintBudget <= 0 || budget <= 0) break;
       if (!lead.email) continue;
       const subject = `Chiudo il cerchio, ${lead.name}`;
       const body = questionnaireUrl
@@ -227,6 +265,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
         ]);
         res.breakups++;
         budget--;
+        maintBudget--;
         if (budget > 0) await jitter();
       } catch (err) {
         console.error(`[opt-in] break-up errore ${lead.id}:`, err);
@@ -236,7 +275,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
   }
 
   // ── T2 — FOLLOW-UP 1 (email) ────────────────────────────────────────────────
-  if (budget > 0) {
+  if (maintBudget > 0) {
     const fu1Leads = await db.lead.findMany({
       where: {
         pipelineStage: { in: inSequence },
@@ -248,10 +287,10 @@ export async function runOptInMailer(): Promise<OptInResult> {
         ...segmentFilter,
       },
       select: { id: true, name: true, email: true, outreachMailSent: true },
-      take: budget * 3,
+      take: maintBudget * 3,
     });
     for (const lead of shuffle(fu1Leads)) {
-      if (budget <= 0) break;
+      if (maintBudget <= 0 || budget <= 0) break;
       if (!lead.email) continue;
       const prev = lead.outreachMailSent as { subject?: string } | null;
       const subject = prev?.subject ? `Re: ${prev.subject}` : `Re: ${lead.name}`;
@@ -269,6 +308,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
         ]);
         res.followupsSent++;
         budget--;
+        maintBudget--;
         if (budget > 0) await jitter();
       } catch (err) {
         console.error(`[opt-in] follow-up errore ${lead.id}:`, err);
@@ -278,7 +318,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
   }
 
   // ── T3 — FOLLOW-UP 2 (email, angolo "visibilità") ───────────────────────────
-  if (budget > 0) {
+  if (maintBudget > 0) {
     const fu2Leads = await db.lead.findMany({
       where: {
         pipelineStage: { in: inSequence },
@@ -290,10 +330,10 @@ export async function runOptInMailer(): Promise<OptInResult> {
         ...segmentFilter,
       },
       select: { id: true, name: true, email: true },
-      take: budget * 3,
+      take: maintBudget * 3,
     });
     for (const lead of shuffle(fu2Leads)) {
-      if (budget <= 0) break;
+      if (maintBudget <= 0 || budget <= 0) break;
       if (!lead.email) continue;
       const subject = `Ultima cosa su ${lead.name}`;
       const body = questionnaireUrl
@@ -309,6 +349,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
         ]);
         res.followup2Sent++;
         budget--;
+        maintBudget--;
         if (budget > 0) await jitter();
       } catch (err) {
         console.error(`[opt-in] follow-up2 errore ${lead.id}:`, err);
