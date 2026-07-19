@@ -31,7 +31,11 @@ export function actionableWhere(
   pausedKeys: string[],
 ): Prisma.LeadWhereInput {
   const where: Prisma.LeadWhereInput = { ...base, ...HAS_EMAIL };
-  if (pausedKeys.length > 0) where.segment = { notIn: pausedKeys };
+  // Segmento non in pausa — MA il segmento nullo (nessun settore) NON è "in pausa"
+  // e va incluso. `notIn` da solo scarterebbe i NULL (semantica SQL), sottostimando.
+  if (pausedKeys.length > 0) {
+    where.OR = [{ segment: null }, { segment: { notIn: pausedKeys } }];
+  }
   return where;
 }
 
@@ -57,6 +61,11 @@ export function approvalQueueWhere(
     outreachApprovedAt: null,
     opportunityScore: { gte: threshold },
   };
-  if (pausedKeys.length > 0) where.segment = { notIn: pausedKeys };
+  // Segmento non in pausa, includendo i lead SENZA settore (segment null): `notIn`
+  // da solo li scarterebbe (semantica SQL sui NULL) → il badge sottostima di 1 per
+  // ogni HOT senza settore rispetto alla pagina Approvazione. Con l'OR combaciano.
+  if (pausedKeys.length > 0) {
+    where.OR = [{ segment: null }, { segment: { notIn: pausedKeys } }];
+  }
   return where;
 }

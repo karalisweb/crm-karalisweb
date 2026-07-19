@@ -36,6 +36,7 @@ const FOLLOWUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP_DAYS || "3
 const FOLLOWUP2_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP2_DAYS || "4", 10) || 4); // T3 (da T2)
 const CALL_DAYS = Math.max(1, parseInt(process.env.OPTIN_CALL_DAYS || "3", 10) || 3);           // T4 (da T3)
 const BREAKUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_BREAKUP_DAYS || "7", 10) || 7);     // T5 (da T3)
+const NURTURE_SOCIAL_DAYS = Math.max(1, parseInt(process.env.OPTIN_NURTURE_SOCIAL_DAYS || "30", 10) || 30); // T6 (da T2), una tantum
 // Frazione del tetto giornaliero RISERVATA alle prime mail (T1). Break-up + follow-up
 // girano PRIMA del T1 sullo stesso budget: senza riserva il drenaggio dei lead già toccati
 // satura il tetto e i nuovi contatti restano a 0. Con 0.5 metà tetto è garantita ai nuovi.
@@ -47,6 +48,7 @@ export interface OptInResult {
   followup2Sent: number;
   callTasks: number;
   breakups: number;
+  nurtureSocial: number;
   skipped: number;
   capReached: boolean;
 }
@@ -108,7 +110,7 @@ function pacedAllowance(dailyCap: number): number {
 
 export async function runOptInMailer(): Promise<OptInResult> {
   const res: OptInResult = {
-    firstSent: 0, followupsSent: 0, followup2Sent: 0, callTasks: 0, breakups: 0,
+    firstSent: 0, followupsSent: 0, followup2Sent: 0, callTasks: 0, breakups: 0, nurtureSocial: 0,
     skipped: 0, capReached: false,
   };
 
@@ -353,6 +355,52 @@ export async function runOptInMailer(): Promise<OptInResult> {
         if (budget > 0) await jitter();
       } catch (err) {
         console.error(`[opt-in] follow-up2 errore ${lead.id}:`, err);
+        res.skipped++;
+      }
+    }
+  }
+
+  // ── T6 — NURTURING social (email UNA TANTUM): ~30gg dopo il follow-up invita a
+  // seguire Alessio su LinkedIn/Substack. Trasforma i lead freddi (già usciti in
+  // NURTURING, senza risposta) in pubblico. Non ripetibile: dedup via activity
+  // [Opt-in-NURTURE] (il prefisso [Opt-in conta nel tetto giornaliero). ─────────
+  if (maintBudget > 0) {
+    const nurtureLeads = await db.lead.findMany({
+      where: {
+        pipelineStage: PipelineStage.NURTURING,
+        optInFollowupAt: { not: null, lte: daysAgo(NURTURE_SOCIAL_DAYS) },
+        respondedAt: null,
+        unsubscribed: false,
+        email: { not: null },
+        activities: { none: { notes: { startsWith: "[Opt-in-NURTURE]" } } },
+        ...segmentFilter,
+      },
+      select: { id: true, name: true, email: true },
+      take: maintBudget * 3,
+    });
+    for (const lead of shuffle(nurtureLeads)) {
+      if (maintBudget <= 0 || budget <= 0) break;
+      if (!lead.email) continue;
+      const subject = "Se ti va, ci leggiamo";
+      const body =
+        `Ciao,\n\nun po' di tempo fa ti avevo scritto a proposito di ${lead.name} e non ci siamo sentiti — nessun problema, niente insistenza.\n\n` +
+        `Non ti scrivo per vendere: ogni settimana scrivo di strategie di marketing — cose concrete per capire dove ha senso investire, senza fuffa. Se l'argomento ti interessa, mi trovi qui:\n` +
+        `LinkedIn: https://www.linkedin.com/in/alessioloi/\n` +
+        `Substack: https://karalisweb.substack.com/\n\n` +
+        `Un saluto,\n${firma}`;
+      try {
+        const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
+        if (!ok) { res.skipped++; continue; }
+        await db.$transaction([
+          db.lead.update({ where: { id: lead.id }, data: { lastContactedAt: new Date() } }),
+          db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in-NURTURE] invito LinkedIn/Substack → ${lead.email}` } }),
+        ]);
+        res.nurtureSocial++;
+        budget--;
+        maintBudget--;
+        if (budget > 0) await jitter();
+      } catch (err) {
+        console.error(`[opt-in] nurture-social errore ${lead.id}:`, err);
         res.skipped++;
       }
     }

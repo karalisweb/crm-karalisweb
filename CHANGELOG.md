@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.32.0] - 2026-07-19
+
+### Added
+- **Mail di nurturing social (una tantum).** ~30 giorni dopo il follow-up, ai lead freddi usciti in NURTURING (non disiscritti, non hanno risposto) parte una mail che invita a seguire Alessio su LinkedIn e Substack ("strategie di marketing"). Trasforma i lead persi in pubblico. Dedup via activity `[Opt-in-NURTURE]` (una sola volta per lead), conta nel tetto giornaliero → deliverability invariata. Env `OPTIN_NURTURE_SOCIAL_DAYS` (default 30).
+
+### Fixed
+- **Contatore "Approvazione" allineato alla pagina.** Il badge sidebar scartava per errore i lead HOT senza settore (`segment` null): la semantica SQL di `notIn` esclude i NULL. Ora inclusi → il badge combacia col numero della pagina (era 39 vs 40).
+
 ## [3.31.0] - 2026-07-19
 
 ### Fixed
