@@ -2,6 +2,7 @@
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { MobileMenu } from "@/components/layout/mobile-menu";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context";
@@ -52,6 +53,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
+      <MobileMenu />
       <Toaster />
       <VideoViewPoller />
     </div>

@@ -16,6 +16,7 @@ export default function HotLeadsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
+  const [withEmail, setWithEmail] = useState(0);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -26,6 +27,7 @@ export default function HotLeadsPage() {
       const json = await res.json();
       setLeads(json.leads || []);
       setTotal(json.total || 0);
+      setWithEmail(json.withEmail || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore sconosciuto");
     } finally {
@@ -48,7 +50,12 @@ export default function HotLeadsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="destructive">{total} lead</Badge>
+          <div className="flex flex-col items-end leading-tight">
+            <Badge variant="destructive">{total} lead</Badge>
+            <span className="text-[10px] text-muted-foreground mt-1">
+              non contattati · {withEmail} con email
+            </span>
+          </div>
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
             Aggiorna

@@ -45,12 +45,11 @@ interface MissionData {
   videoDaFare: MissionLead[];
   followUpPrioritari: MissionLead[];
   badges: {
-    daRegistrare: number;
     daAnalizzare: number;
     followUp: number;
-    inviati: number;
-    appuntamenti: number;
-    inChiusura: number;
+    fareVideoReady: number;
+    emailInviate: number;
+    callFissate: number;
     hotLeads: number;
     warmLeads: number;
   };
@@ -162,11 +161,11 @@ export default function MissionPage() {
       {/* KPI row compatta */}
       {badges && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          <MiniKpi label="Video Pronti" value={badges.daRegistrare} color="red" max={5} />
-          <MiniKpi label="Da Analizzare" value={badges.daAnalizzare} color="amber" />
-          <MiniKpi label="Follow-up" value={badges.followUp} color="amber" />
-          <MiniKpi label="Inviati" value={badges.inviati} color="blue" />
-          <MiniKpi label="Appuntamenti" value={badges.appuntamenti} color="green" />
+          <MiniKpi label="Video Pronti" hint="script pronti" value={badges.fareVideoReady} color="red" max={5} />
+          <MiniKpi label="Da Analizzare" hint="non contattati" value={badges.daAnalizzare} color="amber" />
+          <MiniKpi label="Follow-up" hint="in attesa" value={badges.followUp} color="amber" />
+          <MiniKpi label="Mail Inviate" hint="in gioco" value={badges.emailInviate} color="blue" />
+          <MiniKpi label="Call Fissate" hint="in agenda" value={badges.callFissate} color="green" />
         </div>
       )}
 
@@ -272,11 +271,13 @@ function MiniKpi({
   value,
   color,
   max,
+  hint,
 }: {
   label: string;
   value: number;
   color: "red" | "amber" | "blue" | "green";
   max?: number;
+  hint?: string;
 }) {
   const colorClasses = {
     red: "text-red-500 bg-red-500/10",
@@ -289,10 +290,11 @@ function MiniKpi({
     <Card>
       <CardContent className="p-3 text-center">
         <span className={`text-2xl font-bold tabular-nums ${colorClasses[color].split(" ")[0]}`}>
-          {value}
+          {value ?? 0}
           {max ? <span className="text-sm font-normal text-muted-foreground">/{max}</span> : null}
         </span>
         <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
+        {hint ? <p className="text-[10px] text-muted-foreground/70 leading-tight">{hint}</p> : null}
       </CardContent>
     </Card>
   );

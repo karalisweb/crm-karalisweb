@@ -13,6 +13,20 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.31.0] - 2026-07-19
+
+### Fixed
+- **Dashboard "Missione di Oggi" ripristinata.** L'API `/api/dashboard/mission` non restituiva più le liste `videoDaFare` e `followUpPrioritari` (rimosse in un refactoring) → le due sezioni principali erano sempre vuote. Ora vengono ricalcolate (FARE_VIDEO pronti per il video; VIDEO_INVIATO senza risposta).
+- **KPI dashboard corretti.** 3 dei 5 riquadri leggevano chiavi inesistenti (`daRegistrare`, `inviati`, `appuntamenti`) → mostravano vuoto. Ora usano le chiavi reali (`fareVideoReady`, `emailInviate`, `callFissate`).
+- **Badge "Approvazione" nella sidebar.** Era sempre 0/nascosto (chiave `daApprovare` mai restituita dall'API). Ora l'API la calcola con la STESSA logica della pagina /approvazione (HOT non contattati/approvati, sopra soglia, settore attivo).
+
+### Added
+- **Etichette chiare sui contatori.** Sotto ogni numero di Da Analizzare/Hot/Warm/Cold ora compare cosa conta ("non contattati · X con email"), e ogni KPI dashboard ha una descrizione. Chiarisce perché viste diverse mostrano numeri diversi (sono tappe diverse dell'imbuto). Nuovo campo `withEmail` in `/api/leads`.
+- **Menu mobile completo.** Nuovo drawer (`mobile-menu.tsx`) con TUTTE le sezioni della sidebar (prima da mobile erano raggiungibili solo 5 voci su ~25): si apre dal pulsante "Menu" della bottom-nav. Config di navigazione ora condivisa (`nav-items.ts`) tra sidebar desktop e menu mobile.
+
+### Changed
+- Filtri lead canonici centralizzati in `src/lib/lead-filters.ts` (coda approvazione + "azionabili"), unica fonte di verità per contatori e liste.
+
 ## [3.30.0] - 2026-07-19
 
 ### Fixed

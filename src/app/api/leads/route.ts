@@ -83,7 +83,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [leads, total] = await Promise.all([
+    // "Contattabili" = tra i risultati, quelli con email valida (non nulla, non vuota).
+    const whereWithEmail = {
+      ...where,
+      AND: [{ email: { not: null } }, { email: { not: "" } }],
+    };
+
+    const [leads, total, withEmail] = await Promise.all([
       db.lead.findMany({
         where,
         orderBy: [{ opportunityScore: "desc" }, { createdAt: "desc" }],
@@ -91,6 +97,7 @@ export async function GET(request: NextRequest) {
         take: pageSize,
       }),
       db.lead.count({ where }),
+      db.lead.count({ where: whereWithEmail }),
     ]);
 
     // Calcola conteggi per stage se richiesto
@@ -112,6 +119,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       leads,
       total,
+      withEmail,
       pagination: {
         page,
         pageSize,
