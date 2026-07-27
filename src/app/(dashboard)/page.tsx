@@ -12,7 +12,6 @@ import {
   ArrowRight,
   Flame,
   Clock,
-  RefreshCw,
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
@@ -60,7 +59,6 @@ export default function MissionPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [regenerating, setRegenerating] = useState(false);
 
   const fetchMission = useCallback(async () => {
     try {
@@ -124,20 +122,6 @@ export default function MissionPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleRegenerate = async () => {
-    setRegenerating(true);
-    try {
-      const res = await fetch("/api/dashboard/regenerate", { method: "POST" });
-      if (res.ok) {
-        await fetchMission();
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setRegenerating(false);
-    }
-  };
-
   if (loading) return <MissionSkeleton />;
 
   const videoDaFare = data?.videoDaFare || [];
@@ -176,18 +160,6 @@ export default function MissionPage() {
             <Video className="h-5 w-5 text-red-500" />
             I {videoDaFare.length} Video di Oggi
           </h2>
-          <button
-            onClick={handleRegenerate}
-            disabled={regenerating}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-accent"
-          >
-            {regenerating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Rigenera lista
-          </button>
         </div>
 
         {videoDaFare.length === 0 ? (
@@ -195,10 +167,8 @@ export default function MissionPage() {
             <CardContent className="p-8 text-center">
               <Video className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
               <p className="text-muted-foreground">
-                Nessun lead con analisi pronto.{" "}
-                {badges && badges.daAnalizzare > 0
-                  ? `Ci sono ${badges.daAnalizzare} lead da analizzare con Gemini.`
-                  : "Importa nuovi lead dallo scouting."}
+                Nessun lead pronto per il video. Entrano qui solo i lead che hanno
+                risposto SI (CALDO_REATTIVO) e sono stati spostati manualmente a Fare Video.
               </p>
             </CardContent>
           </Card>

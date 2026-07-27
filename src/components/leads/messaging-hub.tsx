@@ -14,6 +14,7 @@ import {
   Eye,
   Clock,
   Target,
+  ThumbsDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -107,6 +108,53 @@ function ResponseTracker({ leadId, leadName }: { leadId: string; leadName: strin
   );
 }
 
+function NegativeReplyTracker({ leadId, leadName }: { leadId: string; leadName: string }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleNotInterested = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/leads/${leadId}/quick-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "NOT_INTERESTED_REPLY", respondedVia: "email" }),
+      });
+      if (!res.ok) throw new Error("Errore");
+      toast.success(`${leadName} segnato come "non interessato" → Perso`);
+      window.location.reload();
+    } catch {
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="border-red-500/30 bg-red-500/5">
+      <CardContent className="p-4">
+        <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <ThumbsDown className="h-4 w-4 text-red-500" />
+          Ha risposto NO / non interessato
+        </p>
+        <Button
+          size="sm"
+          variant="destructive"
+          disabled={loading}
+          onClick={handleNotInterested}
+          className="w-full"
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : (
+            <ThumbsDown className="h-4 w-4 mr-1" />
+          )}
+          Segna come &quot;Non interessato&quot; → Perso
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function MessagingHub({
   leadId,
   leadName,
@@ -182,6 +230,7 @@ export function MessagingHub({
 
       {/* Segna risposta */}
       <ResponseTracker leadId={leadId} leadName={leadName} />
+      <NegativeReplyTracker leadId={leadId} leadName={leadName} />
 
       {/* Storico messaggi */}
       {messageActivities.length > 0 && (

@@ -6,17 +6,21 @@ import { parsePausedSegments } from "@/lib/segments";
 import { PipelineStage, Prisma } from "@prisma/client";
 
 /**
- * Sequenza fredda verso il QUESTIONARIO — 5 tocchi.
+ * Sequenza fredda verso il QUESTIONARIO — follow-up unico + uscita rapida.
  *
  *  T1 mail 1 (gancio di dolore + questionario). Auto solo se gate approvazione OFF;
  *     altrimenti la manda la schermata di approvazione (/approve-outreach).
- *  T2 follow-up 1 (email, +FOLLOWUP_DAYS)
- *  T3 follow-up 2 (email, +FOLLOWUP2_DAYS, angolo diverso)
- *  T4 telefonata (TASK, +CALL_DAYS, solo lead HOT) — non consuma budget email
- *  T5 break-up (email, +BREAKUP_DAYS) → stato NURTURING (stop solleciti)
+ *  T2 follow-up unico (email, +FOLLOWUP_DAYS da optInSentAt)
+ *  T-exit break-up (email, +BREAKUP_DAYS da optInFollowupAt) → stato NURTURING
+ *     (totale FOLLOWUP_DAYS+BREAKUP_DAYS giorni da optInSentAt, default 4+3=7gg)
+ *  T-call ultimo tentativo telefonico (TASK, +CALL_DAYS da coldBreakupAt, SOLO
+ *     lead che erano HOT — score ≥80 — perché a questo punto sono già in
+ *     NURTURING e lo stage da solo non basterebbe più a distinguerli) — non
+ *     consuma budget email
  *
  * La sequenza si ferma su respondedAt / unsubscribed (gestito altrove: la risposta
- * promuove a CALDO_REATTIVO). Protezioni: tetto giornaliero + warmup + jitter.
+ * positiva promuove a CALDO_REATTIVO, quella esplicitamente negativa va a PERSO).
+ * Protezioni: tetto giornaliero + warmup + jitter.
  */
 
 const DEFAULT_SUBJECTS = [
@@ -32,23 +36,19 @@ const PER_RUN_CAP = Math.max(0, parseInt(process.env.OPTIN_PER_RUN_CAP || "2", 1
 // Finestra oraria (ora di Roma) su cui spalmare il tetto giornaliero.
 const WINDOW_START_H = Math.max(0, Math.min(23, parseInt(process.env.OPTIN_WINDOW_START || "7", 10) || 7));
 const WINDOW_END_H = Math.max(1, Math.min(24, parseInt(process.env.OPTIN_WINDOW_END || "19", 10) || 19));
-const FOLLOWUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP_DAYS || "3", 10) || 3);   // T2
-const FOLLOWUP2_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP2_DAYS || "4", 10) || 4); // T3 (da T2)
-const CALL_DAYS = Math.max(1, parseInt(process.env.OPTIN_CALL_DAYS || "3", 10) || 3);           // T4 (da T3)
-const BREAKUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_BREAKUP_DAYS || "7", 10) || 7);     // T5 (da T3)
-const NURTURE_SOCIAL_DAYS = Math.max(1, parseInt(process.env.OPTIN_NURTURE_SOCIAL_DAYS || "30", 10) || 30); // T6 (da T2), una tantum
-// Frazione del tetto giornaliero RISERVATA alle prime mail (T1). Break-up + follow-up
-// girano PRIMA del T1 sullo stesso budget: senza riserva il drenaggio dei lead già toccati
+const FOLLOWUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_FOLLOWUP_DAYS || "4", 10) || 4); // T2, da optInSentAt
+const BREAKUP_DAYS = Math.max(1, parseInt(process.env.OPTIN_BREAKUP_DAYS || "3", 10) || 3);   // T-exit, da optInFollowupAt
+const CALL_DAYS = Math.max(1, parseInt(process.env.OPTIN_CALL_DAYS || "1", 10) || 1);          // T-call, da coldBreakupAt
+// Frazione del tetto giornaliero RISERVATA alle prime mail (T1). Break-up e follow-up
+// girano PRIMA del T1 sullo stesso budget: senza riserva il drenaggio dei lead vecchi
 // satura il tetto e i nuovi contatti restano a 0. Con 0.5 metà tetto è garantita ai nuovi.
 const NEW_RESERVE_FRAC = Math.min(1, Math.max(0, parseFloat(process.env.OPTIN_NEW_RESERVE_FRAC || "0.5") || 0.5));
 
 export interface OptInResult {
   firstSent: number;
   followupsSent: number;
-  followup2Sent: number;
   callTasks: number;
   breakups: number;
-  nurtureSocial: number;
   skipped: number;
   capReached: boolean;
 }
@@ -110,7 +110,7 @@ function pacedAllowance(dailyCap: number): number {
 
 export async function runOptInMailer(): Promise<OptInResult> {
   const res: OptInResult = {
-    firstSent: 0, followupsSent: 0, followup2Sent: 0, callTasks: 0, breakups: 0, nurtureSocial: 0,
+    firstSent: 0, followupsSent: 0, callTasks: 0, breakups: 0,
     skipped: 0, capReached: false,
   };
 
@@ -169,7 +169,7 @@ export async function runOptInMailer(): Promise<OptInResult> {
   // tetto lasciando 0 ai nuovi, plafoniamo la manutenzione a `maintDailyCap` al giorno,
   // così `newReserve` slot/giorno restano sempre al T1. La riserva non supera i nuovi
   // lead realmente in coda: se non ci sono nuovi da contattare, la manutenzione riprende
-  // tutto il tetto (nessuno spreco di deliverability). Il tetto TOTALE resta invariato.
+  // tutto il tetto (nessuno spreco di deliverability).
   const newSentToday = await db.activity.count({
     where: { type: "EMAIL_OUTREACH", notes: { startsWith: "[Opt-in]" }, createdAt: { gte: startOfDay } },
   });
@@ -197,46 +197,12 @@ export async function runOptInMailer(): Promise<OptInResult> {
       `newReserve=${newReserve} pendingNew=${pendingNew} dailyCap=${dailyCap} sentToday=${sentToday}`,
   );
 
-  // ── T4 — TELEFONATA (task, solo lead HOT): non consuma budget email ──────────
-  const callLeads = await db.lead.findMany({
-    where: {
-      pipelineStage: PipelineStage.HOT_LEAD,
-      optInFollowup2At: { not: null, lte: daysAgo(CALL_DAYS) },
-      coldCallTaskAt: null,
-      respondedAt: null,
-      unsubscribed: false,
-      ...segmentFilter,
-    },
-    select: { id: true, name: true, phone: true, outreachMailSent: true },
-    take: 100,
-  });
-  for (const lead of callLeads) {
-    try {
-      const hook = (lead.outreachMailSent as { hook?: string } | null)?.hook || "";
-      const desc =
-        `Chiama ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}.\n` +
-        (hook ? `Gancio: ${hook}\n` : "") +
-        `Obiettivo: sbloccare via voce ("ti ho scritto, forse è finita in spam") e portarlo al questionario` +
-        (questionnaireUrl ? `: ${questionnaireUrl}` : ".") +
-        `\nSe mostra interesse, segna "Ha risposto" (diventa CALDO).`;
-      await db.$transaction([
-        db.task.create({ data: { leadId: lead.id, title: `📞 Chiama — ${lead.name}`, description: desc, dueAt: new Date() } }),
-        db.lead.update({ where: { id: lead.id }, data: { coldCallTaskAt: new Date() } }),
-        db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Cold-CALL] task telefonata creato` } }),
-      ]);
-      res.callTasks++;
-    } catch (err) {
-      console.error(`[opt-in] call-task errore ${lead.id}:`, err);
-      res.skipped++;
-    }
-  }
-
-  // ── T5 — BREAK-UP (email) → NURTURING ───────────────────────────────────────
+  // ── T-exit — BREAK-UP (email) → NURTURING ───────────────────────────────────
   if (maintBudget > 0) {
     const breakupLeads = await db.lead.findMany({
       where: {
         pipelineStage: { in: inSequence },
-        optInFollowup2At: { not: null, lte: daysAgo(BREAKUP_DAYS) },
+        optInFollowupAt: { not: null, lte: daysAgo(BREAKUP_DAYS) },
         coldBreakupAt: null,
         respondedAt: null,
         unsubscribed: false,
@@ -276,7 +242,43 @@ export async function runOptInMailer(): Promise<OptInResult> {
     }
   }
 
-  // ── T2 — FOLLOW-UP 1 (email) ────────────────────────────────────────────────
+  // ── T-call — ULTIMO TENTATIVO TELEFONICO (task, solo ex-HOT): dopo l'uscita in
+  // NURTURING, non consuma budget email. Gate su score (non più su pipelineStage,
+  // perché a questo punto il lead è già NURTURING) ───────────────────────────
+  const callLeads = await db.lead.findMany({
+    where: {
+      pipelineStage: PipelineStage.NURTURING,
+      opportunityScore: { gte: 80 },
+      coldBreakupAt: { not: null, lte: daysAgo(CALL_DAYS) },
+      coldCallTaskAt: null,
+      respondedAt: null,
+      unsubscribed: false,
+      ...segmentFilter,
+    },
+    select: { id: true, name: true, phone: true, outreachMailSent: true },
+    take: 100,
+  });
+  for (const lead of callLeads) {
+    try {
+      const hook = (lead.outreachMailSent as { hook?: string } | null)?.hook || "";
+      const desc =
+        `Ultimo tentativo — ${lead.name} era un lead HOT, non ha risposto a mail + follow-up.\n` +
+        (hook ? `Gancio: ${hook}\n` : "") +
+        `Chiama${lead.phone ? ` (${lead.phone})` : ""} prima di archiviarlo definitivamente.` +
+        `\nSe mostra interesse, segna "Ha risposto" (torna CALDO).`;
+      await db.$transaction([
+        db.task.create({ data: { leadId: lead.id, title: `📞 Ultimo tentativo — ${lead.name}`, description: desc, dueAt: new Date() } }),
+        db.lead.update({ where: { id: lead.id }, data: { coldCallTaskAt: new Date() } }),
+        db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Cold-CALL] ultimo tentativo telefonico creato` } }),
+      ]);
+      res.callTasks++;
+    } catch (err) {
+      console.error(`[opt-in] call-task errore ${lead.id}:`, err);
+      res.skipped++;
+    }
+  }
+
+  // ── T2 — FOLLOW-UP unico (email) ────────────────────────────────────────────
   if (maintBudget > 0) {
     const fu1Leads = await db.lead.findMany({
       where: {
@@ -314,93 +316,6 @@ export async function runOptInMailer(): Promise<OptInResult> {
         if (budget > 0) await jitter();
       } catch (err) {
         console.error(`[opt-in] follow-up errore ${lead.id}:`, err);
-        res.skipped++;
-      }
-    }
-  }
-
-  // ── T3 — FOLLOW-UP 2 (email, angolo "visibilità") ───────────────────────────
-  if (maintBudget > 0) {
-    const fu2Leads = await db.lead.findMany({
-      where: {
-        pipelineStage: { in: inSequence },
-        optInFollowupAt: { not: null, lte: daysAgo(FOLLOWUP2_DAYS) },
-        optInFollowup2At: null,
-        respondedAt: null,
-        unsubscribed: false,
-        email: { not: null },
-        ...segmentFilter,
-      },
-      select: { id: true, name: true, email: true },
-      take: maintBudget * 3,
-    });
-    for (const lead of shuffle(fu2Leads)) {
-      if (maintBudget <= 0 || budget <= 0) break;
-      if (!lead.email) continue;
-      const subject = `Ultima cosa su ${lead.name}`;
-      const body = questionnaireUrl
-        ? `Ciao,\n\nultima cosa e poi ti lascio in pace: prova a cercare su Google (o a chiederlo a ChatGPT) un'attività come la vostra nella vostra zona, e guarda chi compare per primo.\n` +
-          `Le poche domande che ti ho mandato servono proprio a capire dove si trova ${lead.name} rispetto a questo — e in cambio ti registro il video di 2-3 minuti di cui ti parlavo: ${questionnaireUrl}\n\nUn saluto,\n${firma}`
-        : `Ciao,\n\nultima cosa e poi ti lascio in pace: se ti va di capire dove si trova ${lead.name} rispetto ai concorrenti online, rispondi pure a questa mail.\n\nUn saluto,\n${firma}`;
-      try {
-        const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
-        if (!ok) { res.skipped++; continue; }
-        await db.$transaction([
-          db.lead.update({ where: { id: lead.id }, data: { optInFollowup2At: new Date(), lastContactedAt: new Date() } }),
-          db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in-FU2] follow-up 2 → ${lead.email}` } }),
-        ]);
-        res.followup2Sent++;
-        budget--;
-        maintBudget--;
-        if (budget > 0) await jitter();
-      } catch (err) {
-        console.error(`[opt-in] follow-up2 errore ${lead.id}:`, err);
-        res.skipped++;
-      }
-    }
-  }
-
-  // ── T6 — NURTURING social (email UNA TANTUM): ~30gg dopo il follow-up invita a
-  // seguire Alessio su LinkedIn/Substack. Trasforma i lead freddi (già usciti in
-  // NURTURING, senza risposta) in pubblico. Non ripetibile: dedup via activity
-  // [Opt-in-NURTURE] (il prefisso [Opt-in conta nel tetto giornaliero). ─────────
-  if (maintBudget > 0) {
-    const nurtureLeads = await db.lead.findMany({
-      where: {
-        pipelineStage: PipelineStage.NURTURING,
-        optInFollowupAt: { not: null, lte: daysAgo(NURTURE_SOCIAL_DAYS) },
-        respondedAt: null,
-        unsubscribed: false,
-        email: { not: null },
-        activities: { none: { notes: { startsWith: "[Opt-in-NURTURE]" } } },
-        ...segmentFilter,
-      },
-      select: { id: true, name: true, email: true },
-      take: maintBudget * 3,
-    });
-    for (const lead of shuffle(nurtureLeads)) {
-      if (maintBudget <= 0 || budget <= 0) break;
-      if (!lead.email) continue;
-      const subject = "Se ti va, ci leggiamo";
-      const body =
-        `Ciao,\n\nun po' di tempo fa ti avevo scritto a proposito di ${lead.name} e non ci siamo sentiti — nessun problema, niente insistenza.\n\n` +
-        `Non ti scrivo per vendere: ogni settimana scrivo di strategie di marketing — cose concrete per capire dove ha senso investire, senza fuffa. Se l'argomento ti interessa, mi trovi qui:\n` +
-        `LinkedIn: https://www.linkedin.com/in/alessioloi/\n` +
-        `Substack: https://karalisweb.substack.com/\n\n` +
-        `Un saluto,\n${firma}`;
-      try {
-        const ok = await sendOutreachEmail(lead.email, subject, body, lead.id);
-        if (!ok) { res.skipped++; continue; }
-        await db.$transaction([
-          db.lead.update({ where: { id: lead.id }, data: { lastContactedAt: new Date() } }),
-          db.activity.create({ data: { leadId: lead.id, type: "EMAIL_OUTREACH", notes: `[Opt-in-NURTURE] invito LinkedIn/Substack → ${lead.email}` } }),
-        ]);
-        res.nurtureSocial++;
-        budget--;
-        maintBudget--;
-        if (budget > 0) await jitter();
-      } catch (err) {
-        console.error(`[opt-in] nurture-social errore ${lead.id}:`, err);
         res.skipped++;
       }
     }

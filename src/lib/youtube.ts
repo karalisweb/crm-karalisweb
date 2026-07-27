@@ -160,6 +160,7 @@ export async function recordVideoEvent(
       id: true,
       name: true,
       videoFirstPlayAt: true,
+      videoFirstPlayTaskAt: true,
       videoMaxWatchPercent: true,
       videoCompletedAt: true,
       videoViewsCount: true,
@@ -167,6 +168,10 @@ export async function recordVideoEvent(
   });
 
   if (!lead) return { ok: true };
+
+  // Catturato PRIMA di applicare gli update sotto: è il momento esatto in cui
+  // videoFirstPlayAt passa da null a valorizzato (usato per il task automatico).
+  const isFirstPlay = !lead.videoFirstPlayAt;
 
   const updates: Record<string, unknown> = {};
   let activityNote = "";
@@ -221,10 +226,26 @@ export async function recordVideoEvent(
   }
 
   // Notifica email: solo al primo play e al complete
-  if (event === "play" && !lead.videoFirstPlayAt) {
+  if (event === "play" && isFirstPlay) {
     sendVideoViewNotification(lead.name, lead.id, "play").catch(() => {});
   } else if (event === "complete" && !lead.videoCompletedAt) {
     sendVideoViewNotification(lead.name, lead.id, "complete").catch(() => {});
+  }
+
+  // Task automatico "chiama per fissare la call" al primo play (dedup via
+  // videoFirstPlayTaskAt, per non duplicare su chiamate quasi-simultanee).
+  if (event === "play" && isFirstPlay && !lead.videoFirstPlayTaskAt) {
+    await db.$transaction([
+      db.task.create({
+        data: {
+          leadId: lead.id,
+          title: `📞 Chiama per fissare la call — ${lead.name}`,
+          description: `${lead.name} ha aperto il video per la prima volta. Chiama a caldo per fissare la call.`,
+          dueAt: new Date(),
+        },
+      }),
+      db.lead.update({ where: { id: lead.id }, data: { videoFirstPlayTaskAt: new Date() } }),
+    ]);
   }
 
   return { ok: true, leadId: lead.id };

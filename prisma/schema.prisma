@@ -104,6 +104,8 @@ model Lead {
 
   // Data invio proposta (per tracking)
   offerSentAt       DateTime?     @map("offer_sent_at")
+  // Dedup alert scadenza proposta (14gg da offerSentAt, creato da check-proposal-deadline)
+  proposalDeadlineTaskAt DateTime? @map("proposal_deadline_task_at")
 
   // ==========================================
   // 2-PROMPT CHAIN (Analista + Sceneggiatore)
@@ -169,6 +171,8 @@ model Lead {
   videoFirstPlayAt    DateTime?   @map("video_first_play_at")
   videoMaxWatchPercent Int?       @map("video_max_watch_percent")
   videoCompletedAt    DateTime?   @map("video_completed_at")
+  // Dedup task "chiama per fissare la call" (creato al primo play)
+  videoFirstPlayTaskAt DateTime?  @map("video_first_play_task_at")
 
   // ==========================================
   // FOLLOW-UP TRACKING

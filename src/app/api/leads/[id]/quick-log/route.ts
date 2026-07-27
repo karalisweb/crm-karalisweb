@@ -28,7 +28,9 @@ type ActionType =
   | "MOVE_TO_COLD"
   | "MOVE_BACK"
   | "CALL_LOGGED"
-  | "RESPONSE_RECEIVED";
+  | "RESPONSE_RECEIVED"
+  | "NOT_INTERESTED_REPLY"
+  | "OFFER_SENT";
 
 export async function POST(
   request: Request,
@@ -70,6 +72,7 @@ async function handleAction(leadId: string, body: any) {
     "CALL_SCHEDULED", "IN_TRATTATIVA", "MARK_ARCHIVED",
     "MARK_LOST", "MARK_WON", "MOVE_TO_VIDEO", "MOVE_TO_WARM",
     "MOVE_TO_COLD", "MOVE_BACK", "CALL_LOGGED", "RESPONSE_RECEIVED",
+    "NOT_INTERESTED_REPLY", "OFFER_SENT",
   ];
 
   if (!validActions.includes(action)) {
@@ -241,6 +244,30 @@ async function handleAction(leadId: string, body: any) {
       activityNotes = notes || `Ha risposto via ${viaLabel}`;
       break;
     }
+
+    case "NOT_INTERESTED_REPLY": {
+      const via = respondedVia || "email";
+      const viaLabel = via === "whatsapp" ? "WhatsApp" : via === "email" ? "Email" : via === "telefono" ? "Telefono" : via;
+      newStage = "PERSO";
+      updateData = {
+        // respondedAt blocca subito ulteriori tocchi automatici dell'opt-in-mailer
+        // (tutte le query T2/T-exit/T-call filtrano respondedAt: null).
+        respondedAt: now,
+        respondedVia: via,
+        lostReason: "NO_INTERESSE",
+        lostReasonNotes: lostReasonNotes || notes || null,
+      };
+      activityType = "STAGE_CHANGE";
+      activityNotes = notes || `Ha risposto NO (non interessato) via ${viaLabel}`;
+      break;
+    }
+
+    case "OFFER_SENT":
+      newStage = "IN_TRATTATIVA";
+      updateData = { offerSentAt: now, lastContactedAt: now };
+      activityType = "STAGE_CHANGE";
+      activityNotes = notes || "Si è presentato alla call, proposta di vendita inviata";
+      break;
   }
 
   // Applica aggiornamento lead

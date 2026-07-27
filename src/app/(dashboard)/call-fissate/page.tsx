@@ -14,6 +14,8 @@ import {
   AlertTriangle,
   ChevronRight,
   Phone,
+  Check,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -28,6 +30,7 @@ interface Lead {
   opportunityScore: number | null;
   respondedAt: string | null;
   respondedVia: string | null;
+  appointmentAt: string | null;
 }
 
 function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) {
@@ -75,6 +78,42 @@ function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) 
       onAction();
     } catch {
       toast.error("Errore nello spostamento");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleShowedUp = async () => {
+    setLoading("showedup");
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/quick-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "OFFER_SENT" }),
+      });
+      if (!res.ok) throw new Error("Errore");
+      toast.success(`${lead.name}: si è presentato, proposta inviata → in trattativa`);
+      onAction();
+    } catch {
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleNoShow = async () => {
+    setLoading("noshow");
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/quick-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "MARK_LOST", lostReason: "GHOST_CALL" }),
+      });
+      if (!res.ok) throw new Error("Errore");
+      toast.success(`${lead.name}: segnato come ghost call → Perso`);
+      onAction();
+    } catch {
+      toast.error("Errore nel salvataggio");
     } finally {
       setLoading(null);
     }
@@ -167,6 +206,38 @@ function RispostoCard({ lead, onAction }: { lead: Lead; onAction: () => void }) 
             </Link>
           </Button>
         </div>
+
+        {lead.appointmentAt && (
+          <div className="flex gap-2 mt-2">
+            <Button
+              onClick={handleShowedUp}
+              disabled={!!loading}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              size="sm"
+            >
+              {loading === "showedup" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Check className="h-4 w-4 mr-2" />
+              )}
+              Si è presentato
+            </Button>
+            <Button
+              onClick={handleNoShow}
+              disabled={!!loading}
+              variant="destructive"
+              size="sm"
+              className="flex-1"
+            >
+              {loading === "noshow" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <X className="h-4 w-4 mr-2" />
+              )}
+              Non si è presentato
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
