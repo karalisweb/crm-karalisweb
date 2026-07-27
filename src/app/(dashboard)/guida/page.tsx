@@ -14,6 +14,7 @@ import {
   Zap,
   AlertTriangle,
   CalendarCheck,
+  Handshake,
 } from "lucide-react";
 
 function Section({
@@ -301,11 +302,11 @@ export default function GuidaPage() {
         <Section title="Analisi Gemini AI" icon={Zap}>
           <p>
             Gemini analizza ogni lead e produce uno <strong>script video personalizzato</strong> (teleprompter).
-            L'analisi si basa su dati reali estratti dal sito:
+            L&apos;analisi si basa su dati reali estratti dal sito:
           </p>
           <ul className="list-disc list-inside text-muted-foreground space-y-1">
             <li>Testo homepage, pagina &quot;chi siamo&quot;, pagina servizi</li>
-            <li>Coerenza tra cosa dice il sito e cosa fa l'azienda</li>
+            <li>Coerenza tra cosa dice il sito e cosa fa l&apos;azienda</li>
             <li>Presenza/assenza di Google Ads e Meta Ads</li>
             <li>Problemi specifici e concreti (non generici)</li>
           </ul>
@@ -327,7 +328,7 @@ export default function GuidaPage() {
           <div>
             <h4 className="font-semibold mb-2">WhatsApp</h4>
             <p className="text-muted-foreground">
-              Il sistema cerca attivamente il numero WhatsApp dell'azienda in due modi:
+              Il sistema cerca attivamente il numero WhatsApp dell&apos;azienda in due modi:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-1 mt-1">
               <li><strong>Dal sito web</strong>: link wa.me o api.whatsapp.com (badge verde &quot;dal sito&quot;)</li>
@@ -513,7 +514,97 @@ export default function GuidaPage() {
           </div>
         </Section>
 
-        {/* SEZIONE 11: Glossario */}
+        {/* SEZIONE 11: Rete BNI */}
+        <Section title="Rete BNI — 121, partner e reciprocità" icon={Handshake}>
+          <p className="text-muted-foreground">
+            Il BNI e il passaparola sono il canale che porta pi&ugrave; fatturato. Questa sezione
+            serve a renderlo <strong>sistematico</strong> invece che mnemonico.
+          </p>
+
+          <div className="mt-3">
+            <h4 className="font-semibold mb-1">Le due domande su ogni membro</h4>
+            <p className="text-muted-foreground">
+              Ogni membro viene letto su <strong>due assi indipendenti</strong>:
+            </p>
+            <ul className="space-y-1 text-muted-foreground mt-2">
+              <li>
+                🎯 <strong className="text-foreground">Cliente potenziale</strong> — il membro
+                <em> &egrave;</em> una delle tue buyer personas (infissi, property manager, centro
+                estetico). Gli vendi: vale <strong>1 cliente</strong>.
+              </li>
+              <li>
+                🔑 <strong className="text-foreground">Partner di potere</strong> — il membro
+                <em> serve</em> le tue personas (commercialista, architetto, geometra, agenzia
+                immobiliare). Parla ogni giorno con i tuoi clienti ideali: vale
+                {" "}<strong>10 clienti</strong>.
+              </li>
+              <li>
+                ⚔️ <strong className="text-foreground">Concorrente</strong> — web agency, social
+                media manager, SEO. Segnalato per evitarti figuracce: in quel capitolo la tua
+                categoria &egrave; gi&agrave; occupata.
+              </li>
+            </ul>
+            <p className="text-muted-foreground mt-2">
+              I punteggi si assegnano da soli quando aggiungi un membro. Per quelli gi&agrave; in
+              archivio premi <strong>Riclassifica</strong> nella scheda Coda 121. Se cambi il ruolo
+              a mano, il CRM non lo sovrascrive pi&ugrave;.
+            </p>
+          </div>
+
+          <div className="mt-3">
+            <h4 className="font-semibold mb-1">Coda 121: chi incontrare adesso</h4>
+            <p className="text-muted-foreground">
+              Ordina i membri per priorit&agrave; reale: valore del membro (il partner pesa il
+              doppio) combinato col tempo dall&apos;ultimo incontro. Un partner forte che non senti
+              da 8 mesi torna in cima. Nel <strong>tuo capitolo</strong> chi non ha mai fatto un 121
+              ha una spinta costante, perch&eacute; l&igrave; l&apos;obiettivo &egrave; farlo con tutti.
+              Sotto ogni nome trovi scritto <strong>perch&eacute;</strong> &egrave; in coda.
+            </p>
+          </div>
+
+          <div className="mt-3">
+            <h4 className="font-semibold mb-1">Memo 121: cosa dargli</h4>
+            <p className="text-muted-foreground">
+              Premi <strong>Memo 121</strong> su un membro: &egrave; la schermata da tenere aperta
+              al tavolo, pensata per il telefono.
+            </p>
+            <ol className="space-y-1 text-muted-foreground mt-2 list-decimal list-inside">
+              <li>
+                <strong className="text-foreground">Chi cerca</strong> — scrivi il suo cliente
+                ideale a parole sue (&quot;sindaci di piccoli comuni&quot;).
+              </li>
+              <li>
+                <strong className="text-foreground">Salva e cerca match</strong> — il CRM scorre i
+                tuoi contatti e propone chi puoi regalargli, dicendoti su quale campo ha fatto match.
+              </li>
+              <li>
+                <strong className="text-foreground">Segnala</strong> — il contatto che gli dai resta
+                registrato come referenza data.
+              </li>
+              <li>
+                In alto vedi il <strong>bilancio</strong>: se sei in credito o in debito con lui.
+              </li>
+            </ol>
+            <p className="text-muted-foreground mt-2">
+              ⚠️ Il matcher vale quanto i tuoi contatti taggati: se i lead non hanno categoria,
+              professione o zona, escono pochi suggerimenti. Non sbaglia il matcher, mancano i dati.
+            </p>
+          </div>
+
+          <div className="mt-3">
+            <h4 className="font-semibold mb-1">Capitoli: analizzali prima di visitarli</h4>
+            <p className="text-muted-foreground">
+              La scheda <strong>Capitoli</strong> ti dice se vale la pena visitarlo e con chi
+              parlare: <strong>attrattivit&agrave;</strong> (partner &times;2 + clienti),
+              {" "}<strong>composizione per persona</strong> (detta il pitch da usare),
+              {" "}<strong>top 5 da intercettare</strong> nel libero networking, quanti concorrenti
+              ci sono gi&agrave; dentro, e modalit&agrave;/stato visita. Regola: in Sardegna di
+              persona, fuori dalla Sardegna solo se il capitolo &egrave; ibrido.
+            </p>
+          </div>
+        </Section>
+
+        {/* SEZIONE 12: Glossario */}
         <Section title="Mini-glossario" icon={BookOpen}>
           <ul className="space-y-2 text-muted-foreground">
             <li><strong className="text-foreground">Lead</strong> — un&apos;azienda potenziale cliente, con i suoi dati.</li>
@@ -525,6 +616,10 @@ export default function GuidaPage() {
             <li><strong className="text-foreground">Punto di dolore</strong> — il problema concreto che usi come gancio nella chiamata e nel video.</li>
             <li><strong className="text-foreground">Landing page</strong> — la pagina web dove il prospect guarda il tuo video.</li>
             <li><strong className="text-foreground">UTM</strong> — etichetta in fondo al link (es. <code>?utm=client</code>) che ci dice che il prospect arriva dal nostro messaggio. &Egrave; aggiunta in automatico.</li>
+            <li><strong className="text-foreground">121</strong> — incontro uno-a-uno con un membro BNI: l&apos;evento in cui si costruisce la fiducia e si scambiano referenze.</li>
+            <li><strong className="text-foreground">Buyer persona</strong> — i tre tipi di cliente su cui puntiamo: 🏠 Casa, 🏡 Microturismo, 👤 Persona.</li>
+            <li><strong className="text-foreground">Partner di potere</strong> — un membro che <em>serve</em> le nostre buyer personas (commercialista, architetto&hellip;): non ci compra, ci porta clienti.</li>
+            <li><strong className="text-foreground">Givers Gain</strong> — il principio BNI: si riceve perch&eacute; si d&agrave;. Il CRM misura il bilancio tra referenze date e ricevute.</li>
           </ul>
         </Section>
       </div>

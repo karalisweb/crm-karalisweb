@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/lib/api-auth";
 import { z } from "zod/v4";
 import { Prisma } from "@prisma/client";
+import { classifyMembro } from "@/lib/bni/member-classifier";
+import { extractSeekingTags, serializeTags } from "@/lib/bni/reciprocity";
 
 /**
  * Rete BNI — gestione membri dei capitoli.
@@ -21,6 +23,7 @@ const createMembroSchema = z.object({
   website: z.string().max(500).optional(),
   notes: z.string().max(5000).optional(),
   status: z.enum(["ATTIVO", "VISITATORE", "EX_MEMBRO"]).optional(),
+  seeking: z.string().max(2000).optional(),
 });
 
 const clean = (v?: string) => {
@@ -72,6 +75,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = createMembroSchema.parse(body);
 
+    // Classificazione automatica sui due assi (cliente potenziale / partner di potere).
+    // Si fa alla creazione cosi' il membro nasce gia' prioritizzato per il 121.
+    const cls = classifyMembro({
+      profession: data.profession,
+      company: data.company,
+      website: data.website,
+      notes: data.notes,
+    });
+    const seeking = clean(data.seeking);
+
     const membro = await db.bniMembro.create({
       data: {
         name: data.name.trim(),
@@ -83,6 +96,14 @@ export async function POST(request: NextRequest) {
         website: clean(data.website),
         notes: clean(data.notes),
         status: data.status ?? "ATTIVO",
+        seeking,
+        seekingTags: serializeTags(extractSeekingTags(seeking)),
+        buyerPersona: cls.buyerPersona,
+        memberRole: cls.memberRole,
+        clientScore: cls.clientScore,
+        partnerScore: cls.partnerScore,
+        personasServed: cls.personasServed.join(",") || null,
+        classifiedAt: new Date(),
       },
     });
 

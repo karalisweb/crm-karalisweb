@@ -617,6 +617,120 @@ Modulo per tracciare i 121 (incontri uno-a-uno) con i membri dei capitoli BNI e 
 
 ---
 
+## BNI — due assi, reciprocità e capitoli (v3.33.0)
+
+Estensione del modulo BNI decisa con il piano `PIANO-BNI-ESTREMO.md`. Riferimento
+strategico: `STRATEGIA-REVENUE-FIRST.md`.
+
+### Buyer persona — fonte unica
+
+`src/lib/buyer-personas.ts` risolve un problema che esisteva da prima: la definizione
+di target viveva in **tre tassonomie non riconciliate** (`segments.ts` con 15
+micro-segmenti, i cluster `casa|microturismo|persona` della config ricerche, e
+`HIGH/LOW_TICKET_KEYWORDS` in `scoring/lead-score.ts`). Un lead "ristorazione" era
+segmento attivo nella prima, assente nella seconda e `low_ticket` nella terza.
+
+Gerarchia adottata — **una sola**:
+
+```
+PERSONA (cluster)  →  micro-segmenti (dettaglio)  →  tier (valore)
+CASA               →  infissi, porte, edilizia, ferramenta, arredo, giardinaggio
+MICROTURISMO       →  immobiliare (property manager, agenzie, strutture ricettive)
+PERSONA            →  centri estetici/medici, odontoiatri, laboratori, fisioterapia
+ALTRO              →  ristorazione, abbigliamento, tecnologia
+```
+
+API principali: `resolvePersona({segment, category, profession})` (prima il dato
+strutturato, poi il testo libero), `detectPersona(text)`, `personaFromSegment(seg)`,
+`isCorePersona(key)`. Ritorna `null` quando non sa: meglio "non so" di una persona sbagliata.
+
+Campo `Lead.buyerPersona` (`buyer_persona`, indicizzato) e `BniMembro.buyerPersona`.
+
+### Classificatore a due assi
+
+`src/lib/bni/member-classifier.ts` — `classifyMembro({profession, company, website, notes})`
+restituisce `{buyerPersona, memberRole, clientScore, partnerScore, personasServed, reasons}`.
+
+| Asse | Campo | Significato |
+|------|-------|-------------|
+| ① Cliente potenziale | `clientScore` 0-100 | Il membro **è** una buyer persona → gli vendo (audit del sito) |
+| ② Partner di potere | `partnerScore` 0-100 | Il membro **serve** le mie personas → mi porta clienti |
+
+`memberRole` ∈ `CLIENTE | PARTNER | CONCORRENTE | NEUTRO`. I due punteggi sono
+**indipendenti**: un'agenzia immobiliare è insieme cliente e partner.
+
+- `PARTNER_CATEGORIES` è una tabella con `weight` per categoria (commercialista 95,
+  agenzia immobiliare 90, architetto 85, …) e `serves` (personas a cui dà accesso).
+  Vince la categoria più forte, le altre aggiungono il 15%; bonus +10 se copre tutte
+  e tre le personas. **Non è definitiva**: i pesi si affinano con l'esperienza.
+- `COMPETITOR_KEYWORDS` intercetta web agency / SMM / SEO → `CONCORRENTE`, valutato
+  per primo perché esclude gli altri ruoli.
+- `reasons[]` è la spiegazione leggibile mostrata in UI: senza il "perché" il punteggio
+  non è azionabile.
+- `oneToOnePriority({clientScore, partnerScore, lastOneToOneAt, isMyChapter})` —
+  `partnerScore×2 + clientScore + recency(max 120) + 60 se è il mio capitolo`.
+
+### Reciprocità (Givers Gain)
+
+`src/lib/bni/reciprocity.ts`:
+- `extractSeekingTags(text)` — normalizza il "chi cerca" detto a parole in tag
+  cercabili (stopword italiane, singolarizzazione grossolana, max 12 tag).
+- `scoreCandidate(tags, fields)` — punteggio pesato per campo: professione/categoria ×3,
+  nome ×2, zona/note ×1. Restituisce anche `matchedOn` per spiegare il suggerimento.
+
+Modello **`ReferralGiven`** (`referrals_given`): `membroId`, `contactName`, `contactInfo`,
+`leadId?`, `note`, `outcome` (`PROPOSTO|ACCETTATO|CHIUSO|NULLA`), `givenAt`. Se il
+contatto regalato è un lead del CRM, viene creata un'`Activity` di tipo `NOTE` sulla
+sua timeline.
+
+Campi su `BniMembro`: `seeking` (testo libero), `seekingTags` (csv rigenerato a ogni
+PATCH del campo `seeking`), `roleLocked` (override manuale: blocca la riclassificazione).
+
+### Capitoli
+
+Modello **`BniChapter`** (`bni_chapters`): `name` **unique** (deve combaciare con
+`BniMembro.chapter`, che resta stringa libera — nessuna migrazione delle relazioni),
+`city`, `region`, `mode` (`PRESENZA|ONLINE|IBRIDO`), `meetingDay/Time`, `visitStatus`
+(`DA_ANALIZZARE|ANALIZZATO|VISITA_PIANIFICATA|VISITATO`), `isMine`.
+
+`GET /api/bni/chapters` unisce i membri raggruppati per nome capitolo ai metadati e calcola:
+- `attractiveness` = Σ partnerScore ×2 + Σ clientScore
+- `topTargets` — i 5 con `oneToOnePriority` più alta (chi intercettare nel libero networking)
+- `personaMix` — composizione per persona, detta il pitch da usare in quel capitolo
+- `visitable` — falso solo se `mode === "ONLINE"` (regola: Sardegna di persona, fuori solo ibrido)
+
+### API (tutte protette da `requireSession()`)
+
+| Endpoint | Scopo |
+|----------|-------|
+| `GET/PATCH/DELETE /api/bni/membri/[id]` | Scheda completa (121, referenze ricevute e date, classificazione ricalcolata, bilancio reciprocità) · update con riclassificazione automatica salvo `roleLocked` |
+| `GET /api/bni/match?membroId=&q=` | Matcher di reciprocità: chi regalare a quel membro |
+| `GET/POST/PATCH /api/bni/referral-given` | Referenze date e loro esito |
+| `GET /api/bni/queue?chapter=&limit=` | Coda 121 prioritizzata (esclude i `CONCORRENTE`) |
+| `GET/POST /api/bni/chapters` | Dossier capitoli · upsert metadati per nome |
+| `POST /api/bni/classify?all=1` | Riclassificazione retroattiva (salta i `roleLocked`) |
+
+`GET /api/bni/stats` esteso con: `partnersCount`, `clientsCount`, `referralsGivenTotal`,
+`referralsGivenThisMonth`, `never121`, `chaptersToVisit`, `reciprocityBalance`.
+
+### UI (v3.33.0)
+
+- `rete-bni/page.tsx` riorganizzata in 4 tab: **Coda 121** (default), **Capitoli**,
+  **Membri**, **Ultimi 121**.
+- `src/components/bni/membro-121-panel.tsx` — memo 121 mobile-first: campo "chi cerca",
+  matcher, registrazione referenza data, bilancio dato/ricevuto.
+
+### Limiti noti
+
+- Il matcher dipende dalla **qualità dei tag sui contatti**: senza categoria/professione/zona
+  produce pochi risultati. L'importer file (normalizzazione + auto-tag) è il passo successivo.
+- L'**ingestione automatica dei membri dai siti region BNI** non è implementata: le pagine
+  `findamember` di `bni-sardegnanord/centro/sud.it` caricano i dati via JavaScript, quindi
+  serve automazione browser o l'endpoint JSON sottostante. Fallback attuale: inserimento manuale.
+- `PARTNER_CATEGORIES` è euristica: va tarata sull'esperienza reale dei 121.
+
+---
+
 ## Protezioni e Security
 
 ### SSRF Protection (v3.1.0 → centralizzata in v3.17.0)

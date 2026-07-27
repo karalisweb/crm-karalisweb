@@ -528,17 +528,57 @@ Dopo un incontro premi **Registra 121** — è pensato per il telefono:
 
 Cosa succede: ogni referenza e l'eventuale interesse del membro **diventano lead nella pipeline** (stato **"Da BNI"**), già pronti da lavorare come gli altri — ma **fuori dal flusso video a freddo**. Su ogni lead resta scritto da chi è arrivato.
 
+### Le due domande da farsi su ogni membro (v3.33.0)
+
+Fino alla v3.32 il CRM sapeva fare una domanda sola: *"posso vendergli qualcosa?"*. Nel BNI questa domanda copre solo **metà** del valore. Ora ogni membro viene letto su **due assi indipendenti**:
+
+| Asse | Cosa vuol dire | Cosa ci fai | Quanto vale |
+|------|----------------|-------------|-------------|
+| 🎯 **Cliente potenziale** | Il membro **è** una delle tue buyer personas (è un infissi, un property manager, un centro estetico) | Gli vendi | 1 cliente |
+| 🔑 **Partner di potere** | Il membro **serve** le tue personas (commercialista, architetto, geometra, agenzia immobiliare) — parla ogni giorno con i tuoi clienti ideali | 121 prioritario: ti porta clienti in continuo | 10 clienti |
+
+**Nel BNI il partner vale più del cliente.** Per questo la coda dei 121 pesa il partner il doppio.
+
+C'è anche un terzo caso: ⚔️ **Concorrente** (web agency, social media manager, SEO). Il CRM lo segnala per evitarti figuracce e per farti capire subito che in quel capitolo la tua categoria è già occupata.
+
+> I punteggi si assegnano da soli quando aggiungi un membro. Per i membri già in archivio premi **Riclassifica** nella scheda Coda 121. Se cambi il ruolo a mano, il CRM non lo sovrascrive più.
+
+### Coda 121: chi incontrare adesso
+
+È la scheda che si apre per prima. Ordina i membri per **priorità reale**, combinando il valore del membro con il tempo passato dall'ultimo incontro: un partner forte che non senti da 8 mesi torna in cima, un neutro appena visto sprofonda. Nel **tuo capitolo** chi non ha mai fatto un 121 ha una spinta costante verso l'alto — perché lì l'obiettivo è farlo con tutti.
+
+Sotto ogni nome c'è scritto **perché** è in coda ("mai fatto un 121 e sta nel mio capitolo", "ultimo 121 5 mesi fa: il rapporto si sta raffreddando").
+
+### Memo 121: cosa dargli (il Givers Gain che funziona)
+
+Premi **Memo 121** su un membro. È la schermata da tenere aperta **al tavolo**, pensata per il telefono.
+
+1. **Chi cerca** — scrivi il suo cliente ideale a parole sue (*"sindaci di piccoli comuni"*). È la domanda da fare in ogni 121.
+2. Premi **Salva e cerca match**: il CRM scorre i tuoi contatti (lead e altri membri BNI) e ti propone **chi puoi regalargli**, dicendoti su quale campo ha fatto match.
+3. Premi **Segnala** sul contatto che gli dai: resta registrato come **referenza data**.
+4. In alto vedi il **bilancio**: quante gliene hai date, quante ne hai ricevute, e se sei in credito o in debito con lui.
+
+> ⚠️ Il matcher vale quanto i tuoi contatti taggati. Se i lead non hanno categoria, professione o zona, escono pochi suggerimenti: non è il matcher che sbaglia, sono i dati che mancano a monte.
+
+### Capitoli: prima di visitarli, analizzali
+
+La scheda **Capitoli** ti dice **se vale la pena visitare** un capitolo e **con chi parlare** una volta lì:
+
+- **Attrattività**: quanto vale quel capitolo (partner ×2 + clienti potenziali)
+- **Composizione per persona**: se è pieno di edilizia usi il pitch Casa, se è turistico usi Microturismo
+- **Top 5 da intercettare nel libero networking**, in ordine di priorità — cliccabili per aprire il Memo 121
+- **Quanti concorrenti** ci sono già dentro
+- **Modalità e stato visita**: in Sardegna si va di persona, fuori solo se il capitolo è ibrido
+
 ### Cosa ne esce (le metriche in alto)
 
-- **121 questo mese** e totali
-- **Referenze ricevute** e **Membri interessati**
-- **Clienti da BNI** e **Opportunità aperte**
-- **Da ricoltivare**: membri che non senti da più di 4 mesi
+- 🔑 **Partner di potere** e 🎯 **Clienti potenziali** in rete
+- **121 questo mese** e **bilancio dato/ricevuto** (il vero indicatore del Givers Gain)
+- **Referenze ricevute** e **Referenze date**
+- **Clienti da BNI** e **Mai fatto un 121**
 
 Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona per persona.
 
-> Per ora si tracciano le referenze **ricevute**. Le referenze che dai tu (la reciprocità "Chi dà, riceve") arriveranno in una fase successiva.
-
 ---
 
-*Documento aggiornato il 2026-07-03 | KW Sales CRM v3.29.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-07-27 | KW Sales CRM v3.33.0. La versione di riferimento è la Guida interattiva dentro l'app.*

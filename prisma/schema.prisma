@@ -26,6 +26,9 @@ model Lead {
   socialUrl         String?   @map("social_url")
   category          String?
   segment           String?                          // Micro-segmento: "infissi", "edilizia", "immobiliare", etc.
+  // Buyer persona (fonte unica, vedi src/lib/buyer-personas.ts): "CASA" | "MICROTURISMO" | "PERSONA" | "ALTRO"
+  // Deriva dal segmento/categoria ma e' sovrascrivibile a mano.
+  buyerPersona      String?   @map("buyer_persona")
   googleRating      Decimal?  @map("google_rating") @db.Decimal(2, 1)
   googleReviewsCount Int?     @map("google_reviews_count")
   googleMapsUrl     String?   @map("google_maps_url")
@@ -298,6 +301,7 @@ model Lead {
   @@index([qualificationScore(sort: Desc)], name: "idx_leads_qualification_score")
   @@index([qualificationPriority], name: "idx_leads_qualification_priority")
   @@index([segment], name: "idx_leads_segment")
+  @@index([buyerPersona], name: "idx_leads_buyer_persona")
   // Indici per rete BNI
   @@index([source], name: "idx_leads_source")
   @@index([referredByMembroId], name: "idx_leads_referred_by")
@@ -452,6 +456,30 @@ model BniMembro {
   status      BniMemberStatus @default(ATTIVO)
   knownSince  DateTime?        @map("known_since")     // Membro / conosciuto dal
 
+  // ==========================================
+  // I DUE ASSI (vedi PIANO-BNI-ESTREMO.md §2)
+  // ==========================================
+  // "Utile per me" ha due significati opposti, che portano ad azioni diverse:
+  //   ASSE 1 - il membro E' una mia buyer persona      -> gli VENDO (audit del suo sito)
+  //   ASSE 2 - il membro SERVE le mie buyer personas   -> mi PORTA clienti (121 prioritario)
+  // Nel BNI l'asse 2 vale piu' dell'asse 1: un buon partner porta 10 clienti,
+  // un membro-cliente e' uno solo.
+  buyerPersona   String? @map("buyer_persona")    // CASA | MICROTURISMO | PERSONA | ALTRO (asse 1)
+  memberRole     String? @map("member_role")      // CLIENTE | PARTNER | CONCORRENTE | NEUTRO
+  clientScore    Int     @default(0) @map("client_score")   // 0-100, quanto e' un cliente potenziale
+  partnerScore   Int     @default(0) @map("partner_score")  // 0-100, quanto e' un partner di potere
+  personasServed String? @map("personas_served")  // csv delle personas a cui da' accesso (asse 2)
+  classifiedAt   DateTime? @map("classified_at")  // ultima classificazione automatica
+  roleLocked     Boolean @default(false) @map("role_locked") // true = deciso a mano, non risovrascrivere
+
+  // ==========================================
+  // RECIPROCITA' (Givers Gain)
+  // ==========================================
+  // "Chi cerca" e' la domanda che si fa in ogni 121: senza questo campo il matcher
+  // dei referral da regalare non puo' funzionare.
+  seeking     String?  @db.Text                   // Il cliente ideale del membro, a parole sue
+  seekingTags String?  @map("seeking_tags")       // csv normalizzato per il matcher
+
   // Denormalizzati per dashboard veloce (aggiornati a ogni 121)
   oneToOneCount  Int       @default(0) @map("one_to_one_count")
   lastOneToOneAt DateTime? @map("last_one_to_one_at")
@@ -460,12 +488,71 @@ model BniMembro {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relazioni
-  oneToOnes     OneToOne[]
-  referredLeads Lead[]     @relation("BniReferral")
+  oneToOnes      OneToOne[]
+  referredLeads  Lead[]          @relation("BniReferral")
+  referralsGiven ReferralGiven[]
 
   @@index([chapter], name: "idx_bni_membro_chapter")
   @@index([lastOneToOneAt], name: "idx_bni_membro_last121")
+  @@index([partnerScore(sort: Desc)], name: "idx_bni_membro_partner_score")
+  @@index([memberRole], name: "idx_bni_membro_role")
   @@map("bni_membri")
+}
+
+// ==========================================
+// REFERENZE DATE (l'altra meta' del Givers Gain)
+// ==========================================
+// Il CRM tracciava solo le referenze RICEVUTE. Ma nel BNI si riceve perche' si da':
+// senza misurare cosa do, non so con chi sono in credito e con chi in debito.
+model ReferralGiven {
+  id        String   @id @default(uuid())
+
+  membroId  String    @map("membro_id")           // A CHI ho passato il contatto
+  membro    BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  contactName String  @map("contact_name")        // Chi ho segnalato
+  contactInfo String? @map("contact_info")        // Telefono/email/riferimento
+  leadId      String? @map("lead_id")             // Se il contatto e' un lead del CRM
+  note        String? @db.Text                    // Contesto ("gli servivano sindaci di piccoli comuni")
+
+  outcome   String   @default("PROPOSTO")         // PROPOSTO | ACCETTATO | CHIUSO | NULLA
+  givenAt   DateTime @default(now()) @map("given_at")
+  createdBy String?  @map("created_by")
+
+  @@index([membroId], name: "idx_referral_given_membro")
+  @@index([givenAt], name: "idx_referral_given_date")
+  @@map("referrals_given")
+}
+
+// ==========================================
+// CAPITOLI BNI - metadati per la strategia di visita
+// ==========================================
+// I membri restano collegati al capitolo per NOME (campo libero, gia' esistente):
+// questo modello aggiunge solo i metadati che servono a decidere SE e QUANDO visitarlo.
+// Regola di Alessio: in Sardegna si visita di persona; fuori Sardegna solo se IBRIDO.
+model BniChapter {
+  id       String  @id @default(uuid())
+  name     String  @unique                        // Deve combaciare con BniMembro.chapter
+  city     String?
+  region   String?                                // sardegna_nord | sardegna_centro | sardegna_sud | altro
+  mode     String? @default("PRESENZA")           // PRESENZA | ONLINE | IBRIDO
+
+  meetingDay  String? @map("meeting_day")         // "Giovedi'"
+  meetingTime String? @map("meeting_time")        // "06:45"
+
+  visitStatus    String    @default("DA_ANALIZZARE") @map("visit_status") // DA_ANALIZZARE | ANALIZZATO | VISITA_PIANIFICATA | VISITATO
+  visitPlannedAt DateTime? @map("visit_planned_at")
+  visitedAt      DateTime? @map("visited_at")
+
+  isMine   Boolean @default(false) @map("is_mine") // Il mio capitolo (Atlantide): 121 con OGNI membro
+  notes    String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([visitStatus], name: "idx_bni_chapter_status")
+  @@index([region], name: "idx_bni_chapter_region")
+  @@map("bni_chapters")
 }
 
 // ==========================================

@@ -24,6 +24,13 @@ export async function GET() {
     bniLeadsOpen,
     bniClients,
     coldMembers,
+    // Nuove metriche dei due assi + reciprocita'
+    partnersCount,
+    clientsCount,
+    referralsGivenTotal,
+    referralsGivenThisMonth,
+    never121,
+    chaptersToVisit,
   ] = await Promise.all([
     db.bniMembro.count(),
     db.oneToOne.count(),
@@ -40,6 +47,13 @@ export async function GET() {
         OR: [{ lastOneToOneAt: null }, { lastOneToOneAt: { lt: coldThreshold } }],
       },
     }),
+    // Partner di potere: la leva che porta piu' fatturato nel tempo
+    db.bniMembro.count({ where: { status: "ATTIVO", memberRole: "PARTNER" } }),
+    db.bniMembro.count({ where: { status: "ATTIVO", memberRole: "CLIENTE" } }),
+    db.referralGiven.count(),
+    db.referralGiven.count({ where: { givenAt: { gte: startOfMonth } } }),
+    db.bniMembro.count({ where: { status: "ATTIVO", oneToOneCount: 0 } }),
+    db.bniChapter.count({ where: { visitStatus: { in: ["DA_ANALIZZARE", "ANALIZZATO"] } } }),
   ]);
 
   return NextResponse.json({
@@ -51,5 +65,13 @@ export async function GET() {
     bniLeadsOpen,
     bniClients,
     coldMembers,
+    partnersCount,
+    clientsCount,
+    referralsGivenTotal,
+    referralsGivenThisMonth,
+    never121,
+    chaptersToVisit,
+    // Bilancio del Givers Gain: >0 sono in credito, <0 in debito con la rete
+    reciprocityBalance: referralsGivenTotal - referralsReceived,
   });
 }

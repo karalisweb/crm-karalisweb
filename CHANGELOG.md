@@ -13,6 +13,26 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.33.0] - 2026-07-27
+
+> **Svolta strategica.** Il cold outreach non porta fatturato: i soldi arrivano dal
+> passaparola BNI e dalla riattivazione degli ex-clienti. Questa release sposta il
+> baricentro del CRM sul primo dei due motori. Piani: `STRATEGIA-REVENUE-FIRST.md`
+> e `PIANO-BNI-ESTREMO.md`.
+
+### Added
+- **Buyer persona come fonte unica** (`src/lib/buyer-personas.ts`). Prima la definizione di target viveva in tre tassonomie che si contraddicevano (15 micro-segmenti, cluster Casa/Microturismo/Persona, high/low ticket): un ristorante era segmento attivo nella prima, assente nella seconda e low-ticket nella terza. Ora i 3 cluster **Casa · Microturismo · Persona** sono le personas ufficiali, i micro-segmenti stanno sotto come dettaglio e il tier resta attributo di valore. Campo `buyerPersona` su `Lead` e `BniMembro`.
+- **Classificazione dei membri BNI sui due assi** (`src/lib/bni/member-classifier.ts`). Il CRM sapeva fare una domanda sola ("gli vendo?"), che nel BNI copre metà del valore. Ora ogni membro riceve due punteggi indipendenti: `clientScore` (è una mia buyer persona → gli vendo) e `partnerScore` (serve le mie personas → mi porta clienti). Riconosce anche i **concorrenti** (web agency, SMM, SEO) per non fare gaffe in capitolo. Ogni punteggio è accompagnato dalla spiegazione del perché.
+- **Coda 121 prioritizzata** (`GET /api/bni/queue`). Ordina chi incontrare adesso combinando il valore del membro (il partner pesa il doppio) con il tempo dall'ultimo incontro: un partner forte che non senti da 8 mesi torna in cima. Nel proprio capitolo chi non ha mai fatto un 121 ha una spinta costante.
+- **Memo 121 con matcher di reciprocità** (`src/components/bni/membro-121-panel.tsx`, `GET /api/bni/match`). Campo "chi cerca" su ogni membro; il CRM scorre lead e membri taggati e propone chi regalargli, spiegando su quale campo ha fatto match. Da usare al tavolo, mobile-first.
+- **Referenze DATE** (`ReferralGiven`, `/api/bni/referral-given`). Il CRM tracciava solo quelle ricevute: senza misurare cosa si dà non si sa con chi si è in credito. Bilancio dato/ricevuto per membro e complessivo.
+- **Dossier capitoli** (`BniChapter`, `GET /api/bni/chapters`). Per ogni capitolo: punteggio di attrattività (partner ×2 + clienti), composizione per persona (detta il pitch), top 5 da intercettare nel libero networking, conteggio concorrenti, modalità e stato visita. Regola: in Sardegna di persona, fuori solo se ibrido.
+- **Riclassificazione retroattiva** (`POST /api/bni/classify`). Assegna i due assi ai membri già in archivio. I membri con ruolo deciso a mano (`roleLocked`) non vengono mai sovrascritti.
+
+### Changed
+- **Pagina Rete BNI riorganizzata** in quattro viste: Coda 121 (default), Capitoli, Membri, Ultimi 121. Le metriche in alto ora mostrano partner di potere, clienti potenziali, bilancio della reciprocità e "mai fatto un 121".
+- **`/api/bni/membri`**: i nuovi membri vengono classificati automaticamente alla creazione, così nascono già prioritizzati.
+
 ## [3.32.0] - 2026-07-19
 
 ### Added
