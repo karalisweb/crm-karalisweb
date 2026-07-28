@@ -552,6 +552,24 @@ export default function GuidaPage() {
           </div>
 
           <div className="mt-3">
+            <h4 className="font-semibold mb-1">Popolare un capitolo in un colpo solo</h4>
+            <p className="text-muted-foreground">
+              Tutto il modulo vive dell&apos;anagrafica: senza membri, Coda 121, Capitoli e Memo
+              restano vuoti. Premi <strong>Importa</strong>, scrivi il capitolo e
+              {" "}<strong>incolla la lista</strong> (una riga per persona). Funziona con
+              trattini, punto e virgola, copia-incolla da <strong>Excel</strong> e con il formato
+              {" "}<code>Nome (Professione)</code>; telefoni ed email li riconosce da solo.
+              L&apos;<strong>anteprima</strong> ti mostra cosa ha capito, gi&agrave; classificato
+              partner/cliente/concorrente, prima di salvare.
+            </p>
+            <p className="text-muted-foreground mt-2">
+              I duplicati vengono <strong>saltati, mai sovrascritti</strong>: un import non pu&ograve;
+              cancellarti il &quot;chi cerca&quot; raccolto in un 121. Le righe che non tornano
+              vengono segnalate, non buttate via in silenzio.
+            </p>
+          </div>
+
+          <div className="mt-3">
             <h4 className="font-semibold mb-1">Coda 121: chi incontrare adesso</h4>
             <p className="text-muted-foreground">
               Ordina i membri per priorit&agrave; reale: valore del membro (il partner pesa il

@@ -720,10 +720,36 @@ Modello **`BniChapter`** (`bni_chapters`): `name` **unique** (deve combaciare co
 - `src/components/bni/membro-121-panel.tsx` — memo 121 mobile-first: campo "chi cerca",
   matcher, registrazione referenza data, bilancio dato/ricevuto.
 
+### Import massivo membri (v3.34.0)
+
+Il vero collo di bottiglia del modulo non era il matching ma l'**anagrafica**: in produzione
+c'era **1 membro e 0 capitoli** contro 2807 lead con categoria. Il pool per il matcher era
+quindi già ricco; mancavano i membri BNI. Da qui l'import mirato sui capitoli.
+
+- `src/lib/bni/member-parser.ts` — `parseMembers(raw)` su testo libero. Rileva il separatore
+  più frequente fra `\t`, `|`, `;`, `—`, `–`, `-` (deve comparire in ≥ metà delle righe),
+  con fallback sul formato `Nome (Professione)`. Estrae **e rimuove** email/telefono dalla riga
+  prima di assegnare i campi testuali (regex telefoni IT fissi/mobili). Scarta intestazioni e
+  titoli (`NOISE_PATTERNS`), deduplica per nome. Ordine campi assunto: Nome · Professione · Azienda.
+  Le righe che non rispettano il separatore globale vengono **segnalate con warning, non scartate**.
+- `POST /api/bni/membri/import` — `{raw, chapter?, mode: "preview"|"commit", status?}`.
+  `preview` non tocca il DB: interpreta, classifica sui due assi, marca i duplicati.
+  `commit` usa `createMany({skipDuplicates: true})` e **salta** i duplicati invece di
+  sovrascriverli (un import non deve poter cancellare il `seeking` raccolto in un 121).
+  Tetto `MAX_MEMBERS = 300` per invocazione, segnalato via `summary.truncated`.
+  Se il capitolo è nuovo viene fatto upsert in `BniChapter` con `visitStatus = "ANALIZZATO"`.
+- UI: `src/components/bni/import-membri-dialog.tsx` — anteprima obbligatoria con conteggi
+  per ruolo, duplicati in trasparenza e warning per riga.
+
+Verifica del classificatore su casi reali (commercialista → PARTNER 100 su 3 personas;
+web agency / social media manager → CONCORRENTE; infissi → CLIENTE persona CASA;
+property manager e agenzia immobiliare → doppia natura cliente 70 + partner 80/90;
+fioraio → NEUTRO).
+
 ### Limiti noti
 
 - Il matcher dipende dalla **qualità dei tag sui contatti**: senza categoria/professione/zona
-  produce pochi risultati. L'importer file (normalizzazione + auto-tag) è il passo successivo.
+  produce pochi risultati. Sul lato lead il pool è già ricco (2807 con categoria).
 - L'**ingestione automatica dei membri dai siti region BNI** non è implementata: le pagine
   `findamember` di `bni-sardegnanord/centro/sud.it` caricano i dati via JavaScript, quindi
   serve automazione browser o l'endpoint JSON sottostante. Fallback attuale: inserimento manuale.

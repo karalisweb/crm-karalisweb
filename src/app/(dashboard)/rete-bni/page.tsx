@@ -33,6 +33,7 @@ import {
 import { AddMembroDialog } from "@/components/bni/add-membro-dialog";
 import { Register121Dialog, type BniMembroLite } from "@/components/bni/register-121-dialog";
 import { Membro121Panel } from "@/components/bni/membro-121-panel";
+import { ImportMembriDialog } from "@/components/bni/import-membri-dialog";
 import { toast } from "sonner";
 
 interface Stats {
@@ -314,6 +315,7 @@ export default function ReteBniPage() {
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
+          <ImportMembriDialog chapters={chapters} onImported={fetchData} />
           <AddMembroDialog chapters={chapters} onCreated={fetchData} />
           <Register121Dialog membri={membriLite} chapters={chapters} onSaved={fetchData} />
         </div>

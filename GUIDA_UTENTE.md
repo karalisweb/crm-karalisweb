@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.29.0** | Ultimo aggiornamento: 2026-07-03
+Versione: **3.34.0** | Ultimo aggiornamento: 2026-07-28
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -29,7 +29,7 @@ Versione: **3.29.0** | Ultimo aggiornamento: 2026-07-03
 17. [Ricerche programmate (automatiche)](#17-ricerche-programmate-automatiche)
 18. [FAQ - Domande frequenti](#18-faq---domande-frequenti)
 19. [Automazione email opt-in e report mattutino](#19-automazione-email-opt-in-e-report-mattutino)
-20. [Rete BNI (121 e referenze)](#20-rete-bni-121-e-referenze)
+20. [Rete BNI (121, partner, reciprocità e capitoli)](#20-rete-bni-121-e-referenze)
 
 ---
 
@@ -543,6 +543,22 @@ C'è anche un terzo caso: ⚔️ **Concorrente** (web agency, social media manag
 
 > I punteggi si assegnano da soli quando aggiungi un membro. Per i membri già in archivio premi **Riclassifica** nella scheda Coda 121. Se cambi il ruolo a mano, il CRM non lo sovrascrive più.
 
+### Popolare un capitolo in un colpo solo (v3.34.0)
+
+Tutto il modulo BNI vive dell'anagrafica: senza membri, Coda 121, Capitoli e Memo restano schermate vuote. E digitare 30 persone a mano non succede mai. Per questo c'è **Importa**.
+
+1. Premi **Importa** in alto nella pagina Rete BNI
+2. Scrivi il **capitolo** (vale per tutti quelli che incolli)
+3. **Incolla la lista**, una riga per persona. Funziona con quasi tutti i formati:
+   - `Mario Rossi - Commercialista - Studio Rossi`
+   - copia-incolla diretto da **Excel** (colonne separate da tabulazione)
+   - `Nome;Professione;Azienda` oppure `Giuseppe Loi (Notaio)`
+   - **telefoni ed email vengono riconosciuti da soli**, ovunque siano nella riga
+4. Premi **Anteprima**: vedi cosa ha capito il CRM, con ogni membro **già classificato** partner / cliente / concorrente, e i duplicati segnalati
+5. Se ti convince, premi **Importa N membri**
+
+Tre garanzie: i **duplicati vengono saltati, mai sovrascritti** (un import non può cancellarti il "chi cerca" raccolto in un 121); le righe che non tornano vengono **segnalate, non buttate via in silenzio**; il capitolo viene censito da solo come "analizzato" e compare subito nella scheda Capitoli.
+
 ### Coda 121: chi incontrare adesso
 
 È la scheda che si apre per prima. Ordina i membri per **priorità reale**, combinando il valore del membro con il tempo passato dall'ultimo incontro: un partner forte che non senti da 8 mesi torna in cima, un neutro appena visto sprofonda. Nel **tuo capitolo** chi non ha mai fatto un 121 ha una spinta costante verso l'alto — perché lì l'obiettivo è farlo con tutti.
@@ -581,4 +597,4 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 
 ---
 
-*Documento aggiornato il 2026-07-27 | KW Sales CRM v3.33.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-07-28 | KW Sales CRM v3.34.0. La versione di riferimento è la Guida interattiva dentro l'app.*

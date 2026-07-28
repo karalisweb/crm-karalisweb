@@ -13,6 +13,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.34.0] - 2026-07-28
+
+### Added
+- **Import massivo dei membri di un capitolo** (`POST /api/bni/membri/import`, dialog "Importa" in Rete BNI). Il collo di bottiglia del modulo BNI non era il matching ma l'anagrafica: in produzione c'era **1 solo membro** e 0 capitoli, quindi coda 121, capitoli e matcher restavano schermate vuote. Ora si incolla la lista e il CRM la interpreta.
+  - **Parser tollerante** (`src/lib/bni/member-parser.ts`): riconosce tabulazioni (copia-incolla da Excel), `|`, `;`, trattini lunghi e corti, e il formato `Nome (Professione)`. Estrae da solo telefono ed email dalla riga, scarta intestazioni e titoli, deduplica per nome.
+  - **Anteprima obbligatoria**: prima di scrivere sul database mostra cosa ha capito, con la classificazione sui due assi già applicata (partner / clienti / concorrenti) e i duplicati evidenziati. Le righe fuori formato vengono segnalate, non scartate in silenzio.
+  - I duplicati vengono **saltati, non sovrascritti**: un import non può cancellare il "chi cerca" raccolto in un 121.
+  - Il capitolo viene censito automaticamente come `ANALIZZATO`, così compare subito nella scheda Capitoli.
+
 ## [3.33.1] - 2026-07-28
 
 ### Fixed
