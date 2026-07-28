@@ -126,10 +126,27 @@ const PARTNER_CATEGORIES: PartnerCategory[] = [
     why: "Conosce le aziende che assumono, cioe' quelle che stanno crescendo.",
   },
   {
-    label: "Consulente aziendale / Formatore",
-    keywords: ["consulente aziendal", "business coach", "formator", "formazione aziendal", "temporary manager"],
+    label: "Finanza agevolata / Bandi e incentivi",
+    keywords: [
+      "finanza agevolat", "agevolazion", "bandi", "bando", "incentiv",
+      "fondo perduto", "contribut a fondo perduto", "finanza d'impresa",
+      "finanza per l'impresa", "credito d'imposta",
+    ],
     serves: ["CASA", "MICROTURISMO", "PERSONA"],
-    weight: 60,
+    weight: 85,
+    why: "Chi fa finanza agevolata sa QUALI aziende stanno per investire (bandi, incentivi, fondo perduto): intercetta il cliente nel momento esatto in cui ha budget.",
+  },
+  {
+    label: "Consulente aziendale / Formatore",
+    // Copre sia il verbo ("consulente") sia il sostantivo ("consulenza"): la seconda
+    // forma sfuggiva e mandava questi partner in NEUTRO.
+    keywords: [
+      "consulente aziendal", "consulenza aziendal", "consulenza d'impresa",
+      "consulenza direzional", "business coach", "formator", "formazione aziendal",
+      "temporary manager",
+    ],
+    serves: ["CASA", "MICROTURISMO", "PERSONA"],
+    weight: 70,
     why: "Lavora sull'imprenditore: se si fida, apre porte in profondita'.",
   },
   {

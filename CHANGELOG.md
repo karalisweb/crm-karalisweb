@@ -13,6 +13,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.34.1] - 2026-07-28
+
+### Changed
+- **Classificatore BNI: riconosce la finanza agevolata come partner di potere.** Nuova categoria "Finanza agevolata / Bandi e incentivi" (peso 85, tutte e tre le personas): chi fa finanza agevolata sa quali aziende stanno per investire (bandi, incentivi, fondo perduto, credito d'imposta) → intercetta il cliente nel momento in cui ha budget. Segnalato da Alessio su un membro reale (Financial Domina).
+- **Consulenza aziendale ora riconosciuta** anche nella forma sostantivo ("consulenza aziendale"), non solo "consulente aziendale": prima questi partner finivano in NEUTRO. Peso alzato 60 → 70. Al primo import di Atlantide questi due tipi erano stati corretti a mano; da ora il riconoscimento è automatico anche per gli altri capitoli.
+
 ## [3.34.0] - 2026-07-28
 
 ### Added
