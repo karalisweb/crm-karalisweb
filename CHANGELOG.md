@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.33.1] - 2026-07-28
+
+### Fixed
+- **Ripristinata la mail di nurturing social (T6).** Il deploy della 3.33.0 ha portato in produzione un rewrite più vecchio di `opt-in-mailer.ts` che non conteneva la mail LinkedIn/Substack introdotta in 3.32.0 → la feature era di fatto sparita. Reinserito il blocco T6 (una tantum, ~30gg dal follow-up, dedup via activity `[Opt-in-NURTURE]`, env `OPTIN_NURTURE_SOCIAL_DAYS`), adattato alla cadenza a follow-up singolo. Verificato: la pausa master resta a monte e continua a gatare anche questo tocco; quota T1 riservata invariata.
+
 ## [3.33.0] - 2026-07-27
 
 > **Svolta strategica.** Il cold outreach non porta fatturato: i soldi arrivano dal
