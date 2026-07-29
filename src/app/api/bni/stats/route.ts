@@ -31,6 +31,8 @@ export async function GET() {
     referralsGivenThisMonth,
     never121,
     chaptersToVisit,
+    offerteAperte,
+    recallDovuti,
   ] = await Promise.all([
     db.bniMembro.count(),
     db.oneToOne.count(),
@@ -54,6 +56,9 @@ export async function GET() {
     db.referralGiven.count({ where: { givenAt: { gte: startOfMonth } } }),
     db.bniMembro.count({ where: { status: "ATTIVO", oneToOneCount: 0 } }),
     db.bniChapter.count({ where: { visitStatus: { in: ["DA_ANALIZZARE", "ANALIZZATO"] } } }),
+    // Pipeline BNI: offerte in corso e recall arrivati a scadenza
+    db.bniMembro.count({ where: { bniStage: "OFFERTA" } }),
+    db.bniMembro.count({ where: { bniStage: "RECALL", nextRecallAt: { not: null, lte: now } } }),
   ]);
 
   return NextResponse.json({
@@ -71,6 +76,8 @@ export async function GET() {
     referralsGivenThisMonth,
     never121,
     chaptersToVisit,
+    offerteAperte,
+    recallDovuti,
     // Bilancio del Givers Gain: >0 sono in credito, <0 in debito con la rete
     reciprocityBalance: referralsGivenTotal - referralsReceived,
   });

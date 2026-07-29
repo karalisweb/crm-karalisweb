@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/lib/api-auth";
 import { z } from "zod/v4";
 import { oneToOnePriority } from "@/lib/bni/member-classifier";
+import { generateChapterPitch } from "@/lib/bni/chapter-pitch";
 
 /**
  * CAPITOLI BNI — la coda delle visite.
@@ -53,7 +54,7 @@ export async function GET() {
       select: {
         id: true, name: true, chapter: true, memberRole: true,
         clientScore: true, partnerScore: true, lastOneToOneAt: true,
-        buyerPersona: true,
+        buyerPersona: true, profession: true,
       },
     }),
     db.bniChapter.findMany({ orderBy: { name: "asc" } }),
@@ -105,7 +106,7 @@ export async function GET() {
       .map((m) => ({
         id: m.id, name: m.name, memberRole: m.memberRole,
         clientScore: m.clientScore, partnerScore: m.partnerScore,
-        buyerPersona: m.buyerPersona,
+        buyerPersona: m.buyerPersona, profession: m.profession,
       }));
 
     // Composizione per persona: detta il pitch da usare in quel capitolo.
@@ -114,6 +115,15 @@ export async function GET() {
       if (!m.buyerPersona) continue;
       personaMix[m.buyerPersona] = (personaMix[m.buyerPersona] ?? 0) + 1;
     }
+
+    // "Come giocartela qui": tema d'apertura + nomi da puntare + warning concorrenti.
+    const pitch = generateChapterPitch({
+      personaMix,
+      competitorsCount: competitors.length,
+      partnersCount: partners.length,
+      clientsCount: clients.length,
+      topTargets,
+    });
 
     return {
       name,
@@ -125,6 +135,7 @@ export async function GET() {
       attractiveness,
       topTargets,
       personaMix,
+      pitch,
       // Un capitolo si puo' visitare se e' in Sardegna (di persona) o se e' ibrido.
       visitable: !meta || meta.mode !== "ONLINE",
     };

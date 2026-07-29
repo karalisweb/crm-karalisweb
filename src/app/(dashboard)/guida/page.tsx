@@ -570,6 +570,30 @@ export default function GuidaPage() {
           </div>
 
           <div className="mt-3">
+            <h4 className="font-semibold mb-1">La pipeline di vendita BNI</h4>
+            <p className="text-muted-foreground">
+              Il BNI ha la sua pipeline. Nella tab <strong>Pipeline</strong> vedi ogni membro nella
+              sua colonna: <strong>Da avvicinare → 121 richiesto → Preparo referenze → 121 fatto →
+              Offerta inviata → Recall programmato → Consolidato</strong>. Lo stadio si cambia dal
+              {" "}<strong>Memo 121</strong> del membro, con un clic.
+            </p>
+            <p className="text-muted-foreground mt-2">
+              Quando metti un membro in <strong>Recall</strong> imposti la data di ricontatto: al
+              momento giusto risale <strong>automaticamente in cima alla Coda 121</strong> e compare
+              nel riquadro &quot;Recall da fare oggi&quot;. Nessun ricontatto ti sfugge.
+            </p>
+          </div>
+
+          <div className="mt-3">
+            <h4 className="font-semibold mb-1">Il pitch dedicato al capitolo</h4>
+            <p className="text-muted-foreground">
+              Nel dossier di ogni capitolo trovi <strong>&quot;Come giocartela qui&quot;</strong>: su
+              che tema aprire (Casa, Microturismo o Persona a seconda di chi c&apos;è dentro), i 2-3
+              nomi su cui puntare, e l&apos;avviso se ci sono concorrenti in aula.
+            </p>
+          </div>
+
+          <div className="mt-3">
             <h4 className="font-semibold mb-1">Coda 121: chi incontrare adesso</h4>
             <p className="text-muted-foreground">
               Ordina i membri per priorit&agrave; reale: valore del membro (il partner pesa il

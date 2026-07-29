@@ -13,6 +13,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.35.0] - 2026-07-28
+
+### Added
+- **Pitch dedicato per capitolo** ("Come giocartela qui"). Nel dossier di ogni capitolo un blocco che trasforma la composizione in strategia operativa: tema d'apertura dettato dalla persona dominante (Casa / Microturismo / Persona), i 2-3 nomi su cui puntare con il perché, e l'avviso se ci sono concorrenti in aula. Logica in `src/lib/bni/chapter-pitch.ts`, esposta da `/api/bni/chapters`.
+- **Pipeline di vendita BNI sul membro.** Pipeline parallela a quella dei lead freddi, con le tappe dettate dal processo reale: `Da avvicinare → 121 richiesto → Preparo referenze → 121 fatto → Offerta inviata → Recall programmato → Consolidato` (`src/lib/bni/bni-stages.ts`). Campi `bniStage` + `nextRecallAt` su `BniMembro`.
+  - Nuova tab **Pipeline** in Rete BNI: i membri in colonne per stadio, cliccabili per aprire il Memo 121.
+  - Lo stadio si avanza dal **Memo 121** (dove già si lavora sul membro), con data di recall quando si entra nella tappa Recall.
+  - **I recall a scadenza risalgono in cima alla Coda 121** (boost di priorità) con la ragione esplicita, e compaiono come KPI "Recall da fare oggi". Nuovo KPI anche per le offerte BNI aperte.
+
 ## [3.34.1] - 2026-07-28
 
 ### Changed

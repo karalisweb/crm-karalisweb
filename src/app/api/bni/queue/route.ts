@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         memberRole: true, buyerPersona: true,
         clientScore: true, partnerScore: true,
         oneToOneCount: true, lastOneToOneAt: true,
+        bniStage: true, nextRecallAt: true,
         _count: { select: { referredLeads: true, referralsGiven: true } },
       },
     }),
@@ -46,16 +47,23 @@ export async function GET(request: NextRequest) {
   const queue = membri
     .map((m) => {
       const isMyChapter = !!m.chapter && mine.has(m.chapter.toLowerCase());
-      const priority = oneToOnePriority({
+      let priority = oneToOnePriority({
         clientScore: m.clientScore,
         partnerScore: m.partnerScore,
         lastOneToOneAt: m.lastOneToOneAt,
         isMyChapter,
       });
 
+      // Un recall arrivato a scadenza è un impegno preso: deve stare sopra tutto.
+      const recallDue =
+        m.bniStage === "RECALL" && m.nextRecallAt && new Date(m.nextRecallAt).getTime() <= Date.now();
+
       // Perche' e' in coda: la ragione operativa, non il numero.
       let reason: string;
-      if (m.oneToOneCount === 0 && isMyChapter) {
+      if (recallDue) {
+        priority += 1000;
+        reason = "Recall arrivato a scadenza: avevi deciso di ricontattarlo ora.";
+      } else if (m.oneToOneCount === 0 && isMyChapter) {
         reason = "Mai fatto un 121 e sta nel mio capitolo: e' una lacuna da chiudere.";
       } else if (m.oneToOneCount === 0) {
         reason = "Mai incontrato in 121.";

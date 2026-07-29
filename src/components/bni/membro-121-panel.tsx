@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/dialog";
 import {
   Gift, Loader2, Search, Phone, Save, Sparkles, Scale,
-  ArrowDownLeft, ArrowUpRight, Info,
+  ArrowDownLeft, ArrowUpRight, Info, GitBranch,
 } from "lucide-react";
 import { toast } from "sonner";
+import { BNI_STAGES, getStage } from "@/lib/bni/bni-stages";
 
 /**
  * MEMO 121 — la schermata da usare AL TAVOLO durante un uno-a-uno.
@@ -73,6 +74,9 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
   const [given, setGiven] = useState<ReferralGivenItem[]>([]);
   const [reciprocity, setReciprocity] = useState<{ given: number; received: number; balance: number } | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [bniStage, setBniStage] = useState<string>("DA_AVVICINARE");
+  const [nextRecallAt, setNextRecallAt] = useState<string>("");
+  const [savingStage, setSavingStage] = useState(false);
 
   const loadMembro = useCallback(async () => {
     if (!membroId) return;
@@ -84,6 +88,8 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
       setSeeking(d.membro?.seeking ?? "");
       setGiven(d.membro?.referralsGiven ?? []);
       setReciprocity(d.reciprocity ?? null);
+      setBniStage(d.membro?.bniStage ?? "DA_AVVICINARE");
+      setNextRecallAt(d.membro?.nextRecallAt ? String(d.membro.nextRecallAt).slice(0, 10) : "");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
     } finally {
@@ -141,6 +147,29 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
       toast.error(e instanceof Error ? e.message : "Errore");
     } finally {
       setSavingSeeking(false);
+    }
+  }
+
+  async function saveStage(stage: string, recall: string) {
+    if (!membroId) return;
+    setSavingStage(true);
+    try {
+      const r = await fetch(`/api/bni/membri/${membroId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bniStage: stage,
+          // La data di recall ha senso solo nello stadio RECALL.
+          nextRecallAt: stage === "RECALL" ? (recall || null) : null,
+        }),
+      });
+      if (!r.ok) throw new Error("Errore nel salvataggio dello stadio");
+      toast.success(`Pipeline aggiornata: ${getStage(stage)?.label ?? stage}`);
+      onSaved?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    } finally {
+      setSavingStage(false);
     }
   }
 
@@ -217,6 +246,47 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
                 </Badge>
               </div>
             )}
+
+            {/* Pipeline di vendita BNI */}
+            <div className="space-y-2 rounded-lg border p-3">
+              <Label className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-primary" />
+                A che punto sei con lui
+              </Label>
+              <div className="flex flex-wrap gap-1.5">
+                {BNI_STAGES.map((s) => (
+                  <button
+                    key={s.key}
+                    onClick={() => {
+                      setBniStage(s.key);
+                      saveStage(s.key, nextRecallAt);
+                    }}
+                    disabled={savingStage}
+                    className={`text-xs px-2 py-1 rounded-md border transition ${
+                      bniStage === s.key ? s.color + " font-semibold" : "border-transparent bg-muted/50 hover:bg-muted"
+                    }`}
+                  >
+                    {s.icon} {s.label}
+                  </button>
+                ))}
+              </div>
+              {getStage(bniStage)?.hint && (
+                <p className="text-[11px] text-muted-foreground">{getStage(bniStage)?.hint}</p>
+              )}
+              {bniStage === "RECALL" && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Label htmlFor="recall" className="text-xs shrink-0">Ricontatta il</Label>
+                  <Input
+                    id="recall"
+                    type="date"
+                    value={nextRecallAt}
+                    onChange={(e) => setNextRecallAt(e.target.value)}
+                    onBlur={() => saveStage("RECALL", nextRecallAt)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              )}
+            </div>
 
             {/* Chi cerca */}
             <div className="space-y-2">

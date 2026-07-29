@@ -29,11 +29,16 @@ import {
   ListChecks,
   Sparkles,
   Swords,
+  Clock,
+  FileText,
+  GitBranch,
+  Lightbulb,
 } from "lucide-react";
 import { AddMembroDialog } from "@/components/bni/add-membro-dialog";
 import { Register121Dialog, type BniMembroLite } from "@/components/bni/register-121-dialog";
 import { Membro121Panel } from "@/components/bni/membro-121-panel";
 import { ImportMembriDialog } from "@/components/bni/import-membri-dialog";
+import { BNI_STAGES, getStage } from "@/lib/bni/bni-stages";
 import { toast } from "sonner";
 
 interface Stats {
@@ -51,6 +56,8 @@ interface Stats {
   referralsGivenThisMonth: number;
   never121: number;
   chaptersToVisit: number;
+  offerteAperte: number;
+  recallDovuti: number;
   reciprocityBalance: number;
 }
 
@@ -70,6 +77,8 @@ interface Membro {
   seeking: string | null;
   oneToOneCount: number;
   lastOneToOneAt: string | null;
+  bniStage: string | null;
+  nextRecallAt: string | null;
   _count?: { referredLeads: number };
 }
 
@@ -83,6 +92,18 @@ interface QueueItem extends Membro {
   referralsGiven: number;
 }
 
+/** Badge dello stadio pipeline BNI. */
+function StageBadge({ stage }: { stage: string | null }) {
+  const s = getStage(stage);
+  if (!s || s.key === "DA_AVVICINARE") return null;
+  return (
+    <Badge variant="outline" className={`text-[10px] gap-1 ${s.color}`}>
+      <span>{s.icon}</span>
+      {s.label}
+    </Badge>
+  );
+}
+
 interface ChapterTarget {
   id: string;
   name: string;
@@ -90,6 +111,14 @@ interface ChapterTarget {
   clientScore: number;
   partnerScore: number;
   buyerPersona: string | null;
+}
+
+interface ChapterPitch {
+  headline: string;
+  openingAngle: string;
+  targets: Array<{ name: string; why: string }>;
+  competitorWarning: string | null;
+  focus: string | null;
 }
 
 interface ChapterRow {
@@ -109,6 +138,7 @@ interface ChapterRow {
   attractiveness: number;
   topTargets: ChapterTarget[];
   personaMix: Record<string, number>;
+  pitch: ChapterPitch;
   visitable: boolean;
 }
 
@@ -356,6 +386,12 @@ export default function ReteBniPage() {
           <StatCard icon={ArrowRight} value={stats.referralsGivenTotal} label="Referenze date" accent="bg-sky-500/10 text-sky-500" />
           <StatCard icon={Trophy} value={stats.bniClients} label="Clienti da BNI" accent="bg-green-500/10 text-green-500" />
           <StatCard icon={Snowflake} value={stats.never121} label="Mai fatto un 121" accent="bg-orange-500/10 text-orange-500" />
+          {stats.recallDovuti > 0 && (
+            <StatCard icon={Clock} value={stats.recallDovuti} label="Recall da fare oggi" accent="bg-rose-500/10 text-rose-500" />
+          )}
+          {stats.offerteAperte > 0 && (
+            <StatCard icon={FileText} value={stats.offerteAperte} label="Offerte BNI aperte" accent="bg-purple-500/10 text-purple-500" />
+          )}
         </div>
       ) : null}
 
@@ -364,6 +400,10 @@ export default function ReteBniPage() {
           <TabsTrigger value="coda" className="gap-2">
             <ListChecks className="h-4 w-4" />
             Coda 121
+          </TabsTrigger>
+          <TabsTrigger value="pipeline" className="gap-2">
+            <GitBranch className="h-4 w-4" />
+            Pipeline
           </TabsTrigger>
           <TabsTrigger value="capitoli" className="gap-2">
             <MapPin className="h-4 w-4" />
@@ -415,6 +455,7 @@ export default function ReteBniPage() {
                           <span className="text-xs text-muted-foreground tabular-nums">#{idx + 1}</span>
                           {m.name}
                           <RoleBadge role={m.memberRole} />
+                          <StageBadge stage={m.bniStage} />
                           {m.buyerPersona && (
                             <span title={m.buyerPersona}>{PERSONA_ICONS[m.buyerPersona]}</span>
                           )}
@@ -461,6 +502,70 @@ export default function ReteBniPage() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ─── PIPELINE BNI ─────────────────────────────────────────── */}
+        <TabsContent value="pipeline" className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Dove sei con ogni membro: dal bigliettino al 121, all&apos;offerta, al recall.
+            Cambi stadio dal <strong>Memo 121</strong> di ciascuno.
+          </p>
+          {loading && membri.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {BNI_STAGES.map((stage) => {
+                const inStage = membri.filter(
+                  (m) => (m.bniStage ?? "DA_AVVICINARE") === stage.key
+                );
+                return (
+                  <div key={stage.key} className="rounded-lg border bg-muted/20 p-2 space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-sm font-medium flex items-center gap-1.5">
+                        <span>{stage.icon}</span> {stage.label}
+                      </span>
+                      <Badge variant="secondary">{inStage.length}</Badge>
+                    </div>
+                    <div className="space-y-1.5">
+                      {inStage.map((m) => {
+                        const recallOverdue =
+                          m.bniStage === "RECALL" && m.nextRecallAt &&
+                          new Date(m.nextRecallAt).getTime() <= Date.now();
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => setPanelMembro({ id: m.id, name: m.name })}
+                            className={`w-full text-left rounded-md bg-background border p-2 hover:bg-muted/50 transition ${
+                              recallOverdue ? "border-rose-400" : ""
+                            }`}
+                          >
+                            <div className="text-xs font-medium truncate flex items-center gap-1.5">
+                              {m.name}
+                              {m.memberRole === "PARTNER" && <span>🔑</span>}
+                              {m.memberRole === "CLIENTE" && <span>🎯</span>}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              {m.profession || m.company || m.chapter || "—"}
+                            </div>
+                            {recallOverdue && (
+                              <div className="text-[10px] text-rose-600 mt-0.5">
+                                recall scaduto
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {inStage.length === 0 && (
+                        <p className="text-[11px] text-muted-foreground px-1 py-2">Nessuno</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </TabsContent>
@@ -536,6 +641,31 @@ export default function ReteBniPage() {
                           {PERSONA_ICONS[p] ?? ""} {p.toLowerCase()} {n}
                         </Badge>
                       ))}
+                    </div>
+
+                    {/* Come giocartela qui: il pitch dedicato al capitolo */}
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+                      <div className="text-xs font-semibold flex items-center gap-1.5">
+                        <Lightbulb className="h-3.5 w-3.5 text-primary" />
+                        Come giocartela qui — {c.pitch.headline}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{c.pitch.openingAngle}</p>
+                      {c.pitch.targets.length > 0 && (
+                        <ul className="text-xs space-y-0.5 mt-1">
+                          {c.pitch.targets.map((t) => (
+                            <li key={t.name}>
+                              <span className="font-medium">{t.name}</span>
+                              <span className="text-muted-foreground"> — {t.why}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {c.pitch.competitorWarning && (
+                        <p className="text-xs text-red-600 dark:text-red-400 flex gap-1.5 mt-1">
+                          <Swords className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                          {c.pitch.competitorWarning}
+                        </p>
+                      )}
                     </div>
 
                     {c.topTargets.length > 0 && (

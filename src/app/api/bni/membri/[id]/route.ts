@@ -32,6 +32,11 @@ const updateSchema = z.object({
   // Override manuale della classificazione: se passato, blocca la riclassificazione automatica.
   memberRole: z.enum(["CLIENTE", "PARTNER", "CONCORRENTE", "NEUTRO"]).optional(),
   buyerPersona: z.enum(["CASA", "MICROTURISMO", "PERSONA", "ALTRO"]).nullable().optional(),
+  // Pipeline di vendita BNI
+  bniStage: z.enum([
+    "DA_AVVICINARE", "RICHIESTA_121", "PREP_REFERENZE", "FATTO_121", "OFFERTA", "RECALL", "CONSOLIDATO",
+  ]).optional(),
+  nextRecallAt: z.string().nullable().optional(),
 });
 
 const clean = (v?: string | null) => {
@@ -127,6 +132,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (data.website !== undefined) update.website = clean(data.website);
     if (data.notes !== undefined) update.notes = clean(data.notes);
     if (data.status !== undefined) update.status = data.status;
+
+    // Pipeline di vendita BNI: avanzamento stadio + data di recall.
+    if (data.bniStage !== undefined) update.bniStage = data.bniStage;
+    if (data.nextRecallAt !== undefined) {
+      const d = data.nextRecallAt ? new Date(data.nextRecallAt) : null;
+      update.nextRecallAt = d && !isNaN(d.getTime()) ? d : null;
+    }
 
     // "Chi cerca": ogni volta che cambia, si rigenerano i tag del matcher.
     if (data.seeking !== undefined) {

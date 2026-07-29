@@ -484,6 +484,14 @@ model BniMembro {
   seeking     String?  @db.Text                   // Il cliente ideale del membro, a parole sue
   seekingTags String?  @map("seeking_tags")       // csv normalizzato per il matcher
 
+  // ==========================================
+  // PIPELINE DI VENDITA BNI (vedi src/lib/bni/bni-stages.ts)
+  // ==========================================
+  // Dove sono con QUESTA persona: da avvicinare -> 121 richiesto -> preparo referenze ->
+  // 121 fatto -> offerta -> recall -> consolidato. Parallela alla pipeline dei lead freddi.
+  bniStage    String   @default("DA_AVVICINARE") @map("bni_stage")
+  nextRecallAt DateTime? @map("next_recall_at")  // Quando ricontattarlo (tappa RECALL)
+
   // Denormalizzati per dashboard veloce (aggiornati a ogni 121)
   oneToOneCount  Int       @default(0) @map("one_to_one_count")
   lastOneToOneAt DateTime? @map("last_one_to_one_at")
@@ -500,6 +508,8 @@ model BniMembro {
   @@index([lastOneToOneAt], name: "idx_bni_membro_last121")
   @@index([partnerScore(sort: Desc)], name: "idx_bni_membro_partner_score")
   @@index([memberRole], name: "idx_bni_membro_role")
+  @@index([bniStage], name: "idx_bni_membro_stage")
+  @@index([nextRecallAt], name: "idx_bni_membro_recall")
   @@map("bni_membri")
 }
 

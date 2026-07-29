@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.34.0** | Ultimo aggiornamento: 2026-07-28
+Versione: **3.35.0** | Ultimo aggiornamento: 2026-07-28
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -559,6 +559,20 @@ Tutto il modulo BNI vive dell'anagrafica: senza membri, Coda 121, Capitoli e Mem
 
 Tre garanzie: i **duplicati vengono saltati, mai sovrascritti** (un import non può cancellarti il "chi cerca" raccolto in un 121); le righe che non tornano vengono **segnalate, non buttate via in silenzio**; il capitolo viene censito da solo come "analizzato" e compare subito nella scheda Capitoli.
 
+### La pipeline di vendita BNI (v3.35.0)
+
+Il BNI ha la sua pipeline, diversa da quella dei lead freddi. Nella tab **Pipeline** vedi ogni membro nella sua colonna, dalla conoscenza alla chiusura:
+
+**Da avvicinare → 121 richiesto → Preparo referenze → 121 fatto → Offerta inviata → Recall programmato → Consolidato**
+
+- Lo **stadio si cambia dal Memo 121** del membro (dove già lavori): un clic sulla tappa.
+- Quando entri in **Recall**, imposti la data di ricontatto. Al momento giusto, quel membro **risale automaticamente in cima alla Coda 121** con scritto "recall a scadenza", e lo vedi nel riquadro **"Recall da fare oggi"**. Così nessun ricontatto ti sfugge.
+- Le prime due tappe del processo (visita al capitolo, pitch dedicato) vivono nella scheda **Capitoli**, non qui: la pipeline del membro parte da quando lo conosci.
+
+### Il pitch dedicato al capitolo
+
+Nel dossier di ogni capitolo (tab **Capitoli**) trovi il blocco **"Come giocartela qui"**: ti dice su che tema aprire (se il capitolo è a vocazione Casa apri sul mondo casa, se è turistico sull'ospitalità), i 2-3 nomi su cui puntare, e ti avvisa se ci sono concorrenti in aula. È il promemoria da leggere prima di entrare in sala.
+
 ### Coda 121: chi incontrare adesso
 
 È la scheda che si apre per prima. Ordina i membri per **priorità reale**, combinando il valore del membro con il tempo passato dall'ultimo incontro: un partner forte che non senti da 8 mesi torna in cima, un neutro appena visto sprofonda. Nel **tuo capitolo** chi non ha mai fatto un 121 ha una spinta costante verso l'alto — perché lì l'obiettivo è farlo con tutti.
@@ -597,4 +611,4 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 
 ---
 
-*Documento aggiornato il 2026-07-28 | KW Sales CRM v3.34.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-07-28 | KW Sales CRM v3.35.0. La versione di riferimento è la Guida interattiva dentro l'app.*

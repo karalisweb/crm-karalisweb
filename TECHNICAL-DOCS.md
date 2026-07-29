@@ -746,10 +746,37 @@ web agency / social media manager → CONCORRENTE; infissi → CLIENTE persona C
 property manager e agenzia immobiliare → doppia natura cliente 70 + partner 80/90;
 fioraio → NEUTRO).
 
+### Pipeline di vendita BNI (v3.35.0)
+
+Pipeline parallela a quella dei lead freddi, con le tappe del processo reale di Alessio.
+
+- `src/lib/bni/bni-stages.ts` — 7 stadi ordinati: `DA_AVVICINARE → RICHIESTA_121 →
+  PREP_REFERENZE → FATTO_121 → OFFERTA → RECALL → CONSOLIDATO`. Ogni stadio ha label,
+  icona, colore e `hint` (la prossima azione). Le prime due tappe del funnel narrato
+  (visita al capitolo, pitch dedicato) vivono su `BniChapter.visitStatus`, non sul membro.
+- Schema: `BniMembro.bniStage` (default `DA_AVVICINARE`, indicizzato) + `nextRecallAt`
+  (indicizzato) per la tappa RECALL.
+- `PATCH /api/bni/membri/[id]` accetta `bniStage` e `nextRecallAt` (azzerato fuori da RECALL).
+- **Coda 121 recall-aware** (`/api/bni/queue`): un membro in `RECALL` con `nextRecallAt`
+  scaduto riceve `priority += 1000` e la ragione "recall a scadenza" → risale in cima.
+- `/api/bni/stats` espone `offerteAperte` (stage OFFERTA) e `recallDovuti` (RECALL scaduti).
+- UI: tab **Pipeline** (membri in colonne per stadio); controllo stadio + data recall nel
+  `membro-121-panel.tsx`; badge stadio nella coda; KPI "Recall da fare oggi" / "Offerte aperte".
+
+### Pitch dedicato per capitolo (v3.35.0)
+
+- `src/lib/bni/chapter-pitch.ts` — `generateChapterPitch({personaMix, competitorsCount,
+  topTargets, ...})` → `{headline, openingAngle, targets[], competitorWarning, focus}`.
+  Persona dominante fra le tre core → tema d'apertura; primi 2-3 target (partner prima) con
+  il perché; warning se `competitorsCount > 0`. Esposto da `/api/bni/chapters` come `pitch`,
+  reso nel dossier UI come blocco "Come giocartela qui".
+
 ### Limiti noti
 
 - Il matcher dipende dalla **qualità dei tag sui contatti**: senza categoria/professione/zona
   produce pochi risultati. Sul lato lead il pool è già ricco (2807 con categoria).
+- Il pitch per capitolo è euristico (persona dominante + top target): un promemoria, non un
+  documento. Migliora con la qualità della classificazione dei membri.
 - L'**ingestione automatica dei membri dai siti region BNI** non è implementata: le pagine
   `findamember` di `bni-sardegnanord/centro/sud.it` caricano i dati via JavaScript, quindi
   serve automazione browser o l'endpoint JSON sottostante. Fallback attuale: inserimento manuale.
