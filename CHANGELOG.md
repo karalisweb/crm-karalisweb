@@ -13,6 +13,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.37.0] - 2026-07-28
+
+### Changed
+- **Ripensata la classificazione dei membri BNI (regole di Alessio).** Il modello a "concorrenti" era sbagliato. Nuove regole:
+  1. **Marketing / comunicazione / pubblicità / web / social** → **PARTNER** (non concorrenti: con loro si collabora e si scambia lavoro). Il ruolo `CONCORRENTE` non viene più assegnato.
+  2. **Business trasversali a ogni categoria** (commercialista, consulente del lavoro, finanza agevolata, formazione, sicurezza sul lavoro, avvocato, assicurazioni, credito, notaio, privacy) → **PARTNER con peso moderato** (45-65): utili ma incerti, perché possono girare i contatti ai colleghi del loro capitolo.
+  3. **Casa / Persona / Turismo** (infissi, edilizia, impianti, arredo, immobiliare, architetto, geometra, hotel, estetica, medico…) → **CLIENTE** (gli vendo io).
+  4. Tutto il resto → **NEUTRO**.
+- Conseguenze pratiche: le agenzie immobiliari e gli architetti passano da partner a **clienti**; i punteggi dei partner trasversali scendono da 90-100 a un range moderato; il concetto di concorrente sparisce. Premere **Riclassifica** per riallineare i membri già in archivio (i ruoli decisi a mano restano).
+
 ## [3.36.0] - 2026-07-28
 
 ### Added

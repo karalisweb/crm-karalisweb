@@ -45,11 +45,13 @@ export const BUYER_PERSONAS: BuyerPersonaConfig[] = [
     segments: ["infissi", "porte", "edilizia", "ferramenta", "arredo", "giardinaggio"],
     keywords: [
       "infiss", "serrament", "finestr", "porte", "porton", "pvc", "alluminio",
-      "edil", "ristruttur", "costruzion", "impresa edile", "muratore", "appaltator",
+      "edil", "ristruttur", "costruzion", "impresa edile", "muratore", "appaltator", "costruttore",
       "impiant", "idraulic", "elettricist", "termoidraulic", "climatizzazion", "condizionament",
       "arred", "mobil", "cucine", "interior", "falegnam", "serrament",
       "pavimenti", "piastrell", "ceramich", "marmo", "cartongesso", "pittur", "verniciatur",
       "ferrament", "utensil", "giardin", "verde", "vivai", "piscin", "fotovoltaic", "domotic",
+      // Professionisti del mondo casa: potenziali clienti (gli vendo un sito/portfolio).
+      "architett", "geometr", "ingegner",
     ],
   },
   {

@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.36.0** | Ultimo aggiornamento: 2026-07-28
+Versione: **3.37.0** | Ultimo aggiornamento: 2026-07-28
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -532,14 +532,13 @@ Cosa succede: ogni referenza e l'eventuale interesse del membro **diventano lead
 
 Fino alla v3.32 il CRM sapeva fare una domanda sola: *"posso vendergli qualcosa?"*. Nel BNI questa domanda copre solo **metà** del valore. Ora ogni membro viene letto su **due assi indipendenti**:
 
-| Asse | Cosa vuol dire | Cosa ci fai | Quanto vale |
-|------|----------------|-------------|-------------|
-| 🎯 **Cliente potenziale** | Il membro **è** una delle tue buyer personas (è un infissi, un property manager, un centro estetico) | Gli vendi | 1 cliente |
-| 🔑 **Partner di potere** | Il membro **serve** le tue personas (commercialista, architetto, geometra, agenzia immobiliare) — parla ogni giorno con i tuoi clienti ideali | 121 prioritario: ti porta clienti in continuo | 10 clienti |
+| Ruolo | Chi è | Cosa ci fai |
+|-------|-------|-------------|
+| 🎯 **Cliente potenziale** | È nel mondo **Casa, Persona o Turismo** (infissi, edilizia, impianti, immobiliare, architetto, hotel, estetica, medico…) | Gli vendi tu un sito / marketing |
+| 🤝 **Partner** | È un business **trasversale a ogni categoria** (commercialista, consulente del lavoro, finanza agevolata, formazione, sicurezza sul lavoro, avvocato, assicurazioni, credito) **oppure lavora nel marketing/comunicazione** (con cui collabori) | Coltivi il 121: può portarti clienti |
+| • **Neutro** | Tutto il resto (agricoltura, no-profit, ristorazione, IT non-web…) | Rapporto di cortesia |
 
-**Nel BNI il partner vale più del cliente.** Per questo la coda dei 121 pesa il partner il doppio.
-
-C'è anche un terzo caso: ⚔️ **Concorrente** (web agency, social media manager, SEO). Il CRM lo segnala per evitarti figuracce e per farti capire subito che in quel capitolo la tua categoria è già occupata.
+I partner trasversali hanno un **peso moderato**: sono utili, ma possono girare i contatti ai colleghi del loro stesso capitolo, quindi non valgono quanto un cliente diretto. Il marketing e la comunicazione **non sono concorrenti**: sono potenziali partner con cui scambiare lavoro.
 
 > I punteggi si assegnano da soli quando aggiungi un membro. Per i membri già in archivio premi **Riclassifica** nella scheda Coda 121. Se cambi il ruolo a mano, il CRM non lo sovrascrive più.
 
@@ -614,4 +613,4 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 
 ---
 
-*Documento aggiornato il 2026-07-28 | KW Sales CRM v3.36.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-07-28 | KW Sales CRM v3.37.0. La versione di riferimento è la Guida interattiva dentro l'app.*

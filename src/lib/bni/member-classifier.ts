@@ -1,218 +1,157 @@
 /**
- * CLASSIFICATORE MEMBRI BNI — i due assi
+ * CLASSIFICATORE MEMBRI BNI — modello v2 (regole di Alessio, 2026-07-28)
  *
- * Il CRM nasce per il cold outreach e sa fare una cosa sola: "questo lead ha un sito
- * debole, quindi glielo vendo". Nel BNI questa domanda copre solo META' del valore.
+ * Ogni membro di un capitolo è una di tre cose per Karalisweb:
  *
- *   ASSE 1 — CLIENTE POTENZIALE
- *   Il membro *E'* una delle mie buyer personas (e' un infissi, un property manager,
- *   un centro estetico). Azione: audit del suo sito -> gancio di vendita. Valore: 1 cliente.
+ *   CLIENTE  — è nel mondo CASA, PERSONA o TURISMO (le buyer personas). Gli vendo io.
+ *              Es. infissi, edilizia, impianti, immobiliare, hotel, estetica, medico, architetto.
  *
- *   ASSE 2 — PARTNER DI POTERE
- *   Il membro *SERVE* le mie buyer personas (commercialista, architetto, geometra,
- *   agenzia immobiliare, fornitore edile). Lui parla ogni giorno con i miei clienti
- *   ideali. Azione: 121 prioritario. Valore: 10 clienti nel tempo.
+ *   PARTNER  — è un business TRASVERSALE a qualsiasi categoria (lo serve chiunque),
+ *              oppure lavora nel mio mondo (marketing/comunicazione, con cui collaboro).
+ *              Es. commercialista, consulente del lavoro, finanza agevolata, formazione,
+ *              sicurezza sul lavoro, avvocato, assicurazioni, credito, privacy, agenzia
+ *              pubblicitaria, web, social, stampa, fotografo.
+ *              PESO MODERATO: un trasversale può girare i contatti ai colleghi del suo
+ *              stesso capitolo invece che a me, quindi non vale quanto un cliente diretto.
  *
- * Nel BNI l'asse 2 vale piu' dell'asse 1. Un membro puo' stare su entrambi (un'agenzia
- * immobiliare e' insieme cliente e partner) e per questo i due punteggi sono INDIPENDENTI.
+ *   NEUTRO   — tutto il resto (agricoltura, no-profit, ristorazione, gioielli, IT non-web…).
  *
- * Terzo caso da non ignorare: il CONCORRENTE (web agency, social media manager, SEO).
- * Segnalarlo evita figuracce e fa capire subito che in quel capitolo la mia categoria
- * e' gia' occupata.
+ * NB: il vecchio ruolo "CONCORRENTE" è stato ritirato. Chi fa marketing/comunicazione
+ * NON è un concorrente da evitare: è un potenziale partner con cui scambiare lavoro.
  */
 
 import { resolvePersona, type BuyerPersonaKey } from "@/lib/buyer-personas";
 
+// CONCORRENTE resta nell'unione per compatibilità con dati storici, ma non viene più assegnato.
 export type MemberRole = "CLIENTE" | "PARTNER" | "CONCORRENTE" | "NEUTRO";
 
 export interface MemberClassification {
   buyerPersona: BuyerPersonaKey | null;
   memberRole: MemberRole;
-  /** 0-100 — quanto e' un cliente potenziale diretto (asse 1). */
+  /** 0-100 — è nel mondo Casa/Persona/Turismo → glielo vendo. */
   clientScore: number;
-  /** 0-100 — quanto e' un partner che mi porta clienti (asse 2). */
+  /** 0-100 — è un partner trasversale / del mio mondo. Peso moderato. */
   partnerScore: number;
-  /** Personas a cui il membro da' accesso (asse 2). */
   personasServed: BuyerPersonaKey[];
-  /** Spiegazione leggibile: perche' questo punteggio. Va mostrata in UI. */
+  /** Spiegazione leggibile: perché questo ruolo. Mostrata in UI. */
   reasons: string[];
 }
 
 /**
- * Categorie "partner di potere": professioni che parlano ogni giorno con le mie
- * buyer personas. `weight` = quanto e' forte l'accesso (0-100 sulla singola categoria).
- *
- * Non e' hardcoded per sempre: e' una tabella che si affina con l'esperienza.
- * Se una categoria si rivela piu' o meno utile, si cambia il peso qui.
+ * Categorie PARTNER = business trasversali a ogni categoria + il mondo del marketing.
+ * `weight` è volutamente MODERATO (45-65): un partner nel BNI è utile ma incerto,
+ * perché i suoi referral possono restare dentro il suo capitolo.
  */
 interface PartnerCategory {
   label: string;
   keywords: string[];
-  serves: BuyerPersonaKey[];
   weight: number;
-  /** Perche' e' un partner — mostrato in UI per giustificare la priorita' del 121. */
   why: string;
 }
 
 const PARTNER_CATEGORIES: PartnerCategory[] = [
+  // ── Il mio mondo: marketing / comunicazione (collaborazione, non concorrenza) ──
+  {
+    label: "Marketing / Comunicazione / Pubblicità",
+    keywords: [
+      "marketing", "comunicazione", "pubblicit", "advertising", "agenzia pubblicitaria",
+      "web agency", "web design", "siti web", "sito web", "sviluppo web", "social media",
+      "seo", "personal branding", "ufficio stampa", "digital", "multimedial", "grafic",
+      "growth", "e-commerce", "brand",
+    ],
+    weight: 65,
+    why: "Lavora nel mio mondo (marketing/comunicazione): potenziale partner con cui scambiare lavoro e clienti.",
+  },
+  {
+    label: "Fotografo / Video",
+    keywords: ["fotograf", "videomaker", "riprese", "servizi fotografic", "drone", "video"],
+    weight: 55,
+    why: "Chi cura l'immagine di un'azienda incrocia chi sta rifacendo la propria comunicazione: buon partner.",
+  },
+  {
+    label: "Stampa / Tipografia",
+    keywords: ["tipograf", "stamperia", "stampa", "insegn"],
+    weight: 50,
+    why: "Serve chi fa comunicazione offline: partner naturale del mio mondo.",
+  },
+  // ── Servizi professionali trasversali (li usa qualsiasi azienda) ──
   {
     label: "Commercialista",
-    keywords: ["commercialist", "consulente fiscal", "tributarist", "revisore contabil", "studio contabil"],
-    serves: ["CASA", "MICROTURISMO", "PERSONA"],
-    weight: 95,
-    why: "Parla ogni mese con decine di PMI di ogni settore: e' l'accesso piu' trasversale che esista in un capitolo.",
+    keywords: ["commercialist", "ragionier", "revisore contabil", "studio contabil", "tributarist", "consulente fiscal"],
+    weight: 62,
+    why: "Trasversale: parla con PMI di ogni settore. Partner utile, ma può girare i contatti ai colleghi di capitolo.",
   },
   {
-    label: "Architetto / Studio di architettura",
-    keywords: ["architett", "studio di architettura", "progettazion"],
-    serves: ["CASA", "MICROTURISMO"],
-    weight: 85,
-    why: "Sta a monte di ogni ristrutturazione: intercetta il cliente casa prima di chiunque altro.",
-  },
-  {
-    label: "Geometra",
-    keywords: ["geometr"],
-    serves: ["CASA"],
-    weight: 75,
-    why: "Pratiche edilizie e cantieri: conosce imprese e committenti del mondo casa.",
-  },
-  {
-    label: "Ingegnere",
-    keywords: ["ingegner"],
-    serves: ["CASA"],
-    weight: 65,
-    why: "Strutture e impianti: rete diretta su edilizia e impiantistica.",
-  },
-  {
-    label: "Agenzia immobiliare",
-    keywords: ["immobiliar", "agente immobiliar", "mediatore immobiliar"],
-    serves: ["CASA", "MICROTURISMO"],
-    weight: 90,
-    why: "Ogni compravendita genera ristrutturazioni e nuovi gestori di immobili: doppio accesso.",
-  },
-  {
-    label: "Notaio",
-    keywords: ["notai"],
-    serves: ["CASA", "MICROTURISMO"],
-    weight: 70,
-    why: "Passaggio obbligato di ogni compravendita immobiliare.",
-  },
-  {
-    label: "Mediatore creditizio / Finanziamenti",
-    keywords: ["mediatore creditiz", "finanziament", "mutu", "credit", "bancar", "brokeraggio"],
-    serves: ["CASA", "MICROTURISMO"],
-    weight: 75,
-    why: "Chi finanzia una casa o una struttura sa chi sta per investire (e quindi per spendere).",
-  },
-  {
-    label: "Assicurazioni",
-    keywords: ["assicuraz", "assicurativ", "broker assicur"],
-    serves: ["CASA", "MICROTURISMO", "PERSONA"],
-    weight: 65,
-    why: "Portafoglio ampio e trasversale di aziende e professionisti del territorio.",
-  },
-  {
-    label: "Avvocato",
-    keywords: ["avvocat", "studio legal"],
-    serves: ["CASA", "MICROTURISMO", "PERSONA"],
-    weight: 60,
-    why: "Rete trasversale su imprese e professionisti.",
+    label: "Finanza agevolata / Bandi e incentivi",
+    keywords: ["finanza agevolat", "agevolazion", "bandi", "bando", "incentiv", "fondo perduto", "credito d'imposta", "finanza d'impresa"],
+    weight: 62,
+    why: "Sa quali aziende stanno per investire (bandi, incentivi): trasversale e prezioso, ma condiviso con la sua rete.",
   },
   {
     label: "Consulente del lavoro",
     keywords: ["consulente del lavoro", "paghe e contribut", "payroll"],
-    serves: ["CASA", "MICROTURISMO", "PERSONA"],
-    weight: 70,
-    why: "Conosce le aziende che assumono, cioe' quelle che stanno crescendo.",
+    weight: 58,
+    why: "Trasversale: conosce le aziende che assumono, cioè quelle che crescono.",
   },
   {
-    label: "Finanza agevolata / Bandi e incentivi",
-    keywords: [
-      "finanza agevolat", "agevolazion", "bandi", "bando", "incentiv",
-      "fondo perduto", "contribut a fondo perduto", "finanza d'impresa",
-      "finanza per l'impresa", "credito d'imposta",
-    ],
-    serves: ["CASA", "MICROTURISMO", "PERSONA"],
-    weight: 85,
-    why: "Chi fa finanza agevolata sa QUALI aziende stanno per investire (bandi, incentivi, fondo perduto): intercetta il cliente nel momento esatto in cui ha budget.",
-  },
-  {
-    label: "Consulente aziendale / Formatore",
-    // Copre sia il verbo ("consulente") sia il sostantivo ("consulenza"): la seconda
-    // forma sfuggiva e mandava questi partner in NEUTRO.
-    keywords: [
-      "consulente aziendal", "consulenza aziendal", "consulenza d'impresa",
-      "consulenza direzional", "business coach", "formator", "formazione aziendal",
-      "temporary manager",
-    ],
-    serves: ["CASA", "MICROTURISMO", "PERSONA"],
-    weight: 70,
-    why: "Lavora sull'imprenditore: se si fida, apre porte in profondita'.",
-  },
-  {
-    label: "Tipografia / Stampa",
-    keywords: ["tipograf", "stamperia", "stampa digital", "grafica e stampa", "insegn"],
-    serves: ["CASA", "MICROTURISMO", "PERSONA"],
+    label: "Consulenza aziendale",
+    keywords: ["consulenza aziendal", "consulente aziendal", "consulenza d'impresa", "consulenza direzional", "business coach", "temporary manager"],
     weight: 55,
-    why: "Serve chiunque faccia comunicazione offline: intercetta chi sta gia' investendo in marketing.",
+    why: "Lavora sull'imprenditore, trasversale a ogni settore.",
   },
   {
-    label: "Fotografo / Video",
-    keywords: ["fotograf", "videomaker", "riprese", "servizi fotografic", "drone"],
-    serves: ["MICROTURISMO", "CASA", "PERSONA"],
-    weight: 60,
-    why: "Chi commissiona foto sta rifacendo la propria immagine: momento perfetto per il sito.",
+    label: "Formazione / Coaching",
+    keywords: ["formazione", "formator", "coach", "centro didattico", "e-learning", "docenz"],
+    weight: 52,
+    why: "Trasversale: forma imprenditori e aziende di ogni categoria.",
   },
   {
-    label: "Interior designer / Home staging",
-    keywords: ["interior design", "home staging", "arredator", "space planner"],
-    serves: ["CASA", "MICROTURISMO"],
-    weight: 70,
-    why: "Vicinissimo al cliente casa e alle case vacanza da valorizzare.",
-  },
-  {
-    label: "Fornitore edile / Materiali",
-    keywords: ["materiali edil", "fornitura edil", "rivendita edil", "termoidraulica ingross", "ingrosso"],
-    serves: ["CASA"],
-    weight: 65,
-    why: "Vede passare tutte le imprese edili della zona.",
-  },
-  {
-    label: "Property manager",
-    keywords: ["property manager", "property management", "gestione affitti", "affitti brevi"],
-    serves: ["MICROTURISMO"],
-    weight: 80,
-    why: "E' il cuore del microturismo: gestisce piu' strutture insieme.",
-  },
-  {
-    label: "Wedding planner / Eventi",
-    keywords: ["wedding", "event planner", "organizzazione eventi", "cerimoni"],
-    serves: ["MICROTURISMO", "PERSONA"],
+    label: "Sicurezza sul lavoro",
+    keywords: ["sicurezza sul lavoro", "sicurezza lavoro", "rspp", "antinfortunistic", "medicina del lavoro", "81/08", "hse"],
     weight: 55,
-    why: "Rete di strutture ricettive e fornitori del territorio.",
+    why: "Obbligo per ogni azienda con dipendenti: accesso trasversale al tessuto produttivo.",
   },
-];
-
-/**
- * Categorie concorrenti: fanno il mio stesso mestiere.
- * Non sono partner ne' clienti — ma vanno riconosciute per non fare gaffe in capitolo.
- */
-const COMPETITOR_KEYWORDS = [
-  "web agency", "web design", "siti web", "sito web", "webmaster", "sviluppo web",
-  "digital marketing", "social media manager", "social media marketing", "seo",
-  "comunicazione digital", "agenzia di comunicazione", "agenzia marketing",
-  "advertising", "growth hacking", "e-commerce manager",
-  // Pubblicità classica: nella tassonomia BNI molti "Pubblicità & Marketing" sono
-  // di fatto miei concorrenti. Attenzione: fotografo/tipografo stanno nella stessa
-  // categoria BNI ma NON qui — restano partner (li matcho sulla foglia, non sul prefisso).
-  "agenzia pubblicitaria", "pubblicitaria", "personal branding",
+  {
+    label: "Avvocato / Legale",
+    keywords: ["avvocat", "studio legal", "diritto"],
+    weight: 48,
+    why: "Trasversale su imprese e professionisti.",
+  },
+  {
+    label: "Assicurazioni",
+    keywords: ["assicuraz", "assicurativ", "broker assicur"],
+    weight: 48,
+    why: "Portafoglio ampio e trasversale sul territorio.",
+  },
+  {
+    label: "Notaio",
+    keywords: ["notai"],
+    weight: 45,
+    why: "Passaggio obbligato di compravendite e atti societari.",
+  },
+  {
+    label: "Credito / Finanziamenti",
+    keywords: ["mediatore creditiz", "finanziament", "mutu", "credito", "prestit", "brokeraggio", "ristrutturazione del credito"],
+    weight: 55,
+    why: "Chi finanzia le aziende sa chi sta per spendere.",
+  },
+  {
+    label: "Privacy / DPO",
+    keywords: ["privacy", "dpo", "protezione dei dati", "gdpr"],
+    weight: 45,
+    why: "Adempimento trasversale a ogni azienda.",
+  },
 ];
 
 const norm = (s?: string | null) => (s ?? "").toLowerCase().trim();
 
 /**
- * Classifica un membro BNI sui due assi.
- * Input: quello che sappiamo del membro (professione, azienda, sito).
+ * Classifica un membro secondo le 4 regole:
+ *   1) marketing/comunicazione → PARTNER
+ *   2) business trasversale → PARTNER (peso moderato)
+ *   3) Casa / Persona / Turismo → CLIENTE
+ *   4) resto → NEUTRO
+ * Cliente e partner sono indipendenti; il ruolo prevalente decide l'etichetta.
  */
 export function classifyMembro(input: {
   profession?: string | null;
@@ -223,20 +162,7 @@ export function classifyMembro(input: {
   const haystack = [input.profession, input.company, input.notes].map(norm).filter(Boolean).join(" · ");
   const reasons: string[] = [];
 
-  // ── CONCORRENTE: si valuta per primo, esclude gli altri ruoli ────────────────
-  const competitorHit = COMPETITOR_KEYWORDS.find((k) => haystack.includes(k));
-  if (competitorHit) {
-    return {
-      buyerPersona: null,
-      memberRole: "CONCORRENTE",
-      clientScore: 0,
-      partnerScore: 0,
-      personasServed: [],
-      reasons: [`Fa il mio stesso mestiere ("${competitorHit}") — in questo capitolo la mia categoria e' occupata.`],
-    };
-  }
-
-  // ── ASSE 1: e' una mia buyer persona? ───────────────────────────────────────
+  // ── CLIENTE: è nel mondo Casa / Persona / Turismo? ─────────────────────────
   const buyerPersona = resolvePersona({
     category: input.profession,
     profession: input.company,
@@ -245,54 +171,38 @@ export function classifyMembro(input: {
   let clientScore = 0;
   if (buyerPersona && buyerPersona !== "ALTRO") {
     clientScore = 70;
-    reasons.push(`E' una mia buyer persona (${buyerPersona}): posso vendergli direttamente.`);
-    // Con un sito posso fare l'audit e arrivare al 121 con ganci concreti.
+    const label =
+      buyerPersona === "CASA" ? "Casa" : buyerPersona === "MICROTURISMO" ? "Turismo" : "Persona";
+    reasons.push(`È nel mondo ${label}: potenziale cliente, gli vendo io.`);
     if (norm(input.website)) {
       clientScore += 20;
-      reasons.push("Ha un sito: posso analizzarlo e arrivare al 121 con problemi concreti da mostrare.");
-    } else {
-      reasons.push("Nessun sito noto: da chiedere in 121 (o potrebbe proprio non averlo — opportunita').");
+      reasons.push("Ha un sito: posso analizzarlo e arrivare al contatto con problemi concreti.");
     }
-  } else if (buyerPersona === "ALTRO") {
-    clientScore = 25;
-    reasons.push("Settore fuori dalle tre personas principali: cliente possibile ma non prioritario.");
   }
 
-  // ── ASSE 2: mi porta clienti? ───────────────────────────────────────────────
+  // ── PARTNER: trasversale o del mio mondo? ──────────────────────────────────
   const matched = PARTNER_CATEGORIES.filter((c) => c.keywords.some((k) => haystack.includes(k)));
-
   let partnerScore = 0;
-  const personasServed = new Set<BuyerPersonaKey>();
-
   if (matched.length > 0) {
-    // Vince la categoria piu' forte; le altre aggiungono un bonus ridotto
-    // (un "architetto e geometra" e' piu' utile di un solo architetto, ma non il doppio).
-    const sorted = [...matched].sort((a, b) => b.weight - a.weight);
-    partnerScore = sorted[0].weight;
-    for (const extra of sorted.slice(1)) partnerScore += Math.round(extra.weight * 0.15);
-
-    for (const c of matched) {
-      for (const p of c.serves) personasServed.add(p);
-      reasons.push(`${c.label}: ${c.why}`);
-    }
-
-    // Bonus se copre piu' di una persona: e' un partner "largo".
-    if (personasServed.size >= 3) {
-      partnerScore += 10;
-      reasons.push("Accesso trasversale a tutte e tre le personas: partner da coltivare con priorita' alta.");
-    }
-    partnerScore = Math.min(100, partnerScore);
+    // Peso = la categoria più forte fra quelle trovate (niente stacking: i partner
+    // restano moderati, come da regola "non più di tanto").
+    partnerScore = Math.max(...matched.map((c) => c.weight));
+    for (const c of matched) reasons.push(`${c.label}: ${c.why}`);
   }
 
-  // ── Ruolo prevalente ────────────────────────────────────────────────────────
-  let memberRole: MemberRole = "NEUTRO";
+  // I partner trasversali toccano tutte le personas per definizione.
+  const personasServed: BuyerPersonaKey[] = partnerScore > 0 ? ["CASA", "MICROTURISMO", "PERSONA"] : [];
+
+  // ── Ruolo prevalente ───────────────────────────────────────────────────────
+  let memberRole: MemberRole;
   if (partnerScore === 0 && clientScore === 0) {
     memberRole = "NEUTRO";
-    reasons.push("Non e' un cliente tipico ne' un partner con accesso alle mie personas: rapporto di cortesia.");
-  } else if (partnerScore >= clientScore) {
-    memberRole = "PARTNER";
-  } else {
+    reasons.push("Fuori dalle mie personas e non trasversale: rapporto di cortesia.");
+  } else if (clientScore >= partnerScore) {
+    // A parità (o cliente più forte) vince il cliente: è chi mi porta fatturato diretto.
     memberRole = "CLIENTE";
+  } else {
+    memberRole = "PARTNER";
   }
 
   return {
@@ -300,15 +210,14 @@ export function classifyMembro(input: {
     memberRole,
     clientScore: Math.min(100, clientScore),
     partnerScore,
-    personasServed: [...personasServed],
+    personasServed,
     reasons,
   };
 }
 
 /**
- * Priorita' operativa del 121: quanto conviene incontrarlo *adesso*.
- * Combina il valore del membro con il tempo passato dall'ultimo incontro —
- * un partner fortissimo che non senti da 8 mesi deve tornare in cima.
+ * Priorità operativa del 121: quanto conviene incontrarlo *adesso*.
+ * Cliente e partner contano, poi pesa il tempo dall'ultimo incontro.
  */
 export function oneToOnePriority(input: {
   clientScore: number;
@@ -316,16 +225,12 @@ export function oneToOnePriority(input: {
   lastOneToOneAt?: Date | string | null;
   isMyChapter?: boolean;
 }): number {
-  // L'asse partner pesa il doppio: e' la leva che porta piu' fatturato.
-  const base = input.partnerScore * 2 + input.clientScore;
+  const base = input.partnerScore + input.clientScore;
 
   const last = input.lastOneToOneAt ? new Date(input.lastOneToOneAt).getTime() : null;
   const daysSince = last ? Math.floor((Date.now() - last) / 86_400_000) : null;
-
-  // Mai fatto un 121 = massima urgenza; poi cresce col tempo, con tetto a 6 mesi.
   const recency = daysSince === null ? 120 : Math.min(120, Math.floor(daysSince / 1.5));
 
-  // Nel mio capitolo devo fare un 121 con OGNI membro: spinta costante.
   const mine = input.isMyChapter ? 60 : 0;
 
   return base + recency + mine;
@@ -333,8 +238,8 @@ export function oneToOnePriority(input: {
 
 /** Etichette leggibili per la UI. */
 export const ROLE_LABELS: Record<MemberRole, { label: string; icon: string; color: string }> = {
-  PARTNER: { label: "Partner di potere", icon: "🔑", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  PARTNER: { label: "Partner", icon: "🤝", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
   CLIENTE: { label: "Cliente potenziale", icon: "🎯", color: "bg-blue-100 text-blue-700 border-blue-200" },
   CONCORRENTE: { label: "Concorrente", icon: "⚔️", color: "bg-red-100 text-red-700 border-red-200" },
-  NEUTRO: { label: "Neutro", icon: "🤝", color: "bg-slate-100 text-slate-700 border-slate-200" },
+  NEUTRO: { label: "Neutro", icon: "•", color: "bg-slate-100 text-slate-700 border-slate-200" },
 };
