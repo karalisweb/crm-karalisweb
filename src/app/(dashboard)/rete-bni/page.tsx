@@ -258,6 +258,7 @@ export default function ReteBniPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [classifying, setClassifying] = useState(false);
+  const [selectedChapter, setSelectedChapter] = useState<string>(""); // "" = tutti
 
   // Pannello memo 121 (matcher di reciprocità)
   const [panelMembro, setPanelMembro] = useState<{ id: string; name: string } | null>(null);
@@ -271,7 +272,7 @@ export default function ReteBniPage() {
         fetch("/api/bni/membri"),
         fetch("/api/bni/one-to-one?limit=20"),
         fetch("/api/bni/chapters"),
-        fetch("/api/bni/queue?limit=40"),
+        fetch("/api/bni/queue?limit=300"),
       ]);
       if (!rStats.ok || !rMembri.ok || !r121.ok) throw new Error("Errore nel caricamento");
       const [dStats, dMembri, d121, dChapters, dQueue] = await Promise.all([
@@ -319,15 +320,26 @@ export default function ReteBniPage() {
     [membri]
   );
 
+  // Filtro capitolo, condiviso da Membri / Coda 121 / Pipeline.
+  const byChapter = useCallback(
+    <T extends { chapter: string | null }>(list: T[]) =>
+      selectedChapter ? list.filter((m) => m.chapter === selectedChapter) : list,
+    [selectedChapter]
+  );
+
   const filteredMembri = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return membri;
-    return membri.filter((m) =>
+    const base = byChapter(membri);
+    if (!q) return base;
+    return base.filter((m) =>
       [m.name, m.company, m.profession, m.chapter]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q))
     );
-  }, [membri, query]);
+  }, [membri, query, byChapter]);
+
+  const filteredQueue = useMemo(() => byChapter(queue), [queue, byChapter]);
+  const pipelineMembri = useMemo(() => byChapter(membri), [membri, byChapter]);
 
   return (
     <div className="space-y-6">
@@ -396,6 +408,32 @@ export default function ReteBniPage() {
         </div>
       ) : null}
 
+      {/* Filtro capitolo — governa Coda 121, Pipeline e Membri */}
+      {chapters.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted-foreground mr-1">Capitolo:</span>
+          <button
+            onClick={() => setSelectedChapter("")}
+            className={`text-xs px-2.5 py-1 rounded-md border transition ${
+              selectedChapter === "" ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 hover:bg-muted border-transparent"
+            }`}
+          >
+            Tutti
+          </button>
+          {chapters.map((c) => (
+            <button
+              key={c}
+              onClick={() => setSelectedChapter(c)}
+              className={`text-xs px-2.5 py-1 rounded-md border transition ${
+                selectedChapter === c ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 hover:bg-muted border-transparent"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
       <Tabs defaultValue="coda" className="space-y-4">
         <TabsList>
           <TabsTrigger value="coda" className="gap-2">
@@ -438,7 +476,7 @@ export default function ReteBniPage() {
                 <Skeleton key={i} className="h-20 w-full rounded-xl" />
               ))}
             </div>
-          ) : queue.length === 0 ? (
+          ) : filteredQueue.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-sm text-muted-foreground">
                 Nessun membro in coda. Aggiungi membri, poi premi “Riclassifica”
@@ -447,7 +485,7 @@ export default function ReteBniPage() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {queue.map((m, idx) => (
+              {filteredQueue.map((m, idx) => (
                 <Card key={m.id} className={idx < 3 ? "border-primary/40" : undefined}>
                   <CardContent className="p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -525,7 +563,7 @@ export default function ReteBniPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {BNI_STAGES.map((stage) => {
-                const inStage = membri.filter(
+                const inStage = pipelineMembri.filter(
                   (m) => (m.bniStage ?? "DA_AVVICINARE") === stage.key
                 );
                 return (

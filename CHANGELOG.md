@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.38.1] - 2026-07-28
+
+### Added
+- **Filtro per capitolo in Rete BNI.** Con più capitoli le liste piatte erano illeggibili: una barra "Capitolo: Tutti · Atlantide · Posidonia · …" ora filtra insieme Coda 121, Pipeline e Membri. (Compare da 2 capitoli in su.)
+
 ## [3.38.0] - 2026-07-28
 
 ### Added
