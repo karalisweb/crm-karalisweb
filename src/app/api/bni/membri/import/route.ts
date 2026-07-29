@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/api-auth";
 import { z } from "zod/v4";
 import { parseMembers } from "@/lib/bni/member-parser";
 import { classifyMembro } from "@/lib/bni/member-classifier";
+import { loadMyChapterNames, isMyChapter } from "@/lib/bni/my-chapters";
 
 /**
  * IMPORT MASSIVO MEMBRI BNI
@@ -56,13 +57,15 @@ export async function POST(request: NextRequest) {
     });
     const existingNames = new Set(existing.map((e) => e.name.trim().toLowerCase()));
 
+    // Tutte le righe vanno nello stesso capitolo: calcolo una volta se e' il mio.
+    const myChapters = await loadMyChapterNames();
+    const mine = isMyChapter(myChapters, chapter);
+
     const rows = members.map((m) => {
-      const cls = classifyMembro({
-        profession: m.profession,
-        company: m.company,
-        website: null,
-        notes: null,
-      });
+      const cls = classifyMembro(
+        { profession: m.profession, company: m.company, website: null, notes: null },
+        { isMyChapter: mine }
+      );
       return {
         ...m,
         duplicate: existingNames.has(m.name.toLowerCase()),

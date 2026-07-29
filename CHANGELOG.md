@@ -13,6 +13,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.38.0] - 2026-07-28
+
+### Added
+- **Cliente acquisito** (`BniMembro.isCustomer`). Distinto dal "cliente potenziale" (il ruolo): marca i membri che sono **già clienti** di Karalisweb. Toggle "È già un mio cliente" nel Memo 121, badge 🏆 cliente nella lista.
+- **Tracciamento dei 121 già fatti.** Portare un membro allo stadio "121 fatto" (o oltre) registra automaticamente che il 121 c'è stato (esce da "mai fatto un 121" nella coda). La data dell'ultimo 121 è modificabile dal Memo 121 — utile per i tanti 121 fatti in passato, senza doverli registrare uno a uno.
+
+### Changed
+- **Partner pieni nel proprio capitolo.** Il "peso moderato" dei partner trasversali (rischio che girino i contatti ai colleghi di capitolo) **non si applica nel capitolo di Alessio**: lì il collega di riferimento è lui, quindi i partner valgono pieno (+30, cap 100). La classificazione ora tiene conto di `BniChapter.isMine` in tutti i punti (creazione, import, riclassifica, dettaglio).
+
 ## [3.37.0] - 2026-07-28
 
 ### Changed

@@ -492,6 +492,10 @@ model BniMembro {
   bniStage    String   @default("DA_AVVICINARE") @map("bni_stage")
   nextRecallAt DateTime? @map("next_recall_at")  // Quando ricontattarlo (tappa RECALL)
 
+  // Gia' mio cliente (acquisito): diverso da "cliente potenziale" (memberRole).
+  // Alcuni colleghi di capitolo sono clienti reali di Karalisweb.
+  isCustomer  Boolean  @default(false) @map("is_customer")
+
   // Denormalizzati per dashboard veloce (aggiornati a ogni 121)
   oneToOneCount  Int       @default(0) @map("one_to_one_count")
   lastOneToOneAt DateTime? @map("last_one_to_one_at")

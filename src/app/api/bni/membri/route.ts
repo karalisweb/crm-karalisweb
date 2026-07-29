@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { Prisma } from "@prisma/client";
 import { classifyMembro } from "@/lib/bni/member-classifier";
 import { extractSeekingTags, serializeTags } from "@/lib/bni/reciprocity";
+import { loadMyChapterNames, isMyChapter } from "@/lib/bni/my-chapters";
 
 /**
  * Rete BNI — gestione membri dei capitoli.
@@ -75,14 +76,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = createMembroSchema.parse(body);
 
-    // Classificazione automatica sui due assi (cliente potenziale / partner di potere).
-    // Si fa alla creazione cosi' il membro nasce gia' prioritizzato per il 121.
-    const cls = classifyMembro({
-      profession: data.profession,
-      company: data.company,
-      website: data.website,
-      notes: data.notes,
-    });
+    // Classificazione automatica. Si fa alla creazione cosi' il membro nasce
+    // gia' prioritizzato per il 121 (con boost se e' nel mio capitolo).
+    const myChapters = await loadMyChapterNames();
+    const cls = classifyMembro(
+      {
+        profession: data.profession,
+        company: data.company,
+        website: data.website,
+        notes: data.notes,
+      },
+      { isMyChapter: isMyChapter(myChapters, data.chapter) }
+    );
     const seeking = clean(data.seeking);
 
     const membro = await db.bniMembro.create({

@@ -79,6 +79,7 @@ interface Membro {
   lastOneToOneAt: string | null;
   bniStage: string | null;
   nextRecallAt: string | null;
+  isCustomer?: boolean;
   _count?: { referredLeads: number };
 }
 
@@ -454,6 +455,11 @@ export default function ReteBniPage() {
                         <div className="font-medium truncate flex items-center gap-2 flex-wrap">
                           <span className="text-xs text-muted-foreground tabular-nums">#{idx + 1}</span>
                           {m.name}
+                          {m.isCustomer && (
+                            <Badge variant="outline" className="text-[10px] gap-1 text-green-600 border-green-500/40">
+                              <Trophy className="h-3 w-3" />cliente
+                            </Badge>
+                          )}
                           <RoleBadge role={m.memberRole} />
                           <StageBadge stage={m.bniStage} />
                           {m.buyerPersona && (

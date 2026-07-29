@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/api-auth";
 import { z } from "zod/v4";
 import { classifyMembro } from "@/lib/bni/member-classifier";
 import { extractSeekingTags, serializeTags } from "@/lib/bni/reciprocity";
+import { loadMyChapterNames, isMyChapter } from "@/lib/bni/my-chapters";
 
 /**
  * Rete BNI — dettaglio e aggiornamento di un singolo membro.
@@ -37,7 +38,13 @@ const updateSchema = z.object({
     "DA_AVVICINARE", "RICHIESTA_121", "PREP_REFERENZE", "FATTO_121", "OFFERTA", "RECALL", "CONSOLIDATO",
   ]).optional(),
   nextRecallAt: z.string().nullable().optional(),
+  isCustomer: z.boolean().optional(),
+  // Data dell'ultimo 121 (per marcare 121 già fatti in passato, senza registrarli uno a uno).
+  lastOneToOneAt: z.string().nullable().optional(),
 });
+
+/** Stadi pipeline che implicano un 121 già avvenuto. */
+const STAGES_AFTER_121 = new Set(["FATTO_121", "OFFERTA", "RECALL", "CONSOLIDATO"]);
 
 const clean = (v?: string | null) => {
   if (v === null) return null;
@@ -83,12 +90,16 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   // Spiegazione della classificazione: ricalcolata al volo, non salvata.
   // Serve alla UI per dire *perche'* questo membro e' prioritario.
-  const classification = classifyMembro({
-    profession: membro.profession,
-    company: membro.company,
-    website: membro.website,
-    notes: membro.notes,
-  });
+  const myChapters = await loadMyChapterNames();
+  const classification = classifyMembro(
+    {
+      profession: membro.profession,
+      company: membro.company,
+      website: membro.website,
+      notes: membro.notes,
+    },
+    { isMyChapter: isMyChapter(myChapters, membro.chapter) }
+  );
 
   // Bilancio della reciprocita': do' piu' di quanto ricevo, o viceversa?
   const received = membro.referredLeads.filter((l) => l.bniOriginType === "referral").length;
@@ -132,12 +143,28 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (data.website !== undefined) update.website = clean(data.website);
     if (data.notes !== undefined) update.notes = clean(data.notes);
     if (data.status !== undefined) update.status = data.status;
+    if (data.isCustomer !== undefined) update.isCustomer = data.isCustomer;
 
     // Pipeline di vendita BNI: avanzamento stadio + data di recall.
     if (data.bniStage !== undefined) update.bniStage = data.bniStage;
     if (data.nextRecallAt !== undefined) {
       const d = data.nextRecallAt ? new Date(data.nextRecallAt) : null;
       update.nextRecallAt = d && !isNaN(d.getTime()) ? d : null;
+    }
+
+    // Data 121 esplicita (marca un 121 già fatto in passato).
+    if (data.lastOneToOneAt !== undefined) {
+      const d = data.lastOneToOneAt ? new Date(data.lastOneToOneAt) : null;
+      update.lastOneToOneAt = d && !isNaN(d.getTime()) ? d : null;
+      if (update.lastOneToOneAt && existing.oneToOneCount === 0) update.oneToOneCount = 1;
+    }
+
+    // Portare un membro a "121 fatto" (o oltre) implica che il 121 c'è stato:
+    // se non ne risultava nessuno, lo registriamo (data = oggi salvo diversa indicazione)
+    // così sparisce da "mai fatto un 121" nella coda.
+    if (data.bniStage && STAGES_AFTER_121.has(data.bniStage) && existing.oneToOneCount === 0) {
+      if (update.oneToOneCount === undefined) update.oneToOneCount = 1;
+      if (update.lastOneToOneAt === undefined) update.lastOneToOneAt = new Date();
     }
 
     // "Chi cerca": ogni volta che cambia, si rigenerano i tag del matcher.
@@ -160,12 +187,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       data.website !== undefined || data.notes !== undefined;
 
     if (classInputsChanged && !existing.roleLocked && !manualOverride) {
-      const cls = classifyMembro({
-        profession: (update.profession ?? existing.profession) as string | null,
-        company: (update.company ?? existing.company) as string | null,
-        website: (update.website ?? existing.website) as string | null,
-        notes: (update.notes ?? existing.notes) as string | null,
-      });
+      const myChapters = await loadMyChapterNames();
+      const cls = classifyMembro(
+        {
+          profession: (update.profession ?? existing.profession) as string | null,
+          company: (update.company ?? existing.company) as string | null,
+          website: (update.website ?? existing.website) as string | null,
+          notes: (update.notes ?? existing.notes) as string | null,
+        },
+        { isMyChapter: isMyChapter(myChapters, (update.chapter ?? existing.chapter) as string | null) }
+      );
       update.buyerPersona = cls.buyerPersona;
       update.memberRole = cls.memberRole;
       update.clientScore = cls.clientScore;

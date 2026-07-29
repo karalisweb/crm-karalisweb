@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Gift, Loader2, Search, Phone, Save, Sparkles, Scale,
-  ArrowDownLeft, ArrowUpRight, Info, GitBranch,
+  ArrowDownLeft, ArrowUpRight, Info, GitBranch, Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BNI_STAGES, getStage } from "@/lib/bni/bni-stages";
@@ -77,6 +77,8 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
   const [bniStage, setBniStage] = useState<string>("DA_AVVICINARE");
   const [nextRecallAt, setNextRecallAt] = useState<string>("");
   const [savingStage, setSavingStage] = useState(false);
+  const [isCustomer, setIsCustomer] = useState(false);
+  const [last121, setLast121] = useState<string>("");
 
   const loadMembro = useCallback(async () => {
     if (!membroId) return;
@@ -90,6 +92,8 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
       setReciprocity(d.reciprocity ?? null);
       setBniStage(d.membro?.bniStage ?? "DA_AVVICINARE");
       setNextRecallAt(d.membro?.nextRecallAt ? String(d.membro.nextRecallAt).slice(0, 10) : "");
+      setIsCustomer(!!d.membro?.isCustomer);
+      setLast121(d.membro?.lastOneToOneAt ? String(d.membro.lastOneToOneAt).slice(0, 10) : "");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
     } finally {
@@ -173,6 +177,40 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
     }
   }
 
+  async function saveLast121(date: string) {
+    if (!membroId) return;
+    try {
+      const r = await fetch(`/api/bni/membri/${membroId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lastOneToOneAt: date || null }),
+      });
+      if (!r.ok) throw new Error("Errore nel salvataggio");
+      toast.success("Data del 121 aggiornata");
+      onSaved?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
+  }
+
+  async function toggleCustomer(next: boolean) {
+    if (!membroId) return;
+    setIsCustomer(next); // ottimistico
+    try {
+      const r = await fetch(`/api/bni/membri/${membroId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isCustomer: next }),
+      });
+      if (!r.ok) throw new Error("Errore nel salvataggio");
+      toast.success(next ? "Segnato come tuo cliente" : "Non più segnato come cliente");
+      onSaved?.();
+    } catch (e) {
+      setIsCustomer(!next); // rollback
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
+  }
+
   async function registerGiven(m: MatchItem) {
     if (!membroId) return;
     try {
@@ -247,6 +285,20 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
               </div>
             )}
 
+            {/* È già mio cliente? (acquisito, diverso da cliente potenziale) */}
+            <label className="flex items-center gap-2 rounded-lg border p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isCustomer}
+                onChange={(e) => toggleCustomer(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <span className="text-sm font-medium flex items-center gap-1.5">
+                <Trophy className="h-4 w-4 text-green-500" />
+                È già un mio cliente
+              </span>
+            </label>
+
             {/* Pipeline di vendita BNI */}
             <div className="space-y-2 rounded-lg border p-3">
               <Label className="flex items-center gap-2">
@@ -284,6 +336,20 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
                     onBlur={() => saveStage("RECALL", nextRecallAt)}
                     className="h-8 text-xs"
                   />
+                </div>
+              )}
+              {["FATTO_121", "OFFERTA", "RECALL", "CONSOLIDATO"].includes(bniStage) && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Label htmlFor="last121" className="text-xs shrink-0">Ultimo 121 il</Label>
+                  <Input
+                    id="last121"
+                    type="date"
+                    value={last121}
+                    onChange={(e) => setLast121(e.target.value)}
+                    onBlur={() => saveLast121(last121)}
+                    className="h-8 text-xs"
+                  />
+                  <span className="text-[11px] text-muted-foreground">se in passato, correggi la data</span>
                 </div>
               )}
             </div>

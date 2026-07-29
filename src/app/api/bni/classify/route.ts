@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/lib/api-auth";
 import { classifyMembro } from "@/lib/bni/member-classifier";
 import { extractSeekingTags, serializeTags } from "@/lib/bni/reciprocity";
+import { loadMyChapterNames, isMyChapter } from "@/lib/bni/my-chapters";
 
 /**
  * RICLASSIFICAZIONE RETROATTIVA dei membri BNI.
@@ -30,20 +31,24 @@ export async function POST(request: NextRequest) {
     },
     select: {
       id: true, profession: true, company: true, website: true,
-      notes: true, seeking: true, seekingTags: true,
+      notes: true, seeking: true, seekingTags: true, chapter: true,
     },
   });
 
+  const myChapters = await loadMyChapterNames();
   let updated = 0;
   const now = new Date();
 
   for (const m of membri) {
-    const cls = classifyMembro({
-      profession: m.profession,
-      company: m.company,
-      website: m.website,
-      notes: m.notes,
-    });
+    const cls = classifyMembro(
+      {
+        profession: m.profession,
+        company: m.company,
+        website: m.website,
+        notes: m.notes,
+      },
+      { isMyChapter: isMyChapter(myChapters, m.chapter) }
+    );
 
     // Rigenero anche i tag del matcher se mancano ma il "chi cerca" c'e'.
     const needTags = !m.seekingTags && !!m.seeking;

@@ -153,12 +153,18 @@ const norm = (s?: string | null) => (s ?? "").toLowerCase().trim();
  *   4) resto → NEUTRO
  * Cliente e partner sono indipendenti; il ruolo prevalente decide l'etichetta.
  */
-export function classifyMembro(input: {
-  profession?: string | null;
-  company?: string | null;
-  website?: string | null;
-  notes?: string | null;
-}): MemberClassification {
+export function classifyMembro(
+  input: {
+    profession?: string | null;
+    company?: string | null;
+    website?: string | null;
+    notes?: string | null;
+  },
+  // Nel MIO capitolo i partner trasversali valgono pieno: non c'è un collega a cui
+  // possano girare i contatti al posto mio — quel collega sono io. Fuori dal mio
+  // capitolo restano moderati (rischio che i referral vadano al loro web/marketing interno).
+  opts?: { isMyChapter?: boolean }
+): MemberClassification {
   const haystack = [input.profession, input.company, input.notes].map(norm).filter(Boolean).join(" · ");
   const reasons: string[] = [];
 
@@ -184,10 +190,14 @@ export function classifyMembro(input: {
   const matched = PARTNER_CATEGORIES.filter((c) => c.keywords.some((k) => haystack.includes(k)));
   let partnerScore = 0;
   if (matched.length > 0) {
-    // Peso = la categoria più forte fra quelle trovate (niente stacking: i partner
-    // restano moderati, come da regola "non più di tanto").
+    // Peso = la categoria più forte fra quelle trovate (niente stacking).
     partnerScore = Math.max(...matched.map((c) => c.weight));
     for (const c of matched) reasons.push(`${c.label}: ${c.why}`);
+    // Nel MIO capitolo il "moderato" non si applica: il collega di riferimento sono io.
+    if (opts?.isMyChapter) {
+      partnerScore = Math.min(100, partnerScore + 30);
+      reasons.push("È nel mio capitolo: qui i suoi referral arrivano a me, non a un collega. Vale pieno.");
+    }
   }
 
   // I partner trasversali toccano tutte le personas per definizione.
