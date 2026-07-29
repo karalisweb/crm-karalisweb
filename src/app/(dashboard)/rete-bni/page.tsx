@@ -89,9 +89,16 @@ interface QueueItem extends Membro {
   roleLabel: string;
   roleIcon: string;
   isMyChapter: boolean;
+  bucket: "RECALL" | "DA_CONOSCERE" | "DA_RICOLTIVARE";
   referralsReceived: number;
   referralsGiven: number;
 }
+
+const QUEUE_BUCKETS: { key: string; label: string; hint: string }[] = [
+  { key: "RECALL", label: "⏰ Recall a scadenza", hint: "Avevi deciso di ricontattarli ora" },
+  { key: "DA_CONOSCERE", label: "👋 Da conoscere", hint: "Mai fatto un 121: il primo incontro da fissare" },
+  { key: "DA_RICOLTIVARE", label: "🔁 Da ricoltivare", hint: "121 fatto ma il rapporto si è raffreddato" },
+];
 
 /** Badge dello stadio pipeline BNI. */
 function StageBadge({ stage }: { stage: string | null }) {
@@ -462,7 +469,8 @@ export default function ReteBniPage() {
         <TabsContent value="coda" className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
-              Chi incontrare adesso. I partner pesano il doppio: portano clienti nel tempo.
+              Chi devi ancora <strong>conoscere</strong> o <strong>risentire</strong>. Chi hai già
+              incontrato di recente e i clienti non sono qui: stanno nella Pipeline.
             </p>
             <Button variant="outline" size="sm" onClick={classifyAll} disabled={classifying}>
               <Sparkles className={`h-4 w-4 ${classifying ? "animate-pulse" : ""}`} />
@@ -479,73 +487,79 @@ export default function ReteBniPage() {
           ) : filteredQueue.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                Nessun membro in coda. Aggiungi membri, poi premi “Riclassifica”
-                per assegnare clienti e partner.
+                Nessuno da conoscere o ricoltivare qui. Chi hai già incontrato è nella Pipeline.
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {filteredQueue.map((m, idx) => (
-                <Card key={m.id} className={idx < 3 ? "border-primary/40" : undefined}>
-                  <CardContent className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-muted-foreground tabular-nums">#{idx + 1}</span>
-                          {m.name}
-                          {m.isCustomer && (
-                            <Badge variant="outline" className="text-[10px] gap-1 text-green-600 border-green-500/40">
-                              <Trophy className="h-3 w-3" />cliente
-                            </Badge>
-                          )}
-                          <RoleBadge role={m.memberRole} />
-                          <StageBadge stage={m.bniStage} />
-                          {m.buyerPersona && (
-                            <span title={m.buyerPersona}>{PERSONA_ICONS[m.buyerPersona]}</span>
-                          )}
-                          {m.isMyChapter && (
-                            <Badge variant="secondary" className="text-[10px]">mio capitolo</Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {[m.profession, m.company].filter(Boolean).join(" · ") || "—"}
-                          {m.chapter ? ` · ${m.chapter}` : ""}
-                        </div>
-                        <p className="text-xs mt-1 text-amber-600 dark:text-amber-400">{m.reason}</p>
-                        {m.seeking && (
-                          <p className="text-[11px] mt-1 text-muted-foreground truncate">
-                            Cerca: {m.seeking}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <div className="flex items-center gap-1">
-                          {m.phone && (
-                            <a
-                              href={`tel:${m.phone}`}
-                              className="p-2 rounded-md hover:bg-muted text-muted-foreground"
-                              aria-label="Chiama"
-                            >
-                              <Phone className="h-4 w-4" />
-                            </a>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setPanelMembro({ id: m.id, name: m.name })}
-                          >
-                            <Gift className="h-4 w-4" />
-                            Memo 121
-                          </Button>
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">
-                          dato {m.referralsGiven} · ricevuto {m.referralsReceived}
-                        </div>
-                      </div>
+            <div className="space-y-5">
+              {QUEUE_BUCKETS.map((bk) => {
+                const items = filteredQueue.filter((m) => m.bucket === bk.key);
+                if (items.length === 0) return null;
+                return (
+                  <div key={bk.key} className="space-y-2">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <h3 className="text-sm font-semibold">{bk.label}</h3>
+                      <Badge variant="secondary">{items.length}</Badge>
+                      <span className="text-xs text-muted-foreground">{bk.hint}</span>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    {items.map((m) => (
+                      <Card key={m.id}>
+                        <CardContent className="p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate flex items-center gap-2 flex-wrap">
+                                {m.name}
+                                <RoleBadge role={m.memberRole} />
+                                <StageBadge stage={m.bniStage} />
+                                {m.buyerPersona && (
+                                  <span title={m.buyerPersona}>{PERSONA_ICONS[m.buyerPersona]}</span>
+                                )}
+                                {m.isMyChapter && (
+                                  <Badge variant="secondary" className="text-[10px]">mio capitolo</Badge>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {[m.profession, m.company].filter(Boolean).join(" · ") || "—"}
+                                {m.chapter ? ` · ${m.chapter}` : ""}
+                              </div>
+                              <p className="text-xs mt-1 text-amber-600 dark:text-amber-400">{m.reason}</p>
+                              {m.seeking && (
+                                <p className="text-[11px] mt-1 text-muted-foreground truncate">
+                                  Cerca: {m.seeking}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <div className="flex items-center gap-1">
+                                {m.phone && (
+                                  <a
+                                    href={`tel:${m.phone}`}
+                                    className="p-2 rounded-md hover:bg-muted text-muted-foreground"
+                                    aria-label="Chiama"
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </a>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setPanelMembro({ id: m.id, name: m.name })}
+                                >
+                                  <Gift className="h-4 w-4" />
+                                  Memo 121
+                                </Button>
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                dato {m.referralsGiven} · ricevuto {m.referralsReceived}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </TabsContent>

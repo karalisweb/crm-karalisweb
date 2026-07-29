@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.39.1] - 2026-07-28
+
+### Changed
+- **Coda 121 ripensata: non è più un calderone.** Metteva sullo stesso piano chi non ti conosce, chi hai già incontrato e i clienti. Ora la coda è solo "chi devi ancora conoscere o risentire", divisa in gruppi chiari:
+  - **⏰ Recall a scadenza** · **👋 Da conoscere** (mai fatto un 121) · **🔁 Da ricoltivare** (121 fatto ma da oltre 4 mesi).
+  - **Esclusi dalla coda**: i clienti acquisiti (`isCustomer`) — con loro non si fa un 121 di conoscenza — e chi ha un 121 **recente** (è relazione in corso, sta nella Pipeline, non fra le cose "da fare").
+
 ## [3.39.0] - 2026-07-28
 
 ### Added
