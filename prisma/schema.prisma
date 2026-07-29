@@ -892,3 +892,38 @@ model Settings {
 
   @@map("settings")
 }
+
+// ==========================================
+// OPPORTUNITA' EXTRA-BNI (clienti caldi che arrivano da fuori)
+// ==========================================
+// Contatti/opportunita' che NON sono lead freddi (no scraping, no audit) e NON sono
+// membri BNI: un collega per una collaborazione, un preventivo da lavorare, un referral
+// che arriva da chiunque. Modello a se' per non inquinare le liste Hot/Warm/Cold.
+// Il campo chiave e' nextFollowupAt: il promemoria che evita di dimenticarli.
+model Opportunita {
+  id           String    @id @default(uuid())
+
+  name         String                                   // Persona o azienda
+  source       String    @default("altro")             // collega | referral | evento | ex_cliente | bni | altro
+  sourceDetail String?   @map("source_detail")          // Chi l'ha passato / dove l'ho conosciuto
+
+  phone        String?
+  email        String?
+  website      String?
+  about        String?   @db.Text                       // Di cosa si tratta
+
+  stage        String    @default("DA_SENTIRE")         // DA_SENTIRE | IN_CORSO | PREVENTIVO | VINTO | PERSO
+  estimatedValue Int?    @map("estimated_value")        // Valore stimato in euro (opzionale)
+
+  nextFollowupAt DateTime? @map("next_followup_at")     // Promemoria: quando risentirlo
+  lastContactedAt DateTime? @map("last_contacted_at")
+
+  notes        String?   @db.Text
+  createdBy    String?   @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([stage], name: "idx_opportunita_stage")
+  @@index([nextFollowupAt], name: "idx_opportunita_followup")
+  @@map("opportunita")
+}

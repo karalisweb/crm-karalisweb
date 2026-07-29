@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.39.0] - 2026-07-28
+
+### Added
+- **Opportunità extra-BNI** (nuova sezione + menu "Opportunità"). Gestisce i clienti caldi che arrivano da **fuori BNI** e non sono lead freddi: un collega per una collaborazione, un preventivo da lavorare, un referral che arriva da chiunque. Modello `Opportunita` a sé (nessun inquinamento delle liste Hot/Warm/Cold, nessun audit/video ereditato).
+  - Campi: nome, **fonte** (collega / referral / evento / ex-cliente / BNI / altro), contatti, di cosa si tratta, **stadio** (Da sentire → In corso → Preventivo → Vinto/Perso), valore stimato, e soprattutto il **promemoria** (`nextFollowupAt`) per non dimenticarle.
+  - Pagina `/opportunita`: aggiunta rapida (solo il nome è obbligatorio), lista ordinata per promemoria (le scadute in cima, evidenziate), filtro per stadio, avanzamento stadio e data promemoria modificabili al volo. KPI: aperte, da risentire ora, preventivi in corso.
+  - Badge "Opportunità" nella sidebar col numero di promemoria a scadenza (via `/api/dashboard/mission`).
+
 ## [3.38.1] - 2026-07-28
 
 ### Added

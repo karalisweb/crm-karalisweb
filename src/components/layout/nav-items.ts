@@ -18,6 +18,7 @@ import {
   Mail,
   Eye,
   ClipboardCheck,
+  Target,
 } from "lucide-react";
 
 // Badge types per colore
@@ -59,6 +60,7 @@ export const navSections: NavSection[] = [
     title: "RETE BNI",
     items: [
       { href: "/rete-bni", label: "Rete BNI", icon: Handshake, badgeKey: "bniDaLavorare", badgeColor: "green" },
+      { href: "/opportunita", label: "Opportunità", icon: Target, badgeKey: "opportunitaFollowup", badgeColor: "red" },
     ],
   },
   {

@@ -53,6 +53,7 @@ export async function GET() {
       countVideoVisti,
       countBniDaLavorare,
       countDaApprovare,
+      countOppFollowup,
       videoDaFare,
       followUpPrioritari,
     ] = await Promise.all([
@@ -97,6 +98,10 @@ export async function GET() {
       db.lead.count({ where: { pipelineStage: "BNI_DA_LAVORARE" } }),
       // Coda approvazione outreach (allineata alla pagina /approvazione).
       db.lead.count({ where: approvalQueueWhere(pausedKeys, approvalThreshold) }),
+      // Opportunità extra-BNI con promemoria arrivato a scadenza.
+      db.opportunita.count({
+        where: { stage: { in: ["DA_SENTIRE", "IN_CORSO", "PREVENTIVO"] }, nextFollowupAt: { not: null, lte: new Date() } },
+      }),
       // Lista "I video di oggi": lead pronti per registrare il video (FARE_VIDEO).
       db.lead.findMany({
         where: { pipelineStage: "FARE_VIDEO" },
@@ -135,6 +140,7 @@ export async function GET() {
         videoVisti: countVideoVisti,
         bniDaLavorare: countBniDaLavorare,
         daApprovare: countDaApprovare,
+        opportunitaFollowup: countOppFollowup,
       },
     });
   } catch (error) {
