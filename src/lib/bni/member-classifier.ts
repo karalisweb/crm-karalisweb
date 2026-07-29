@@ -202,6 +202,10 @@ const COMPETITOR_KEYWORDS = [
   "digital marketing", "social media manager", "social media marketing", "seo",
   "comunicazione digital", "agenzia di comunicazione", "agenzia marketing",
   "advertising", "growth hacking", "e-commerce manager",
+  // Pubblicità classica: nella tassonomia BNI molti "Pubblicità & Marketing" sono
+  // di fatto miei concorrenti. Attenzione: fotografo/tipografo stanno nella stessa
+  // categoria BNI ma NON qui — restano partner (li matcho sulla foglia, non sul prefisso).
+  "agenzia pubblicitaria", "pubblicitaria", "personal branding",
 ];
 
 const norm = (s?: string | null) => (s ?? "").toLowerCase().trim();

@@ -181,8 +181,10 @@ Anna Bianchi - Architetto - Bianchi Progetti
 Luca Verdi - Infissi - Verdi Serramenti srl`}
             />
             <p className="text-xs text-muted-foreground">
-              Funziona anche con tabulazioni, punto e virgola o testo copiato da Excel.
-              Email e telefoni vengono riconosciuti da soli.
+              <strong>Suggerimento:</strong> apri la pagina del capitolo sul sito BNI,
+              seleziona la tabella dei membri e incollala qui direttamente — il CRM
+              riconosce le colonne (nome, società, professione) da solo. Funziona anche
+              con Excel, punto e virgola o trattini. Email e telefoni vengono estratti in automatico.
             </p>
           </div>
 

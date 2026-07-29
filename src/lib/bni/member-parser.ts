@@ -26,18 +26,29 @@ export interface ParsedMember {
 const COLUMN_SEPARATORS = ["\t", "|", ";", " — ", " – ", " - "];
 
 const EMAIL_RE = /[\w.+-]+@[\w-]+\.[\w.]+/;
-// Numeri italiani: fissi e mobili, con o senza prefisso, spazi/punti/trattini.
-const PHONE_RE = /(?:\+39[\s.-]?)?(?:3\d{2}|0\d{1,3})[\s.-]?\d{5,8}/;
+// Numeri italiani: fissi e mobili, con o senza prefisso, e con i gruppi separati da
+// spazi/punti/trattini (es. "+39 392 711 2294", "347 1234567", "070 680721").
+const PHONE_RE = /(?:\+39[\s.-]?)?(?:3\d{2}|0\d{1,3})(?:[\s.-]?\d){5,9}/;
 
 /** Righe che sono intestazioni o rumore, non membri. */
 const NOISE_PATTERNS = [
   /^nome\b/i, /^cognome\b/i, /^membro\b/i, /^socio\b/i,
-  /^professione\b/i, /^categoria\b/i, /^azienda\b/i,
-  /^capitolo\b/i, /^telefono\b/i, /^e-?mail\b/i,
-  // Titoli tipici in cima a un elenco incollato
+  /^professione\b/i, /^categoria\b/i, /^azienda\b/i, /^societ[aà]\b/i,
+  /^capitolo\b/i, /^telefono\b/i, /^e-?mail\b/i, /^invia email\b/i,
+  // Titoli tipici in cima a un elenco incollato / intestazioni tabella BNI
   /^elenco\b/i, /^lista\b/i, /^soci\b/i, /^membri\b/i, /^chapter\b/i,
+  /^nome membro/i, /^member name\b/i, /^mostra \d/i, /^showing \d/i,
   /^-+$/, /^=+$/, /^\d+$/,
 ];
+
+/**
+ * La professione BNI è una tassonomia "Categoria > Sottocategoria > Foglia".
+ * Teniamo solo la foglia: è la più specifica e la più leggibile.
+ */
+function professionLeaf(s: string): string {
+  const parts = s.split(">").map((p) => p.trim()).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : s.trim();
+}
 
 function isNoise(line: string): boolean {
   const t = line.trim();
@@ -102,6 +113,18 @@ function parseLine(line: string, sep: string | null): ParsedMember | null {
 
   const name = clean(parts[0]);
   if (!name) return null;
+
+  // ── Formato TABELLA BNI (copia-incolla dalla pagina) ────────────────────────
+  // La colonna professione contiene la tassonomia con ">". Se una colonna (diversa
+  // dal nome) la contiene, siamo in una tabella BNI: quella è la professione (foglia),
+  // l'altra colonna testuale è la società. Così l'ordine Nome/Società/Professione
+  // della pagina viene interpretato correttamente, non alla rovescia.
+  const profIdx = parts.findIndex((p, i) => i > 0 && p.includes(">"));
+  if (profIdx >= 0) {
+    const profession = clean(professionLeaf(parts[profIdx]));
+    const company = clean(parts.find((p, i) => i > 0 && i !== profIdx) ?? null);
+    return { name, profession, company, phone, email, raw: original, warning: null };
+  }
 
   let warning: string | null = null;
   if (parts.length === 1) {

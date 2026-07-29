@@ -13,6 +13,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.36.0] - 2026-07-28
+
+### Added
+- **Import membri per incolla-da-pagina.** L'importatore ora riconosce la tabella dei membri copiata direttamente dalla pagina di un capitolo sul sito BNI (colonne Nome/Società/Professione/Telefono separate da tab). La professione BNI (`Categoria > Sotto > Foglia`) viene ridotta alla foglia; l'ordine società/professione è dedotto dalla colonna che contiene ">", quindi non serve riordinare nulla. Rende l'import **self-service** senza scraping: il browser dell'utente rende già il JavaScript, basta copiare e incollare.
+  - _Perché non "importa da URL":_ le pagine BNI caricano i membri via JS chiamando un endpoint interno (`/bnicms/v3/...`) che pretende la sessione del browser — replicarlo lato server sarebbe fragile, e un browser headless sul server è sproporzionato per pochi capitoli.
+
+### Changed
+- **Concorrenti: riconosciute le agenzie pubblicitarie.** `COMPETITOR_KEYWORDS` ora include "agenzia pubblicitaria", "pubblicitaria", "personal branding" — nella tassonomia BNI molti "Pubblicità & Marketing" sono di fatto concorrenti di Karalisweb. Fotografo/tipografo restano partner (match sulla foglia, non sul prefisso di categoria). Emerso dal capitolo Posidonia, saturo di marketing.
+- **Parser telefoni**: riconosce i numeri coi gruppi separati da spazi (es. "+39 392 711 2294").
+
 ## [3.35.0] - 2026-07-28
 
 ### Added

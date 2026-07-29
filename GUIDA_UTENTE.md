@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.35.0** | Ultimo aggiornamento: 2026-07-28
+Versione: **3.36.0** | Ultimo aggiornamento: 2026-07-28
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -550,10 +550,13 @@ Tutto il modulo BNI vive dell'anagrafica: senza membri, Coda 121, Capitoli e Mem
 1. Premi **Importa** in alto nella pagina Rete BNI
 2. Scrivi il **capitolo** (vale per tutti quelli che incolli)
 3. **Incolla la lista**, una riga per persona. Funziona con quasi tutti i formati:
+   - **Il modo più veloce:** apri la pagina del capitolo sul sito BNI, seleziona la tabella dei membri e incollala qui. Il CRM riconosce le colonne (nome, società, professione) da solo — non devi sistemare niente.
    - `Mario Rossi - Commercialista - Studio Rossi`
    - copia-incolla diretto da **Excel** (colonne separate da tabulazione)
    - `Nome;Professione;Azienda` oppure `Giuseppe Loi (Notaio)`
    - **telefoni ed email vengono riconosciuti da soli**, ovunque siano nella riga
+
+   > Perché non "incolla il link"? Le pagine BNI mostrano i membri solo dopo che il browser esegue del codice, con un accesso interno: leggerle dal server sarebbe fragile. Copiare la tabella è più semplice e non si rompe mai.
 4. Premi **Anteprima**: vedi cosa ha capito il CRM, con ogni membro **già classificato** partner / cliente / concorrente, e i duplicati segnalati
 5. Se ti convince, premi **Importa N membri**
 
@@ -611,4 +614,4 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 
 ---
 
-*Documento aggiornato il 2026-07-28 | KW Sales CRM v3.35.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-07-28 | KW Sales CRM v3.36.0. La versione di riferimento è la Guida interattiva dentro l'app.*
