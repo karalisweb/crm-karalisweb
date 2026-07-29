@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.39.2] - 2026-07-28
+
+### Added
+- **Data del 121 in programma.** Nelle tappe "121 richiesto" e "Preparo referenze" il Memo 121 mostra il campo **"121 in programma il"** (`BniMembro.next121At`): la data dell'incontro imminente (es. "con Giampaolo giovedì"). Compare anche sulla card della Pipeline. Prima un 121 richiesto/in procinto non aveva una data.
+
 ## [3.39.1] - 2026-07-28
 
 ### Changed

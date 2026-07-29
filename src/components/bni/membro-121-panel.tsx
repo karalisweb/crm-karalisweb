@@ -79,6 +79,7 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
   const [savingStage, setSavingStage] = useState(false);
   const [isCustomer, setIsCustomer] = useState(false);
   const [last121, setLast121] = useState<string>("");
+  const [next121, setNext121] = useState<string>("");
 
   const loadMembro = useCallback(async () => {
     if (!membroId) return;
@@ -94,6 +95,7 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
       setNextRecallAt(d.membro?.nextRecallAt ? String(d.membro.nextRecallAt).slice(0, 10) : "");
       setIsCustomer(!!d.membro?.isCustomer);
       setLast121(d.membro?.lastOneToOneAt ? String(d.membro.lastOneToOneAt).slice(0, 10) : "");
+      setNext121(d.membro?.next121At ? String(d.membro.next121At).slice(0, 10) : "");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
     } finally {
@@ -187,6 +189,22 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
       });
       if (!r.ok) throw new Error("Errore nel salvataggio");
       toast.success("Data del 121 aggiornata");
+      onSaved?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    }
+  }
+
+  async function saveNext121(date: string) {
+    if (!membroId) return;
+    try {
+      const r = await fetch(`/api/bni/membri/${membroId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ next121At: date || null }),
+      });
+      if (!r.ok) throw new Error("Errore nel salvataggio");
+      toast.success("121 in programma salvato");
       onSaved?.();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
@@ -334,6 +352,19 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
                     value={nextRecallAt}
                     onChange={(e) => setNextRecallAt(e.target.value)}
                     onBlur={() => saveStage("RECALL", nextRecallAt)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              )}
+              {["RICHIESTA_121", "PREP_REFERENZE"].includes(bniStage) && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Label htmlFor="next121" className="text-xs shrink-0">121 in programma il</Label>
+                  <Input
+                    id="next121"
+                    type="date"
+                    value={next121}
+                    onChange={(e) => setNext121(e.target.value)}
+                    onBlur={() => saveNext121(next121)}
                     className="h-8 text-xs"
                   />
                 </div>

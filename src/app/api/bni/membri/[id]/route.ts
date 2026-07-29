@@ -38,6 +38,7 @@ const updateSchema = z.object({
     "DA_AVVICINARE", "RICHIESTA_121", "PREP_REFERENZE", "FATTO_121", "OFFERTA", "RECALL", "CONSOLIDATO",
   ]).optional(),
   nextRecallAt: z.string().nullable().optional(),
+  next121At: z.string().nullable().optional(),
   isCustomer: z.boolean().optional(),
   // Data dell'ultimo 121 (per marcare 121 già fatti in passato, senza registrarli uno a uno).
   lastOneToOneAt: z.string().nullable().optional(),
@@ -150,6 +151,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (data.nextRecallAt !== undefined) {
       const d = data.nextRecallAt ? new Date(data.nextRecallAt) : null;
       update.nextRecallAt = d && !isNaN(d.getTime()) ? d : null;
+    }
+    if (data.next121At !== undefined) {
+      const d = data.next121At ? new Date(data.next121At) : null;
+      update.next121At = d && !isNaN(d.getTime()) ? d : null;
     }
 
     // Data 121 esplicita (marca un 121 già fatto in passato).

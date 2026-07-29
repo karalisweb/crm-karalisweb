@@ -79,6 +79,7 @@ interface Membro {
   lastOneToOneAt: string | null;
   bniStage: string | null;
   nextRecallAt: string | null;
+  next121At?: string | null;
   isCustomer?: boolean;
   _count?: { referredLeads: number };
 }
@@ -609,6 +610,11 @@ export default function ReteBniPage() {
                             <div className="text-[11px] text-muted-foreground truncate">
                               {m.profession || m.company || m.chapter || "—"}
                             </div>
+                            {m.next121At && ["RICHIESTA_121", "PREP_REFERENZE"].includes(m.bniStage ?? "") && (
+                              <div className="text-[10px] text-sky-600 mt-0.5">
+                                121 il {new Date(m.next121At).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+                              </div>
+                            )}
                             {recallOverdue && (
                               <div className="text-[10px] text-rose-600 mt-0.5">
                                 recall scaduto

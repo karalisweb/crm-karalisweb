@@ -491,6 +491,7 @@ model BniMembro {
   // 121 fatto -> offerta -> recall -> consolidato. Parallela alla pipeline dei lead freddi.
   bniStage    String   @default("DA_AVVICINARE") @map("bni_stage")
   nextRecallAt DateTime? @map("next_recall_at")  // Quando ricontattarlo (tappa RECALL)
+  next121At   DateTime? @map("next_121_at")      // Data del 121 in programma (tappe RICHIESTA_121 / PREP_REFERENZE)
 
   // Gia' mio cliente (acquisito): diverso da "cliente potenziale" (memberRole).
   // Alcuni colleghi di capitolo sono clienti reali di Karalisweb.
