@@ -80,6 +80,8 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
   const [isCustomer, setIsCustomer] = useState(false);
   const [last121, setLast121] = useState<string>("");
   const [next121, setNext121] = useState<string>("");
+  const [memberRole, setMemberRole] = useState<string | null>(null);
+  const [roleLocked, setRoleLocked] = useState(false);
 
   const loadMembro = useCallback(async () => {
     if (!membroId) return;
@@ -96,6 +98,8 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
       setIsCustomer(!!d.membro?.isCustomer);
       setLast121(d.membro?.lastOneToOneAt ? String(d.membro.lastOneToOneAt).slice(0, 10) : "");
       setNext121(d.membro?.next121At ? String(d.membro.next121At).slice(0, 10) : "");
+      setMemberRole(d.membro?.memberRole ?? null);
+      setRoleLocked(!!d.membro?.roleLocked);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
     } finally {
@@ -176,6 +180,24 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
       toast.error(e instanceof Error ? e.message : "Errore");
     } finally {
       setSavingStage(false);
+    }
+  }
+
+  async function saveRole(role: string) {
+    if (!membroId) return;
+    setMemberRole(role); // ottimistico
+    setRoleLocked(true);
+    try {
+      const r = await fetch(`/api/bni/membri/${membroId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberRole: role }),
+      });
+      if (!r.ok) throw new Error("Errore nel salvataggio del ruolo");
+      toast.success("Ruolo aggiornato (bloccato: la riclassifica non lo cambia più)");
+      onSaved?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
     }
   }
 
@@ -302,6 +324,32 @@ export function Membro121Panel({ membroId, membroName, open, onOpenChange, onSav
                 </Badge>
               </div>
             )}
+
+            {/* Ruolo (override manuale: blocca la riclassifica automatica) */}
+            <div className="space-y-1.5 rounded-lg border p-3">
+              <Label className="text-xs text-muted-foreground">
+                Ruolo {roleLocked ? "· deciso a mano 🔒" : "· automatico"}
+              </Label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { key: "CLIENTE", label: "🎯 Cliente potenziale" },
+                  { key: "PARTNER", label: "🤝 Partner" },
+                  { key: "NEUTRO", label: "• Neutro" },
+                ].map((r) => (
+                  <button
+                    key={r.key}
+                    onClick={() => saveRole(r.key)}
+                    className={`text-xs px-2.5 py-1 rounded-md border transition ${
+                      memberRole === r.key
+                        ? "bg-primary text-primary-foreground border-primary font-semibold"
+                        : "bg-muted/50 hover:bg-muted border-transparent"
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* È già mio cliente? (acquisito, diverso da cliente potenziale) */}
             <label className="flex items-center gap-2 rounded-lg border p-3 cursor-pointer">

@@ -181,7 +181,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // Override manuale: vince sempre sull'automatico e lo blocca per il futuro.
     const manualOverride = data.memberRole !== undefined || data.buyerPersona !== undefined;
-    if (data.memberRole !== undefined) update.memberRole = data.memberRole;
+    if (data.memberRole !== undefined) {
+      update.memberRole = data.memberRole;
+      // Allineo i punteggi al ruolo scelto (così la priorità in coda ha senso),
+      // senza sovrascrivere un punteggio già presente e coerente.
+      if (data.memberRole === "CLIENTE") {
+        update.clientScore = existing.clientScore || 70;
+        update.partnerScore = 0;
+      } else if (data.memberRole === "PARTNER") {
+        update.partnerScore = existing.partnerScore || 55;
+        update.clientScore = 0;
+      } else {
+        update.clientScore = 0;
+        update.partnerScore = 0;
+      }
+    }
     if (data.buyerPersona !== undefined) update.buyerPersona = data.buyerPersona;
     if (manualOverride) update.roleLocked = true;
 
