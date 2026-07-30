@@ -267,6 +267,8 @@ export default function ReteBniPage() {
   const [query, setQuery] = useState("");
   const [classifying, setClassifying] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState<string>(""); // "" = tutti
+  // Capitolo:ruolo espansi nel dossier (per vedere la lista completa di partner/clienti)
+  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
 
   // Pannello memo 121 (matcher di reciprocità)
   const [panelMembro, setPanelMembro] = useState<{ id: string; name: string } | null>(null);
@@ -345,6 +347,16 @@ export default function ReteBniPage() {
         .some((v) => v!.toLowerCase().includes(q))
     );
   }, [membri, query, byChapter]);
+
+  function toggleRole(chapter: string, role: string) {
+    const key = `${chapter}|${role}`;
+    setExpandedRoles((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   const filteredQueue = useMemo(() => byChapter(queue), [queue, byChapter]);
   const pipelineMembri = useMemo(() => byChapter(membri), [membri, byChapter]);
@@ -686,12 +698,18 @@ export default function ReteBniPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                      <Badge variant="outline" className="gap-1 text-emerald-600 border-emerald-500/40">
+                      <button
+                        onClick={() => toggleRole(c.name, "PARTNER")}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-emerald-600 border-emerald-500/40 transition hover:bg-emerald-500/10 ${expandedRoles.has(`${c.name}|PARTNER`) ? "bg-emerald-500/10" : ""}`}
+                      >
                         <Key className="h-3 w-3" /> {c.partnersCount} partner
-                      </Badge>
-                      <Badge variant="outline" className="gap-1 text-blue-600 border-blue-500/40">
+                      </button>
+                      <button
+                        onClick={() => toggleRole(c.name, "CLIENTE")}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-blue-600 border-blue-500/40 transition hover:bg-blue-500/10 ${expandedRoles.has(`${c.name}|CLIENTE`) ? "bg-blue-500/10" : ""}`}
+                      >
                         <Target className="h-3 w-3" /> {c.clientsCount} clienti
-                      </Badge>
+                      </button>
                       <Badge variant="outline" className="gap-1">
                         <Users className="h-3 w-3" /> {c.membersCount} membri
                       </Badge>
@@ -706,6 +724,33 @@ export default function ReteBniPage() {
                         </Badge>
                       ))}
                     </div>
+
+                    {/* Liste espanse: tutti i partner / tutti i clienti del capitolo */}
+                    {(["PARTNER", "CLIENTE"] as const).map((role) =>
+                      expandedRoles.has(`${c.name}|${role}`) ? (
+                        <div key={role} className={`rounded-lg border p-2 ${role === "PARTNER" ? "border-emerald-500/30" : "border-blue-500/30"}`}>
+                          <div className="text-[11px] font-medium mb-1">
+                            {role === "PARTNER" ? "🤝 Tutti i partner" : "🎯 Tutti i clienti potenziali"}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                            {membri
+                              .filter((m) => m.chapter === c.name && m.memberRole === role)
+                              .sort((a, b) => (role === "PARTNER" ? b.partnerScore - a.partnerScore : b.clientScore - a.clientScore))
+                              .map((m) => (
+                                <button
+                                  key={m.id}
+                                  onClick={() => setPanelMembro({ id: m.id, name: m.name })}
+                                  className="text-left text-xs flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted"
+                                >
+                                  <span className="font-medium truncate">{m.name}</span>
+                                  {m.isCustomer && <Trophy className="h-3 w-3 text-green-600 shrink-0" />}
+                                  <span className="text-muted-foreground truncate">{m.profession || m.company || ""}</span>
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                      ) : null
+                    )}
 
                     {/* Come giocartela qui: il pitch dedicato al capitolo */}
                     <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1.5">
