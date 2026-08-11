@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.29.0** | Ultimo aggiornamento: 2026-07-03
+Versione: **3.40.0** | Ultimo aggiornamento: 2026-08-11
 
 ---
 
@@ -1178,3 +1178,83 @@ npx prisma generate
 ---
 
 *Documentazione aggiornata il 2026-06-16 | KW Sales CRM v3.17.0*
+
+---
+
+## Registro unico dei soggetti (v3.40.0)
+
+Prima tappa della Fase 1 di `PIANO-ORCHESTRAAI-v1.md`. **Additiva**: nessun modello
+preesistente è stato toccato.
+
+### Modello dati
+
+| Tabella | Ruolo |
+|---|---|
+| `subjects` | Soggetto economico canonico. Campi minimi: `display_name`, `google_place_id` (unique), `primary_domain`, `vat_number` (sempre `NULL`, vedi OPEN-02), `country_code`. |
+| `subject_identities` | `(source, external_id)` unique. `source` ∈ `crm_lead`, `crm_opportunita`, `crm_bnimembro`, `gads_account`, `seoi_client`, `hub_project`. `payload` jsonb con la fotografia dei campi di origine. |
+| `reconciliation_candidates` | Coda manuale. `(left_subject_id, right_subject_id)` unique, `reason`, `score`, `evidence`, `status` ∈ `PENDING`/`MERGED`/`REJECTED`. |
+
+Migrazione: `prisma/migrations/20260811090000_add_subject_registry/`
+— `migration.sql` + **`rollback.sql` scritto prima dell'esecuzione** (regola 0.8).
+Puramente additiva: 3 `CREATE TABLE`, 2 `CREATE TYPE`, indici, chiavi esterne.
+Zero `DROP`, zero `ALTER` distruttivi.
+
+### Codice
+
+```
+scripts/subject-registry/
+├─ lib/normalize.mjs     normalizzazione domini/nomi, similarità, frequenze
+├─ dataset.dev.mjs       dataset finto con attese dichiarate
+├─ seed-dev.mjs          popola l'ambiente di sviluppo (rifiuta URL non-localhost)
+├─ import.mjs            lettura origini → deduplicazione → scrittura registro
+└─ report.mjs            genera docs/inventory/sovrapposizioni.md
+```
+
+Pagina: `src/app/(dashboard)/registro-soggetti/page.tsx` (server component, sola lettura).
+
+### Regole di deduplicazione
+
+Uniscono, tramite insiemi disgiunti (union-find):
+
+1. `normalizePlaceId` uguale → stesso soggetto.
+2. `normalizeDomain` uguale **e** non in `HOSTING_SUFFIXES` → stesso soggetto.
+
+`normalizeDomain` rimuove schema, credenziali, porta, percorso, query, frammento,
+`www.` iniziale e punto finale; scarta IP, host senza punto e TLD di un carattere.
+
+**Non uniscono mai** (finiscono in coda con un punteggio):
+
+| `reason` | Punteggio | Quando |
+|---|---:|---|
+| `shared_email_domain` | 0,75 | dominio di posta aziendale = dominio di un altro soggetto (i provider pubblici sono in blocklist) |
+| `domain_host_mismatch` | 0,65 | un dominio è sottodominio dell'altro |
+| `same_normalized_name` | 0,60 | `normalizeName` identica |
+| `similar_name` | ≤0,55 | Dice sui bigrammi ≥ 0,80 |
+| `shared_distinctive_tokens` | 0,45 | ≥2 token condivisi con copertura ≥50 % del nome più corto; il criterio di rarità su token singolo si attiva solo con corpus ≥ `MIN_CORPUS_FOR_SINGLE_TOKEN` (200) |
+| `shared_hosting_domain` | 0,30 | stesso dominio di hosting condiviso |
+
+### Sola lettura sulle origini
+
+- SQLite aperto con `new DatabaseSync(file, { readOnly: true })`.
+- PostgreSQL: solo `SELECT`.
+- `seed-dev.mjs` termina con errore se `DEV_*_URL` non punta a `localhost`/`127.0.0.1`.
+- Il registro è ricostruibile per intero: `import.mjs` fa `TRUNCATE` **solo** delle
+  tre tabelle del registro, mai delle anagrafiche.
+
+### Limite noto
+
+`google_ads_accounts` non espone né `place_id` né dominio (`docs/inventory/gads.md`,
+S-05): gli account GADS non sono deduplicabili automaticamente e possono solo essere
+proposti per somiglianza di ragione sociale.
+
+### Variabili d'ambiente degli script
+
+| Variabile | Uso |
+|---|---|
+| `SRC_CRM_URL` | copia del DB CRM (lettura) |
+| `SRC_GADS_URL` | copia del DB GADS (lettura, opzionale) |
+| `SRC_SEOI_DB` | copia del file SQLite SEOI (opzionale) |
+| `SRC_HUB_DB` | copia del file SQLite HUB (opzionale) |
+| `TARGET_URL` | database che ospita il registro |
+| `REPORT_OUT`, `REPORT_STAMP`, `DATASET_LABEL` | generazione del rapporto |
+

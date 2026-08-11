@@ -928,3 +928,118 @@ model Opportunita {
   @@index([nextFollowupAt], name: "idx_opportunita_followup")
   @@map("opportunita")
 }
+
+// ==========================================
+// REGISTRO UNICO DEI SOGGETTI — OrchestraAI Fase 1
+// ==========================================
+// Entità nuove, distinte dalla catena di tenancy (piano, sezione 3.2).
+// Nessun modello preesistente è stato modificato.
+//
+// REGISTRO IN SOLA AGGIUNTA: in questa fase nessuna applicazione scrive su
+// Subject. È alimentato esclusivamente dall'importazione in sola lettura
+// (scripts/subject-registry/). Le anagrafiche di origine non vengono toccate.
+//
+// I campi di Subject sono volutamente MINIMI: la loro composizione definitiva
+// è una decisione della sezione 8 del piano e non è stata presa.
+// Vedi docs/decisions/OPEN-01.md.
+
+model Subject {
+  id            String   @id @default(uuid())
+
+  // Etichetta leggibile. Non è una chiave: la ragione sociale non deduplica
+  // (piano, sezione 3.2: "Nessuna deduplicazione automatica su ragione sociale").
+  displayName   String   @map("display_name")
+
+  // Chiave di deduplicazione 1 — priorità massima.
+  googlePlaceId String?  @unique @map("google_place_id")
+
+  // Chiave di deduplicazione 2 — dominio normalizzato (minuscolo, senza
+  // schema, senza "www.", senza porta, senza percorso, senza punto finale).
+  primaryDomain String?  @map("primary_domain")
+
+  // Chiave di deduplicazione 3 — oggi SEMPRE null: nessuna delle sei
+  // anagrafiche raccoglie la partita IVA. Colonna predisposta, non usata.
+  // Vedi docs/decisions/OPEN-02.md.
+  vatNumber     String?  @map("vat_number")
+
+  countryCode   String?  @map("country_code")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  identities    SubjectIdentity[]
+  leftCandidates  ReconciliationCandidate[] @relation("ReconLeft")
+  rightCandidates ReconciliationCandidate[] @relation("ReconRight")
+
+  @@index([primaryDomain], name: "idx_subjects_domain")
+  @@index([displayName], name: "idx_subjects_name")
+  @@map("subjects")
+}
+
+model SubjectIdentity {
+  id         String        @id @default(uuid())
+
+  subjectId  String        @map("subject_id")
+  subject    Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  source     SubjectSource
+  externalId String        @map("external_id")
+
+  // Fotografia dei campi di origine utili alla riconciliazione.
+  // Non è una copia dell'anagrafica: non va usata come sorgente di verità.
+  payload    Json?
+
+  // Quando questa identità è stata vista l'ultima volta dall'importazione.
+  seenAt     DateTime      @default(now()) @map("seen_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  @@unique([source, externalId], name: "uq_identity_source_external")
+  @@index([subjectId], name: "idx_identity_subject")
+  @@index([source], name: "idx_identity_source")
+  @@map("subject_identities")
+}
+
+// Coda di riconciliazione manuale (piano, sezione 3.2).
+// Ci finisce ogni corrispondenza NON certa. Il codice non la risolve.
+model ReconciliationCandidate {
+  id            String   @id @default(uuid())
+
+  leftSubjectId  String  @map("left_subject_id")
+  leftSubject    Subject @relation("ReconLeft", fields: [leftSubjectId], references: [id], onDelete: Cascade)
+  rightSubjectId String  @map("right_subject_id")
+  rightSubject   Subject @relation("ReconRight", fields: [rightSubjectId], references: [id], onDelete: Cascade)
+
+  // Perché è dubbio: "same_normalized_name", "shared_email_domain",
+  // "domain_host_mismatch", "similar_name" ...
+  reason        String
+  score         Float?
+  evidence      Json?
+
+  status        ReconciliationStatus @default(PENDING)
+  decidedAt     DateTime? @map("decided_at")
+  decidedBy     String?   @map("decided_by")
+  notes         String?
+
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([leftSubjectId, rightSubjectId], name: "uq_recon_pair")
+  @@index([status], name: "idx_recon_status")
+  @@map("reconciliation_candidates")
+}
+
+// I valori sono gli identificatori delle anagrafiche di origine, non termini
+// di dominio: restano nella forma in cui le tabelle si chiamano davvero.
+enum SubjectSource {
+  crm_lead
+  crm_opportunita
+  crm_bnimembro
+  gads_account
+  seoi_client
+  hub_project
+}
+
+enum ReconciliationStatus {
+  PENDING
+  MERGED
+  REJECTED
+}

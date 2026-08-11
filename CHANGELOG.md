@@ -13,6 +13,24 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.40.0] - 2026-08-11
+
+### Added
+- **Registro unico dei soggetti (OrchestraAI, Fase 1).** Il CRM ospita ora l'anagrafica canonica della piattaforma: una stessa azienda che compare come lead nel CRM, cliente in SEOI, progetto in HUB e account in GADS diventa **un solo soggetto**, con tante identità quante sono le applicazioni in cui appare.
+  - Tre tabelle nuove, tutte additive: `subjects`, `subject_identities`, `reconciliation_candidates`. **Nessun modello esistente è stato modificato.**
+  - Nuova pagina **Registro soggetti** (menu "Piattaforma"): quante identità, quanti soggetti distinti, quali aziende compaiono in più applicazioni, e la coda dei casi dubbi.
+  - Importazione in **sola lettura**: legge le sei anagrafiche da copie dei database e non scrive mai sulle origini. Il registro è ricostruibile da zero in qualunque momento.
+  - Deduplicazione conservativa: uniscono **solo** lo stesso `google_place_id` e lo stesso dominio normalizzato (schema, `www.`, porta, percorso e maiuscole ignorati; i domini di hosting condiviso non uniscono mai). Tutto il resto finisce in una coda di riconciliazione manuale e **non viene unito**.
+  - Comandi: `npm run registry:seed` (dati finti di sviluppo), `npm run registry:import`, `npm run registry:report`.
+  - Rapporto delle sovrapposizioni in `docs/inventory/sovrapposizioni.md`.
+
+### Changed
+- La migrazione `20260811090000_add_subject_registry` è **versionata e con rollback scritto prima dell'esecuzione** (`rollback.sql`), come impone la regola 0.8 del piano. È puramente additiva: nessun `DROP`, nessuna colonna rimossa, nessuna perdita di dati possibile.
+
+### Note
+- Il registro è in **sola aggiunta**: in questa fase nessuna applicazione ci scrive sopra e nessuna ci legge. È un osservatorio, non ancora una sorgente di verità.
+- Tre decisioni restano aperte e sono a registro in `docs/decisions/`: composizione dei campi di `Subject` (OPEN-01), assenza della partita IVA come terza chiave (OPEN-02), cosa fare dei doppioni una volta riconosciuti (OPEN-03).
+
 ## [3.39.2] - 2026-07-28
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "sales-crm-karalisweb",
-  "version": "3.39.4",
+  "version": "3.40.0",
   "private": true,
   "engines": {
     "node": ">=20.0.0"
@@ -15,7 +15,10 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "registry:seed": "node scripts/subject-registry/seed-dev.mjs",
+    "registry:import": "node scripts/subject-registry/import.mjs",
+    "registry:report": "node scripts/subject-registry/report.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

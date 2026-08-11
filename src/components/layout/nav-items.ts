@@ -19,6 +19,7 @@ import {
   Eye,
   ClipboardCheck,
   Target,
+  Database,
 } from "lucide-react";
 
 // Badge types per colore
@@ -54,6 +55,12 @@ export const navSections: NavSection[] = [
       { href: "/hot-leads", label: "Hot Leads", icon: Flame, badgeKey: "hotLeads", badgeColor: "red" },
       { href: "/warm-leads", label: "Warm Leads", icon: Sun, badgeKey: "warmLeads", badgeColor: "yellow" },
       { href: "/cold-leads", label: "Cold Leads", icon: Snowflake, badgeKey: "coldLeads", badgeColor: "blue" },
+    ],
+  },
+  {
+    title: "PIATTAFORMA",
+    items: [
+      { href: "/registro-soggetti", label: "Registro soggetti", icon: Database },
     ],
   },
   {

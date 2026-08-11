@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.38.0** | Ultimo aggiornamento: 2026-07-28
+Versione: **3.40.0** | Ultimo aggiornamento: 2026-08-11
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -614,3 +614,62 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 ---
 
 *Documento aggiornato il 2026-07-28 | KW Sales CRM v3.38.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+
+---
+
+## Registro soggetti
+
+**Dove:** menu a sinistra, sezione *Piattaforma* → **Registro soggetti**.
+
+### A cosa serve
+
+La stessa azienda oggi compare in più programmi con nomi diversi: è un *lead* qui,
+un *cliente* nel programma che segue il posizionamento, un *progetto* in quello dei
+contenuti, un *account* in quello delle pubblicità. Nessuno dei quattro sa degli
+altri.
+
+Il registro mette ordine: raccoglie tutte le apparizioni della stessa azienda e le
+mostra come **una cosa sola**.
+
+### Cosa vedi
+
+In alto quattro numeri:
+
+- **Identità importate** — quante schede aziendali esistono in tutto, sommando i
+  quattro programmi.
+- **Soggetti distinti** — quante aziende *diverse* sono in realtà.
+- **Sovrapposizioni certe** — quante aziende comparivano in più di un posto.
+- **In attesa di verifica** — quanti casi il programma non ha saputo decidere.
+
+Sotto, l'elenco delle aziende presenti in più programmi, con l'indicazione di dove
+compaiono. E in fondo, i casi dubbi.
+
+### Perché ci sono casi "in attesa di verifica"
+
+Perché unire due aziende diverse è un errore che poi **non si vede più**: da quel
+momento sembrano una cosa sola e nessuno se ne accorge.
+
+Il programma quindi unisce solo quando è sicuro, e cioè in due casi:
+
+1. le due schede puntano alla **stessa scheda Google Maps**;
+2. le due schede hanno lo **stesso sito internet** — e qui è tollerante sulla forma:
+   *www.esempio.it*, *https://esempio.it/* e *ESEMPIO.IT* sono lo stesso sito.
+
+In tutti gli altri casi — nomi che si somigliano, indirizzi di posta simili, un
+indirizzo che è una sezione dell'altro — il programma **non decide**: te lo mette
+in elenco e aspetta.
+
+### Cosa devi farci
+
+Per ora niente: **guardarlo**. Il registro non modifica nulla in nessun programma,
+non cancella niente e non manda niente a nessuno. Serve a rispondere a una domanda
+che finora non aveva risposta: *quante aziende stiamo davvero seguendo, e quante
+volte stiamo lavorando due volte sulla stessa?*
+
+### Una cosa che non fa ancora
+
+Il programma delle pubblicità non è collegabile automaticamente: le sue schede non
+contengono né la scheda Google Maps né il sito internet dell'azienda, quindi non
+c'è modo di riconoscerle da sole. Compaiono nel registro, ma restano isolate finché
+qualcuno non le abbina a mano.
+
