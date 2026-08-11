@@ -178,9 +178,16 @@ export function sharedDistinctiveTokens(a, b, df = null, corpusSize = 0) {
   // Una coda da 7 805 voci non si rivede a mano: è rumore, non lavoro.
   // Quando la frequenza è utilizzabile la rarità è quindi OBBLIGATORIA,
   // non alternativa al numero di token condivisi.
+  // Verificato sui dati reali: il solo token raro non basta. "Casa Angela" e
+  // "Luz Angela Rojas" condividono un nome proprio raro e non sono la stessa
+  // cosa; su un insieme in cui convivono insegne e nomi di persona questo
+  // produceva 32 proposte su 35, quasi tutte sbagliate.
+  // Servono quindi DUE token condivisi, di cui almeno uno raro.
   const dfUsable = df && corpusSize >= MIN_CORPUS_FOR_SINGLE_TOKEN;
   const isDistinctive = (t) => (df ? (df.get(t) || 0) <= 2 : false);
-  const strong = dfUsable ? shared.some(isDistinctive) : shared.length >= 2;
+  const strong = dfUsable
+    ? shared.length >= 2 && shared.some(isDistinctive)
+    : shared.length >= 2;
   if (!strong) return null;
 
   return {
