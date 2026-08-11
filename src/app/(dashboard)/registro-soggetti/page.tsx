@@ -1,4 +1,6 @@
-import prisma from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { resolveAccessContext } from "@/lib/core/access-context";
+import { tenantScoped } from "@/lib/core/tenant-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Link2, HelpCircle, Database } from "lucide-react";
@@ -46,12 +48,29 @@ function Stat({ label, value, hint }: { label: string; value: number | string; h
 }
 
 export default async function RegistroSoggettiPage() {
+  // Il contesto si risolve a inizio richiesta e il client che ne esce e gia
+  // filtrato: da qui in poi non e possibile leggere fuori dal proprio ambito
+  // nemmeno dimenticandosene (piano, sezione 2).
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) {
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        Sessione non valida.
+      </div>
+    );
+  }
+  const ctx = await resolveAccessContext(userId);
+  const prisma = tenantScoped(ctx);
+
   const [subjects, identityCount, queue] = await Promise.all([
     prisma.subject.findMany({
       include: { identities: { orderBy: { source: "asc" } } },
       orderBy: [{ displayName: "asc" }],
       take: 500,
     }),
+    // Le identita non hanno company_id: la guardia le filtra risalendo al
+    // soggetto (SCOPED_BY_RELATION in tenant-guard.ts).
     prisma.subjectIdentity.count(),
     prisma.reconciliationCandidate.findMany({
       where: { status: "PENDING" },

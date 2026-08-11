@@ -13,6 +13,30 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.41.0] - 2026-08-11
+
+### Added
+- **Struttura commerciale e isolamento fra clienti (OrchestraAI, Fase 1).** Il CRM ha ora la catena **Organizzazione → Azienda → Progetto**, la licenza e i sette ruoli previsti dal piano. È la parte che rende la piattaforma vendibile a terzi.
+  - Cinque tabelle nuove, tutte additive: `organizations`, `companies`, `projects_core`, `licences`, `memberships`. Più una colonna `company_id` su `subjects`, **nullable**: nessun dato preesistente è stato toccato.
+  - **Sette ruoli** (`PLATFORM_ADMIN`, `PLATFORM_OPERATOR`, `ORG_OWNER`, `COMPANY_OWNER`, `COMPANY_MEMBER`, `PROJECT_MEMBER`, `GUEST_LINK`). Il permesso è sempre `(ruolo, scope)`, mai ruolo da solo.
+  - **Licenza per Azienda** con i limiti come colonne, non come costanti nel codice: due Progetti e tre utenti inclusi, entrambi estendibili.
+  - **Conoscenza condivisa a livello Progetto** (proposta di valore, tono di voce, contatto di riferimento): si scrive una volta sola, nessun modulo ne possiede copia.
+  - **Isolamento imposto dal database, non dalla disciplina.** `tenantScoped()` restituisce un client Prisma già filtrato: leggere fuori dal proprio ambito non è possibile nemmeno dimenticandosene. Le scritture verso un'azienda fuori ambito falliscono.
+  - I dati commerciali e di licenza sono **invisibili** a `PROJECT_MEMBER` e `GUEST_LINK`.
+  - Comandi: `npm run tenancy:bootstrap` (avvio idempotente), `npm run test:isolation`.
+
+### Testing
+- **Dieci test di isolamento**, che sono il criterio di completamento della Fase 1 scritto nel piano: *«un `PROJECT_MEMBER` non riesce, in nessun modo, a leggere dati di un'altra Company»*. Coprono lettura diretta, conteggio, creazione, modifica e cancellazione oltre confine.
+- `vitest.config.ts` esclude `.claude/worktrees/`: le copie di lavoro contenevano un duplicato di ogni test e ogni esecuzione contava il doppio (302 test invece di 156).
+
+### Changed
+- La pagina **Registro soggetti** usa il client filtrato: quello che vedi dipende da chi sei.
+- La migrazione `20260811120000_add_tenancy` è versionata e con `rollback.sql` scritto prima dell'esecuzione (regola 0.8). Nessun `DROP`, nessuna colonna rimossa, nessun `SET NOT NULL` su tabella popolata.
+
+### Note
+- `subjects.company_id` resta **nullable** per scelta: renderla obbligatoria su una tabella già popolata è un secondo passo, non questo.
+- Un `PROJECT_MEMBER` oggi non vede alcun soggetto, nemmeno della propria azienda: i soggetti stanno a livello di Azienda e risalire dal Progetto sarebbe una scalata di privilegi. Legarli al Progetto è lavoro successivo.
+
 ## [3.40.0] - 2026-08-11
 
 ### Added

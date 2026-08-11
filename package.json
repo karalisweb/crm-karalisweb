@@ -1,6 +1,6 @@
 {
   "name": "sales-crm-karalisweb",
-  "version": "3.40.0",
+  "version": "3.41.0",
   "private": true,
   "engines": {
     "node": ">=20.0.0"
@@ -18,7 +18,9 @@
     "test:watch": "vitest",
     "registry:seed": "node scripts/subject-registry/seed-dev.mjs",
     "registry:import": "node scripts/subject-registry/import.mjs",
-    "registry:report": "node scripts/subject-registry/report.mjs"
+    "registry:report": "node scripts/subject-registry/report.mjs",
+    "tenancy:bootstrap": "node scripts/tenancy/bootstrap.mjs",
+    "test:isolation": "vitest run src/lib/core/__tests__/isolation.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

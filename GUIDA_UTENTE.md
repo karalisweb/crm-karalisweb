@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.40.0** | Ultimo aggiornamento: 2026-08-11
+Versione: **3.41.0** | Ultimo aggiornamento: 2026-08-11
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -672,4 +672,55 @@ Il programma delle pubblicità non è collegabile automaticamente: le sue schede
 contengono né la scheda Google Maps né il sito internet dell'azienda, quindi non
 c'è modo di riconoscerle da sole. Compaiono nel registro, ma restano isolate finché
 qualcuno non le abbina a mano.
+
+---
+
+## Chi vede che cosa
+
+Da questa versione il programma sa **chi sei** e ti mostra solo quello che ti
+riguarda. Prima c'erano due soli livelli: amministratore, oppure utente. Adesso
+ce ne sono sette, e ognuno vede una fetta diversa.
+
+### Le sette figure
+
+| Chi è | Che cosa vede |
+|---|---|
+| **Titolare della piattaforma** | Tutto. Sei tu. |
+| **Collaboratore interno** | Le aziende che gli assegni. Non vede fatturazione né licenze. |
+| **Titolare di più aziende** | Tutte le proprie aziende. È l'unico caso in cui il livello più alto è visibile. |
+| **Cliente titolare** | La propria azienda: i suoi progetti e i suoi utenti. |
+| **Utente del cliente** | Tutti i progetti della propria azienda. |
+| **Utente di un progetto** | Un solo progetto. Nessun dato commerciale, nessuna licenza. |
+| **Ospite con collegamento** | Una cosa sola, senza account, tramite un collegamento personale. |
+
+### La cosa importante da capire
+
+Non è una tendina che nasconde delle voci: è il **magazzino stesso** che
+consegna solo la roba giusta. Se un utente di un'altra azienda prova a chiedere
+un dato che non gli spetta — anche indovinando l'indirizzo esatto, anche
+scrivendolo a mano — il programma non glielo restituisce, perché non arriva
+nemmeno a cercarlo.
+
+Questa è la differenza fra uno strumento interno e qualcosa che si può vendere
+a terzi: quando due clienti diversi usano lo stesso programma, i dati dell'uno
+devono essere **irraggiungibili** dall'altro, non solo nascosti.
+
+### Come è organizzato
+
+Tre livelli, dal più grande al più piccolo:
+
+- **Organizzazione** — chi possiede la licenza. Se ne hai una sola non la vedi
+  nemmeno: resta sullo sfondo.
+- **Azienda** — il cliente. È qui che si conta la licenza.
+- **Progetto** — dove si lavora davvero. Ogni azienda ne ha almeno uno.
+
+Sul Progetto si scrivono **una volta sola** la proposta di valore, il tono di
+voce e il contatto di riferimento. Da lì li leggono tutti gli strumenti attivi
+su quel progetto, invece di riscriverli in ognuno.
+
+### La licenza
+
+Ogni azienda ha la sua: due progetti e tre utenti inclusi, entrambi allargabili.
+I limiti sono scritti sulla licenza di quella specifica azienda, non fissi nel
+programma: si cambiano per un singolo cliente senza toccare gli altri.
 

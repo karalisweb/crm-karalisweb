@@ -393,6 +393,7 @@ model User {
   // Relazioni
   otpCodes      OtpCode[]
   passwordResets PasswordReset[]
+  memberships   Membership[]
 
   @@map("users")
 }
@@ -967,10 +968,17 @@ model Subject {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
+  // Azienda che osserva questo soggetto. Nullable finche la migrazione dei
+  // dati non e completata: renderla obbligatoria e un secondo passo, non
+  // questo, perche una colonna NOT NULL su tabella popolata perde dati.
+  companyId     String?  @map("company_id")
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
   identities    SubjectIdentity[]
   leftCandidates  ReconciliationCandidate[] @relation("ReconLeft")
   rightCandidates ReconciliationCandidate[] @relation("ReconRight")
 
+  @@index([companyId], name: "idx_subjects_company")
   @@index([primaryDomain], name: "idx_subjects_domain")
   @@index([displayName], name: "idx_subjects_name")
   @@map("subjects")
@@ -1042,4 +1050,135 @@ enum ReconciliationStatus {
   PENDING
   MERGED
   REJECTED
+}
+
+// ==========================================
+// TENANCY — OrchestraAI Fase 1
+// ==========================================
+// Catena della sezione 3.1 del piano:
+//   Organization → Company → Project
+// Additiva: nessun modello preesistente è stato modificato.
+// Il livello Organization è invisibile in interfaccia quando ne esiste una sola
+// (piano, sezione 3.1).
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  companies Company[]
+
+  @@map("organizations")
+}
+
+model Company {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  name      String
+  slug      String       @unique
+  status    TenantStatus @default(ACTIVE)
+  vatNumber String?      @map("vat_number")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  projects Project[]
+  licence  Licence?
+  subjects Subject[]
+
+  @@index([organizationId], name: "idx_companies_org")
+  @@map("companies")
+}
+
+model Project {
+  id        String  @id @default(uuid())
+  companyId String  @map("company_id")
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  name   String
+  slug   String
+  status TenantStatus @default(ACTIVE)
+
+  // Conoscenza condivisa (piano, sezione 3.4): si scrive una volta sola e
+  // ogni modulo attivo sul Progetto la legge. Nessun modulo ne possiede copia.
+  valueProposition String? @map("value_proposition") @db.Text
+  toneOfVoice      String? @map("tone_of_voice") @db.Text
+  referenceContact String? @map("reference_contact")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([companyId, slug], name: "uq_project_company_slug")
+  @@index([companyId], name: "idx_projects_company")
+  @@map("projects_core")
+}
+
+// Licenza per Company. Inclusi due Project e tre utenti, entrambi estendibili
+// (piano, sezione 3.1). I limiti sono colonne, non costanti nel codice.
+model Licence {
+  id        String  @id @default(uuid())
+  companyId String  @unique @map("company_id")
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  plan        String       @default("standard")
+  status      TenantStatus @default(ACTIVE)
+  maxProjects Int          @default(2) @map("max_projects")
+  maxUsers    Int          @default(3) @map("max_users")
+
+  startsAt DateTime  @default(now()) @map("starts_at")
+  endsAt   DateTime? @map("ends_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("licences")
+}
+
+// Il permesso è sempre (ruolo, scope), mai ruolo da solo (piano, sezione 2).
+model Membership {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role      MembershipRole
+  scopeType ScopeType      @map("scope_type")
+  // null solo per lo scope GLOBAL: un PLATFORM_ADMIN non ha un ambito.
+  scopeId   String?        @map("scope_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by")
+
+  @@unique([userId, role, scopeType, scopeId], name: "uq_membership")
+  @@index([userId], name: "idx_membership_user")
+  @@index([scopeType, scopeId], name: "idx_membership_scope")
+  @@map("memberships")
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+// Le sette figure della sezione 2 del piano.
+enum MembershipRole {
+  PLATFORM_ADMIN     // Alessio. Vede e amministra tutto.
+  PLATFORM_OPERATOR  // Team Karalisweb. Nessun accesso a fatturazione.
+  ORG_OWNER          // Titolare di più Aziende.
+  COMPANY_OWNER      // Cliente licenziatario.
+  COMPANY_MEMBER     // Utente del cliente, tutti i Progetti dell'Azienda.
+  PROJECT_MEMBER     // Un solo Progetto. Nessun dato commerciale.
+  GUEST_LINK         // Nessun account: magic link firmato e scadenzato.
+}
+
+enum ScopeType {
+  GLOBAL
+  ORGANIZATION
+  COMPANY
+  PROJECT
+  RESOURCE
 }

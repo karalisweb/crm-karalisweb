@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.40.0** | Ultimo aggiornamento: 2026-08-11
+Versione: **3.41.0** | Ultimo aggiornamento: 2026-08-11
 
 ---
 
@@ -1257,4 +1257,84 @@ proposti per somiglianza di ragione sociale.
 | `SRC_HUB_DB` | copia del file SQLite HUB (opzionale) |
 | `TARGET_URL` | database che ospita il registro |
 | `REPORT_OUT`, `REPORT_STAMP`, `DATASET_LABEL` | generazione del rapporto |
+
+---
+
+## Tenancy e isolamento (v3.41.0)
+
+Seconda tappa della Fase 1 di `PIANO-ORCHESTRAAI-v1.md`. **Additiva.**
+
+### Modello
+
+| Tabella | Note |
+|---|---|
+| `organizations` | `slug` unique. Invisibile in UI quando ne esiste una sola. |
+| `companies` | FK → `organizations` (`onDelete: Restrict`), `slug` unique, `status`, `vat_number`. |
+| `projects_core` | FK → `companies`, unique `(company_id, slug)`. Nome fisico scelto per non collidere con `hub.projects` (piano, sezione 3.3). Porta la conoscenza condivisa della sezione 3.4: `value_proposition`, `tone_of_voice`, `reference_contact`. |
+| `licences` | Una per Company (`company_id` unique). `max_projects` 2, `max_users` 3: **colonne**, non costanti. |
+| `memberships` | `(user_id, role, scope_type, scope_id)` unique. `scope_id` è null solo per `GLOBAL`. |
+| `subjects.company_id` | Colonna aggiunta, **nullable**. FK `Restrict`. |
+
+Enum: `TenantStatus`, `MembershipRole` (7 valori, sezione 2 del piano), `ScopeType`
+(`GLOBAL`, `ORGANIZATION`, `COMPANY`, `PROJECT`, `RESOURCE`).
+
+Migrazione `20260811120000_add_tenancy` + `rollback.sql` scritto prima
+dell'esecuzione. Verificato: zero `DROP TABLE`, zero `DROP COLUMN`, zero
+`SET NOT NULL`.
+
+### Codice
+
+```
+src/lib/core/
+├─ access-context.ts   resolveAccessContext(userId) → AccessContext
+├─ tenant-guard.ts     tenantScoped(ctx) → client Prisma già filtrato
+└─ __tests__/isolation.test.ts
+scripts/tenancy/bootstrap.mjs   avvio idempotente
+```
+
+**`resolveAccessContext`** legge le Membership ed espande gli scope:
+`ORGANIZATION` → tutte le sue Company. **Non** espande `PROJECT` → `COMPANY`:
+sarebbe una scalata di privilegi, e il criterio di completamento della Fase 1
+lo vieta esplicitamente.
+
+**`tenantScoped`** usa `$extends` con `$allOperations`. Tre categorie:
+
+| Categoria | Modelli | Filtro |
+|---|---|---|
+| `SCOPED_BY_COMPANY` | `subject`, `project`, `licence` | `companyId in (...)` |
+| `SCOPED_BY_ID` | `company` | `id in (...)` |
+| `SCOPED_BY_RELATION` | `subjectIdentity`, `reconciliationCandidate` | risale al soggetto |
+
+`COMMERCIAL_ONLY` (`licence`) è invisibile quando `canSeeCommercialData` è falso.
+`PLATFORM_ADMIN` salta ogni filtro. Ambito vuoto → `{ id: { in: [] } }`, mai
+nessuna riga. Le scritture: con `where` si restringono, senza `where` devono
+dichiarare una `companyId` in ambito, altrimenti sollevano.
+
+I modelli non elencati passano non filtrati **per scelta**: `Lead`, `Activity`,
+`Task` e gli altri non hanno ancora una colonna di tenant. Vanno aggiunti alla
+mappa quando l'avranno.
+
+### Test
+
+`npm run test:isolation` — dieci casi. Gira solo se `DATABASE_URL` punta a
+localhost: `describe.runIf(isLocal)`. Copre lettura, lettura diretta per id,
+conteggio, creazione, `updateMany`, `deleteMany` oltre confine, più i casi
+`PROJECT_MEMBER` e utente senza alcuna membership.
+
+### Avvio
+
+```bash
+npm run tenancy:bootstrap
+```
+
+Idempotente. Crea Organizzazione, Azienda, Licenza e Progetto per Karalisweb,
+assegna una Membership a ogni utente (`ADMIN` → `PLATFORM_ADMIN` con scope
+`GLOBAL`, gli altri → `COMPANY_MEMBER`), e riempie `subjects.company_id` dove
+è vuoto. Tutto in una transazione.
+
+### Limite noto
+
+Un `PROJECT_MEMBER` non vede alcun soggetto: i soggetti stanno a livello di
+Azienda e non esiste ancora un legame Soggetto ↔ Progetto. È deliberato — la
+scelta prudente è non vedere niente, non vedere tutto.
 
