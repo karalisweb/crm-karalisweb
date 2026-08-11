@@ -233,16 +233,34 @@ export function buildRegistry(rawIdentities) {
     }
   };
 
-  // a) dominio di posta aziendale che coincide con il dominio di un altro
-  for (const a of ids) {
-    if (!a.emailDom) continue;
-    for (const b of ids) {
-      if (a.key === b.key) continue;
-      if (b.domainUsable && b.domainUsable === a.emailDom) {
-        propose(a, b, 'shared_email_domain', 0.75,
-                { emailDomain: a.emailDom, otherDomain: b.domainUsable });
-      } else if (b.emailDom && b.emailDom === a.emailDom) {
-        propose(a, b, 'shared_email_domain', 0.70, { emailDomain: a.emailDom });
+  // a) dominio di posta aziendale che coincide con il dominio di un altro.
+  // Indicizzato: il doppio ciclo su 3 204 identita erano 10 milioni di
+  // confronti e faceva superare i dieci minuti.
+  const byDomainIdx = new Map();
+  const byEmailIdx = new Map();
+  for (const i of ids) {
+    if (i.domainUsable) {
+      if (!byDomainIdx.has(i.domainUsable)) byDomainIdx.set(i.domainUsable, []);
+      byDomainIdx.get(i.domainUsable).push(i);
+    }
+    if (i.emailDom) {
+      if (!byEmailIdx.has(i.emailDom)) byEmailIdx.set(i.emailDom, []);
+      byEmailIdx.get(i.emailDom).push(i);
+    }
+  }
+  const MAX_GRUPPO_EMAIL = 20;   // oltre, e un portale: non identifica nessuno
+  for (const [dom, withEmail] of byEmailIdx) {
+    const withSite = byDomainIdx.get(dom) || [];
+    if (withEmail.length + withSite.length > MAX_GRUPPO_EMAIL) continue;
+    for (const a of withEmail) {
+      for (const b of withSite) {
+        if (a.key !== b.key) {
+          propose(a, b, 'shared_email_domain', 0.75,
+                  { emailDomain: dom, otherDomain: dom });
+        }
+      }
+      for (const b of withEmail) {
+        if (a.key < b.key) propose(a, b, 'shared_email_domain', 0.70, { emailDomain: dom });
       }
     }
   }
@@ -274,27 +292,50 @@ export function buildRegistry(rawIdentities) {
         propose(group[x], group[y], 'shared_hosting_domain', 0.30, { hostingDomain: dom });
   }
 
-  // d) ragione sociale identica, molto simile, o con token distintivi condivisi
-  const df = tokenDocumentFrequency(ids.map((i) => i.nameKey));
-  for (let x = 0; x < ids.length; x++) {
-    for (let y = x + 1; y < ids.length; y++) {
-      const a = ids[x], b = ids[y];
-      if (!a.nameKey || !b.nameKey) continue;
-      if (a.nameKey === b.nameKey) {
-        propose(a, b, 'same_normalized_name', 0.60, { name: a.nameKey });
-        continue;
-      }
-      const sim = diceSimilarity(a.nameKey, b.nameKey);
-      if (sim >= 0.80) {
-        propose(a, b, 'similar_name', Math.min(0.55, sim / 2),
-                { a: a.nameKey, b: b.nameKey, similarity: Number(sim.toFixed(3)) });
-        continue;
-      }
-      const tok = sharedDistinctiveTokens(a.nameKey, b.nameKey, df,
-                                          ids.filter((i) => i.nameKey).length);
-      if (tok) {
-        propose(a, b, 'shared_distinctive_tokens', 0.45,
-                { a: a.nameKey, b: b.nameKey, ...tok });
+  // d) ragione sociale identica, molto simile, o con token distintivi condivisi.
+  //
+  // Confrontare tutte le coppie sono 5 milioni di calcoli di similarita su
+  // 3 204 nomi: troppo. Si confrontano solo le coppie che condividono almeno
+  // un token — due nomi senza nemmeno una parola in comune non possono essere
+  // ne identici, ne molto simili, ne avere token distintivi condivisi.
+  const named = ids.filter((i) => i.nameKey);
+  const df = tokenDocumentFrequency(named.map((i) => i.nameKey));
+  const corpus = named.length;
+
+  const tokenIdx = new Map();
+  for (const i of named) {
+    for (const t of new Set(i.nameKey.split(' '))) {
+      if (!tokenIdx.has(t)) tokenIdx.set(t, []);
+      tokenIdx.get(t).push(i);
+    }
+  }
+
+  const MAX_BLOCCO = 300;   // token cosi frequenti non restringono nulla
+  const visti = new Set();
+  for (const [, blocco] of tokenIdx) {
+    if (blocco.length > MAX_BLOCCO) continue;
+    for (let x = 0; x < blocco.length; x++) {
+      for (let y = x + 1; y < blocco.length; y++) {
+        const a = blocco[x], b = blocco[y];
+        const coppia = a.key < b.key ? a.key + '|' + b.key : b.key + '|' + a.key;
+        if (visti.has(coppia)) continue;
+        visti.add(coppia);
+
+        if (a.nameKey === b.nameKey) {
+          propose(a, b, 'same_normalized_name', 0.60, { name: a.nameKey });
+          continue;
+        }
+        const sim = diceSimilarity(a.nameKey, b.nameKey);
+        if (sim >= 0.80) {
+          propose(a, b, 'similar_name', Math.min(0.55, sim / 2),
+                  { a: a.nameKey, b: b.nameKey, similarity: Number(sim.toFixed(3)) });
+          continue;
+        }
+        const tok = sharedDistinctiveTokens(a.nameKey, b.nameKey, df, corpus);
+        if (tok) {
+          propose(a, b, 'shared_distinctive_tokens', 0.45,
+                  { a: a.nameKey, b: b.nameKey, ...tok });
+        }
       }
     }
   }
