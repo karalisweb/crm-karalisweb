@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.41.0** | Ultimo aggiornamento: 2026-08-11
+Versione: **3.43.0** | Ultimo aggiornamento: 2026-08-11
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -723,4 +723,40 @@ su quel progetto, invece di riscriverli in ognuno.
 Ogni azienda ha la sua: due progetti e tre utenti inclusi, entrambi allargabili.
 I limiti sono scritti sulla licenza di quella specifica azienda, non fissi nel
 programma: si cambiano per un singolo cliente senza toccare gli altri.
+
+---
+
+## La scheda di un'azienda
+
+**Dove:** Registro soggetti → clicca su un'azienda qualsiasi.
+
+Fino a ieri, per sapere tutto di un cliente dovevi aprire quattro programmi
+diversi e mettere insieme i pezzi a mente. Adesso c'è una pagina che raccoglie
+le quattro risposte:
+
+- **quanto ha investito** in pubblicità e quante conversioni ha portato;
+- **come si posiziona** su Google: quante parole chiave segui, la posizione
+  media, quante stanno nelle prime dieci;
+- **quanti contenuti** hai prodotto e pubblicato per lui;
+- **dove compare** dentro il gestionale commerciale.
+
+### Due cose da sapere
+
+**I dati non si sono spostati.** Ogni programma continua a tenersi i suoi: la
+scheda va a leggerli sul momento e li mostra insieme. Non c'è una copia che si
+può disallineare, e nessun programma viene modificato — vengono solo letti.
+
+**Se un modulo non risponde, gli altri restano.** Vedrai scritto accanto a quel
+riquadro che non è raggiungibile, e il resto della pagina funziona lo stesso.
+
+### Perché alcune aziende hanno riquadri vuoti
+
+Perché quel modulo non segue quel cliente. Un'azienda che è solo un contatto
+commerciale non ha campagne, né posizionamento, né articoli: è normale, e la
+scheda te lo dice invece di mostrarti degli zeri.
+
+Un caso a parte è il modulo delle attività pubblicitarie: si aggancia al nome
+dell'azienda, perché le sue schede non contengono né l'indirizzo del sito né la
+scheda Google. È un aggancio più fragile degli altri, e può non trovare
+corrispondenza anche quando il cliente c'è.
 

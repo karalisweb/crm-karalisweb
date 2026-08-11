@@ -13,6 +13,19 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.43.0] - 2026-08-11
+
+### Added
+- **Scheda soggetto: i quattro moduli in una pagina sola.** Da "Registro soggetti" si apre ora ogni azienda e si vede, in un colpo solo, cosa ne sanno tutti e quattro i moduli: investito e conversioni dal rendimento pubblicitario, keyword e posizione media dalla visibilità organica, articoli pubblicati dalla produzione contenuti, e le identità nel CRM.
+- **Adapter di sola lettura** verso gli altri tre moduli (piano, criticità 2, soluzione di riserva). I dati **restano dove sono**: qui vengono letti, mai copiati e mai modificati. I file SQLite si aprono con `readOnly: true`, sul database del modulo di rendimento si eseguono solo `SELECT`.
+- Ogni modulo è **opzionale e indipendente**: se non è configurato la scheda lo dice, se è irraggiungibile riporta l'errore accanto a quel modulo. Un modulo rotto non fa cadere la pagina né gli altri tre.
+
+### Security
+- La scheda passa dal client filtrato: un soggetto fuori dal proprio ambito **non si apre nemmeno conoscendone l'indirizzo esatto**.
+
+### Note
+- L'aggancio al modulo di rendimento avviene per ragione sociale, ed è dichiaratamente debole: `google_ads_accounts` non contiene né identificativo Google Maps né dominio (`docs/inventory/gads.md`, S-05). Gli altri due si agganciano per dominio, che è la loro chiave naturale.
+
 ## [3.42.0] - 2026-08-11
 
 ### Added

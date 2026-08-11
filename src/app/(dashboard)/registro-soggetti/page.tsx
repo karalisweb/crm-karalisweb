@@ -3,6 +3,7 @@ import { resolveAccessContext } from "@/lib/core/access-context";
 import { tenantScoped } from "@/lib/core/tenant-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import { Building2, Link2, HelpCircle, Database } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -125,7 +126,8 @@ export default async function RegistroSoggettiPage() {
           </p>
           <div className="grid gap-3">
             {multi.map((s) => (
-              <Card key={s.id}>
+              <Link key={s.id} href={`/registro-soggetti/${s.id}`} className="block">
+              <Card className="transition-shadow hover:shadow-md">
                 <CardContent className="p-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
                     <div className="font-medium truncate flex items-center gap-2">
@@ -147,6 +149,7 @@ export default async function RegistroSoggettiPage() {
                   </div>
                 </CardContent>
               </Card>
+              </Link>
             ))}
           </div>
         </section>

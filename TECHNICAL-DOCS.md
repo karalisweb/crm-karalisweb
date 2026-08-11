@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.41.0** | Ultimo aggiornamento: 2026-08-11
+Versione: **3.43.0** | Ultimo aggiornamento: 2026-08-11
 
 ---
 
@@ -1337,4 +1337,45 @@ assegna una Membership a ogni utente (`ADMIN` → `PLATFORM_ADMIN` con scope
 Un `PROJECT_MEMBER` non vede alcun soggetto: i soggetti stanno a livello di
 Azienda e non esiste ancora un legame Soggetto ↔ Progetto. È deliberato — la
 scelta prudente è non vedere niente, non vedere tutto.
+
+---
+
+## Adapter di sola lettura (v3.43.0)
+
+Criticità 2 del piano, **soluzione di riserva**: accesso in sola lettura ai
+database degli altri moduli in attesa delle API. *Mai in scrittura.*
+
+```
+src/lib/adapters/
+├─ types.ts    EsitoModulo<T>, prova(), forme dei dati
+├─ sqlite.ts   apertura readOnly di un file SQLite
+├─ gads.ts     PostgreSQL, aggancio per customer_name
+├─ seoi.ts     SQLite, aggancio per dominio
+└─ hub.ts      SQLite, aggancio per dominio del wp_url
+```
+
+**Configurazione** (assente ⇒ modulo mostrato come "non collegato"):
+
+| Variabile | Contenuto |
+|---|---|
+| `ADAPTER_GADS_URL` | stringa di connessione, utenza in sola lettura |
+| `ADAPTER_SEOI_DB` | percorso del file SQLite |
+| `ADAPTER_HUB_DB` | percorso del file SQLite |
+
+**Garanzie.** `leggiSqlite` apre con `{ readOnly: true }`. Su PostgreSQL solo
+`SELECT`, pool limitato a 2 connessioni. `prova()` cattura l'errore e lo
+restituisce come `EsitoModulo`: un modulo irraggiungibile non propaga
+l'eccezione e non fa cadere la pagina.
+
+`node:sqlite` è importato con specificatore calcolato e tipizzato a mano:
+`@types/node` è alla 20 e non lo dichiara ancora. `next.config.ts` lo elenca in
+`serverExternalPackages` perché non va impacchettato.
+
+**Pagina** `src/app/(dashboard)/registro-soggetti/[id]/page.tsx`, server
+component. Legge il soggetto dal **client filtrato**: un id fuori ambito
+produce 404, non una fuga di dati.
+
+**Limite noto.** L'aggancio a GADS è per `lower(customer_name)`. È debole e
+dichiarato: quella tabella non ha `place_id` né dominio. Quando GADS avrà una
+delle chiavi canoniche, l'adapter va cambiato.
 

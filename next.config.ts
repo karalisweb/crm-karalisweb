@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // node:sqlite e un modulo interno di Node: non va impacchettato.
+  serverExternalPackages: ['node:sqlite'],
   // Output standalone per Docker
   output: "standalone",
 
