@@ -229,10 +229,11 @@ function render(d, stampISO) {
 
   L.push('## 5. Cosa questi numeri non dicono');
   L.push('');
-  L.push('- **Non descrivono la produzione.** Sono misurati sull\'insieme indicato in testa.');
-  L.push('  I volumi reali richiedono accesso ai database di produzione, che il piano');
-  L.push('  (criticità 3) chiede di verificare prima di scegliere fra soluzione primaria');
-  L.push('  e di riserva.');
+  L.push('- **Sono una fotografia, non un flusso.** Valgono per le copie prese alla data');
+  L.push('  in testa. Ogni nuova ricerca di lead cambia i numeri: il rapporto va');
+  L.push('  rigenerato, non letto una volta sola.');
+  L.push('- **Il conteggio dei soggetti non e il conteggio dei clienti.** Un soggetto e');
+  L.push('  un\'azienda osservata: la grande maggioranza sono lead mai contattati.');
   L.push('- **La terza chiave di deduplicazione non esiste.** La sezione 3.2 prevede');
   L.push('  `google_place_id` → dominio → **partita IVA**. Nessuna delle sei anagrafiche');
   L.push('  raccoglie la partita IVA: il terzo livello non è applicabile oggi.');
