@@ -86,8 +86,22 @@ async function collect(c) {
     `SELECT count(*)::int n FROM subjects
       WHERE google_place_id IS NULL AND primary_domain IS NULL`);
 
+  // Domini che NON identificano un soggetto: portali, aggregatori, catene.
+  // Sono i siti condivisi da piu soggetti con schede Google distinte.
+  const portals = await q(
+    `SELECT primary_domain, count(*)::int n
+       FROM subjects
+      WHERE primary_domain IS NOT NULL AND google_place_id IS NOT NULL
+      GROUP BY 1 HAVING count(*) > 1
+      ORDER BY 2 DESC LIMIT 15`);
+  const [{ n: portalSubjects }] = await q(
+    `SELECT coalesce(sum(n),0)::int n FROM (
+       SELECT count(*)::int n FROM subjects
+        WHERE primary_domain IS NOT NULL AND google_place_id IS NOT NULL
+        GROUP BY primary_domain HAVING count(*) > 1) t`);
+
   return { identities, subjects, queued, bySource, multi, spread, crossApp: crossApp[0].n,
-           doubts, byReason, noKeys: noKeys[0].n };
+           doubts, byReason, noKeys: noKeys[0].n, portals, portalSubjects };
 }
 
 function render(d, stampISO) {
@@ -187,7 +201,33 @@ function render(d, stampISO) {
   }
   L.push('');
 
-  L.push('## 4. Cosa questi numeri non dicono');
+  L.push('## 4. Domini che non identificano un soggetto');
+  L.push('');
+  L.push('Siti indicati da **piu soggetti diversi**, ciascuno con la propria scheda');
+  L.push('Google. Non sono il sito *dell\'* azienda: sono il portale su cui l\'azienda');
+  L.push('e pubblicata, oppure l\'insegna di una catena con piu sedi.');
+  L.push('');
+  L.push('**Non uniscono mai.** Due schede Google distinte sono due soggetti distinti,');
+  L.push('qualunque sito condividano: il `google_place_id` e la chiave prioritaria');
+  L.push('della sezione 3.2 e non puo essere scavalcato da una di rango inferiore.');
+  L.push('');
+  if (!d.portals.length) {
+    L.push('_Nessuno._');
+  } else {
+    L.push(`In totale **${d.portalSubjects} soggetti** hanno come sito un dominio ` +
+           'condiviso con almeno un altro soggetto.');
+    L.push('');
+    L.push('| Dominio | Soggetti che lo indicano |');
+    L.push('|---|---:|');
+    for (const p of d.portals) L.push(`| \`${p.primary_domain}\` | ${p.n} |`);
+  }
+  L.push('');
+  L.push('> **Lettura commerciale.** Un soggetto il cui unico sito e un portale e un');
+  L.push('> soggetto **senza sito proprio**. E un dato di qualificazione, non un difetto');
+  L.push('> del registro.');
+  L.push('');
+
+  L.push('## 5. Cosa questi numeri non dicono');
   L.push('');
   L.push('- **Non descrivono la produzione.** Sono misurati sull\'insieme indicato in testa.');
   L.push('  I volumi reali richiedono accesso ai database di produzione, che il piano');
