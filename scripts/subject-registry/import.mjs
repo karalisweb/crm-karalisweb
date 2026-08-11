@@ -159,13 +159,31 @@ export function buildRegistry(rawIdentities) {
   }
 
   // CERTO 2 — stesso dominio normalizzato (hosting escluso)
+  //
+  // Con un vincolo che vale piu della regola: se due identita hanno DUE schede
+  // Google distinte, sono due soggetti distinti, qualunque sito condividano.
+  // Il google_place_id e la chiave prioritaria (piano, sezione 3.2) e non puo
+  // essere scavalcato da una chiave di rango inferiore.
+  //
+  // Senza questo vincolo, misurato sui dati reali dell 11 agosto 2026:
+  // 206 appartamenti diversi elencati su "br.bluepillow.com" diventavano UN
+  // soggetto solo; 114 su "booking.com"; 15 negozi della stessa catena su
+  // "iperceramica.it". Il sito non e sempre il sito DELL azienda: spesso e il
+  // portale su cui l azienda e pubblicata, o l insegna di una catena.
   const byDomain = new Map();
   for (const i of ids) {
     if (!i.domainUsable) continue;
     if (!byDomain.has(i.domainUsable)) byDomain.set(i.domainUsable, []);
     byDomain.get(i.domainUsable).push(i);
   }
+  const nonIdentifyingDomains = [];
   for (const [dom, group] of byDomain) {
+    const places = new Set(group.map((g) => g.placeKey).filter(Boolean));
+    if (places.size > 1) {
+      // Dominio non identificante: portale, aggregatore, o catena.
+      nonIdentifyingDomains.push({ domain: dom, identities: group.length, places: places.size });
+      continue;
+    }
     for (let n = 1; n < group.length; n++) {
       const merged = uf.union(group[0].key, group[n].key, 'normalized_domain', { domain: dom });
       if (merged) certainLinks.push({ rule: 'normalized_domain', value: dom, a: group[0].key, b: group[n].key });
@@ -262,7 +280,23 @@ export function buildRegistry(rawIdentities) {
     }
   }
 
-  return { ids, components, certainLinks, candidates: [...candidates.values()] };
+  // e) domini non identificanti: per i gruppi piccoli vale la pena proporli a
+  // mano (possono essere la stessa azienda con due schede duplicate su Google);
+  // per i gruppi grandi no, sarebbero migliaia di coppie inutili.
+  const MAX_GRUPPO_PROPONIBILE = 5;
+  for (const nid of nonIdentifyingDomains) {
+    const group = byDomain.get(nid.domain);
+    if (group.length > MAX_GRUPPO_PROPONIBILE) continue;
+    for (let x = 0; x < group.length; x++) {
+      for (let y = x + 1; y < group.length; y++) {
+        propose(group[x], group[y], 'shared_domain_distinct_places', 0.55,
+                { domain: nid.domain, schedeGoogleDistinte: nid.places });
+      }
+    }
+  }
+
+  return { ids, components, certainLinks, candidates: [...candidates.values()],
+           nonIdentifyingDomains: nonIdentifyingDomains.sort((a, b) => b.identities - a.identities) };
 }
 
 // ── Scrittura del registro ──────────────────────────────────────────────────

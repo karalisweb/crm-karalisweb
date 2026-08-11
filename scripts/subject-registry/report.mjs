@@ -33,6 +33,7 @@ const REASON_LABELS = {
   similar_name: 'Ragione sociale molto simile',
   shared_distinctive_tokens: 'Parole distintive in comune nel nome',
   shared_hosting_domain: 'Stesso dominio di hosting (indizio debole)',
+  shared_domain_distinct_places: 'Stesso sito ma schede Google distinte',
 };
 
 async function collect(c) {
