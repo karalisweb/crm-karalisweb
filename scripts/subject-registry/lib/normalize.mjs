@@ -147,8 +147,8 @@ export function diceSimilarity(a, b) {
  * ma differiscono troppo nel resto (somiglianza 0,57).
  *
  * Ritorna { tokens, coverage } se il segnale è abbastanza forte, altrimenti null.
- * Condizioni: l'intersezione copre almeno metà del nome più corto E contiene
- * almeno due token, oppure un solo token ma lungo almeno 6 caratteri.
+ * Condizione: l'intersezione copre almeno metà del nome più corto e contiene
+ * almeno un token raro (o due token qualsiasi su insiemi piccoli).
  */
 export const MIN_CORPUS_FOR_SINGLE_TOKEN = 200;
 
@@ -170,9 +170,17 @@ export function sharedDistinctiveTokens(a, b, df = null, corpusSize = 0) {
   // La rarità è un indizio affidabile solo su un insieme abbastanza grande.
   // Su poche decine di nomi "cagliari" sembra raro pur essendo una città:
   // sotto la soglia si richiedono due token condivisi, che è prudente.
+  //
+  // Misurato su 3 204 anagrafiche reali (11 agosto 2026):
+  //   almeno 1 token condiviso con frequenza <= 2 .....    198 coppie
+  //   almeno 2 token condivisi, frequenza qualsiasi ....  7 805 coppie
+  //   almeno 3 token condivisi, frequenza qualsiasi ....  1 802 coppie
+  // Una coda da 7 805 voci non si rivede a mano: è rumore, non lavoro.
+  // Quando la frequenza è utilizzabile la rarità è quindi OBBLIGATORIA,
+  // non alternativa al numero di token condivisi.
   const dfUsable = df && corpusSize >= MIN_CORPUS_FOR_SINGLE_TOKEN;
-  const isDistinctive = (t) => (dfUsable ? (df.get(t) || 0) <= 2 : false);
-  const strong = shared.length >= 2 || shared.some(isDistinctive);
+  const isDistinctive = (t) => (df ? (df.get(t) || 0) <= 2 : false);
+  const strong = dfUsable ? shared.some(isDistinctive) : shared.length >= 2;
   if (!strong) return null;
 
   return {
