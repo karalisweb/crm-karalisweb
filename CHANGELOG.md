@@ -13,6 +13,20 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.42.0] - 2026-08-11
+
+### Added
+- **Accesso unico ai quattro moduli (OrchestraAI, Fase 3).** Il CRM diventa il fornitore d'identità della piattaforma: da qui si entra negli altri tre moduli senza reinserire le credenziali.
+  - Nuova pagina **Moduli** (menu "Piattaforma"): i quattro moduli in un posto solo, ognuno con un pulsante che porta dentro già autenticati.
+  - `POST /api/sso/issue` emette un token firmato **HMAC-SHA256**, valido **120 secondi**, **a uso singolo** e **legato a una sola applicazione di destinazione**: un token per SEOI non funziona su HUB.
+  - Nessuna password viaggia e **nessuna sessione è condivisa**: ogni applicazione verifica il token e apre una sessione propria, con il proprio meccanismo.
+  - Nessun valore di riserva per il segreto: se `ORCHESTRA_SSO_SECRET` manca o è più corta di 32 caratteri, l'emissione fallisce invece di degradare.
+
+### Security
+- Il collegamento avviene **per indirizzo di posta su utenze già esistenti**. L'accesso unico non crea utenti nelle altre applicazioni: se l'utenza non c'è o è disattivata, l'ingresso viene rifiutato con un messaggio esplicito. Creare utenti a distanza sarebbe una scelta con conseguenze, e non la prende il codice.
+- Token già usati tenuti in memoria fino alla scadenza: un collegamento intercettato non è riutilizzabile.
+- Confronto della firma a tempo costante.
+
 ## [3.41.0] - 2026-08-11
 
 ### Added

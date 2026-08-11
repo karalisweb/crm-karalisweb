@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   Target,
   Database,
+  LayoutGrid,
 } from "lucide-react";
 
 // Badge types per colore
@@ -60,6 +61,7 @@ export const navSections: NavSection[] = [
   {
     title: "PIATTAFORMA",
     items: [
+      { href: "/moduli", label: "Moduli", icon: LayoutGrid },
       { href: "/registro-soggetti", label: "Registro soggetti", icon: Database },
     ],
   },
