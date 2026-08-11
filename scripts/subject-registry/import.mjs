@@ -202,9 +202,28 @@ export function buildRegistry(rawIdentities) {
   const compOf = new Map();
   for (const [root, members] of components) for (const m of members) compOf.set(m.key, root);
   const candidates = new Map();
+  // Insieme dei place_id di ogni componente: serve al filtro qui sotto.
+  const placesOf = new Map();
+  for (const [root, members] of components) {
+    placesOf.set(root, new Set(members.map((m) => m.placeKey).filter(Boolean)));
+  }
+
   const propose = (a, b, reason, score, evidence) => {
     const ca = compOf.get(a.key), cb = compOf.get(b.key);
     if (ca === cb) return;                       // già lo stesso soggetto
+
+    // Stessa regola che vale per le unioni: se i due soggetti hanno DUE schede
+    // Google distinte, non sono lo stesso soggetto. Proporli a mano non e
+    // prudenza, e far perdere tempo a chi rivede: la risposta e gia nota.
+    // Senza questo filtro, sui dati reali dell 11 agosto 2026 la coda passava
+    // da 313 a 3 292 voci, quasi tutte coppie di attivita diverse che
+    // condividono il dominio di posta del portale che le pubblica.
+    const pa = placesOf.get(ca), pb = placesOf.get(cb);
+    if (pa && pb && pa.size && pb.size) {
+      let condiviso = false;
+      for (const p of pa) if (pb.has(p)) { condiviso = true; break; }
+      if (!condiviso) return;
+    }
     const [x, y] = ca < cb ? [ca, cb] : [cb, ca];
     const id = `${x}|${y}`;
     const prev = candidates.get(id);
