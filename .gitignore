@@ -59,3 +59,6 @@ next-env.d.ts
 
 # Config locale Claude Code (non va in produzione)
 .claude/
+
+# Copia locale dei dati di produzione (mai nel repo)
+.local/

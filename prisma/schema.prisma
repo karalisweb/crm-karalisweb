@@ -278,6 +278,12 @@ model Lead {
   activities          Activity[]
   tasks               Task[]
 
+  // Squadra di agenti (v3.44): il fascicolo dell'azienda vive in tabelle sue,
+  // NON in colonne di Lead. Vedi PROGETTO-AGENTI.md.
+  agentRuns           AgentRun[]
+  agentReports        AgentReport[]
+  approvalItems       ApprovalItem[]
+
   // Relazioni BNI
   referredByMembroId String?    @map("referred_by_membro_id")
   referredByMembro   BniMembro? @relation("BniReferral", fields: [referredByMembroId], references: [id])
@@ -1086,9 +1092,10 @@ model Company {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  projects Project[]
-  licence  Licence?
-  subjects Subject[]
+  projects     Project[]
+  licence      Licence?
+  subjects     Subject[]
+  entitlements ModuleEntitlement[]
 
   @@index([organizationId], name: "idx_companies_org")
   @@map("companies")
@@ -1107,6 +1114,20 @@ model Project {
   // ogni modulo attivo sul Progetto la legge. Nessun modulo ne possiede copia.
   valueProposition String? @map("value_proposition") @db.Text
   toneOfVoice      String? @map("tone_of_voice") @db.Text
+
+  // Colonne presenti nel DB di produzione (lavoro del branch fase1, mai arrivato in main).
+  // Il codice di main non le usa: stanno qui solo perché `prisma db push` non le cancelli.
+  whatWeSell         String?   @map("what_we_sell") @db.Text
+  targetAudience     String?   @map("target_audience") @db.Text
+  differentiators    String?   @map("differentiators") @db.Text
+  wordsToUse         String?   @map("words_to_use") @db.Text
+  wordsToAvoid       String?   @map("words_to_avoid") @db.Text
+  knowledgeBase      String?   @map("knowledge_base") @db.Text
+  aiInstructions     String?   @map("ai_instructions") @db.Text
+  websiteUrl         String?   @map("website_url")
+  linkedProfiles     String?   @map("linked_profiles") @db.Text
+  knowledgeUpdatedAt DateTime? @map("knowledge_updated_at")
+  knowledgeUpdatedBy String?   @map("knowledge_updated_by")
   referenceContact String? @map("reference_contact")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -1181,4 +1202,115 @@ enum ScopeType {
   COMPANY
   PROJECT
   RESOURCE
+}
+
+// Tabella presente nel DB di produzione (12 righe, lavoro del branch fase1).
+// Il codice di main non la usa: sta qui solo perché `prisma db push` non la cancelli.
+enum PlatformModule {
+  ACQUISIZIONE
+  CAMPAGNE
+  VISIBILITA
+  CONTENUTI
+}
+
+model ModuleEntitlement {
+  id          String         @id @default(uuid())
+  companyId   String         @map("company_id")
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  module      PlatformModule
+  status      TenantStatus   @default(ACTIVE)
+  activatedAt DateTime       @default(now()) @map("activated_at")
+  activatedBy String?        @map("activated_by")
+  suspendedAt DateTime?      @map("suspended_at")
+
+  @@unique([companyId, module], name: "uq_entitlement_company_module")
+  @@index([companyId], name: "idx_entitlements_company")
+  @@map("module_entitlements")
+}
+
+// ==========================================
+// SQUADRA DI AGENTI (v3.44) — vedi PROGETTO-AGENTI.md
+// ==========================================
+// Ogni agente lavora su un'azienda (Lead) e consegna un REFERTO con le prove.
+// Il regista decide chi far lavorare; l'orologio (crontab) lo sveglia;
+// quello che va deciso da Alessio finisce in CASSETTA. Niente parte da solo.
+
+// Un lavoro: un agente su un'azienda. Sostituisce le code in memoria (p-queue):
+// sopravvive ai riavvii e si ispeziona.
+model AgentRun {
+  id         String         @id @default(uuid())
+  leadId     String         @map("lead_id")
+  lead       Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  agent      String         // chiave del registro, es. "tecnico", "seo", "blog"
+  status     AgentRunStatus @default(IN_CODA)
+  attempts   Int            @default(0)
+  error      String?
+  costCents  Int            @default(0) @map("cost_cents") // costo esterno (API), in centesimi di euro
+  queuedAt   DateTime       @default(now()) @map("queued_at")
+  startedAt  DateTime?      @map("started_at")
+  finishedAt DateTime?      @map("finished_at")
+  report     AgentReport?
+
+  @@index([status, queuedAt])
+  @@index([leadId, agent])
+  @@map("agent_runs")
+}
+
+enum AgentRunStatus {
+  IN_CODA
+  IN_CORSO
+  FATTO
+  FALLITO
+}
+
+// Il referto: cosa ha trovato l'agente, con le prove e fino a quando vale.
+model AgentReport {
+  id          String          @id @default(uuid())
+  leadId      String          @map("lead_id")
+  lead        Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  agent       String
+  runId       String?         @unique @map("run_id")
+  run         AgentRun?       @relation(fields: [runId], references: [id], onDelete: SetNull)
+  summary     String          // una riga leggibile
+  findings    Json            // dati strutturati dell'agente
+  levers      Json            @default("[]") // leve commerciali: [{servizio, testo, prova}]
+  evidence    Json            @default("[]") // prove: [{cosa, fonte, citazione}]
+  confidence  AgentConfidence @default(MEDIA)
+  collectedAt DateTime        @default(now()) @map("collected_at")
+  validUntil  DateTime        @map("valid_until")
+
+  @@index([leadId, agent, collectedAt])
+  @@map("agent_reports")
+}
+
+enum AgentConfidence {
+  ALTA
+  MEDIA
+  BASSA
+}
+
+// La cassetta: tutto ciò che aspetta una decisione di Alessio.
+model ApprovalItem {
+  id        String         @id @default(uuid())
+  leadId    String         @map("lead_id")
+  lead      Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  kind      String         // "FASCICOLO_BASE" (approva la raccolta approfondita), poi bozze di contatto…
+  agent     String         // chi l'ha proposto
+  title     String
+  payload   Json
+  status    ApprovalStatus @default(IN_ATTESA)
+  note      String?
+  createdAt DateTime       @default(now()) @map("created_at")
+  decidedAt DateTime?      @map("decided_at")
+  decidedBy String?        @map("decided_by")
+
+  @@index([status, createdAt])
+  @@index([leadId, kind])
+  @@map("approval_items")
+}
+
+enum ApprovalStatus {
+  IN_ATTESA
+  APPROVATO
+  SCARTATO
 }

@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { checkBlog } from "../blog-detector";
 
+// Il test riguarda la lettura del blog, non la difesa SSRF (testata a parte):
+// safeFetch passa dritto al fetch finto, che non ha status né header.
+vi.mock("@/lib/safe-fetch", () => ({ safeFetch: (url: string, init?: RequestInit) => fetch(url, init) }));
+
 // Mock fetch globale
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);

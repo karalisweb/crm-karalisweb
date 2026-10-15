@@ -54,6 +54,7 @@ export async function GET() {
       countBniDaLavorare,
       countDaApprovare,
       countOppFollowup,
+      countCassetta,
       videoDaFare,
       followUpPrioritari,
     ] = await Promise.all([
@@ -102,6 +103,8 @@ export async function GET() {
       db.opportunita.count({
         where: { stage: { in: ["DA_SENTIRE", "IN_CORSO", "PREVENTIVO"] }, nextFollowupAt: { not: null, lte: new Date() } },
       }),
+      // Cassetta della squadra di agenti: fascicoli in attesa di decisione.
+      db.approvalItem.count({ where: { status: "IN_ATTESA" } }),
       // Lista "I video di oggi": lead pronti per registrare il video (FARE_VIDEO).
       db.lead.findMany({
         where: { pipelineStage: "FARE_VIDEO" },
@@ -141,6 +144,7 @@ export async function GET() {
         bniDaLavorare: countBniDaLavorare,
         daApprovare: countDaApprovare,
         opportunitaFollowup: countOppFollowup,
+        cassetta: countCassetta,
       },
     });
   } catch (error) {

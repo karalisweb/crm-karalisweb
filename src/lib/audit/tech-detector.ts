@@ -20,51 +20,55 @@ export function detectTech(html: string): TechAudit {
     }
   }
 
+  // Da qui in poi il primo CMS riconosciuto vince (cms ??=): un sito WordPress
+  // che nomina Shopify in una pagina resta WordPress.
+
   // Shopify
   if (/cdn\.shopify\.com|shopify/i.test(html)) {
-    cms = "Shopify";
+    cms ??= "Shopify";
     stack.push("Shopify");
   }
 
   // Wix
   if (/wix\.com|parastorage\.com|wixstatic\.com/i.test(html)) {
-    cms = "Wix";
+    cms ??= "Wix";
     stack.push("Wix");
   }
 
   // Squarespace
   if (/squarespace\.com|sqsp/i.test(html)) {
-    cms = "Squarespace";
+    cms ??= "Squarespace";
     stack.push("Squarespace");
   }
 
   // Webflow
   if (/webflow\.com/i.test(html)) {
-    cms = "Webflow";
+    cms ??= "Webflow";
     stack.push("Webflow");
   }
 
   // Joomla
   if (/joomla/i.test(html) || /\/media\/system\/js/i.test(html)) {
-    cms = "Joomla";
+    cms ??= "Joomla";
     stack.push("Joomla");
   }
 
   // Drupal
   if (/drupal/i.test(html) || /\/sites\/default\/files/i.test(html)) {
-    cms = "Drupal";
+    cms ??= "Drupal";
     stack.push("Drupal");
   }
 
   // PrestaShop
   if (/prestashop/i.test(html) || /\/modules\/ps_/i.test(html)) {
-    cms = "PrestaShop";
+    cms ??= "PrestaShop";
     stack.push("PrestaShop");
   }
 
   // Magento
-  if (/magento|mage/i.test(html)) {
-    cms = "Magento";
+  // "mage" da solo trovava "image" in quasi ogni sito: servono segni veri di Magento.
+  if (/\bmagento\b|\/static\/version\d+\/frontend\/|mage\/cookies/i.test(html)) {
+    cms ??= "Magento";
     stack.push("Magento");
   }
 

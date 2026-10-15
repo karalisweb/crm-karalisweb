@@ -21,6 +21,7 @@ import { VideoOutreachStepperWrapper } from "@/components/leads/video-outreach-s
 import { ContactInfoEditor } from "@/components/leads/contact-info-editor";
 import { MessagingHub } from "@/components/leads/messaging-hub";
 import { LeadBriefingCard } from "@/components/leads/lead-briefing-card";
+import { FascicoloCard } from "@/components/agents/fascicolo-card";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +161,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             adsVerifiedManually={lead.adsVerifiedManually}
             adsCheckedAt={lead.adsCheckedAt}
           />
+          <FascicoloCard leadId={lead.id} />
           <Card>
             <CardHeader>
               <CardTitle>Dettagli Contatto</CardTitle>

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
+import pkg from "./package.json";
 
 const nextConfig: NextConfig = {
+  // Una sola fonte per la versione mostrata nell'app: package.json.
+  env: { NEXT_PUBLIC_APP_VERSION: pkg.version },
   // node:sqlite e un modulo interno di Node: non va impacchettato.
   serverExternalPackages: ['node:sqlite'],
   // Output standalone per Docker

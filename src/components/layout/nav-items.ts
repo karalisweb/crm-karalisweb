@@ -21,6 +21,8 @@ import {
   Target,
   Database,
   LayoutGrid,
+  Bot,
+  Inbox,
 } from "lucide-react";
 
 // Badge types per colore
@@ -48,6 +50,13 @@ export const navSections: NavSection[] = [
   {
     title: "",
     items: [{ href: "/", label: "Home", icon: Home }],
+  },
+  {
+    title: "SQUADRA",
+    items: [
+      { href: "/cassetta", label: "Cassetta", icon: Inbox, badgeKey: "cassetta", badgeColor: "yellow" },
+      { href: "/squadra", label: "Squadra", icon: Bot },
+    ],
   },
   {
     title: "ANALISI",

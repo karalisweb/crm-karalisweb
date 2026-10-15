@@ -122,4 +122,14 @@ describe("detectTech", () => {
     expect(result.stack).toEqual([]);
     expect(result.isOutdated).toBe(false);
   });
+
+  it("non scambia la parola 'image' per Magento", () => {
+    const result = detectTech(`<img src="/images/hero.jpg" class="image-full"><div class="wp-content">x</div>`);
+    expect(result.cms).toBe("WordPress");
+    expect(result.stack).not.toContain("Magento");
+  });
+
+  it("riconosce Magento dai suoi percorsi statici", () => {
+    expect(detectTech(`<script src="/static/version1712/frontend/Theme/it_IT/require.js"></script>`).cms).toBe("Magento");
+  });
 });

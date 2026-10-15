@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.43.0** | Ultimo aggiornamento: 2026-08-11
+Versione: **3.44.0** | Ultimo aggiornamento: 2026-10-15
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -9,6 +9,8 @@ Versione: **3.43.0** | Ultimo aggiornamento: 2026-08-11
 ---
 
 ## Indice
+
+0. [La Squadra di agenti e la Cassetta (novità)](#0-la-squadra-di-agenti-e-la-cassetta)
 
 1. [Mini-glossario (leggi questo per primo)](#1-mini-glossario-leggi-questo-per-primo)
 2. [Accesso al CRM](#2-accesso-al-crm)
@@ -30,6 +32,44 @@ Versione: **3.43.0** | Ultimo aggiornamento: 2026-08-11
 18. [FAQ - Domande frequenti](#18-faq---domande-frequenti)
 19. [Automazione email opt-in e report mattutino](#19-automazione-email-opt-in-e-report-mattutino)
 20. [Rete BNI (121, partner, reciprocità e capitoli)](#20-rete-bni-121-e-referenze)
+
+---
+
+## 0. La Squadra di agenti e la Cassetta
+
+Il CRM sta diventando una **squadra di agenti che lavorano al posto tuo**. Ogni agente fa un
+mestiere solo e consegna un **referto**: che cosa ha trovato, su cosa si può fare leva in una
+chiamata e **la prova** di ogni cosa che dice.
+
+**Chi lavora oggi (passo 1)**
+
+| Agente | Cosa guarda |
+|---|---|
+| 2.5 Tecnico | Con che cosa è fatto il sito, la versione PHP, l'anno scritto nel piè di pagina, se è in HTTPS |
+| 3 SEO | Titolo, descrizione, titolo principale, sitemap, dati strutturati, se va bene sul telefono |
+| 3.5 Blog | Se c'è un blog, quando è uscito l'ultimo articolo e i titoli recenti |
+| 5 Tracciamenti | Google Analytics, Tag Manager, pixel Meta, tag Google Ads e simili |
+
+Gli altri agenti (Google Ads, social, Meta, LinkedIn, coerenza, scheda leve, video, BNI) sono
+nella pagina **Squadra** con la scritta "Da costruire": arrivano nei prossimi passi.
+
+**Come funziona la giornata**
+1. **Di notte** la squadra lavora da sola su un gruppo di aziende.
+2. **La mattina** apri **Cassetta**: trovi solo le aziende in cui ha trovato almeno 3 leve.
+   Per ognuna vedi le leve raggruppate per servizio (Sito web, SEO, Contenuti, Google Ads…),
+   ognuna con la sua prova.
+3. Decidi: **Approfondisci** (vale la pena lavorarci) o **Scarta**. Ogni azienda arriva in
+   cassetta una volta sola.
+4. Nella scheda dell'azienda, il riquadro **Fascicolo della squadra** mostra tutti i referti.
+
+**Cose da sapere**
+- Se un agente non può leggere un sito (alcuni bloccano i programmi automatici), lo scrive.
+  Non inventa niente.
+- Un referto vale per un tempo: poi la squadra lo rifà da sola (il blog ogni mese, la
+  tecnologia ogni tre mesi).
+- "Approfondisci" per ora registra la tua decisione: gli agenti della raccolta approfondita
+  (Google Ads, social, LinkedIn…) partiranno da lì quando saranno pronti.
+- Dalla pagina **Squadra** puoi far lavorare la squadra subito su 5 aziende.
 
 ---
 

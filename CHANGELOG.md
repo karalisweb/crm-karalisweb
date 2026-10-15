@@ -13,6 +13,28 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.44.0] - 2026-10-15
+
+### Added
+- **La Squadra di agenti, passo 1.** Il CRM comincia a diventare una squadra di agenti che lavorano al posto tuo (progetto completo in `PROGETTO-AGENTI.md`). Quattro agenti sono già al lavoro: **Tecnico** (con che cosa è fatto il sito, PHP, da quando è fermo), **SEO** (la pagina è ottimizzata?), **Blog** (esiste? ultimo articolo? letto da WordPress o dal feed, con data certa) e **Tracciamenti** (Analytics, Tag Manager, pixel, tag Google Ads).
+- **Ogni agente consegna un referto con le prove**: per ogni leva commerciale ("il blog è fermo da 7 anni") c'è la prova ("ultimo articolo del 27/03/2019: …"). Niente dati inventati: se un agente non può leggere un sito, lo scrive.
+- **Cassetta** (nuova voce di menu): di notte la squadra analizza le aziende; quelle con almeno 3 leve arrivano qui. Tu decidi: **Approfondisci** o **Scarta**. Niente parte da solo.
+- **Squadra** (nuova voce di menu): tutti gli agenti previsti, quali lavorano già e quali sono da costruire, cosa hanno fatto in settimana, perché qualche lavoro non è riuscito. Pulsante "Lavora su 5 aziende" per un turno a mano.
+- **Fascicolo della squadra** nella scheda di ogni azienda: l'ultimo referto di ogni agente, con leve e prove.
+- Nuovo indirizzo per l'orologio del server: `POST /api/cron/squadra` (protetto da `CRON_SECRET`).
+
+### Fixed
+- **Il rilevatore di tecnologia vedeva "Magento" quasi ovunque**: cercava "mage", che compare in ogni "image". Ora servono segni veri di Magento, e il primo CMS riconosciuto vince (un sito WordPress che nomina Shopify resta WordPress). Corregge anche l'audit storico.
+- I due test del blog che fallivano da tempo: il problema era nel test (non simulava la difesa SSRF), non nel codice.
+- La versione mostrata nel menu era ferma a 3.33.0: ora la legge da `package.json`.
+
+### Changed
+- Lo schema del database ora descrive anche la tabella dei moduli e le colonne di conoscenza dei progetti che esistono in produzione ma non erano nello schema: così un `db push` non le può più cancellare.
+
+### Note
+- Prova su 20 aziende reali: 13 analizzate, 10 arrivate in cassetta, **7 siti hanno rifiutato la lettura** (403/503, protezioni anti-programma). Saranno il lavoro degli agenti di browser.
+- Gli agenti del passo 1 non costano nulla: leggono solo pagine pubbliche, senza servizi a pagamento.
+
 ## [3.43.0] - 2026-08-11
 
 ### Added

@@ -1379,3 +1379,68 @@ produce 404, non una fuga di dati.
 dichiarato: quella tabella non ha `place_id` né dominio. Quando GADS avrà una
 delle chiavi canoniche, l'adapter va cambiato.
 
+---
+
+## Squadra di agenti (v3.44.0)
+
+Progetto e decisioni: `PROGETTO-AGENTI.md`. Il CRM viene riprogettato come squadra di agenti;
+il passo 1 introduce il motore (lavori, referti, regista, cassetta) e i quattro agenti economici.
+
+### Tabelle (nuove, separate da `leads`)
+
+| Tabella | Modello | Ruolo |
+|---|---|---|
+| `agent_runs` | `AgentRun` | Un lavoro = un agente su un'azienda. Stato `IN_CODA/IN_CORSO/FATTO/FALLITO`, errore, costo in centesimi. Sostituisce le code in memoria: sopravvive ai riavvii. |
+| `agent_reports` | `AgentReport` | Il referto: `summary`, `findings` (JSON dell'agente), `levers` `[{servizio, testo, prova}]`, `evidence` `[{cosa, fonte, citazione}]`, `confidence`, `valid_until`. |
+| `approval_items` | `ApprovalItem` | La cassetta: `kind` (`FASCICOLO_BASE`), `payload`, stato `IN_ATTESA/APPROVATO/SCARTATO`, chi e quando ha deciso. |
+
+Migrazione: `prisma/migrations/20261015090000_squadra_agenti/migration.sql`, **solo additiva e
+idempotente**, da applicare a mano con `psql` (il DB di produzione ha `_prisma_migrations` vuota).
+
+**Schema = produzione.** Dalla 3.44 lo schema contiene anche `module_entitlements` (enum
+`PlatformModule`) e 11 colonne di `projects_core` che esistevano solo nel DB di produzione (lavoro
+del branch `fase1`, mai arrivato in main). Senza, `db push --accept-data-loss` del deploy le
+avrebbe cancellate. Verifica: `prisma migrate diff --from-config-datasource --to-schema` su una
+copia di produzione deve essere vuoto.
+
+### Codice (`src/lib/agents/`)
+
+| File | Contenuto |
+|---|---|
+| `tipi.ts` | `Leva`, `Prova`, `Referto`, `AgenteEseguibile`, `SERVIZI` |
+| `pagina.ts` | `scaricaPagina` (homepage SSRF-safe, header da browser, URL finale dopo i redirect), `scaricaTesto` |
+| `agenti/tecnico.ts` | 2.5 — `detectTech` + anno del © (`annoCopyright`) + PHP da `X-Powered-By`. Validità 90 gg |
+| `agenti/seo.ts` | 3 — `checkSEO` → leve. Validità 60 gg |
+| `agenti/blog.ts` | 3.5 — API WordPress → feed RSS/Atom → `checkBlog`. Validità 30 gg |
+| `agenti/tracciamenti.ts` | 5 — `detectTracking` → leve; con GTM la fiducia scende a MEDIA. Validità 60 gg |
+| `registro.ts` | `SQUADRA` (tutti gli agenti previsti, con stato) e `AGENTI_ESEGUIBILI` |
+| `regista.ts` | **Logica pura**: `agentiDaEseguire` (validità, pausa 20 h dopo un fallimento, stop dopo 3 di fila), `valutaFascicolo` (soglia 3 leve) |
+| `turno.ts` | Accesso al DB: `sbloccaLavori` (IN_CORSO > 30 min → FALLITO), `scegliAziende` (prima le mai viste per `opportunity_score`, poi scaduti/da riprovare), `lavoraSuAzienda` (homepage scaricata una volta per tutti gli agenti), `proponiInCassetta` (una volta per azienda), `eseguiTurno` (4 aziende in parallelo) |
+
+Aziende escluse: senza sito, `unsubscribed`, stadi `NON_TARGET`, `SENZA_SITO`, `CLIENTE`, `PERSO`, `ARCHIVIATO`.
+
+Test: `src/lib/agents/__tests__/` (regista e i quattro agenti, su HTML/feed finti).
+
+### API
+
+| Rotta | Auth | Cosa fa |
+|---|---|---|
+| `POST /api/cron/squadra?limit=20` | `CRON_SECRET` | Un turno (max 100 aziende) |
+| `POST /api/squadra/lancia` | ADMIN, 6 lanci/10 min | Turno a mano, max 10 aziende |
+| `GET /api/squadra` | sessione | Registro + lavori 7 gg + conteggi + errori più frequenti |
+| `GET /api/cassetta?stato=` | sessione | Voci della cassetta con l'azienda |
+| `POST /api/cassetta/[id]` | sessione | `{decisione: APPROVATO|SCARTATO}`; una voce si decide una volta sola (409 se già decisa) |
+
+Pagine: `/squadra`, `/cassetta`; componente `FascicoloCard` nella scheda lead. Badge `cassetta` in `/api/dashboard/mission`.
+
+### Orologio
+
+Crontab del VPS (unico scheduler):
+`15 0-5 * * * curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3003/api/cron/squadra?limit=20"` → 6 turni a notte, ~120 aziende.
+
+### Limiti noti
+
+- Su 20 aziende reali, 7 siti hanno risposto 403/503 (protezioni anti-programma): si potranno leggere solo con gli agenti di browser.
+- I tag dentro Google Tag Manager non si vedono dall'HTML statico: l'agente Tracciamenti lo dichiara.
+- "Approfondisci" in cassetta per ora registra solo la decisione.
+

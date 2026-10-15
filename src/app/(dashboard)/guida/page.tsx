@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   CalendarCheck,
   Handshake,
+  Bot,
 } from "lucide-react";
 
 function Section({
@@ -88,8 +89,35 @@ export default function GuidaPage() {
       </div>
 
       <div className="space-y-3">
+        {/* SEZIONE 0: Squadra di agenti (v3.44) */}
+        <Section title="La Squadra di agenti e la Cassetta" icon={Bot} defaultOpen={true}>
+          <p>
+            Il CRM sta diventando una <strong>squadra di agenti</strong> che lavorano al posto tuo. Ogni agente
+            fa un mestiere solo e consegna un <strong>referto</strong>: cosa ha trovato, su cosa fare leva in una
+            chiamata e la <strong>prova</strong> di ogni cosa che dice.
+          </p>
+          <div className="space-y-3">
+            <Step n={1}>
+              <p><strong>Di notte</strong> la squadra analizza da sola un gruppo di aziende: tecnologia del sito, SEO, blog, tracciamenti.</p>
+            </Step>
+            <Step n={2}>
+              <p><strong>La mattina</strong> apri <strong>Cassetta</strong>: trovi solo le aziende con almeno 3 leve, raggruppate per servizio, ognuna con la sua prova.</p>
+            </Step>
+            <Step n={3}>
+              <p>Decidi: <strong>Approfondisci</strong> o <strong>Scarta</strong>. Ogni azienda arriva in cassetta una volta sola.</p>
+            </Step>
+            <Step n={4}>
+              <p>Nella scheda dell&apos;azienda il riquadro <strong>Fascicolo della squadra</strong> mostra tutti i referti.</p>
+            </Step>
+          </div>
+          <Tip>
+            Se un sito blocca i programmi automatici, l&apos;agente lo scrive e non inventa niente. Nella pagina
+            <strong> Squadra</strong> vedi chi lavora già, chi è ancora da costruire, e puoi far lavorare la squadra subito su 5 aziende.
+          </Tip>
+        </Section>
+
         {/* SEZIONE 1: Routine mattutina */}
-        <Section title="Routine mattutina (5 video/giorno)" icon={Video} defaultOpen={true}>
+        <Section title="Routine mattutina (5 video/giorno)" icon={Video}>
           <p>
             Ogni mattina il CRM ha gi&agrave; pronto il lavoro: i nuovi lead sono stati analizzati
             durante la notte da Gemini AI. Ecco i passaggi:
