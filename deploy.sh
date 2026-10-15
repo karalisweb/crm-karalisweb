@@ -358,16 +358,19 @@ else
     print_warning "CHANGELOG.md non trovato, skip verifica"
 fi
 
-# 1b: Verifica coerenza versione sidebar
+# 1b: Verifica coerenza versione sidebar.
+# Dalla 3.44 la sidebar legge la versione da package.json (NEXT_PUBLIC_APP_VERSION):
+# se non c'è un numero scritto a mano non c'è niente da allineare (|| true: con
+# pipefail un grep vuoto faceva uscire lo script in silenzio).
 SIDEBAR_FILE="${SCRIPT_DIR}/src/components/layout/sidebar.tsx"
 if [ -f "$SIDEBAR_FILE" ]; then
-    SIDEBAR_V=$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' "$SIDEBAR_FILE" | head -1)
+    SIDEBAR_V=$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' "$SIDEBAR_FILE" | head -1 || true)
     if [ -n "$SIDEBAR_V" ] && [ "$SIDEBAR_V" != "v$APP_VERSION" ]; then
         print_warning "Sidebar version ($SIDEBAR_V) diversa da v$APP_VERSION"
         sed -i '' "s/$SIDEBAR_V/v$APP_VERSION/" "$SIDEBAR_FILE"
         print_success "Sidebar version aggiornata a v$APP_VERSION"
     else
-        print_success "Sidebar version $SIDEBAR_V coerente"
+        print_success "Sidebar version ${SIDEBAR_V:-da package.json} coerente"
     fi
 fi
 
