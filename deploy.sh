@@ -68,6 +68,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_VERSION=$(grep '"version"' "${SCRIPT_DIR}/package.json" | head -1 | sed 's/.*"version"[^"]*"\([^"]*\)".*/\1/')
 VPS_HOST="root@185.192.97.108"
 VPS_PATH="/opt/sales-app"
+# Una sola connessione SSH riutilizzata per tutto il deploy: il server ha fail2ban e
+# una decina di connessioni ravvicinate facevano scattare il blocco a metà rilascio.
+SSH_OPTS="-o ControlMaster=auto -o ControlPath=$HOME/.ssh/cm-crm-%r@%h:%p -o ControlPersist=15m -o ServerAliveInterval=30"
 BRANCH="main"
 PM2_PROCESS="sales-crm"
 LOCAL_PORT=3003
@@ -448,12 +451,12 @@ print_success "Push completato"
 print_step "Step 6/9 - Pull sul VPS (con stash + pulizia)..."
 # Salva il commit attuale del server PRIMA del pull: è il punto di ripristino
 # per il rollback automatico se il nuovo deploy non passa l'health check.
-ROLLBACK_COMMIT=$(ssh $VPS_HOST "cd $VPS_PATH && git rev-parse HEAD" 2>/dev/null || echo "")
+ROLLBACK_COMMIT=$(ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && git rev-parse HEAD" 2>/dev/null || echo "")
 if [ -n "$ROLLBACK_COMMIT" ]; then
     echo -e "  ${CYAN}Punto di rollback: ${ROLLBACK_COMMIT:0:8}${NC}"
 fi
 # Stash modifiche locali + rimuovi file spuri non tracciati nella root
-ssh $VPS_HOST "cd $VPS_PATH && git stash --include-untracked 2>/dev/null; git clean -f -d --exclude=node_modules --exclude=.next --exclude=logs --exclude=.env* 2>/dev/null; git pull origin $BRANCH"
+ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && git stash --include-untracked 2>/dev/null; git clean -f -d --exclude=node_modules --exclude=.next --exclude=logs --exclude=.env* 2>/dev/null; git pull origin $BRANCH"
 print_success "Pull completato"
 
 # ═══════════════════════════════════════════
@@ -479,41 +482,41 @@ else
 fi
 
 # npm install solo se package.json è cambiato
-PACKAGE_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff $DIFF_RANGE --name-only 2>/dev/null | grep package.json" 2>/dev/null || echo "")
+PACKAGE_CHANGED=$(ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && git diff $DIFF_RANGE --name-only 2>/dev/null | grep package.json" 2>/dev/null || echo "")
 if [ -n "$PACKAGE_CHANGED" ]; then
     echo -e "  ${CYAN}package.json modificato → npm install${NC}"
-    ssh $VPS_HOST "cd $VPS_PATH && npm install"
+    ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && npm install"
     print_success "npm install completato"
 else
     print_success "package.json invariato, skip npm install"
 fi
 
 # PRIMA sincronizza schema DB (nuovi campi/tabelle)
-SCHEMA_CHANGED=$(ssh $VPS_HOST "cd $VPS_PATH && git diff $DIFF_RANGE --name-only 2>/dev/null | grep schema.prisma" 2>/dev/null || echo "")
+SCHEMA_CHANGED=$(ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && git diff $DIFF_RANGE --name-only 2>/dev/null | grep schema.prisma" 2>/dev/null || echo "")
 if [ -n "$SCHEMA_CHANGED" ]; then
     echo -e "  ${CYAN}schema.prisma modificato → backup DB + prisma db push${NC}"
     # Backup del DB PRIMA di toccare lo schema: `db push --accept-data-loss` può
     # cancellare colonne/dati. Il backup è il paracadute → se NON si apre, NON
     # eseguiamo la migrazione distruttiva (stesso principio del gate ENV allo step 9a).
-    if ssh $VPS_HOST "cd $VPS_PATH && [ -f scripts/backup-db.sh ] && bash scripts/backup-db.sh"; then
+    if ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && [ -f scripts/backup-db.sh ] && bash scripts/backup-db.sh"; then
         print_success "Backup DB eseguito prima della migrazione"
     elif [ "${ALLOW_UNSAFE_MIGRATION:-}" = "1" ]; then
         print_warning "Backup DB FALLITO ma ALLOW_UNSAFE_MIGRATION=1 → proseguo SENZA backup (rischio perdita dati)"
     else
         print_error "Backup DB fallito/assente → migrazione distruttiva ANNULLATA (nessun --accept-data-loss eseguito)."
         print_error "Il sito vecchio resta online e i dati sono intatti. Risolvi il backup e ri-deploya."
-        echo -e "  ${YELLOW}Test backup a mano: ssh $VPS_HOST \"cd $VPS_PATH && bash scripts/backup-db.sh\"${NC}"
+        echo -e "  ${YELLOW}Test backup a mano: ssh $SSH_OPTS $VPS_HOST \"cd $VPS_PATH && bash scripts/backup-db.sh\"${NC}"
         echo -e "  ${YELLOW}Forzare di proposito (sconsigliato): ALLOW_UNSAFE_MIGRATION=1 ./deploy.sh ...${NC}"
         exit 1
     fi
-    ssh $VPS_HOST "cd $VPS_PATH && npx prisma db push --accept-data-loss"
+    ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && npx prisma db push --accept-data-loss"
     print_success "Database sincronizzato"
 else
     print_success "schema.prisma invariato, skip db push"
 fi
 
 # POI genera il client Prisma (riflette lo schema aggiornato)
-ssh $VPS_HOST "cd $VPS_PATH && npx prisma generate"
+ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && npx prisma generate"
 print_success "Prisma client generato"
 
 # ═══════════════════════════════════════════
@@ -521,7 +524,7 @@ print_success "Prisma client generato"
 # ═══════════════════════════════════════════
 
 print_step "Step 8/9 - Build Next.js sul server..."
-ssh $VPS_HOST "cd $VPS_PATH && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build"
+ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build"
 print_success "Build completata"
 
 # ═══════════════════════════════════════════
@@ -532,7 +535,7 @@ print_step "Step 9/9 - Verifica ENV + Restart $PM2_PROCESS + health check..."
 
 # 9a: Gate ENV — niente restart se mancano i segreti critici (fail fast,
 # il vecchio processo resta su e online).
-MISSING_ENV=$(ssh $VPS_HOST "cd $VPS_PATH && for v in DATABASE_URL NEXTAUTH_SECRET CRON_SECRET; do grep -qE \"^\${v}=.+\" .env 2>/dev/null || echo \$v; done")
+MISSING_ENV=$(ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && for v in DATABASE_URL NEXTAUTH_SECRET CRON_SECRET; do grep -qE \"^\${v}=.+\" .env 2>/dev/null || echo \$v; done")
 if [ -n "$MISSING_ENV" ]; then
     print_error "Variabili ENV mancanti/vuote nel .env del server: $MISSING_ENV"
     print_error "Deploy annullato PRIMA del restart — il sito vecchio resta online."
@@ -541,8 +544,10 @@ fi
 print_success "ENV critiche presenti (DATABASE_URL, NEXTAUTH_SECRET, CRON_SECRET)"
 
 # 9b: Restart
-ssh $VPS_HOST "cd $VPS_PATH && pm2 restart $PM2_PROCESS --update-env || pm2 start ecosystem.config.cjs"
-ssh $VPS_HOST "pm2 save"
+# Se pm2 ha "perso" il processo (capitato il 2026-10-15: "Process 9 not found") lo si
+# ricrea da ecosystem.config.cjs invece di lasciarlo spento.
+ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && (pm2 restart $PM2_PROCESS --update-env || (pm2 delete $PM2_PROCESS; pm2 start ecosystem.config.cjs))"
+ssh $SSH_OPTS $VPS_HOST "pm2 save"
 
 # 9c: Health check REALE su /api/health (verifica anche il DB), con retry.
 echo -e "  ${CYAN}Verifico /api/health (max 6 tentativi)...${NC}"
@@ -550,7 +555,7 @@ HEALTH_OK=false
 HTTP_STATUS="000"
 for i in 1 2 3 4 5 6; do
     sleep 5
-    HTTP_STATUS=$(ssh $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/api/health" 2>/dev/null || echo "000")
+    HTTP_STATUS=$(ssh $SSH_OPTS $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/api/health" 2>/dev/null || echo "000")
     if [ "$HTTP_STATUS" = "200" ]; then HEALTH_OK=true; break; fi
     echo -e "  ${YELLOW}tentativo $i/6: HTTP $HTTP_STATUS, riprovo...${NC}"
 done
@@ -561,19 +566,19 @@ else
     # 9d: ROLLBACK automatico al commit precedente.
     print_error "Health check fallito (HTTP $HTTP_STATUS) → ROLLBACK automatico..."
     if [ -n "$ROLLBACK_COMMIT" ]; then
-        ssh $VPS_HOST "cd $VPS_PATH && git reset --hard $ROLLBACK_COMMIT && npm install && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build && pm2 restart $PM2_PROCESS --update-env && pm2 save" \
+        ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && git reset --hard $ROLLBACK_COMMIT && npm install && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build && pm2 restart $PM2_PROCESS --update-env && pm2 save" \
             || print_warning "Errori durante il rollback, verifico comunque lo stato..."
         sleep 5
-        ROLLBACK_STATUS=$(ssh $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/api/health" 2>/dev/null || echo "000")
+        ROLLBACK_STATUS=$(ssh $SSH_OPTS $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/api/health" 2>/dev/null || echo "000")
         if [ "$ROLLBACK_STATUS" = "200" ]; then
             print_success "Rollback OK: sito di nuovo online sulla versione precedente (${ROLLBACK_COMMIT:0:8})."
         else
             print_error "Rollback eseguito ma health ancora KO (HTTP $ROLLBACK_STATUS)."
-            echo -e "  ${YELLOW}Log: ssh $VPS_HOST \"pm2 logs $PM2_PROCESS --lines 40 --nostream\"${NC}"
+            echo -e "  ${YELLOW}Log: ssh $SSH_OPTS $VPS_HOST \"pm2 logs $PM2_PROCESS --lines 40 --nostream\"${NC}"
         fi
     else
         print_error "Nessun commit di rollback salvato — intervieni a mano."
-        echo -e "  ${YELLOW}Log: ssh $VPS_HOST \"pm2 logs $PM2_PROCESS --lines 40 --nostream\"${NC}"
+        echo -e "  ${YELLOW}Log: ssh $SSH_OPTS $VPS_HOST \"pm2 logs $PM2_PROCESS --lines 40 --nostream\"${NC}"
     fi
     exit 1
 fi

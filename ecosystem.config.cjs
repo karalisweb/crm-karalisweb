@@ -12,8 +12,9 @@ module.exports = {
       PORT: 3003,
       HOSTNAME: '0.0.0.0',
     },
-    // Carica variabili da .env e .env.local
-    env_file: ['.env', '.env.local'],
+    // Come gira davvero sul server (prima era una modifica locale che ogni deploy
+    // metteva da parte con git stash): solo .env.
+    env_file: '.env',
     // Restart automatico se crasha
     autorestart: true,
     max_restarts: 10,
