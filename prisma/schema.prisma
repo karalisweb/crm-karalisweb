@@ -504,6 +504,12 @@ model BniMembro {
   // Alcuni colleghi di capitolo sono clienti reali di Karalisweb.
   isCustomer  Boolean  @default(false) @map("is_customer")
 
+  // Squadra BNI (v3.45): ruolo nella dirigenza del capitolo, letto da BNI Connect dal
+  // Cartografo (PRESIDENTE | VICEPRESIDENTE | FORMAZIONE), e quando Alessio l'ha conosciuto
+  // (121, visita, riunione): serve a misurare la copertura in Sardegna.
+  leadershipRole String?   @map("leadership_role")
+  conosciutoAt   DateTime? @map("conosciuto_at")
+
   // Denormalizzati per dashboard veloce (aggiornati a ogni 121)
   oneToOneCount  Int       @default(0) @map("one_to_one_count")
   lastOneToOneAt DateTime? @map("last_one_to_one_at")
@@ -515,6 +521,9 @@ model BniMembro {
   oneToOnes      OneToOne[]
   referredLeads  Lead[]          @relation("BniReferral")
   referralsGiven ReferralGiven[]
+  agentRuns      AgentRun[]
+  agentReports   AgentReport[]
+  approvalItems  ApprovalItem[]
 
   @@index([chapter], name: "idx_bni_membro_chapter")
   @@index([lastOneToOneAt], name: "idx_bni_membro_last121")
@@ -572,6 +581,16 @@ model BniChapter {
 
   isMine   Boolean @default(false) @map("is_mine") // Il mio capitolo (Atlantide): 121 con OGNI membro
   notes    String? @db.Text
+
+  // Squadra BNI (v3.45): capitoli di tutta Italia, mappati dal Cartografo su BNI Connect.
+  regioneItaliana String?   @map("regione_italiana") // "Sardegna", "Lombardia", …
+  provincia       String?
+  bniConnectUrl   String?   @map("bni_connect_url")
+  mappedAt        DateTime? @map("mapped_at")
+
+  agentRuns     AgentRun[]
+  agentReports  AgentReport[]
+  approvalItems ApprovalItem[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1239,13 +1258,20 @@ model ModuleEntitlement {
 // sopravvive ai riavvii e si ispeziona.
 model AgentRun {
   id         String         @id @default(uuid())
-  leadId     String         @map("lead_id")
-  lead       Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  // Su cosa lavora: un'azienda, un capitolo BNI o un membro BNI (uno dei tre, o nessuno
+  // per gli agenti che cercano aziende nuove come l'Esploratore).
+  leadId     String?        @map("lead_id")
+  lead       Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  bniChapterId String?      @map("bni_chapter_id")
+  bniChapter   BniChapter?  @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
+  bniMembroId  String?      @map("bni_membro_id")
+  bniMembro    BniMembro?   @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
   agent      String         // chiave del registro, es. "tecnico", "seo", "blog"
   status     AgentRunStatus @default(IN_CODA)
   attempts   Int            @default(0)
   error      String?
-  costCents  Int            @default(0) @map("cost_cents") // costo esterno (API), in centesimi di euro
+  costCents  Float          @default(0) @map("cost_cents") // costo esterno (API), in centesimi di euro (con decimali: una chiamata costa frazioni di centesimo)
+  input      Json?          // istruzioni del lavoro, se servono (es. la regione da mappare per il Cartografo)
   queuedAt   DateTime       @default(now()) @map("queued_at")
   startedAt  DateTime?      @map("started_at")
   finishedAt DateTime?      @map("finished_at")
@@ -1253,6 +1279,8 @@ model AgentRun {
 
   @@index([status, queuedAt])
   @@index([leadId, agent])
+  @@index([bniChapterId])
+  @@index([bniMembroId])
   @@map("agent_runs")
 }
 
@@ -1266,8 +1294,12 @@ enum AgentRunStatus {
 // Il referto: cosa ha trovato l'agente, con le prove e fino a quando vale.
 model AgentReport {
   id          String          @id @default(uuid())
-  leadId      String          @map("lead_id")
-  lead        Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId      String?         @map("lead_id")
+  lead        Lead?           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  bniChapterId String?        @map("bni_chapter_id")
+  bniChapter   BniChapter?    @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
+  bniMembroId  String?        @map("bni_membro_id")
+  bniMembro    BniMembro?     @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
   agent       String
   runId       String?         @unique @map("run_id")
   run         AgentRun?       @relation(fields: [runId], references: [id], onDelete: SetNull)
@@ -1280,6 +1312,8 @@ model AgentReport {
   validUntil  DateTime        @map("valid_until")
 
   @@index([leadId, agent, collectedAt])
+  @@index([bniChapterId, agent])
+  @@index([bniMembroId, agent])
   @@map("agent_reports")
 }
 
@@ -1292,8 +1326,12 @@ enum AgentConfidence {
 // La cassetta: tutto ciò che aspetta una decisione di Alessio.
 model ApprovalItem {
   id        String         @id @default(uuid())
-  leadId    String         @map("lead_id")
-  lead      Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId    String?        @map("lead_id")
+  lead      Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  bniChapterId String?     @map("bni_chapter_id")
+  bniChapter   BniChapter? @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
+  bniMembroId  String?     @map("bni_membro_id")
+  bniMembro    BniMembro?  @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
   kind      String         // "FASCICOLO_BASE" (approva la raccolta approfondita), poi bozze di contatto…
   agent     String         // chi l'ha proposto
   title     String
@@ -1306,6 +1344,8 @@ model ApprovalItem {
 
   @@index([status, createdAt])
   @@index([leadId, kind])
+  @@index([bniChapterId, kind])
+  @@index([bniMembroId, kind])
   @@map("approval_items")
 }
 

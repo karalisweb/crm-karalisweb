@@ -1444,3 +1444,80 @@ Crontab del VPS (unico scheduler):
 - I tag dentro Google Tag Manager non si vedono dall'HTML statico: l'agente Tracciamenti lo dichiara.
 - "Approfondisci" in cassetta per ora registra solo la decisione.
 
+
+---
+
+## Squadra di agenti completa (v3.45.0)
+
+Tutti gli agenti di `PROGETTO-AGENTI.md` sono in `src/lib/agents/`. Registro e istruzioni dei
+lavori di browser: `registro.ts`.
+
+### L'imbuto (`turno.ts`)
+
+1. **Base** (gratis) — `tecnico`, `seo`, `blog`, `tracciamenti` su tutte le aziende con sito
+   (`BASE_AZIENDE`). Con ≥ 3 leve → `ApprovalItem` `FASCICOLO_BASE`.
+2. **Approfondimento** — solo se `FASCICOLO_BASE` è `APPROVATO`: agenti di server a pagamento
+   `lettore` (AI), `posizioni` (DataForSEO SERP), `google_ads` (DataForSEO Ads Transparency,
+   `target` = dominio, annuncio "attivo" se `last_shown` negli ultimi 14 giorni) + lavori di browser
+   accodati (`social`, `meta_ads`, `linkedin_azienda`, `decision_maker`), una volta sola, senza
+   ripetizione automatica se falliscono.
+3. **Sintesi** — quando tutti gli agenti dell'approfondimento hanno chiuso (referto valido o
+   fallimento; i lavori di browser mai presi scadono dopo 3 giorni): catena `coerenza` →
+   `regista_video` → `scheda_leve` → `aggancio` (si riparte dal primo anello mancante; al primo
+   errore la catena si ferma). Poi `ApprovalItem` `SCHEDA_CONTATTO` (una per azienda).
+
+Ogni turno: `sbloccaLavori` (server IN_CORSO > 30 min, browser IN_CORSO > 3 h, browser IN_CODA > 3
+giorni → FALLITO), poi le approvate (`ceil(limit/4)`), poi la raccolta base.
+
+### Moduli
+
+| File | Ruolo |
+|---|---|
+| `ai.ts` | `chiediJSON` — Claude `claude-opus-5-5` (structured output, `fallbacks: "default"`, effort medium) se `ANTHROPIC_API_KEY`, altrimenti Gemini (`GEMINI_MODEL`, default `gemini-2.5-flash`). `REGOLE_COMUNI`: Metodo SD, niente fatti inventati, niente tono da venditore |
+| `costi.ts` | Costo in centesimi di euro (decimali): DataForSEO dal campo `cost` della risposta; AI da token × `LISTINO_AI`. Cambio USD→EUR fisso `AGENTI_EUR_PER_USD` (default 0,92: **assunzione**). Tetto `AGENTI_BUDGET_EUR` (default 70) |
+| `dataforseo.ts` | Client con costo; `dominio()` |
+| `materiali.ts` | Referti in forma compatta per l'AI; `citazioneVera` (anti-allucinazione, accetta citazioni composte " / ") |
+| `agenti/lettore.ts`, `posizioni.ts`, `google-ads.ts`, `sintesi.ts` | Agenti 2, 3, 4, 11, 13, 12, 10 |
+| `esploratore.ts` | Agente 1 (Google Search): prossima coppia `SearchCategory` × `SearchLocation` non cercata da 60 giorni, SERP depth 30, filtro `NON_AZIENDE`, dedup per dominio, franchising → `NON_TARGET`; lead `source = "google_search"`, `address` = città |
+| `browser.ts` | Coda browser: `prendiLavori` (presa atomica), `SchemaChiusura` (zod), `chiudiLavoro`; validità per agente |
+| `bni-regole.ts` | **Puro**: `stessoRuolo`, `eSardo`, `formatoDa`, `dirigenzaDa`, `coperturaCapitolo`, `azioneCapitolo`, `REGIONI_ITALIA` |
+| `bni.ts` | `importaMappaBni` (crea/completa capitoli e membri, non cancella), `eseguiTurnoBni`: B4 copertura (referto per capitolo, 1 giorno), B2 azione per capitolo (`AZIONE_BNI`, Sardegna ogni 7 giorni, altrove ogni 60), B1 accoda una regione (90 giorni), B3 messaggi per le azioni approvate (`MESSAGGIO_BNI`) |
+
+### Database (migrazione `20261016090000_squadra_completa`, additiva, via psql)
+
+- `agent_runs`, `agent_reports`, `approval_items`: `lead_id` facoltativo + `bni_chapter_id`,
+  `bni_membro_id`; `agent_runs.input` (JSONB); `agent_runs.cost_cents` → `DOUBLE PRECISION`.
+- `bni_chapters`: `regione_italiana`, `provincia`, `bni_connect_url`, `mapped_at`.
+- `bni_membri`: `leadership_role`, `conosciuto_at` (PATCH `/api/bni/membri/[id]` accetta
+  `conosciuto` e `leadershipRole`).
+
+### API
+
+| Rotta | Auth | Cosa fa |
+|---|---|---|
+| `POST /api/cron/squadra?limit=20` | `CRON_SECRET` | Turno commerciale (base + approfondimento + sintesi) |
+| `POST /api/cron/squadra-bni` | `CRON_SECRET` | Turno BNI |
+| `POST /api/cron/esploratore?ricerche=1` | `CRON_SECRET` | Ricerche Google (max 5) |
+| `GET /api/agenti/browser/lavori?limit=5` | `AGENTI_BROWSER_KEY` (middleware) | Presa in carico lavori di browser |
+| `POST /api/agenti/browser/referto` | `AGENTI_BROWSER_KEY` | Chiusura con referto validato (400 con dettaglio se non valido, 409 se non in corso) |
+| `POST /api/squadra/lancia` | ADMIN | `{squadra: commerciale|bni|esploratore}` |
+
+`ApprovalItem.kind`: `FASCICOLO_BASE`, `SCHEDA_CONTATTO`, `AZIONE_BNI`, `MESSAGGIO_BNI`
+(approvato → membro da `DA_AVVICINARE` a `RICHIESTA_121`).
+
+### Agenti di browser
+
+Istruzioni operative in `agenti-browser/ISTRUZIONI.md`; attività programmata nell'app Claude del
+Mac di Alessio. Credenziali sul Mac in `~/.karalisweb/agenti-browser.env` (fuori dal repo).
+
+### Orologio (crontab VPS)
+
+- `15 0-5 * * *` squadra (20 aziende a turno)
+- `0 7 * * *` squadra-bni
+- `30 6,14 * * 1-5` esploratore (1 ricerca)
+
+### Limiti noti
+
+- Gli agenti di browser lavorano solo con il Mac acceso e l'app Claude aperta.
+- Il costo dell'AI è calcolato dai token con il listino in `costi.ts`; il cambio dollaro→euro è fisso.
+- I nomi delle aziende trovate su Google sono ricavati dal titolo o dal dominio: possono essere imprecisi.

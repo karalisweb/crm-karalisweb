@@ -133,6 +133,8 @@ async function cercaArticoli(p: PaginaScaricata): Promise<{ articoli: Articolo[]
 
 export const agenteBlog: AgenteEseguibile = {
   chiave: "blog",
+  fase: "base",
+  aPagamento: false,
   validitaGiorni: 30,
   async esegui(ctx) {
     const p = await ctx.pagina();

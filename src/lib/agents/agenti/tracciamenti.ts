@@ -55,6 +55,8 @@ export function refertoTracciamenti(t: TrackingAudit, fonte: string): Referto {
 
 export const agenteTracciamenti: AgenteEseguibile = {
   chiave: "tracciamenti",
+  fase: "base",
+  aPagamento: false,
   validitaGiorni: 60,
   async esegui(ctx) {
     const p = await ctx.pagina();

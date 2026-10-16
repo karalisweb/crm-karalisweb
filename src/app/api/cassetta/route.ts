@@ -17,7 +17,11 @@ export async function GET(request: NextRequest) {
       where: { status: stato },
       orderBy: { createdAt: stato === "IN_ATTESA" ? "asc" : "desc" },
       take: 100,
-      include: { lead: { select: { id: true, name: true, website: true, category: true, address: true, phone: true, googleRating: true, googleReviewsCount: true } } },
+      include: {
+        lead: { select: { id: true, name: true, website: true, category: true, address: true, phone: true, googleRating: true, googleReviewsCount: true } },
+        bniChapter: { select: { id: true, name: true, city: true } },
+        bniMembro: { select: { id: true, name: true, phone: true, company: true, profession: true, chapter: true } },
+      },
     }),
     db.approvalItem.groupBy({ by: ["status"], _count: { _all: true } }),
   ]);

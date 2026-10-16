@@ -156,10 +156,10 @@ Oggi esistono **tre pipeline separate** (lead, BNI, opportunità). La pipeline d
    *Alla fine funziona*: di notte arrivano N aziende con i loro referti, la mattina le vedi in cassetta.
    Prova su 20 aziende reali: 13 analizzate, 10 in cassetta, 7 siti hanno rifiutato la lettura (403/503).
    L'agente 1 (Google Maps) resta quello delle Ricerche; la ricerca notturna è ancora spenta nel crontab.
-2. **Agenti di sintesi 11 e 12** sulle stesse aziende. *Alla fine funziona*: scheda leve con prove.
-3. **Agenti di browser** 6, 7, 8, 9 come attività programmata sul Mac, pochi al giorno.
-4. **Agente 10 + 13**: bozze di contatto e scaletta video, tu approvi e mandi.
-5. **Squadra BNI** (B1 → B4).
+2. ✅ **Agenti di sintesi 11 e 12**, 3. ✅ **agenti di browser** 6, 7, 8, 9 (attività programmata sul Mac),
+   4. ✅ **agenti 10 + 13**, 5. ✅ **squadra BNI** (B1 → B4), più ✅ Esploratore su Google, Lettore (2),
+   Posizioni (3) e Google Ads (4) — **v3.45.0**, 2026-10-16. Prova reale: approfondimento + sintesi ≈ 2
+   centesimi per azienda con Gemini.
 6. **Pipeline di vendita** (dopo la sessione dedicata).
 
 Prima di tutto: prova su **20 aziende reali** per misurare costo e qualità di ogni agente, prima di farli girare su migliaia.

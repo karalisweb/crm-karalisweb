@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.44.0** | Ultimo aggiornamento: 2026-10-15
+Versione: **3.45.0** | Ultimo aggiornamento: 2026-10-16
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -41,26 +41,37 @@ Il CRM sta diventando una **squadra di agenti che lavorano al posto tuo**. Ogni 
 mestiere solo e consegna un **referto**: che cosa ha trovato, su cosa si può fare leva in una
 chiamata e **la prova** di ogni cosa che dice.
 
-**Chi lavora oggi (passo 1)**
+**L'imbuto, dall'azienda sconosciuta alla call**
+1. **L'Esploratore** trova aziende nuove su Google (oltre a quelle delle Ricerche su Maps).
+2. **Di notte**, su tutte le aziende: Tecnico, SEO, Blog, Tracciamenti (gratis).
+3. **Cassetta → "Da approfondire?"**: le aziende con almeno 3 leve. Tu scegli **Approfondisci** o **Scarta**.
+4. **Approfondimento** (solo su quelle che approvi): Lettore del sito, Posizioni su Google, Google Ads
+   (sul server, pochi centesimi) e Social, Meta Ad Library, LinkedIn, Decision maker (con il tuo browser,
+   vedi sotto).
+5. **Sintesi**: Coerenza → Regista del video → Scheda leve → Aggancio.
+6. **Cassetta → "Pronta per il contatto"**: temperatura, servizio da proporre, come aprire la
+   chiamata, domande, obiezione probabile, chi decide, il **messaggio** (pulsante Copia) e la
+   **scaletta del video**. Il messaggio lo mandi tu.
 
-| Agente | Cosa guarda |
-|---|---|
-| 2.5 Tecnico | Con che cosa è fatto il sito, la versione PHP, l'anno scritto nel piè di pagina, se è in HTTPS |
-| 3 SEO | Titolo, descrizione, titolo principale, sitemap, dati strutturati, se va bene sul telefono |
-| 3.5 Blog | Se c'è un blog, quando è uscito l'ultimo articolo e i titoli recenti |
-| 5 Tracciamenti | Google Analytics, Tag Manager, pixel Meta, tag Google Ads e simili |
+**La squadra BNI**
+- **In Sardegna** l'obiettivo è conoscere tutti i membri: ogni settimana la Cassetta propone i
+  prossimi 5 per capitolo. Nella pagina Squadra vedi la copertura (quanti ne conosci su quanti).
+- **Fuori Sardegna**, per ogni capitolo: se c'è un collega con il tuo mestiere → collaborazione;
+  se il tuo ruolo è scoperto e il capitolo è online o ibrido → partecipa alla riunione; se è in
+  presenza → 121 con presidente, vicepresidente e responsabile formazione.
+- Approvi l'azione → il Preparatore scrive i messaggi → in Cassetta trovi ogni messaggio con
+  **Apri WhatsApp** (si apre la chat con il testo pronto). Quando l'hai mandato premi **Mandato**.
+- Il **Cartografo** legge capitoli, membri e dirigenza da BNI Connect, una regione alla volta.
 
-Gli altri agenti (Google Ads, social, Meta, LinkedIn, coerenza, scheda leve, video, BNI) sono
-nella pagina **Squadra** con la scritta "Da costruire": arrivano nei prossimi passi.
+**Gli agenti di browser (sul tuo Mac)**
+Social, Meta Ad Library, LinkedIn, Decision maker e Cartografo usano il tuo Chrome. Li fa Claude
+nell'attività programmata "Squadra CRM — agenti di browser" (app Claude, Mac acceso). Solo
+lettura, LinkedIn al massimo 20 aziende al giorno. Se il Mac è spento i lavori aspettano 3 giorni,
+poi la sintesi va avanti con quello che c'è e lo dice.
 
-**Come funziona la giornata**
-1. **Di notte** la squadra lavora da sola su un gruppo di aziende.
-2. **La mattina** apri **Cassetta**: trovi solo le aziende in cui ha trovato almeno 3 leve.
-   Per ognuna vedi le leve raggruppate per servizio (Sito web, SEO, Contenuti, Google Ads…),
-   ognuna con la sua prova.
-3. Decidi: **Approfondisci** (vale la pena lavorarci) o **Scarta**. Ogni azienda arriva in
-   cassetta una volta sola.
-4. Nella scheda dell'azienda, il riquadro **Fascicolo della squadra** mostra tutti i referti.
+**Spesa**
+Ogni lavoro registra quanto costa. Nella pagina Squadra vedi la spesa del mese sul tetto (70 €):
+arrivati al tetto gli agenti a pagamento si fermano fino al mese dopo.
 
 **Cose da sapere**
 - Se un agente non può leggere un sito (alcuni bloccano i programmi automatici), lo scrive.

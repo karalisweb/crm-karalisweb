@@ -98,16 +98,19 @@ export default function GuidaPage() {
           </p>
           <div className="space-y-3">
             <Step n={1}>
-              <p><strong>Di notte</strong> la squadra analizza da sola un gruppo di aziende: tecnologia del sito, SEO, blog, tracciamenti.</p>
+              <p><strong>Di notte</strong> la squadra analizza da sola le aziende (anche quelle nuove trovate dall&apos;Esploratore su Google).</p>
             </Step>
             <Step n={2}>
-              <p><strong>La mattina</strong> apri <strong>Cassetta</strong>: trovi solo le aziende con almeno 3 leve, raggruppate per servizio, ognuna con la sua prova.</p>
+              <p>In <strong>Cassetta</strong> trovi le aziende con almeno 3 leve: <strong>Approfondisci</strong> o <strong>Scarta</strong>.</p>
             </Step>
             <Step n={3}>
-              <p>Decidi: <strong>Approfondisci</strong> o <strong>Scarta</strong>. Ogni azienda arriva in cassetta una volta sola.</p>
+              <p>Su quelle approfondite lavorano gli agenti a pagamento (pochi centesimi) e quelli di browser sul tuo Mac; poi la sintesi.</p>
             </Step>
             <Step n={4}>
-              <p>Nella scheda dell&apos;azienda il riquadro <strong>Fascicolo della squadra</strong> mostra tutti i referti.</p>
+              <p>In Cassetta arriva la <strong>scheda pronta per il contatto</strong>: leve con prova, come aprire la chiamata, il messaggio da copiare e la scaletta del video. Il messaggio lo mandi tu.</p>
+            </Step>
+            <Step n={5}>
+              <p><strong>BNI</strong>: in Cassetta trovi l&apos;azione per ogni capitolo e, se la approvi, i messaggi pronti con &quot;Apri WhatsApp&quot;.</p>
             </Step>
           </div>
           <Tip>

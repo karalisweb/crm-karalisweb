@@ -84,3 +84,54 @@ export function levePerServizio(leve: Leva[]): Record<string, Leva[]> {
   for (const l of leve) (out[l.servizio] ??= []).push(l);
   return out;
 }
+
+// ─── Approfondimento e sintesi ─────────────────────────────────────────────
+// Partono solo dopo che Alessio ha detto "Approfondisci" in cassetta.
+
+/** Agenti dell'approfondimento che lavorano sul server (a pagamento: DataForSEO / AI). */
+export const AGENTI_APPROFONDIMENTO_SERVER = ["lettore", "posizioni", "google_ads"] as const;
+/** Agenti dell'approfondimento che lavorano col browser di Alessio (Claude sul Mac). */
+export const AGENTI_BROWSER_AZIENDA = ["social", "meta_ads", "linkedin_azienda", "decision_maker"] as const;
+/** La catena di sintesi, nell'ordine: ognuno legge quello che hanno scritto i precedenti. */
+export const AGENTI_SINTESI = ["coerenza", "regista_video", "scheda_leve", "aggancio"] as const;
+
+/** Dopo quanti giorni un lavoro di browser mai preso in carico si considera perso. */
+export const SCADENZA_BROWSER_GIORNI = 3;
+/** Un lavoro di browser preso in carico ma mai chiuso: dopo quante ore si chiude come fallito. */
+export const LAVORO_BROWSER_BLOCCATO_ORE = 3;
+
+/**
+ * Quali lavori di browser mettere in coda. Un lavoro di browser si accoda una volta:
+ * se fallisce non si riprova da solo (lo fa il Mac di Alessio, che può essere spento),
+ * si rifà solo quando un referto vecchio scade.
+ */
+export function browserDaAccodare(stati: StatoAgenteSuAzienda[], oggi: Date): string[] {
+  const perAgente = new Map(stati.map((s) => [s.agente, s]));
+  return AGENTI_BROWSER_AZIENDA.filter((a) => {
+    const s = perAgente.get(a);
+    if (!s) return true;
+    if (s.inCorso || s.fallimentiDiFila > 0) return false;
+    return !!s.validoFino && s.validoFino <= oggi;
+  });
+}
+
+/** Un agente ha "chiuso" il suo lavoro: referto valido, oppure ci ha provato ed è fallito. */
+function chiuso(s: StatoAgenteSuAzienda | undefined, oggi: Date): boolean {
+  if (!s) return false;
+  if (s.validoFino && s.validoFino > oggi) return true;
+  return s.fallimentiDiFila > 0 && !s.inCorso;
+}
+
+/**
+ * La sintesi parte quando tutti gli agenti dell'approfondimento hanno chiuso il loro
+ * lavoro (anche fallendo: si sintetizza quello che c'è, e lo si dice).
+ */
+export function prontoPerSintesi(stati: StatoAgenteSuAzienda[], oggi: Date): boolean {
+  const perAgente = new Map(stati.map((s) => [s.agente, s]));
+  return [...AGENTI_APPROFONDIMENTO_SERVER, ...AGENTI_BROWSER_AZIENDA].every((a) => chiuso(perAgente.get(a), oggi));
+}
+
+/** La catena di sintesi va (ri)fatta se anche un solo anello manca o è scaduto. */
+export function sintesiDaFare(stati: StatoAgenteSuAzienda[], oggi: Date): boolean {
+  return agentiDaEseguire(stati, oggi, AGENTI_SINTESI).length > 0;
+}

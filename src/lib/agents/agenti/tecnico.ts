@@ -97,6 +97,8 @@ export function analizzaTecnico(pagina: PaginaScaricata, oggi: Date): Referto {
 
 export const agenteTecnico: AgenteEseguibile = {
   chiave: "tecnico",
+  fase: "base",
+  aPagamento: false,
   validitaGiorni: 90,
   async esegui(ctx) {
     return analizzaTecnico(await ctx.pagina(), ctx.oggi);

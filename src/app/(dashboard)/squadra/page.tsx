@@ -21,6 +21,7 @@ interface Agente {
   nota?: string;
   settimana: { fatti: number; falliti: number };
   ultimoLavoro: string | null;
+  spesaMeseEuro: number;
 }
 
 interface Dati {
@@ -29,7 +30,22 @@ interface Dati {
   daAnalizzare: number;
   cassetta: Partial<Record<"IN_ATTESA" | "APPROVATO" | "SCARTATO", number>>;
   erroriSettimana: { errore: string; lavori: number }[];
+  browser: Partial<Record<"IN_CODA" | "IN_CORSO", number>>;
+  spesa: { meseEuro: number; tettoEuro: number };
+  servizi: { ai: string | null; dataForSeo: boolean; browser: boolean };
+  coperturaSardegna: {
+    capitoli: { capitolo: string; totale: number; conosciuti: number; percentuale: number }[];
+    totale: number;
+    conosciuti: number;
+    percentuale: number;
+  } | null;
 }
+
+const LANCI: { squadra: "commerciale" | "bni" | "esploratore"; label: string }[] = [
+  { squadra: "commerciale", label: "Commerciale: 5 aziende" },
+  { squadra: "bni", label: "BNI" },
+  { squadra: "esploratore", label: "Cerca aziende nuove" },
+];
 
 const FAMIGLIA = {
   server: { label: "Server", icon: Server, help: "Lavora di notte sul server, su molte aziende" },
@@ -62,7 +78,7 @@ export default function SquadraPage() {
   const [dati, setDati] = useState<Dati | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lancio, setLancio] = useState(false);
+  const [lancio, setLancio] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -82,24 +98,30 @@ export default function SquadraPage() {
     fetchData();
   }, [fetchData]);
 
-  async function lancia() {
-    setLancio(true);
+  async function lancia(squadra: "commerciale" | "bni" | "esploratore") {
+    setLancio(squadra);
     try {
       const r = await fetch("/api/squadra/lancia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ limit: 5 }),
+        body: JSON.stringify({ squadra, limit: 5 }),
       });
       const d = await r.json();
       if (!r.ok || !d.success) throw new Error(d.error || "Errore");
-      toast.success(
-        `${d.aziende} aziende analizzate · ${d.nuoviInCassetta} in cassetta${d.lavoriFalliti ? ` · ${d.lavoriFalliti} lavori non riusciti` : ""}`
-      );
+      if (squadra === "bni") {
+        toast.success(`${d.capitoliValutati} capitoli valutati · ${d.azioniInCassetta} azioni e ${d.messaggiInCassetta} messaggi in cassetta${d.mappeAccodate ? " · 1 regione da mappare in coda" : ""}`);
+      } else if (squadra === "esploratore") {
+        toast.success(d.motivo ? d.motivo : `"${d.ricerca}": ${d.nuove} aziende nuove (${d.giaPresenti} già nel CRM)`);
+      } else {
+        toast.success(
+          `${d.aziende} aziende · ${d.nuoviInCassetta} in cassetta${d.accodatiBrowser ? ` · ${d.accodatiBrowser} lavori per il browser` : ""}${d.lavoriFalliti ? ` · ${d.lavoriFalliti} non riusciti` : ""}${d.saltatiPerBudget ? ` · ${d.saltatiPerBudget} fermati dal tetto di spesa` : ""}`
+        );
+      }
       fetchData();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore");
     } finally {
-      setLancio(false);
+      setLancio(null);
     }
   }
 
@@ -115,15 +137,16 @@ export default function SquadraPage() {
             Gli agenti che lavorano al posto tuo. Di notte analizzano; la mattina trovi in Cassetta le aziende che meritano.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} aria-label="Aggiorna">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          {isAdmin && (
-            <Button size="sm" onClick={lancia} disabled={lancio}>
-              <Play className="h-4 w-4 mr-1" /> {lancio ? "Al lavoro…" : "Lavora su 5 aziende"}
-            </Button>
-          )}
+          {isAdmin &&
+            LANCI.map((l) => (
+              <Button key={l.squadra} size="sm" variant={l.squadra === "commerciale" ? "default" : "outline"} onClick={() => lancia(l.squadra)} disabled={!!lancio}>
+                <Play className="h-4 w-4 mr-1" /> {lancio === l.squadra ? "Al lavoro…" : l.label}
+              </Button>
+            ))}
         </div>
       </div>
 
@@ -145,8 +168,18 @@ export default function SquadraPage() {
             <Link href="/cassetta">
               <Card className="hover:border-primary transition"><CardContent className="p-4"><div className={`text-2xl font-bold ${dati.cassetta.IN_ATTESA ? "text-amber-600 dark:text-amber-400" : ""}`}>{dati.cassetta.IN_ATTESA ?? 0}</div><div className="text-xs text-muted-foreground">In cassetta da decidere</div></CardContent></Card>
             </Link>
-            <Card><CardContent className="p-4"><div className="text-2xl font-bold">{dati.cassetta.APPROVATO ?? 0}</div><div className="text-xs text-muted-foreground">Da approfondire</div></CardContent></Card>
+            <Card><CardContent className="p-4"><div className={`text-2xl font-bold ${dati.spesa.meseEuro >= dati.spesa.tettoEuro ? "text-rose-600 dark:text-rose-400" : ""}`}>{dati.spesa.meseEuro.toLocaleString("it-IT", { style: "currency", currency: "EUR" })}</div><div className="text-xs text-muted-foreground">Spesi questo mese su {dati.spesa.tettoEuro} €</div></CardContent></Card>
           </div>
+
+          <Card>
+            <CardContent className="p-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              <span>AI: <strong>{dati.servizi.ai ?? "non configurata"}</strong></span>
+              <span>DataForSEO: <strong>{dati.servizi.dataForSeo ? "collegato" : "non configurato"}</strong></span>
+              <span>Browser: <strong>{dati.servizi.browser ? "collegato" : "chiave mancante"}</strong>
+                {(dati.browser.IN_CODA || dati.browser.IN_CORSO) ? ` · ${dati.browser.IN_CODA ?? 0} in coda, ${dati.browser.IN_CORSO ?? 0} in corso` : ""}
+              </span>
+            </CardContent>
+          </Card>
 
           {SQUADRE.map((sq) => (
             <section key={sq.chiave} className="space-y-2">
@@ -174,6 +207,7 @@ export default function SquadraPage() {
                             <>
                               <span>7 giorni: {a.settimana.fatti} fatti{a.settimana.falliti ? `, ${a.settimana.falliti} non riusciti` : ""}</span>
                               <span>ultimo: {quando(a.ultimoLavoro)}</span>
+                              {a.spesaMeseEuro > 0 && <span>{a.spesaMeseEuro.toLocaleString("it-IT", { style: "currency", currency: "EUR" })} nel mese</span>}
                             </>
                           )}
                         </div>
@@ -185,6 +219,24 @@ export default function SquadraPage() {
               </div>
             </section>
           ))}
+
+          {dati.coperturaSardegna && (
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Copertura Sardegna: conosci {dati.coperturaSardegna.conosciuti} membri su {dati.coperturaSardegna.totale} ({dati.coperturaSardegna.percentuale}%)
+              </h2>
+              <Card>
+                <CardContent className="p-3 space-y-2">
+                  {dati.coperturaSardegna.capitoli.map((c) => (
+                    <div key={c.capitolo} className="space-y-1">
+                      <div className="flex justify-between text-xs"><span>{c.capitolo}</span><span className="text-muted-foreground">{c.conosciuti}/{c.totale}</span></div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full bg-primary" style={{ width: `${c.percentuale}%` }} /></div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </section>
+          )}
 
           {dati.erroriSettimana.length > 0 && (
             <section className="space-y-2">

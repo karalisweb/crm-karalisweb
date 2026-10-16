@@ -50,6 +50,17 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // 4b. Coda della squadra per gli agenti di browser (Claude sul Mac di Alessio):
+  //     FAIL-CLOSED su una chiave dedicata, diversa dal CRON_SECRET.
+  if (pathname.startsWith("/api/agenti/browser/")) {
+    const key = process.env.AGENTI_BROWSER_KEY;
+    const authHeader = req.headers.get("authorization") || "";
+    if (!key || !safeEqual(authHeader, `Bearer ${key}`)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
   // 5. Test API: solo in sviluppo, altrove invisibile.
   if (pathname.startsWith("/api/test")) {
     if (process.env.NODE_ENV === "development") {

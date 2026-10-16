@@ -53,6 +53,8 @@ export function refertoSeo(seo: EsitoSeo, fonte: string): Referto {
 
 export const agenteSeo: AgenteEseguibile = {
   chiave: "seo",
+  fase: "base",
+  aPagamento: false,
   validitaGiorni: 60,
   async esegui(ctx) {
     const p = await ctx.pagina();

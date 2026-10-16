@@ -54,16 +54,52 @@ export interface PaginaScaricata {
   headers: Record<string, string>;
 }
 
+export interface AziendaContesto {
+  id: string;
+  name: string;
+  website: string;
+  category: string | null;
+  address: string | null;
+  phone: string | null;
+  googleRating: number | null;
+  googleReviewsCount: number | null;
+  /** Città della ricerca che l'ha trovata (Google Maps o Search), se nota. */
+  citta: string | null;
+}
+
+/** Un referto già consegnato da un altro agente, letto dagli agenti di sintesi. */
+export interface RefertoLetto {
+  agent: string;
+  summary: string;
+  findings: Record<string, unknown>;
+  levers: Leva[];
+  evidence: Prova[];
+  confidence: Fiducia;
+  collectedAt: Date;
+}
+
 export interface ContestoAgente {
-  lead: { id: string; name: string; website: string; category: string | null };
+  lead: AziendaContesto;
   /** Scarica la homepage alla prima richiesta, poi la riusa. */
   pagina(): Promise<PaginaScaricata>;
+  /** I referti validi degli altri agenti su questa azienda (il più recente per agente). */
+  referti(): Promise<RefertoLetto[]>;
   oggi: Date;
 }
 
+/**
+ * Le fasi dell'imbuto: la raccolta economica gira su tutte le aziende; l'approfondimento
+ * solo dopo che Alessio ha detto "Approfondisci" in cassetta; la sintesi quando
+ * l'approfondimento è finito.
+ */
+export type Fase = "base" | "approfondimento" | "sintesi";
+
 export interface AgenteEseguibile {
   chiave: string;
+  fase: Fase;
   /** Dopo quanti giorni il referto va rifatto. */
   validitaGiorni: number;
+  /** Usa servizi a pagamento (DataForSEO, AI): soggetto al tetto di spesa. */
+  aPagamento: boolean;
   esegui(ctx: ContestoAgente): Promise<Referto>;
 }

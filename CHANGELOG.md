@@ -13,6 +13,31 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.45.0] - 2026-10-16
+
+### Added
+- **La squadra è completa: tutti i 19 agenti previsti lavorano.** Oltre ai 4 del passo 1:
+  - **1 Esploratore** — cerca aziende nuove su Google per le categorie e città delle Ricerche, scarta portali, directory, catene e chi è già nel CRM.
+  - **2 Lettore del sito** — cosa dice il sito e come lo dice; ogni problema cita il sito alla lettera, e le citazioni che non si ritrovano vengono scartate.
+  - **3 Posizioni su Google** — dove compare l'azienda cercando "categoria + città".
+  - **4 Google Ads** — annunci su Google Ads Transparency con le date: dice se fanno pubblicità **adesso**, e lo incrocia con il tracciamento delle conversioni.
+  - **6 Social, 7 Meta Ad Library, 8 LinkedIn azienda, 9 Decision maker** — li esegue Claude sul tuo Mac, con il tuo browser (LinkedIn al massimo 20 aziende al giorno, solo lettura).
+  - **11 Coerenza, 13 Regista del video, 12 Scheda leve, 10 Aggancio** — la catena di sintesi: incoerenze fra canali, scaletta del video, leve con prova, apertura della chiamata, domande, obiezione, e il messaggio al decision maker.
+  - **Squadra BNI: B1 Cartografo** (capitoli, formato, membri e dirigenza da BNI Connect), **B2 Stratega** (Sardegna → copertura; altrove → collaborazione con il collega, visita se online/ibrido, 121 con la dirigenza se in presenza), **B3 Preparatore 121** (messaggi WhatsApp pronti), **B4 Copertura Sardegna**.
+- **L'imbuto completo:** raccolta base su tutte le aziende → in cassetta quelle con almeno 3 leve → tu dici "Approfondisci" → agenti a pagamento e di browser → sintesi → **scheda contatto in cassetta** con messaggio da copiare.
+- **Cassetta per tipo:** schede contatto (temperatura, servizio da proporre, apertura, domande, obiezione, chi decide, messaggio, scaletta video), azioni BNI per capitolo, messaggi BNI con "Apri WhatsApp". Filtri Aziende / BNI.
+- **Tetto di spesa:** ogni lavoro registra il suo costo reale; gli agenti a pagamento si fermano quando il mese arriva al tetto (70 € di default, `AGENTI_BUDGET_EUR`). La pagina Squadra mostra la spesa del mese, agente per agente.
+- **Il cervello degli agenti:** Claude (Opus 5.5) appena si aggiunge `ANTHROPIC_API_KEY`; fino ad allora Gemini, già configurato.
+- **Membri BNI:** "conosciuto" (conta per la copertura) e ruolo nella dirigenza; un messaggio BNI segnato "Mandato" sposta il membro a "richiesta 121".
+- Nuovi indirizzi per l'orologio: `/api/cron/squadra-bni`, `/api/cron/esploratore`; coda per il browser `/api/agenti/browser/*` (chiave `AGENTI_BROWSER_KEY`).
+
+### Fixed
+- **Deploy:** una sola connessione SSH per tutto il rilascio (fail2ban non blocca più a metà); se pm2 perde il processo lo ricrea invece di lasciare il sito spento; la configurazione di pm2 nel repository è quella vera del server.
+- Rimossi i duplicati creati da iCloud ("file 2.ts") dentro il progetto.
+
+### Note
+- Prova su dati reali (copia di produzione): approfondimento + sintesi su un'azienda ≈ **2 centesimi** con Gemini; una ricerca dell'Esploratore ≈ 0,5 centesimi (8 aziende nuove su 30 risultati).
+
 ## [3.44.0] - 2026-10-15
 
 ### Added

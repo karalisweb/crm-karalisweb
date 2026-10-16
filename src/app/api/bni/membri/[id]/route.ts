@@ -40,6 +40,9 @@ const updateSchema = z.object({
   nextRecallAt: z.string().nullable().optional(),
   next121At: z.string().nullable().optional(),
   isCustomer: z.boolean().optional(),
+  // Squadra BNI: "l'ho conosciuto" (conta per la copertura Sardegna) e ruolo nella dirigenza.
+  conosciuto: z.boolean().optional(),
+  leadershipRole: z.enum(["PRESIDENTE", "VICEPRESIDENTE", "FORMAZIONE"]).nullable().optional(),
   // Data dell'ultimo 121 (per marcare 121 già fatti in passato, senza registrarli uno a uno).
   lastOneToOneAt: z.string().nullable().optional(),
 });
@@ -145,6 +148,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (data.notes !== undefined) update.notes = clean(data.notes);
     if (data.status !== undefined) update.status = data.status;
     if (data.isCustomer !== undefined) update.isCustomer = data.isCustomer;
+    if (data.conosciuto !== undefined) update.conosciutoAt = data.conosciuto ? (existing.conosciutoAt ?? new Date()) : null;
+    if (data.leadershipRole !== undefined) update.leadershipRole = data.leadershipRole;
 
     // Pipeline di vendita BNI: avanzamento stadio + data di recall.
     if (data.bniStage !== undefined) update.bniStage = data.bniStage;
