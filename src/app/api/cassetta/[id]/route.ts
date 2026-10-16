@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
+import { applicaDecisioneVendita } from "@/lib/vendita/trattative";
 
 /**
  * POST /api/cassetta/[id] — la decisione di Alessio su una voce in cassetta.
@@ -36,6 +37,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       { status: esiste ? 409 : 404 }
     );
   }
+  // Pipeline di vendita: la decisione fa avanzare la trattativa (lettera inviata, recall fatto…).
+  const decisa = await db.approvalItem.findUnique({ where: { id }, select: { kind: true, trattativaId: true, payload: true } });
+  if (decisa?.trattativaId) await applicaDecisioneVendita(decisa, decisione, gate.userId);
+
   // Effetto collaterale piccolo e reversibile: un messaggio BNI mandato sposta il membro
   // da "da avvicinare" a "richiesta 121" (solo se era ancora all'inizio).
   if (decisione === "APPROVATO") {

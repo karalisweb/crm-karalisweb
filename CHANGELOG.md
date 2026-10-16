@@ -13,6 +13,25 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.46.0] - 2026-10-16
+
+### Added
+- **La pipeline di vendita: Trattative** (nuova voce di menu, al posto di "Call fissate" e "In trattativa"). Una sola pipeline per tutte le origini (squadra, BNI, opportunità, passaparola, sito, cliente esistente): **call fissata → call fatta → follow-up o lettera strategica → recall o incarico → exit o nurturing**. Passaggi controllati, motivo obbligatorio per l'exit, diario di ogni trattativa.
+- **Si apre una trattativa quando fissi una call:** pulsante "Call fissata" nella scheda di un'azienda e nelle schede pronte in Cassetta, "Nuova trattativa" per il passaparola. Una prenotazione su Google Calendar abbinata a un'azienda apre la trattativa da sola.
+- **La squadra di vendita (V1-V4):**
+  - **V1 Preparatore call** — il giorno prima: obiettivo, cosa sappiamo, apertura, domande in ordine, leve con prova, obiezioni, il ponte verso il Metodo SD, come chiudere.
+  - **V2 Dopo-call** — incolli la trascrizione di Google Meet (o gli appunti di Gemini): sintesi, i problemi con le parole del cliente (citazioni verificate), obiezioni, temperatura e la **lettera strategica** in prima persona che propone il **Metodo SD come primo incarico**. Il prezzo non lo inventa mai: lascia **[INVESTIMENTO]** evidenziato da completare.
+  - **V3 Recall** — se la risposta non arriva entro la data, il richiamo che riparte dalle obiezioni; dopo 2 recall senza risposta propone il nurturing.
+  - **V4 Nurturing** — ogni 45 giorni un messaggio di valore per chi non ha detto un no definitivo.
+- In Cassetta le voci di vendita (filtro "Vendita") con lettera e messaggi da copiare: approvare fa avanzare la trattativa (lettera mandata → si aspetta 7 giorni; recall fatto → altri 7; nurturing mandato → 45). Le voci superate da un cambio di stadio si chiudono da sole.
+- Incarico → l'azienda diventa Cliente; exit → Persa con il motivo.
+
+### Fixed
+- Gli agenti firmano sempre "Alessio Loi — Karalisweb": in prova l'AI aveva inventato un cognome.
+
+### Note
+- Prova completa su copia di produzione (call fissata → preparazione → dopo-call → lettera → 2 recall → nurturing): **1,6 centesimi** con Gemini.
+
 ## [3.45.0] - 2026-10-16
 
 ### Added

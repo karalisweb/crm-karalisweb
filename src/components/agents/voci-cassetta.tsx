@@ -19,6 +19,7 @@ export interface VoceCassetta {
   lead: { id: string; name: string; website: string | null; category: string | null; googleRating: string | number | null; googleReviewsCount: number | null } | null;
   bniChapter: { id: string; name: string; city: string | null } | null;
   bniMembro: { id: string; name: string; phone: string | null; company: string | null; profession: string | null; chapter: string | null } | null;
+  trattativa?: { id: string; nome: string; stadio: string; origine: string; telefono: string | null; email: string | null; referente: string | null } | null;
 }
 
 /** Etichette dei pulsanti per tipo di voce: cosa vuol dire "sì" e "no". */
@@ -27,7 +28,17 @@ export const AZIONI: Record<string, { si: string; no: string; etichetta: string 
   SCHEDA_CONTATTO: { si: "Lo contatto", no: "Scarta", etichetta: "Pronta per il contatto" },
   AZIONE_BNI: { si: "Prepara i messaggi", no: "Non ora", etichetta: "BNI · azione" },
   MESSAGGIO_BNI: { si: "Mandato", no: "Scarta", etichetta: "BNI · messaggio" },
+  PREPARAZIONE_CALL: { si: "Letta", no: "Non serve", etichetta: "Vendita · prepara la call" },
+  DOPO_CALL: { si: "Mandata", no: "Scarta", etichetta: "Vendita · dopo la call" },
+  RECALL: { si: "Fatto", no: "Rimanda", etichetta: "Vendita · recall" },
+  NURTURING_PROPOSTO: { si: "Passa a nurturing", no: "Riprova fra 7 giorni", etichetta: "Vendita · nessuna risposta" },
+  MESSAGGIO_NURTURING: { si: "Mandato", no: "Salta questo giro", etichetta: "Vendita · nurturing" },
 };
+
+/** Etichetta del "sì" del Dopo-call: dipende da cosa raccomanda l'agente. */
+export function siDopoCall(p: Record<string, unknown>): string {
+  return ({ LETTERA: "Lettera mandata", FOLLOW_UP: "Follow-up mandato", NURTURING: "Passa a nurturing", EXIT: "Chiudi (exit)" } as Record<string, string>)[String(p.raccomandazione)] ?? "Fatto";
+}
 
 function copia(testo: string) {
   navigator.clipboard.writeText(testo).then(
@@ -48,6 +59,17 @@ const s = (v: unknown): string => (typeof v === "string" ? v : "");
 const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
 function Intestazione({ v }: { v: VoceCassetta }) {
+  if (v.trattativa) {
+    return (
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={`/trattative/${v.trattativa.id}`} className="font-semibold hover:underline break-words">{v.trattativa.nome}</Link>
+          <Badge variant="secondary" className="text-[10px]">{AZIONI[v.kind]?.etichetta ?? v.kind}</Badge>
+        </div>
+        {v.trattativa.referente && <div className="text-xs text-muted-foreground mt-1">{v.trattativa.referente}</div>}
+      </div>
+    );
+  }
   if (v.lead) {
     const rating = v.lead.googleRating != null ? Number(v.lead.googleRating) : null;
     return (
@@ -216,6 +238,98 @@ function CorpoMessaggioBni({ p, telefono }: { p: Record<string, unknown>; telefo
   );
 }
 
+/** Testo lungo con i segnaposto [INVESTIMENTO] in evidenza, da completare prima di mandarlo. */
+function TestoLungo({ testo }: { testo: string }) {
+  const pezzi = testo.split(/(\[[A-ZÀ-Ù _]+\])/);
+  return (
+    <p className="text-sm whitespace-pre-wrap break-words">
+      {pezzi.map((p, i) => (/^\[[A-ZÀ-Ù _]+\]$/.test(p) ? <mark key={i} className="bg-amber-300/60 text-foreground rounded px-0.5">{p}</mark> : p))}
+    </p>
+  );
+}
+
+export function CorpoPreparazione({ p }: { p: Record<string, unknown> }) {
+  return (
+    <div className="space-y-3">
+      <Blocco titolo="Obiettivo della call">{s(p.obiettivo_call)}</Blocco>
+      {arr<string>(p.cosa_sappiamo).length > 0 && (
+        <Blocco titolo="Cosa sappiamo"><ul className="list-disc pl-4 space-y-0.5">{arr<string>(p.cosa_sappiamo).map((x, i) => <li key={i}>{x}</li>)}</ul></Blocco>
+      )}
+      <Blocco titolo="Come aprire">{s(p.apertura)}</Blocco>
+      <Blocco titolo="Domande, in quest'ordine">
+        <ol className="list-decimal pl-4 space-y-1">
+          {arr<{ domanda: string; perche: string }>(p.domande).map((d, i) => <li key={i}>{d.domanda}<div className="text-xs text-muted-foreground">{d.perche}</div></li>)}
+        </ol>
+      </Blocco>
+      {arr(p.leve).length > 0 && (
+        <Blocco titolo="Leve">
+          {arr<{ leva: string; prova: string }>(p.leve).map((l, i) => <div key={i}>{l.leva}<div className="text-xs text-muted-foreground">Prova: {l.prova}</div></div>)}
+        </Blocco>
+      )}
+      {arr(p.obiezioni).length > 0 && (
+        <Blocco titolo="Obiezioni probabili">
+          {arr<{ obiezione: string; risposta: string }>(p.obiezioni).map((o, i) => <div key={i}>{o.obiezione}<div className="text-xs text-muted-foreground">→ {o.risposta}</div></div>)}
+        </Blocco>
+      )}
+      <Blocco titolo="Il ponte verso il Metodo SD">{s(p.ponte_metodo_sd)}</Blocco>
+      <Blocco titolo="Come chiudere">{s(p.chiusura)}</Blocco>
+    </div>
+  );
+}
+
+export function CorpoDopoCall({ p, telefono }: { p: Record<string, unknown>; telefono?: string | null }) {
+  const lettera = s(p.lettera);
+  const email = s(p.email_accompagnamento);
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {s(p.temperatura) && <Badge variant="outline">Temperatura: {s(p.temperatura)}</Badge>}
+        {s(p.raccomandazione) && <Badge variant="outline">Consiglio: {s(p.raccomandazione).toLowerCase().replace("_", " ")}</Badge>}
+      </div>
+      <Blocco titolo="Cosa è successo">{s(p.sintesi)}{s(p.perche) && <div className="text-muted-foreground mt-1">{s(p.perche)}</div>}</Blocco>
+      {arr(p.problemi).length > 0 && (
+        <Blocco titolo="I problemi, con le loro parole">
+          {arr<{ problema: string; citazione: string }>(p.problemi).map((x, i) => <div key={i}>{x.problema}<div className="text-xs text-muted-foreground">“{x.citazione}”</div></div>)}
+        </Blocco>
+      )}
+      {arr<string>(p.obiezioni).length > 0 && <Blocco titolo="Obiezioni"><ul className="list-disc pl-4">{arr<string>(p.obiezioni).map((o, i) => <li key={i}>{o}</li>)}</ul></Blocco>}
+      {lettera && (
+        <Blocco titolo={s(p.raccomandazione) === "LETTERA" ? `Lettera strategica: ${s(p.lettera_titolo)}` : "Messaggio"}>
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+            <TestoLungo testo={lettera} />
+            <Button size="sm" variant="outline" onClick={() => copia(lettera)}><Copy className="h-3.5 w-3.5 mr-1" /> Copia la lettera</Button>
+          </div>
+          {/\[[A-ZÀ-Ù _]+\]/.test(lettera) && <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">Completa i punti evidenziati prima di mandarla.</div>}
+        </Blocco>
+      )}
+      {email && <Blocco titolo="Email di accompagnamento"><Messaggio testo={email} telefono={telefono} /></Blocco>}
+      {s(p.prossimo_passo) && <Blocco titolo="Prossimo passo">{s(p.prossimo_passo)}{p.giorni_al_prossimo_passo ? ` (fra ${String(p.giorni_al_prossimo_passo)} giorni se non rispondono)` : ""}</Blocco>}
+    </div>
+  );
+}
+
+export function CorpoRecall({ p, telefono }: { p: Record<string, unknown>; telefono?: string | null }) {
+  if (p.proposta === "NURTURING") {
+    return <p className="text-sm">Nessuna risposta dopo {String(p.recallFatti)} richiami. Ti propongo di passarla al nurturing: un messaggio di valore ogni 45 giorni, senza insistere.</p>;
+  }
+  return (
+    <div className="space-y-3">
+      <Blocco titolo={`Recall ${String(p.numero ?? "")} · ${s(p.canale)}`}><Messaggio testo={s(p.messaggio)} telefono={telefono} /></Blocco>
+      {s(p.copione_telefono) && <Blocco titolo="Se chiami">{s(p.copione_telefono)}</Blocco>}
+      {s(p.obiezione_da_sciogliere) && <Blocco titolo="Il dubbio da sciogliere">{s(p.obiezione_da_sciogliere)}</Blocco>}
+    </div>
+  );
+}
+
+export function CorpoNurturing({ p, telefono }: { p: Record<string, unknown>; telefono?: string | null }) {
+  return (
+    <div className="space-y-2">
+      <Messaggio testo={s(p.messaggio)} oggetto={s(p.oggetto) || undefined} telefono={s(p.canale) === "whatsapp" ? telefono : null} />
+      {s(p.spunto) && <p className="text-xs text-muted-foreground">Nasce da: {s(p.spunto)}</p>}
+    </div>
+  );
+}
+
 export function CorpoVoce({ v }: { v: VoceCassetta }) {
   return (
     <>
@@ -224,6 +338,10 @@ export function CorpoVoce({ v }: { v: VoceCassetta }) {
       {v.kind === "SCHEDA_CONTATTO" && <CorpoSchedaContatto p={v.payload} />}
       {v.kind === "AZIONE_BNI" && <CorpoAzioneBni p={v.payload} />}
       {v.kind === "MESSAGGIO_BNI" && <CorpoMessaggioBni p={v.payload} telefono={v.bniMembro?.phone ?? null} />}
+      {v.kind === "PREPARAZIONE_CALL" && <CorpoPreparazione p={v.payload} />}
+      {v.kind === "DOPO_CALL" && <CorpoDopoCall p={v.payload} telefono={v.trattativa?.telefono} />}
+      {(v.kind === "RECALL" || v.kind === "NURTURING_PROPOSTO") && <CorpoRecall p={v.payload} telefono={v.trattativa?.telefono} />}
+      {v.kind === "MESSAGGIO_NURTURING" && <CorpoNurturing p={v.payload} telefono={v.trattativa?.telefono} />}
     </>
   );
 }

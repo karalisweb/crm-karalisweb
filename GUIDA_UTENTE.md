@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.45.0** | Ultimo aggiornamento: 2026-10-16
+Versione: **3.46.0** | Ultimo aggiornamento: 2026-10-16
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -68,6 +68,18 @@ Social, Meta Ad Library, LinkedIn, Decision maker e Cartografo usano il tuo Chro
 nell'attività programmata "Squadra CRM — agenti di browser" (app Claude, Mac acceso). Solo
 lettura, LinkedIn al massimo 20 aziende al giorno. Se il Mac è spento i lavori aspettano 3 giorni,
 poi la sintesi va avanti con quello che c'è e lo dice.
+
+**La pipeline di vendita (Trattative)**
+1. **Call fissata** — dalla scheda pronta in Cassetta o dalla scheda dell'azienda premi "Call fissata"
+   e metti la data (le prenotazioni su Google Calendar aprono la trattativa da sole). Il giorno prima
+   in Cassetta trovi la **preparazione della call**.
+2. **Call fatta** — nella trattativa premi "Call fatta", incolla la **trascrizione di Google Meet**
+   (o gli appunti di Gemini) e premi "Salva e prepara il dopo-call".
+3. In Cassetta arriva il **dopo-call**: cosa è emerso e la **lettera strategica** pronta. Completa
+   i punti evidenziati ([INVESTIMENTO]), copiala, mandala tu, poi premi "Lettera mandata".
+4. Se dopo 7 giorni non rispondono arriva il **recall**; dopo 2 recall senza risposta ti propone il
+   **nurturing**: un messaggio di valore ogni 45 giorni.
+5. **Incarico** o **Exit** (con il motivo) chiudono la trattativa.
 
 **Spesa**
 Ogni lavoro registra quanto costa. Nella pagina Squadra vedi la spesa del mese sul tetto (70 €):

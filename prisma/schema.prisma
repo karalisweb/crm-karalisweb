@@ -283,6 +283,7 @@ model Lead {
   agentRuns           AgentRun[]
   agentReports        AgentReport[]
   approvalItems       ApprovalItem[]
+  trattative          Trattativa[]
 
   // Relazioni BNI
   referredByMembroId String?    @map("referred_by_membro_id")
@@ -521,6 +522,7 @@ model BniMembro {
   oneToOnes      OneToOne[]
   referredLeads  Lead[]          @relation("BniReferral")
   referralsGiven ReferralGiven[]
+  trattative     Trattativa[]
   agentRuns      AgentRun[]
   agentReports   AgentReport[]
   approvalItems  ApprovalItem[]
@@ -953,6 +955,7 @@ model Opportunita {
   @@index([stage], name: "idx_opportunita_stage")
   @@index([nextFollowupAt], name: "idx_opportunita_followup")
   @@map("opportunita")
+  trattative   Trattativa[]
 }
 
 // ==========================================
@@ -1281,6 +1284,10 @@ model AgentRun {
   @@index([leadId, agent])
   @@index([bniChapterId])
   @@index([bniMembroId])
+  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
+  trattativaId String?     @map("trattativa_id")
+  trattativa   Trattativa? @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
+  @@index([trattativaId])
   @@map("agent_runs")
 }
 
@@ -1314,6 +1321,10 @@ model AgentReport {
   @@index([leadId, agent, collectedAt])
   @@index([bniChapterId, agent])
   @@index([bniMembroId, agent])
+  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
+  trattativaId String?     @map("trattativa_id")
+  trattativa   Trattativa? @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
+  @@index([trattativaId])
   @@map("agent_reports")
 }
 
@@ -1346,6 +1357,10 @@ model ApprovalItem {
   @@index([leadId, kind])
   @@index([bniChapterId, kind])
   @@index([bniMembroId, kind])
+  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
+  trattativaId String?     @map("trattativa_id")
+  trattativa   Trattativa? @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
+  @@index([trattativaId])
   @@map("approval_items")
 }
 
@@ -1353,4 +1368,80 @@ enum ApprovalStatus {
   IN_ATTESA
   APPROVATO
   SCARTATO
+}
+
+// ==========================================
+// PIPELINE DI VENDITA (v3.46) — una sola, per tutte le origini
+// ==========================================
+// Call di vendita → follow-up o lettera strategica → recall o incarico → exit o nurturing.
+// Una trattativa nasce quando c'è una call: dalla squadra (azienda), da BNI (membro),
+// da un'opportunità o dal passaparola. Gli agenti V1-V4 preparano, Alessio decide in cassetta.
+
+model Trattativa {
+  id            String           @id @default(uuid())
+  nome          String           // azienda o persona
+  origine       String           // squadra | bni | opportunita | passaparola | sito | cliente
+  stadio        TrattativaStadio @default(CALL_FISSATA)
+
+  leadId        String?          @map("lead_id")
+  lead          Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  bniMembroId   String?          @map("bni_membro_id")
+  bniMembro     BniMembro?       @relation(fields: [bniMembroId], references: [id], onDelete: SetNull)
+  opportunitaId String?          @map("opportunita_id")
+  opportunita   Opportunita?     @relation(fields: [opportunitaId], references: [id], onDelete: SetNull)
+
+  referente     String?          // con chi si parla
+  telefono      String?
+  email         String?
+
+  callAt        DateTime?        @map("call_at")
+  // Trascrizione di Google Meet o appunti di Gemini, incollati da Alessio dopo la call.
+  trascrizione  String?          @db.Text
+  valoreEuro    Int?             @map("valore_euro")
+
+  prossimoPasso String?          @map("prossimo_passo")
+  prossimaData  DateTime?        @map("prossima_data")
+  recallFatti   Int              @default(0) @map("recall_fatti")
+  motivoUscita  String?          @map("motivo_uscita")
+  ultimoNurturingAt DateTime?    @map("ultimo_nurturing_at")
+
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  chiusaAt      DateTime?        @map("chiusa_at")
+
+  eventi        TrattativaEvento[]
+  agentRuns     AgentRun[]
+  agentReports  AgentReport[]
+  approvalItems ApprovalItem[]
+
+  @@index([stadio, prossimaData])
+  @@index([leadId])
+  @@map("trattative")
+}
+
+enum TrattativaStadio {
+  CALL_FISSATA
+  CALL_FATTA
+  FOLLOW_UP
+  LETTERA_INVIATA
+  RECALL
+  INCARICO
+  EXIT
+  NURTURING
+}
+
+// Il diario della trattativa: ogni cambio di stadio, nota o messaggio approvato.
+model TrattativaEvento {
+  id           String     @id @default(uuid())
+  trattativaId String     @map("trattativa_id")
+  trattativa   Trattativa @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
+  tipo         String     // STADIO | NOTA | MESSAGGIO | CALL
+  testo        String?    @db.Text
+  da           String?    // stadio di partenza
+  a            String?    // stadio di arrivo
+  createdAt    DateTime   @default(now()) @map("created_at")
+  createdBy    String?    @map("created_by")
+
+  @@index([trattativaId, createdAt])
+  @@map("trattativa_eventi")
 }

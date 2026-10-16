@@ -1521,3 +1521,44 @@ Mac di Alessio. Credenziali sul Mac in `~/.karalisweb/agenti-browser.env` (fuori
 - Gli agenti di browser lavorano solo con il Mac acceso e l'app Claude aperta.
 - Il costo dell'AI è calcolato dai token con il listino in `costi.ts`; il cambio dollaro→euro è fisso.
 - I nomi delle aziende trovate su Google sono ricavati dal titolo o dal dominio: possono essere imprecisi.
+
+---
+
+## Pipeline di vendita (v3.46.0)
+
+Una sola pipeline per tutte le origini, in tabelle sue (`Lead` non cresce).
+
+### Database (migrazione `20261016150000_pipeline_vendita`, additiva, via psql)
+
+- `trattative` (`Trattativa`): nome, origine (`squadra|bni|opportunita|passaparola|sito|cliente`),
+  stadio (`TrattativaStadio`), collegamento facoltativo a `leads` / `bni_membri` / `opportunita`
+  (`ON DELETE SET NULL`), referente/telefono/email, `call_at`, `trascrizione`, `valore_euro`,
+  `prossimo_passo`, `prossima_data`, `recall_fatti`, `motivo_uscita`, `ultimo_nurturing_at`, `chiusa_at`.
+- `trattativa_eventi`: diario (`STADIO`, `NOTA`, `MESSAGGIO`, `TRASCRIZIONE`).
+- `agent_runs`, `agent_reports`, `approval_items`: `trattativa_id` facoltativo.
+
+### Codice (`src/lib/vendita/`)
+
+| File | Contenuto |
+|---|---|
+| `regole.ts` | **Puro**: `STADI`, `TRANSIZIONI`/`puoPassare`, `ATTESA_GIORNI` (follow-up 3, lettera 7, recall 7, nurturing 45), `PASSO_DEFAULT`, `RECALL_MASSIMI` (2), `agenteDaFare` (quale agente lavora), `inRitardo`, `MOTIVI_USCITA` |
+| `agenti.ts` | V1 `preparaCall`, V2 `dopoCall` (citazioni verificate sulla trascrizione, `[INVESTIMENTO]` al posto dei prezzi), V3 `preparaRecall`, V4 `preparaNurturing`; contesto dai referti della squadra / scheda BNI / opportunità |
+| `trattative.ts` | `creaTrattativa` (una aperta per azienda/persona; lead → `CALL_FISSATA`), `cambiaStadio` (validato, chiude le voci superate; incarico → lead `CLIENTE`, exit → `PERSO` + `lostReason`), `eseguiAgenteVendita`, `eseguiTurnoVendita`, `applicaDecisioneVendita` |
+
+Voci di cassetta: `PREPARAZIONE_CALL`, `DOPO_CALL` (approvare applica la raccomandazione: lettera →
+`LETTERA_INVIATA`, follow-up, nurturing, exit), `RECALL` (approvare → `RECALL`, +7 giorni; scartare →
+rimanda di 7), `NURTURING_PROPOSTO`, `MESSAGGIO_NURTURING` (approvare → +45 giorni; scartare → salta il giro).
+
+### API
+
+| Rotta | Auth | Cosa fa |
+|---|---|---|
+| `GET/POST /api/trattative` | sessione | Elenco con conteggi per stadio / nuova trattativa (`daVoce` chiude la scheda contatto in cassetta) |
+| `GET/PATCH /api/trattative/[id]` | sessione | Dettaglio con diario, referti, voci / dati, trascrizione, nota, cambio stadio |
+| `POST /api/trattative/[id]/agente` | sessione, 10/10 min | Fa lavorare subito V1-V4 |
+| `POST /api/cron/vendita` | `CRON_SECRET` | Turno di vendita |
+
+`sync-calendar`: una prenotazione abbinata a un'azienda apre (o aggiorna) la trattativa.
+Pagine: `/trattative`, `/trattative/[id]`; `/call-fissate` rimanda a `/trattative`. Badge `trattative` = in ritardo.
+
+Orologio: `0 7-20 * * *` vendita (ogni ora).

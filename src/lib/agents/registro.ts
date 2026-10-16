@@ -72,6 +72,10 @@ export const SQUADRA: SchedaAgente[] = [
   },
   { chiave: "stratega_bni", numero: "B2", nome: "Stratega di capitolo", compito: "Copertura, collaborazione, visita o 121 con la dirigenza", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
   { chiave: "preparatore_121", numero: "B3", nome: "Preparatore 121", compito: "Scrive la richiesta di 121 o di collaborazione (la mandi tu)", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
+  { chiave: "preparazione_call", numero: "V1", nome: "Preparatore call", compito: "La pagina da avere davanti durante la call di vendita", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
+  { chiave: "dopo_call", numero: "V2", nome: "Dopo-call", compito: "Dalla trascrizione di Meet: lettera strategica o follow-up e prossimo passo", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
+  { chiave: "recall", numero: "V3", nome: "Recall", compito: "Il richiamo quando la risposta non arriva", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
+  { chiave: "nurturing", numero: "V4", nome: "Nurturing", compito: "Un messaggio di valore ogni 45 giorni", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
   { chiave: "copertura_sardegna", numero: "B4", nome: "Copertura Sardegna", compito: "Chi conosci e chi manca, capitolo per capitolo", famiglia: "server", squadra: "bni", stato: "attivo" },
 ];
 

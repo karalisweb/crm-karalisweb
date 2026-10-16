@@ -97,8 +97,7 @@ export const navSections: NavSection[] = [
     title: "VENDITA",
     items: [
       { href: "/risposto", label: "Ha Risposto", icon: MessageCircle, badgeKey: "risposto", badgeColor: "green" },
-      { href: "/call-fissate", label: "Call Fissate", icon: CalendarCheck, badgeKey: "callFissate" },
-      { href: "/trattative", label: "In Trattativa", icon: Handshake, badgeKey: "inTrattativa" },
+      { href: "/trattative", label: "Trattative", icon: CalendarCheck, badgeKey: "trattative", badgeColor: "red" },
       { href: "/clienti", label: "Clienti", icon: Trophy, badgeKey: "clienti", badgeColor: "green" },
     ],
   },

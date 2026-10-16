@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRecentAppointments } from "@/lib/google-calendar";
+import { creaTrattativa } from "@/lib/vendita/trattative";
 
 /**
  * POST /api/cron/sync-calendar
@@ -118,6 +119,21 @@ export async function POST(request: NextRequest) {
           },
         }),
       ]);
+
+      // Pipeline di vendita: la call prenotata apre la trattativa (o aggiorna quella aperta).
+      try {
+        const lead = await db.lead.findUnique({ where: { id: matchedLead.id }, select: { source: true } });
+        const t = await creaTrattativa({
+          origine: lead?.source === "bni" ? "bni" : "squadra",
+          leadId: matchedLead.id,
+          callAt: appt.startTime,
+        });
+        if (!t.callAt || t.callAt.getTime() !== appt.startTime.getTime()) {
+          await db.trattativa.update({ where: { id: t.id }, data: { callAt: appt.startTime, prossimaData: appt.startTime } });
+        }
+      } catch (err) {
+        console.error(`[CALENDAR-SYNC] trattativa non aperta per "${matchedLead.name}":`, err);
+      }
 
       synced++;
       console.log(

@@ -160,7 +160,7 @@ Oggi esistono **tre pipeline separate** (lead, BNI, opportunità). La pipeline d
    4. ✅ **agenti 10 + 13**, 5. ✅ **squadra BNI** (B1 → B4), più ✅ Esploratore su Google, Lettore (2),
    Posizioni (3) e Google Ads (4) — **v3.45.0**, 2026-10-16. Prova reale: approfondimento + sintesi ≈ 2
    centesimi per azienda con Gemini.
-6. **Pipeline di vendita** (dopo la sessione dedicata).
+6. ✅ **Pipeline di vendita** — **v3.46.0**: Trattative (una pipeline per tutte le origini) + agenti V1 Preparatore call, V2 Dopo-call (lettera strategica dalla trascrizione di Google Meet, Metodo SD come primo incarico, prezzo come segnaposto), V3 Recall, V4 Nurturing (45 giorni).
 
 Prima di tutto: prova su **20 aziende reali** per misurare costo e qualità di ogni agente, prima di farli girare su migliaia.
 
@@ -174,4 +174,4 @@ Prima di tutto: prova su **20 aziende reali** per misurare costo e qualità di o
    Gemini resta come riserva economica dietro un unico punto d'accesso all'AI.
 3. ✅ **LinkedIn — DECISO**: l'agente legge con il browser di Alessio, lentamente, max ~20 aziende al giorno; il messaggio lo prepara l'agente e lo manda Alessio a mano. Rischio sul profilo accettato consapevolmente.
 4. ✅ **Tetto di spesa — DECISO: 100 €/mese** (Apify + DataForSEO + AI). Prima si misura il costo per azienda sul pilota di 20.
-5. **Pipeline di vendita e "lettera strategica"**: una sessione dedicata. La lettera nasce dal Metodo SD (repository `MetodoSD`)?
+5. ✅ **Pipeline di vendita e lettera strategica — DECISO 2026-10-16**: lettera post-call scritta dal Dopo-call dalla trascrizione di Google Meet, Metodo SD come primo incarico, prezzo come segnaposto; nurturing ogni 45 giorni.

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         lead: { select: { id: true, name: true, website: true, category: true, address: true, phone: true, googleRating: true, googleReviewsCount: true } },
         bniChapter: { select: { id: true, name: true, city: true } },
         bniMembro: { select: { id: true, name: true, phone: true, company: true, profession: true, chapter: true } },
+        trattativa: { select: { id: true, nome: true, stadio: true, origine: true, telefono: true, email: true, referente: true } },
       },
     }),
     db.approvalItem.groupBy({ by: ["status"], _count: { _all: true } }),

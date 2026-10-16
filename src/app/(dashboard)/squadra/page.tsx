@@ -62,6 +62,7 @@ const STATO = {
 const SQUADRE: { chiave: Agente["squadra"]; titolo: string }[] = [
   { chiave: "commerciale", titolo: "Squadra commerciale" },
   { chiave: "bni", titolo: "Squadra BNI" },
+  { chiave: "vendita", titolo: "Squadra vendita" },
 ];
 
 function quando(iso: string | null): string {

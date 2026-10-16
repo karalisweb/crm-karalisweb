@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Inbox, RefreshCw, AlertTriangle, Check, X } from "lucide-react";
 import { toast } from "sonner";
-import { AZIONI, CorpoVoce, type VoceCassetta } from "@/components/agents/voci-cassetta";
+import { AZIONI, CorpoVoce, siDopoCall, type VoceCassetta } from "@/components/agents/voci-cassetta";
+import { CallFissataDialog } from "@/components/vendita/call-fissata-dialog";
 
 type Stato = "IN_ATTESA" | "APPROVATO" | "SCARTATO";
-type Area = "tutto" | "aziende" | "bni";
+type Area = "tutto" | "vendita" | "aziende" | "bni";
 
 const TAB: { stato: Stato; label: string }[] = [
   { stato: "IN_ATTESA", label: "Da decidere" },
@@ -19,12 +20,16 @@ const TAB: { stato: Stato; label: string }[] = [
 
 const AREE: { area: Area; label: string }[] = [
   { area: "tutto", label: "Tutto" },
+  { area: "vendita", label: "Vendita" },
   { area: "aziende", label: "Aziende" },
   { area: "bni", label: "BNI" },
 ];
 
 /** In cima le voci più vicine a un incontro: schede contatto e messaggi, poi il resto. */
-const ORDINE: Record<string, number> = { SCHEDA_CONTATTO: 0, MESSAGGIO_BNI: 1, AZIONE_BNI: 2, FASCICOLO_BASE: 3 };
+const ORDINE: Record<string, number> = {
+  PREPARAZIONE_CALL: 0, DOPO_CALL: 1, RECALL: 2, NURTURING_PROPOSTO: 3, MESSAGGIO_NURTURING: 4,
+  SCHEDA_CONTATTO: 5, MESSAGGIO_BNI: 6, AZIONE_BNI: 7, FASCICOLO_BASE: 8,
+};
 
 export default function CassettaPage() {
   const [stato, setStato] = useState<Stato>("IN_ATTESA");
@@ -76,7 +81,10 @@ export default function CassettaPage() {
   }
 
   const visibili = voci
-    .filter((v) => area === "tutto" || (area === "bni" ? !v.lead : !!v.lead))
+    .filter((v) =>
+      area === "tutto" ||
+      (area === "vendita" ? !!v.trattativa : area === "bni" ? !v.lead && !v.trattativa : !!v.lead && !v.trattativa)
+    )
     .sort((a, b) => (ORDINE[a.kind] ?? 9) - (ORDINE[b.kind] ?? 9));
 
   return (
@@ -143,10 +151,13 @@ export default function CassettaPage() {
               <CardContent className="p-4 space-y-3">
                 <CorpoVoce v={v} />
                 {v.status === "IN_ATTESA" ? (
-                  <div className="flex gap-2 pt-1">
+                  <div className="flex flex-wrap gap-2 pt-1">
                     <Button size="sm" className="flex-1 sm:flex-none" onClick={() => decidi(v.id, "APPROVATO")} disabled={inDecisione === v.id}>
-                      <Check className="h-4 w-4 mr-1" /> {AZIONI[v.kind]?.si ?? "Approva"}
+                      <Check className="h-4 w-4 mr-1" /> {v.kind === "DOPO_CALL" ? siDopoCall(v.payload) : AZIONI[v.kind]?.si ?? "Approva"}
                     </Button>
+                    {v.kind === "SCHEDA_CONTATTO" && v.lead && (
+                      <CallFissataDialog leadId={v.lead.id} nome={v.lead.name} origine="squadra" daVoce={v.id} variante="outline" />
+                    )}
                     <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => decidi(v.id, "SCARTATO")} disabled={inDecisione === v.id}>
                       <X className="h-4 w-4 mr-1" /> {AZIONI[v.kind]?.no ?? "Scarta"}
                     </Button>

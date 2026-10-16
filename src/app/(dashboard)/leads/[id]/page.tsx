@@ -22,6 +22,7 @@ import { ContactInfoEditor } from "@/components/leads/contact-info-editor";
 import { MessagingHub } from "@/components/leads/messaging-hub";
 import { LeadBriefingCard } from "@/components/leads/lead-briefing-card";
 import { FascicoloCard } from "@/components/agents/fascicolo-card";
+import { CallFissataDialog } from "@/components/vendita/call-fissata-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,8 @@ export default async function LeadDetailPage({ params, searchParams }: LeadPageP
             )}
           </div>
         </div>
+        {/* Pipeline di vendita: fissata una call, si apre la trattativa */}
+        <CallFissataDialog leadId={lead.id} nome={lead.name} origine={lead.source === "bni" ? "bni" : "squadra"} variante="outline" />
       </div>
 
       {/* Quick Info Cards */}

@@ -55,6 +55,7 @@ export async function GET() {
       countDaApprovare,
       countOppFollowup,
       countCassetta,
+      countTrattative,
       videoDaFare,
       followUpPrioritari,
     ] = await Promise.all([
@@ -105,6 +106,16 @@ export async function GET() {
       }),
       // Cassetta della squadra di agenti: fascicoli in attesa di decisione.
       db.approvalItem.count({ where: { status: "IN_ATTESA" } }),
+      // Trattative che aspettano Alessio: prossimo passo scaduto, o call passata da più di un giorno.
+      db.trattativa.count({
+        where: {
+          stadio: { notIn: ["INCARICO", "EXIT"] },
+          OR: [
+            { stadio: { not: "CALL_FISSATA" }, prossimaData: { lt: new Date() } },
+            { stadio: "CALL_FISSATA", callAt: { lt: new Date(Date.now() - 24 * 3600_000) } },
+          ],
+        },
+      }),
       // Lista "I video di oggi": lead pronti per registrare il video (FARE_VIDEO).
       db.lead.findMany({
         where: { pipelineStage: "FARE_VIDEO" },
@@ -145,6 +156,7 @@ export async function GET() {
         daApprovare: countDaApprovare,
         opportunitaFollowup: countOppFollowup,
         cassetta: countCassetta,
+        trattative: countTrattative,
       },
     });
   } catch (error) {
