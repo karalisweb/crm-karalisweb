@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Handshake, RefreshCw } from "lucide-react";
 import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
 import { CollegaCalendario } from "@/components/ricerca/collega-calendario";
+import { CollegamentiLinkedin, type StatoLinkedin } from "@/components/ricerca/collegamenti-linkedin";
 import { TrackerIncontri, type Fissato, type Tracker, type Visita } from "@/components/ricerca/tracker-incontri";
 
 interface Settimana {
@@ -21,7 +22,7 @@ interface Settimana {
 }
 
 export default function Bni121Page() {
-  const [dati, setDati] = useState<{ settimana: Settimana; calendario: Fissato[]; tracker: Tracker; visite: Visita[] } | null>(null);
+  const [dati, setDati] = useState<{ settimana: Settimana; calendario: Fissato[]; tracker: Tracker; visite: Visita[]; linkedin: StatoLinkedin } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,6 +103,8 @@ export default function Bni121Page() {
           </CardContent></Card>
 
           <TrackerIncontri tracker={dati.tracker} fissati={dati.calendario} visite={dati.visite} onCambio={carica} />
+
+          <CollegamentiLinkedin dati={dati.linkedin} onCambio={carica} />
 
         </>
       ) : null}

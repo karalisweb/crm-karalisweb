@@ -20,6 +20,7 @@ import {
   coperturaCapitolo,
   dirigenzaDa,
   dirigenzaNota,
+  mezzanotteRoma,
   gruppiCapitolo,
   eSardo,
   formato121,
@@ -298,6 +299,7 @@ export interface RiepilogoBni {
   saltatiPerBudget: number;
   vecchieChiuse: number;
   riscritte: number;
+  profiliLinkedin: number;
   coperturaSardegna: { capitoli: number; membri: number; conosciuti: number; percentuale: number } | null;
 }
 
@@ -312,7 +314,7 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
   const r: RiepilogoBni = {
     settimana: await statoSettimana(oggi, tutti),
     richiesteNuove: 0, visiteProposte: 0, preparazioni: 0, retiAccodate: 0, mappeAccodate: 0, saltatiPerBudget: 0,
-    vecchieChiuse: vecchie.count, riscritte: 0, coperturaSardegna: null,
+    vecchieChiuse: vecchie.count, riscritte: 0, profiliLinkedin: 0, coperturaSardegna: null,
   };
 
   // B4 — Copertura (ogni giorno: è un conteggio, non costa nulla) e visita a un terzo.
@@ -376,6 +378,9 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
     if (m.next121At!.getTime() <= oggi.getTime() + ORE_PREPARAZIONE * 3600_000 && (await preparaFoglio121(m.id, m.next121At!))) r.preparazioni++;
   }
 
+  // Collegarsi su LinkedIn con tutti i membri: 15 profili al giorno da cercare.
+  r.profiliLinkedin = await accodaProfiliLinkedin(oggi);
+
   // B1 — Cartografo: una regione per volta; la Sardegna ogni 30 giorni.
   r.mappeAccodate = await accodaMappa(tutti, oggi);
   return r;
@@ -410,6 +415,64 @@ export async function chiudiRichiesteSuperate(membroId: string, motivo: string, 
     data: { status: "APPROVATO", note: motivo, decidedAt: oggi },
   });
   return r.count;
+}
+
+// ─── Collegarsi su LinkedIn con tutti i membri ─────────────────────────────
+
+/** Profili da cercare ogni giorno: LinkedIn non va stressato. */
+export const PROFILI_LINKEDIN_AL_GIORNO = 15;
+export const STATI_LINKEDIN = ["NON_TROVATO", "DA_COLLEGARE", "RICHIESTA_INVIATA", "COLLEGATI"] as const;
+
+/**
+ * Accoda la ricerca dei profili LinkedIn dei prossimi 15 membri (prima quelli che Alessio conosce
+ * già: accettano più volentieri). Chi ha già un profilo salvato passa direttamente a "da collegare".
+ */
+export async function accodaProfiliLinkedin(oggi = new Date()): Promise<number> {
+  await db.bniMembro.updateMany({
+    where: { status: "ATTIVO", linkedinStato: null, linkedinUrl: { not: null } },
+    data: { linkedinStato: "DA_COLLEGARE", linkedinStatoAt: oggi },
+  });
+  const gia = await db.agentRun.findFirst({
+    where: { agent: "linkedin_membri", OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { queuedAt: { gte: mezzanotteRoma(oggi) } }] },
+  });
+  if (gia) return 0;
+  const membri = await db.bniMembro.findMany({
+    where: { status: "ATTIVO", linkedinStato: null, linkedinUrl: null },
+    select: { id: true, name: true, company: true, profession: true, chapter: true, conosciutoAt: true, oneToOneCount: true },
+  });
+  if (!membri.length) return 0;
+  membri.sort((a, b) => Number(!!b.conosciutoAt || b.oneToOneCount > 0) - Number(!!a.conosciutoAt || a.oneToOneCount > 0) || (a.chapter ?? "").localeCompare(b.chapter ?? "") || a.name.localeCompare(b.name));
+  const lotto = membri.slice(0, PROFILI_LINKEDIN_AL_GIORNO);
+  await db.agentRun.create({
+    data: {
+      agent: "linkedin_membri",
+      status: "IN_CODA",
+      input: { membri: lotto.map((m) => ({ id: m.id, nome: m.name, azienda: m.company, categoria: m.profession, capitolo: m.chapter })) },
+    },
+  });
+  return lotto.length;
+}
+
+/** I profili trovati dall'agente: salvati sul membro con lo stato del collegamento. */
+export async function importaProfiliMembri(findings: Record<string, unknown>, oggi = new Date()): Promise<{ nuove: number; esistenti: number; scartate: number }> {
+  const profili = Array.isArray(findings.profili) ? (findings.profili as Record<string, unknown>[]) : [];
+  const e = { nuove: 0, esistenti: 0, scartate: 0 };
+  for (const p of profili.slice(0, 50)) {
+    const id = typeof p.id === "string" ? p.id : null;
+    if (!id) continue;
+    const stato = (STATI_LINKEDIN as readonly string[]).includes(String(p.stato)) ? String(p.stato) : "NON_TROVATO";
+    const url = typeof p.profilo === "string" ? (p.profilo.match(/linkedin\.com\/in\/[^/?#\s]+/i)?.[0] ?? null) : null;
+    const r = await db.bniMembro.updateMany({
+      where: { id },
+      data: url && stato !== "NON_TROVATO"
+        ? { linkedinUrl: `https://www.${url.toLowerCase()}`, linkedinStato: stato, linkedinStatoAt: oggi }
+        : { linkedinStato: "NON_TROVATO", linkedinStatoAt: oggi },
+    });
+    if (!r.count) e.scartate++;
+    else if (url && stato !== "NON_TROVATO") e.nuove++;
+    else e.esistenti++;
+  }
+  return e;
 }
 
 // ─── Rete del membro (lavoro di browser su LinkedIn) ───────────────────────

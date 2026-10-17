@@ -62,6 +62,7 @@ const Schema = z.object({
   conosciuto: z.boolean().optional(),
   capitolo: z.string().min(1).max(120).optional(),
   stato: z.enum(["ATTIVO", "EX_MEMBRO"]).optional(),
+  linkedinStato: z.enum(["NON_TROVATO", "DA_COLLEGARE", "RICHIESTA_INVIATA", "COLLEGATI"]).optional(),
 });
 
 /** PATCH /api/ricerca/bni/membri/[id] — Alessio corregge la scheda o fissa la data del 121. */
@@ -93,6 +94,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       profession: p(d.categoria),
       notes: p(d.note),
       chapter: d.capitolo?.trim(),
+      ...(d.linkedinStato ? { linkedinStato: d.linkedinStato, linkedinStatoAt: new Date() } : {}),
+      // Profilo sbagliato: si toglie, l'agente lo ricerca.
+      ...(d.linkedinStato === "NON_TROVATO" ? { linkedinUrl: null } : {}),
+      ...(d.linkedin ? { linkedinStato: "DA_COLLEGARE", linkedinStatoAt: new Date() } : {}),
       status: d.stato,
       // "Già conosciuto" (un 121 fatto in passato, senza registrarlo): non si toglie se ci sono 121 registrati.
       ...(d.conosciuto === true && !esistente.conosciutoAt ? { conosciutoAt: new Date() } : {}),

@@ -526,6 +526,9 @@ model BniMembro {
   indicatoDa       String?   @map("indicato_da") // chi l'ha indicato come attivo (il presidente)
   indicatoAt       DateTime? @map("indicato_at")
   reteLettaAt      DateTime? @map("rete_letta_at") // ultima lettura della rete LinkedIn
+  // Collegamento LinkedIn con Alessio: DA_CERCARE (null) | NON_TROVATO | DA_COLLEGARE | RICHIESTA_INVIATA | COLLEGATI
+  linkedinStato    String?   @map("linkedin_stato")
+  linkedinStatoAt  DateTime? @map("linkedin_stato_at")
 
   // Denormalizzati per dashboard veloce (aggiornati a ogni 121)
   oneToOneCount  Int       @default(0) @map("one_to_one_count")

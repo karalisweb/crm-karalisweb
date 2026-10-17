@@ -11,7 +11,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { CHIAVI_BROWSER, schedaDi } from "./registro";
 import { SERVIZI } from "./tipi";
-import { importaMappaBni, type EsitoMappa } from "./bni";
+import { importaMappaBni, importaProfiliMembri, type EsitoMappa } from "./bni";
 import { importaAziendeMeta, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
 /** Quanto vale un referto di browser prima di essere rifatto. */
@@ -22,12 +22,13 @@ export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
   decision_maker: 180,
   cartografo_bni: 30,
   rete_membro: 180,
+  linkedin_membri: 90,
   cerca_meta: 60,
   cerca_linkedin: 60,
 };
 
 /** I lavori BNI passano davanti: i 121 vengono prima di tutto. */
-const BROWSER_BNI = ["cartografo_bni", "rete_membro"];
+const BROWSER_BNI = ["cartografo_bni", "rete_membro", "linkedin_membri"];
 
 export interface LavoroBrowser {
   runId: string;
@@ -154,6 +155,7 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
   if (run.agent === "cerca_meta") importazione = await importaAziendeMeta(run.input, c.referto.findings);
   if (run.agent === "cerca_linkedin") importazione = await importaPersoneLinkedin(run.input, c.referto.findings);
   if (run.agent === "rete_membro") importazione = await importaReteMembro(run.bniMembroId, c.referto.findings, oggi);
+  if (run.agent === "linkedin_membri") importazione = await importaProfiliMembri(c.referto.findings, oggi);
 
   await db.$transaction([
     db.agentReport.create({

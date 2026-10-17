@@ -112,7 +112,23 @@ export async function GET() {
   ]);
   const fissatiSettimana = calendario.filter((c) => c.next121At && c.next121At >= oggi && c.next121At < settimana.fine).map((c) => c.name);
 
+  // Collegarsi su LinkedIn con tutti i membri: a che punto siamo e i prossimi da collegare.
+  const [statiLinkedin, daCollegare] = await Promise.all([
+    db.bniMembro.groupBy({ by: ["linkedinStato"], where: { status: "ATTIVO" }, _count: { _all: true } }),
+    db.bniMembro.findMany({
+      where: { status: "ATTIVO", linkedinStato: "DA_COLLEGARE", linkedinUrl: { not: null } },
+      orderBy: [{ conosciutoAt: { sort: "desc", nulls: "last" } }, { name: "asc" }],
+      select: { id: true, name: true, company: true, profession: true, chapter: true, linkedinUrl: true, conosciutoAt: true },
+      take: 15,
+    }),
+  ]);
+  const linkedin = {
+    conteggi: Object.fromEntries(statiLinkedin.map((x) => [x.linkedinStato ?? "DA_CERCARE", x._count._all])),
+    daCollegare,
+  };
+
   return NextResponse.json({
+    linkedin,
     settimana: {
       ...settimana,
       nomiFatti: fattiSettimana.map((f) => f.membro.name),
