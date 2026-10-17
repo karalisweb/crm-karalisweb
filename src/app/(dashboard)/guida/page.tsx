@@ -113,7 +113,7 @@ export default function GuidaPage() {
           <h4 className="font-semibold mt-4 mb-1">La ricerca: BNI per primo (menu RICERCA)</h4>
           <div className="space-y-3">
             <Step n={1}>
-              <p><strong>121 BNI</strong>: obiettivo 10 a settimana. Ogni mattina in Cassetta trovi le richieste di 121 con &quot;Apri WhatsApp&quot;: in ogni capitolo prima chi fa il tuo mestiere, poi presidente e formazione/eventi, poi tutti gli altri. Quando ti rispondono premi &quot;Fissato&quot; e metti la data.</p>
+              <p><strong>121 BNI</strong>: obiettivo 8 a settimana. Ogni mattina in Cassetta trovi le richieste di 121 con &quot;Apri WhatsApp&quot;: in ogni capitolo prima chi fa il tuo mestiere, poi presidente e formazione/eventi, poi tutti gli altri. Quando ti rispondono premi &quot;Fissato&quot; e metti la data.</p>
             </Step>
             <Step n={2}>
               <p>Fissato il 121, l&apos;agente guarda la rete LinkedIn del membro e ti prepara 3-5 persone da farti presentare. Il giorno prima trovi il foglio del 121 in Cassetta.</p>

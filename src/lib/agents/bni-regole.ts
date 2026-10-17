@@ -8,7 +8,7 @@
  *   3. se nessuno ha il ruolo di Alessio: prima il presidente, poi quelli che il presidente
  *      indica al 121 come i più attivi;
  *   4. tutti gli altri.
- * Obiettivo: 10 121 a settimana. La visita al capitolo quando ne hai conosciuto un terzo.
+ * Obiettivo: 8 121 a settimana. La visita al capitolo quando ne hai conosciuto un terzo.
  */
 
 export type Formato = "PRESENZA" | "ONLINE" | "IBRIDO";
@@ -58,9 +58,9 @@ export function dirigenzaDa(s: string | null | undefined): Dirigenza | null {
 
 // ─── L'ordine dentro il capitolo ────────────────────────────────────────────
 
-export const OBIETTIVO_121_SETTIMANA = 10;
+export const OBIETTIVO_121_SETTIMANA = 8;
 /** Richieste di 121 tenute aperte: qualcuno non risponde o rimanda. */
-export const RICHIESTE_APERTE = 15;
+export const RICHIESTE_APERTE = 12;
 /** Capitoli lavorati insieme, per arrivare presto a un terzo di ciascuno. */
 export const CAPITOLI_IN_CORSO = 2;
 /** Dopo quanti giorni una richiesta senza risposta non blocca più chi viene dopo. */

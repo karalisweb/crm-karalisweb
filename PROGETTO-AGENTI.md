@@ -37,7 +37,7 @@ alimenta la ricerca di clienti negli altri canali.
 
 ### Flusso BNI — relazioni
 
-**Obiettivo: almeno 10 121 a settimana, 2 al giorno. Ha la precedenza su tutto il resto.**
+**Obiettivo: almeno 8 121 a settimana, 2 al giorno. Ha la precedenza su tutto il resto.**
 
 - Si incontrano **tutti i membri**, a prescindere dalla categoria: la referenza può arrivare da chiunque, in
   qualsiasi momento. Si privilegiano le persone nuove.

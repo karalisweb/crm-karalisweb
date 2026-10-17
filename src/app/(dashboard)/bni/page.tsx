@@ -50,7 +50,7 @@ export default function Bni121Page() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Handshake className="h-6 w-6 text-primary" /> Incontri BNI</h1>
-          <p className="text-sm text-muted-foreground">Cosa fare con i 121: obiettivo 10 a settimana. I messaggi sono già scritti: li mandi da qui con WhatsApp. Chi è chi nei capitoli lo trovi nella Rubrica BNI.</p>
+          <p className="text-sm text-muted-foreground">Cosa fare con i 121: obiettivo 8 a settimana. I messaggi sono già scritti: li mandi da qui con WhatsApp. Chi è chi nei capitoli lo trovi nella Rubrica BNI.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LanciaAdesso squadra="bni" etichetta="Prepara le richieste adesso" onFatto={carica} />

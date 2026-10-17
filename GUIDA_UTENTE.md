@@ -56,7 +56,7 @@ chiamata e **la prova** di ogni cosa che dice.
 **La ricerca (dalla v3.47): BNI per primo, poi i clienti dai casi studio**
 
 Menu **RICERCA**:
-- **121 BNI** — l'obiettivo è **10 121 a settimana** (2 al giorno): il contatore della settimana, i
+- **121 BNI** — l'obiettivo è **8 121 a settimana** (2 al giorno): il contatore della settimana, i
   121 in calendario, le richieste aperte e i capitoli con quanti membri conosci.
 - **Membri BNI** — scrivi un bisogno ("commercialista a Cagliari", "chi conosce aziende di piscine")
   e trovi a chi girare una referenza. Ogni membro ha la sua **scheda**: chi è, cosa fa, referenze
@@ -72,7 +72,7 @@ Menu **RICERCA**:
    poi **presidente e responsabile formazione/eventi**, poi **tutti gli altri**. Se nessuno fa il tuo
    mestiere si parte dal **presidente**, e al 121 gli chiedi chi sono i più attivi: quelli che indica
    salgono in cima.
-3. Ogni mattina alle 7 il Pianificatore tiene **15 richieste aperte**, lavorando **2 capitoli alla
+3. Ogni mattina alle 7 il Pianificatore tiene **12 richieste aperte**, lavorando **2 capitoli alla
    volta**: in Cassetta trovi il messaggio con **Apri WhatsApp** (di persona se il capitolo è in
    presenza, Meet se è online). Mandato il messaggio premi **Mandato**; quando ti rispondono, in
    **121 BNI** premi **Fissato** e metti la data.

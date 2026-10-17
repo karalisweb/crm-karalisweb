@@ -5,7 +5,7 @@ import { caricaCapitoli, statoSettimana, scegliProssimi } from "@/lib/agents/bni
 import { coperturaCapitolo, dirigenzaNota, eSardo, formatoDa, prossimiDelCapitolo, visitaDaProporre, CAPITOLI_IN_CORSO, GIORNI_SENZA_RISPOSTA } from "@/lib/agents/bni-regole";
 
 /**
- * GET /api/ricerca/bni — la pagina "121 BNI": la settimana (obiettivo 10), i 121 in calendario,
+ * GET /api/ricerca/bni — la pagina "121 BNI": la settimana (obiettivo 8), i 121 in calendario,
  * le richieste aperte e i capitoli con il loro avanzamento.
  */
 export async function GET() {

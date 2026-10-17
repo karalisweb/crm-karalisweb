@@ -89,10 +89,10 @@ d'Italia ogni 90), così i ruoli non invecchiano. Non compaiono nella scheda del
 
 ### 3.2 La settimana dei 121 — `src/lib/ricerca/bni-settimana.ts`
 
-Obiettivo **10 121 a settimana**. Ogni mattina (cron `squadra-bni`, 07:00):
+Obiettivo **8 121 a settimana**. Ogni mattina (cron `squadra-bni`, 07:00):
 
 - conta i 121 della settimana: fatti (`one_to_ones`) + fissati (`next_121_at` nella settimana);
-- tiene **15 richieste aperte** (le persone a cui chiedere un 121, perché qualcuno non risponde o rimanda): se sono
+- tiene **12 richieste aperte** (le persone a cui chiedere un 121, perché qualcuno non risponde o rimanda): se sono
   meno, aggiunge le prossime persone secondo l'ordine;
 - lavora **2 capitoli alla volta**, per arrivare presto a un terzo di ciascuno e alla visita. Ordine dei capitoli:
   prima la Sardegna (prima quelli già iniziati, poi il capitolo di Alessio, poi gli altri), poi il resto d'Italia;
@@ -188,7 +188,7 @@ arriva a 5 o fa 4 ricerche. Su LinkedIn al massimo **2 lavori al giorno** (circa
 | Agente | Famiglia | Cosa fa |
 |---|---|---|
 | Cartografo capitoli (B1) | browser | come oggi, più la sede; la Sardegna ogni 30 giorni |
-| Pianificatore 121 (sostituisce lo Stratega B2) | server | l'ordine nel capitolo, i 2 capitoli in corso, le 15 richieste aperte |
+| Pianificatore 121 (sostituisce lo Stratega B2) | server | l'ordine nel capitolo, i 2 capitoli in corso, le 12 richieste aperte |
 | Preparatore 121 (B3) | sintesi | il messaggio di richiesta; il foglio del giorno prima |
 | Rete del membro | browser | 3-5 persone da farsi presentare dalla rete LinkedIn del membro |
 | Dopo-121 | sintesi | compila la scheda del membro dalla trascrizione o dal vocale |

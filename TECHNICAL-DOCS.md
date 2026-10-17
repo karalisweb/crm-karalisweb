@@ -1566,7 +1566,7 @@ Orologio: `0 7-20 * * *` vendita (ogni ora).
 ## Fase 1 Ricerca (v3.47.0)
 
 Specifica: `FASE-1-RICERCA.md`; processo deciso con Alessio: `PROGETTO-AGENTI.md` (v3, Fase 1).
-BNI fa da motore: 10 121 a settimana; i casi studio dicono cosa cercare prima; le reti dei membri
+BNI fa da motore: 8 121 a settimana; i casi studio dicono cosa cercare prima; le reti dei membri
 diventano chiavi di ricerca.
 
 ### Database (migrazione `20261017090000_fase_ricerca`, additiva, via psql)
@@ -1587,7 +1587,7 @@ diventano chiavi di ricerca.
 
 | File | Contenuto |
 |---|---|
-| `src/lib/agents/bni-regole.ts` | **Puro**: `gruppiCapitolo` (stesso ruolo → presidente + formazione/eventi → indicati → altri; senza stesso ruolo: presidente → indicati → altri; senza dirigenza nota solo lo stesso ruolo), `prossimiDelCapitolo` (un gruppo alla volta; chiuso quando ognuno è conosciuto, rinviato o non risponde da 7 giorni), `capitoliInCorso` (2, Sardegna prima), `visitaDaProporre` (a 1/3, mai il proprio capitolo), `settimanaDi`/`mezzanotteRoma`, costanti (10 121, 15 richieste aperte) |
+| `src/lib/agents/bni-regole.ts` | **Puro**: `gruppiCapitolo` (stesso ruolo → presidente + formazione/eventi → indicati → altri; senza stesso ruolo: presidente → indicati → altri; senza dirigenza nota solo lo stesso ruolo), `prossimiDelCapitolo` (un gruppo alla volta; chiuso quando ognuno è conosciuto, rinviato o non risponde da 7 giorni), `capitoliInCorso` (2, Sardegna prima), `visitaDaProporre` (a 1/3, mai il proprio capitolo), `settimanaDi`/`mezzanotteRoma`, costanti (10 121, 12 richieste aperte) |
 | `src/lib/agents/bni.ts` | `importaMappaBni` (+ sede; i ruoli si sovrascrivono), `caricaCapitoli`, `statoSettimana`, `scegliProssimi`, `eseguiTurnoBni` (chiude le vecchie `AZIONE_BNI`, copertura, visita, richieste — max 8 nuove al giorno —, rete del membro e foglio del giorno prima, Cartografo: Sardegna ogni 30 giorni), `accodaReteMembro`, `chiudiRichiesteSuperate` |
 | `src/lib/ricerca/regole.ts` | **Puro**: zone (18 sarde, poi Italia), `prossimaChiave`, `passoRicerca` (termine × zona), `normalizzaLinkedin`, `stessoNome`, `punteggioBisogno` |
 | `src/lib/ricerca/dopo-121.ts` | `registra121`: salva il 121, membro conosciuto, chiude la richiesta in cassetta, accoda la rete; con testo ≥150 caratteri l'AI compila la scheda, le presentazioni e i membri indicati |

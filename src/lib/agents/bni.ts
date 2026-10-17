@@ -3,8 +3,8 @@
  *
  *   Cartografo (B1)       → lavoro di browser su BNI Connect; qui si importa quello che porta.
  *                           La Sardegna si rilegge ogni 30 giorni: i ruoli cambiano.
- *   Pianificatore 121     → tiene 15 richieste di 121 aperte, 2 capitoli alla volta, con l'ordine
- *                           di Alessio dentro ogni capitolo. Obiettivo: 10 121 a settimana.
+ *   Pianificatore 121     → tiene 12 richieste di 121 aperte, 2 capitoli alla volta, con l'ordine
+ *                           di Alessio dentro ogni capitolo. Obiettivo: 8 121 a settimana.
  *   Preparatore 121 (B3)  → il messaggio di richiesta (in cassetta: lo manda Alessio) e il foglio
  *                           del giorno prima.
  *   Copertura (B4)        → conosciuti su totale per capitolo; la visita a un terzo.
@@ -349,7 +349,7 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
   // Le richieste in attesa scritte col modello vecchio si riscrivono con quello di Alessio.
   r.riscritte = await riscriviRichiesteVecchie(tutti, oggi);
 
-  // Pianificatore — 15 richieste aperte, al massimo 8 nuove al giorno.
+  // Pianificatore — 12 richieste aperte, al massimo 8 nuove al giorno.
   const nuoveOggi = await db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, createdAt: { gte: new Date(oggi.getTime() - 20 * 3600_000) } } });
   const quante = Math.max(0, Math.min(RICHIESTE_APERTE - r.settimana.richiesteAperte, RICHIESTE_AL_GIORNO - nuoveOggi));
   for (const p of scegliProssimi(tutti, quante, oggi)) {
