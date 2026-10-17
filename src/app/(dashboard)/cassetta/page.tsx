@@ -27,8 +27,8 @@ const AREE: { area: Area; label: string }[] = [
 
 /** In cima le voci più vicine a un incontro: schede contatto e messaggi, poi il resto. */
 const ORDINE: Record<string, number> = {
-  PREPARAZIONE_CALL: 0, DOPO_CALL: 1, RECALL: 2, NURTURING_PROPOSTO: 3, MESSAGGIO_NURTURING: 4,
-  SCHEDA_CONTATTO: 5, MESSAGGIO_BNI: 6, AZIONE_BNI: 7, FASCICOLO_BASE: 8,
+  PREPARAZIONE_121: 0, PREPARAZIONE_CALL: 1, DOPO_CALL: 2, RECALL: 3, NURTURING_PROPOSTO: 4, MESSAGGIO_NURTURING: 5,
+  MESSAGGIO_BNI: 6, VISITA_CAPITOLO: 7, SCHEDA_CONTATTO: 8, AZIONE_BNI: 9, FASCICOLO_BASE: 10,
 };
 
 export default function CassettaPage() {

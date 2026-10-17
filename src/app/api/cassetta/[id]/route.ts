@@ -10,8 +10,9 @@ import { applicaDecisioneVendita } from "@/lib/vendita/trattative";
  * Cosa vuol dire approvare, per tipo:
  *   FASCICOLO_BASE  → "approfondisci": partono gli agenti a pagamento e quelli di browser;
  *   SCHEDA_CONTATTO → "contatto": Alessio usa scheda e messaggio (l'invio lo fa lui);
- *   AZIONE_BNI      → il Preparatore 121 scrive i messaggi ai destinatari;
- *   MESSAGGIO_BNI   → "mandato": il membro passa a "richiesta 121" nella pipeline BNI.
+ *   MESSAGGIO_BNI   → "mandato": la richiesta di 121 è partita (Alessio fissa poi la data);
+ *   VISITA_CAPITOLO → "mandato": la visita al capitolo è chiesta (capitolo in "visita pianificata");
+ *   PREPARAZIONE_121→ "letto".
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireSession();
@@ -44,7 +45,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Effetto collaterale piccolo e reversibile: un messaggio BNI mandato sposta il membro
   // da "da avvicinare" a "richiesta 121" (solo se era ancora all'inizio).
   if (decisione === "APPROVATO") {
-    const voce = await db.approvalItem.findUnique({ where: { id }, select: { kind: true, bniMembroId: true } });
+    const voce = await db.approvalItem.findUnique({ where: { id }, select: { kind: true, bniMembroId: true, bniChapterId: true } });
+    if (voce?.kind === "VISITA_CAPITOLO" && voce.bniChapterId) {
+      await db.bniChapter.updateMany({ where: { id: voce.bniChapterId, visitStatus: { notIn: ["VISITATO"] } }, data: { visitStatus: "VISITA_PIANIFICATA" } });
+    }
     if (voce?.kind === "MESSAGGIO_BNI" && voce.bniMembroId) {
       await db.bniMembro.updateMany({
         where: { id: voce.bniMembroId, bniStage: "DA_AVVICINARE" },

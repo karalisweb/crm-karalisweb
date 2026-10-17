@@ -17,7 +17,7 @@ import { agenteAggancio, agenteCoerenza, agenteRegistaVideo, agenteSchedaLeve } 
 import type { AgenteEseguibile } from "./tipi";
 
 export type Famiglia = "server" | "browser" | "sintesi";
-export type Squadra = "commerciale" | "bni" | "vendita";
+export type Squadra = "commerciale" | "bni" | "vendita" | "ricerca";
 export type StatoAgente = "attivo" | "da_costruire" | "esistente_altrove";
 
 export interface SchedaAgente {
@@ -68,15 +68,31 @@ export const SQUADRA: SchedaAgente[] = [
   { chiave: "regista_video", numero: "13", nome: "Regista del video", compito: "Cosa mostrare nel video di analisi", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
   {
     chiave: "cartografo_bni", numero: "B1", nome: "Cartografo capitoli", compito: "Capitoli, formato, membri e dirigenza su BNI Connect", famiglia: "browser", squadra: "bni", stato: "attivo",
-    istruzioni: `Usa Chrome di Alessio su BNI Connect (è già entrato). Per la regione indicata nel lavoro: elenca i capitoli (nome, città, provincia, giorno e ora della riunione, formato: in presenza / online / ibrido, link alla pagina del capitolo). Per ogni capitolo apri l'elenco membri e riporta per ciascuno: nome, azienda, categoria professionale, telefono se pubblicato, e se ha un ruolo nella dirigenza (presidente, vicepresidente, responsabile formazione). Puoi seguire il metodo della skill bni-121 per navigare BNI Connect. Findings: { regione, capitoli: [{ nome, citta, provincia, formato, giorno, ora, url, membri: [{ nome, azienda, categoria, telefono, dirigenza }] }] }. ${REGOLE_BROWSER}`,
+    istruzioni: `Usa Chrome di Alessio su BNI Connect (è già entrato). Per la regione indicata nel lavoro: elenca i capitoli (nome, città, provincia, giorno e ora della riunione, formato: in presenza / online / ibrido, sede o indirizzo della riunione — oppure "online" —, link alla pagina del capitolo). Per ogni capitolo apri l'elenco membri e riporta per ciascuno: nome, azienda, categoria professionale, telefono se pubblicato, e il ruolo nella dirigenza se ne ha uno ADESSO (presidente, vicepresidente, responsabile formazione, responsabile eventi). Puoi seguire il metodo della skill bni-121 per navigare BNI Connect. Findings: { regione, capitoli: [{ nome, citta, provincia, formato, giorno, ora, sede, url, membri: [{ nome, azienda, categoria, telefono, dirigenza }] }] }. ${REGOLE_BROWSER}`,
   },
-  { chiave: "stratega_bni", numero: "B2", nome: "Stratega di capitolo", compito: "Copertura, collaborazione, visita o 121 con la dirigenza", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
-  { chiave: "preparatore_121", numero: "B3", nome: "Preparatore 121", compito: "Scrive la richiesta di 121 o di collaborazione (la mandi tu)", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
+  { chiave: "pianificatore_121", numero: "B2", nome: "Pianificatore 121", compito: "10 121 a settimana: 15 richieste aperte, 2 capitoli alla volta, con il tuo ordine dentro ogni capitolo", famiglia: "server", squadra: "bni", stato: "attivo" },
+  { chiave: "preparatore_121", numero: "B3", nome: "Preparatore 121", compito: "Scrive la richiesta di 121 (la mandi tu) e il foglio del giorno prima", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
+  {
+    chiave: "rete_membro", numero: "B5", nome: "Rete del membro", compito: "Dalla rete LinkedIn del membro, 3-5 persone da farsi presentare", famiglia: "browser", squadra: "bni", stato: "attivo",
+    nota: "Con il browser di Alessio; conta nei 2 lavori LinkedIn al giorno",
+    istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Il lavoro indica un membro BNI (nome, azienda, capitolo, profilo se noto). 1) Trova il suo profilo: il link del lavoro, oppure cerca nome + azienda, verificando azienda e città. 2) Guarda la sua rete: se i collegamenti sono visibili usa la ricerca Persone con il filtro "Collegamenti di <nome>"; altrimenti i "collegamenti in comune" con Alessio. 3) Scegli fino a 10 persone che sono titolari, soci, amministratori o responsabili di un'azienda (non semplici dipendenti, non concorrenti di Alessio: niente web agency, marketing, grafica, comunicazione), meglio se in Sardegna e nei settori dei casi studio indicati nel lavoro. Per ognuna: nome, ruolo, azienda, sito dell'azienda se è nel profilo, link al profilo, località, perché è interessante (una riga). Apri al massimo una quindicina di profili, con calma. Non mandare richieste di collegamento né messaggi. Findings: { profiloMembro, persone: [{ nome, ruolo, azienda, sitoAzienda, profilo, localita, perche }] }. ${REGOLE_BROWSER}`,
+  },
+  { chiave: "dopo_121", numero: "B6", nome: "Dopo-121", compito: "Dalla trascrizione di Meet o dal vocale compila la scheda del membro", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
   { chiave: "preparazione_call", numero: "V1", nome: "Preparatore call", compito: "La pagina da avere davanti durante la call di vendita", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
   { chiave: "dopo_call", numero: "V2", nome: "Dopo-call", compito: "Dalla trascrizione di Meet: lettera strategica o follow-up e prossimo passo", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
   { chiave: "recall", numero: "V3", nome: "Recall", compito: "Il richiamo quando la risposta non arriva", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
   { chiave: "nurturing", numero: "V4", nome: "Nurturing", compito: "Un messaggio di valore ogni 45 giorni", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
-  { chiave: "copertura_sardegna", numero: "B4", nome: "Copertura Sardegna", compito: "Chi conosci e chi manca, capitolo per capitolo", famiglia: "server", squadra: "bni", stato: "attivo" },
+  { chiave: "copertura_sardegna", numero: "B4", nome: "Copertura", compito: "Chi conosci e chi manca, capitolo per capitolo; la visita quando ne conosci un terzo", famiglia: "server", squadra: "bni", stato: "attivo" },
+  { chiave: "lettore_casi", numero: "R1", nome: "Lettore casi studio", compito: "Dal PDF: la storia da 30 secondi e le chiavi di ricerca (settore, aziende simili, persone simili)", famiglia: "sintesi", squadra: "ricerca", stato: "attivo" },
+  {
+    chiave: "cerca_meta", numero: "R2", nome: "Cercatore Meta", compito: "Aziende su Facebook e Instagram per settore e zona", famiglia: "browser", squadra: "ricerca", stato: "attivo",
+    istruzioni: `Cerca aziende su Facebook e Instagram per il termine e la zona del lavoro (es. "piscine Cagliari"). Facebook: ricerca con il filtro Pagine, termine + città. Instagram: ricerca account con termine e città (anche l'hashtag del termine). Prendi solo pagine di aziende vere della zona (non gruppi, non persone private, non portali o directory), fino a 15. Per ognuna: nome, piattaforma (facebook o instagram), link alla pagina, sito se indicato nella pagina, città, telefono se pubblico, categoria. Findings: { aziende: [{ nome, piattaforma, pagina, sito, citta, telefono, categoria }] }. ${REGOLE_BROWSER}`,
+  },
+  {
+    chiave: "cerca_linkedin", numero: "R3", nome: "Cercatore LinkedIn", compito: "Persone simili al titolare del caso studio, la sua rete, la rete dei membri BNI", famiglia: "browser", squadra: "ricerca", stato: "attivo",
+    nota: "Con il browser di Alessio; massimo 2 lavori LinkedIn al giorno (circa 20 profili)",
+    istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Il lavoro ha una chiave. Se c'è una PERSONA (il titolare di un cliente del caso studio): cerca persone con un profilo simile — stesso ruolo (titolare, socio, amministratore) nello stesso settore, nella zona indicata (prima la Sardegna); se c'è il link del suo profilo guarda anche i suoi collegamenti (filtro "Collegamenti di <nome>") e gli amici in comune con Alessio. Se c'è un MEMBRO BNI: cerca fra i suoi collegamenti (filtro "Collegamenti di <nome>") titolari e responsabili di aziende. "giaVisti" dice quante volte la chiave è già stata usata: vai avanti nelle pagine dei risultati per non ripetere le stesse persone. Fino a 10 persone, niente concorrenti di Alessio (web, marketing, grafica, comunicazione). Per ognuna: nome, ruolo, azienda, sito dell'azienda se è nel profilo, link al profilo, località, contatto in comune se LinkedIn lo mostra, perché è simile (una riga). Non mandare richieste di collegamento né messaggi. Findings: { persone: [{ nome, ruolo, azienda, sitoAzienda, profilo, localita, contattoInComune, perche }] }. ${REGOLE_BROWSER}`,
+  },
 ];
 
 /** Gli agenti che girano nell'app, per fase. */

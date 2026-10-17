@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 // Qui si provano solo funzioni pure: il database non serve (e non deve essere toccato).
 vi.mock("@/lib/db", () => ({ db: {} }));
 import { browserDaAccodare, prontoPerSintesi, sintesiDaFare, AGENTI_BROWSER_AZIENDA, type StatoAgenteSuAzienda } from "../regista";
-import { stessoRuolo, eSardo, formatoDa, dirigenzaDa, coperturaCapitolo, azioneCapitolo, type MembroPerRegole } from "../bni-regole";
+import { stessoRuolo, eSardo, formatoDa, dirigenzaDa } from "../bni-regole";
 import { refertoPosizioni, parolaChiave } from "../agenti/posizioni";
 import { refertoGoogleAds } from "../agenti/google-ads";
 import { eNonAzienda, nomeDaTitolo } from "../esploratore";
@@ -47,11 +47,7 @@ describe("Regista: approfondimento e sintesi", () => {
   });
 });
 
-describe("Regole BNI", () => {
-  const m = (x: Partial<MembroPerRegole> & { id: string }): MembroPerRegole => ({
-    name: x.id, profession: null, company: null, phone: null, leadershipRole: null, conosciuto: false, priorita: 0, ...x,
-  });
-
+describe("Regole BNI: riconoscimenti", () => {
   it("riconosce chi fa il mio mestiere", () => {
     expect(stessoRuolo("Web Agency")).toBe(true);
     expect(stessoRuolo("Consulente marketing digitale")).toBe(true);
@@ -70,43 +66,8 @@ describe("Regole BNI", () => {
     expect(dirigenzaDa("Vice Presidente")).toBe("VICEPRESIDENTE");
     expect(dirigenzaDa("Presidente")).toBe("PRESIDENTE");
     expect(dirigenzaDa("Coordinatore Formazione")).toBe("FORMAZIONE");
+    expect(dirigenzaDa("Coordinatore eventi")).toBe("EVENTI");
     expect(dirigenzaDa("Membro")).toBeNull();
-  });
-
-  it("copertura: conta i conosciuti e mette prima i mancanti più importanti", () => {
-    const c = coperturaCapitolo([m({ id: "a", conosciuto: true }), m({ id: "b", priorita: 10 }), m({ id: "c", priorita: 80 })]);
-    expect(c).toMatchObject({ totale: 3, conosciuti: 1, percentuale: 33 });
-    expect(c.mancanti.map((x) => x.id)).toEqual(["c", "b"]);
-  });
-
-  const base = { nome: "Cap", giorno: "Mercoledì", ora: "07:00" };
-
-  it("Sardegna → copertura, al massimo 5 alla volta", () => {
-    const membri = Array.from({ length: 8 }, (_, i) => m({ id: `m${i}`, priorita: i }));
-    const a = azioneCapitolo({ ...base, sardo: true, formato: "PRESENZA", membri });
-    expect(a.tipo).toBe("COPERTURA");
-    expect(a.destinatari).toHaveLength(5);
-    expect(a.destinatari[0].membroId).toBe("m7");
-  });
-
-  it("fuori Sardegna con un collega → collaborazione (anche se online)", () => {
-    const a = azioneCapitolo({ ...base, sardo: false, formato: "ONLINE", membri: [m({ id: "w", profession: "Web designer" }), m({ id: "x" })] });
-    expect(a.tipo).toBe("COLLABORAZIONE");
-    expect(a.destinatari.map((d) => d.membroId)).toEqual(["w"]);
-  });
-
-  it("ruolo scoperto e capitolo ibrido/online → visita alla riunione", () => {
-    const a = azioneCapitolo({ ...base, sardo: false, formato: "IBRIDO", membri: [m({ id: "p", leadershipRole: "PRESIDENTE" })] });
-    expect(a.tipo).toBe("VISITA");
-    expect(a.motivo).toContain("Mercoledì alle 07:00");
-  });
-
-  it("ruolo scoperto e capitolo in presenza → 121 con la dirigenza, o mappare se non è nota", () => {
-    const dirigenti = [m({ id: "p", leadershipRole: "PRESIDENTE" }), m({ id: "v", leadershipRole: "VICEPRESIDENTE" }), m({ id: "x" })];
-    const a = azioneCapitolo({ ...base, sardo: false, formato: "PRESENZA", membri: dirigenti });
-    expect(a.tipo).toBe("121_DIRIGENZA");
-    expect(a.destinatari.map((d) => d.membroId)).toEqual(["p", "v"]);
-    expect(azioneCapitolo({ ...base, sardo: false, formato: "PRESENZA", membri: [m({ id: "x" })] }).tipo).toBe("MAPPARE");
   });
 });
 

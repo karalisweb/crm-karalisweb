@@ -53,20 +53,58 @@ chiamata e **la prova** di ogni cosa che dice.
    chiamata, domande, obiezione probabile, chi decide, il **messaggio** (pulsante Copia) e la
    **scaletta del video**. Il messaggio lo mandi tu.
 
-**La squadra BNI**
-- **In Sardegna** l'obiettivo è conoscere tutti i membri: ogni settimana la Cassetta propone i
-  prossimi 5 per capitolo. Nella pagina Squadra vedi la copertura (quanti ne conosci su quanti).
-- **Fuori Sardegna**, per ogni capitolo: se c'è un collega con il tuo mestiere → collaborazione;
-  se il tuo ruolo è scoperto e il capitolo è online o ibrido → partecipa alla riunione; se è in
-  presenza → 121 con presidente, vicepresidente e responsabile formazione.
-- Approvi l'azione → il Preparatore scrive i messaggi → in Cassetta trovi ogni messaggio con
-  **Apri WhatsApp** (si apre la chat con il testo pronto). Quando l'hai mandato premi **Mandato**.
-- Il **Cartografo** legge capitoli, membri e dirigenza da BNI Connect, una regione alla volta.
+**La ricerca (dalla v3.47): BNI per primo, poi i clienti dai casi studio**
+
+Menu **RICERCA**:
+- **121 BNI** — l'obiettivo è **10 121 a settimana** (2 al giorno): il contatore della settimana, i
+  121 in calendario, le richieste aperte e i capitoli con quanti membri conosci.
+- **Membri BNI** — scrivi un bisogno ("commercialista a Cagliari", "chi conosce aziende di piscine")
+  e trovi a chi girare una referenza. Ogni membro ha la sua **scheda**: chi è, cosa fa, referenze
+  che cerca, referenze che può dare, persone da farsi presentare, la vostra storia, prossimo passo.
+- **Casi studio** — carichi il PDF di un cliente: l'agente scrive la **storia da 30 secondi** (com'era,
+  cosa abbiamo fatto, cosa è cambiato) e le **chiavi di ricerca**. Le controlli, premi **Conferma**:
+  per 6 mesi la ricerca di aziende parte da lì.
+- **Persone LinkedIn** — le persone trovate su LinkedIn, ognuna con la sua azienda.
+
+**Come lavora il BNI**
+1. Si incontrano **tutti** i membri, in Sardegna (Sud e Nord) e poi nel resto d'Italia.
+2. In ogni capitolo l'ordine è: **prima chi fa il tuo mestiere** (per rispetto: paga per quel posto),
+   poi **presidente e responsabile formazione/eventi**, poi **tutti gli altri**. Se nessuno fa il tuo
+   mestiere si parte dal **presidente**, e al 121 gli chiedi chi sono i più attivi: quelli che indica
+   salgono in cima.
+3. Ogni mattina alle 7 il Pianificatore tiene **15 richieste aperte**, lavorando **2 capitoli alla
+   volta**: in Cassetta trovi il messaggio con **Apri WhatsApp** (di persona se il capitolo è in
+   presenza, Meet se è online). Mandato il messaggio premi **Mandato**; quando ti rispondono, in
+   **121 BNI** premi **Fissato** e metti la data.
+4. Quando fissi il 121 l'agente guarda la **rete LinkedIn** del membro e ti prepara **3-5 persone da
+   farti presentare**. Il giorno prima trovi in Cassetta il **foglio del 121**: chi è, chi chiedergli
+   di presentarti, la storia di un caso studio da raccontare, le domande.
+5. Dopo il 121, nella scheda del membro premi **Registra il 121**: online incolli la trascrizione di
+   Meet, di persona detti un vocale di 2 minuti. La scheda si compila da sola. Anche i 121 fatti in
+   passato si registrano così (o con **Già conosciuto** nella pagina del capitolo).
+6. Quando conosci **un terzo** di un capitolo arriva il messaggio per chiedere la **visita** (non per
+   il tuo capitolo, di cui sei membro).
+7. Se un capitolo non è ancora stato letto da BNI Connect non si sa chi lo guida: finché il Cartografo
+   non lo legge, si contatta solo chi fa il tuo mestiere.
+
+**Come lavora la ricerca clienti**
+- Obiettivo **5 aziende nuove al giorno** (ne contatti circa una al giorno). Due giri, alle 6:30 e alle
+  14:30 nei giorni feriali.
+- Si parte dalle chiavi dei casi studio attivi: **stesso settore** e **aziende simili** su Google Maps,
+  Google, Facebook e Instagram; **persone simili** al titolare su LinkedIn, anche nella sua rete.
+  Anche la rete LinkedIn dei membri BNI incontrati diventa una chiave.
+- Prima tutta la Sardegna (Cagliari, Quartu, … Sassari, Olbia…), poi le città del resto d'Italia.
+- Un filtro tiene solo chi fa **lo stesso mestiere** del cliente del caso (cercando "piscine" non ti
+  arrivano piscine comunali e palestre).
+- Persona e azienda sono sempre collegate. Se una persona trovata è un membro BNI resta relazione,
+  non diventa un'azienda da contattare.
+- Senza casi studio attivi la ricerca torna alle categorie e città delle Ricerche.
 
 **Gli agenti di browser (sul tuo Mac)**
-Social, Meta Ad Library, LinkedIn, Decision maker e Cartografo usano il tuo Chrome. Li fa Claude
+Social, Meta Ad Library, LinkedIn, Decision maker, Cartografo, Rete del membro, Cercatore Meta e
+Cercatore LinkedIn usano il tuo Chrome (i lavori BNI passano per primi). Li fa Claude
 nell'attività programmata "Squadra CRM — agenti di browser" (app Claude, Mac acceso). Solo
-lettura, LinkedIn al massimo 20 aziende al giorno. Se il Mac è spento i lavori aspettano 3 giorni,
+lettura, LinkedIn al massimo 20 aziende al giorno (più 2 lavori di ricerca persone). Se il Mac è spento i lavori aspettano 3 giorni,
 poi la sintesi va avanti con quello che c'è e lo dice.
 
 **La pipeline di vendita (Trattative)**

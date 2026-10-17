@@ -13,78 +13,78 @@ datasource db {
 // LEAD - Dati da Google Maps + Audit + CRM
 // ==========================================
 model Lead {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Dati da Google Maps (Apify)
-  name              String
-  address           String?
-  phone             String?
-  phoneVerified     Boolean   @default(false) @map("phone_verified") // Numero verificato manualmente
-  whatsappNumber    String?   @map("whatsapp_number")
-  whatsappSource    String?   @map("whatsapp_source") // "website" | "google_maps" | "manual" | "none"
-  website           String?
-  socialUrl         String?   @map("social_url")
-  category          String?
-  segment           String?                          // Micro-segmento: "infissi", "edilizia", "immobiliare", etc.
+  name               String
+  address            String?
+  phone              String?
+  phoneVerified      Boolean  @default(false) @map("phone_verified") // Numero verificato manualmente
+  whatsappNumber     String?  @map("whatsapp_number")
+  whatsappSource     String?  @map("whatsapp_source") // "website" | "google_maps" | "manual" | "none"
+  website            String?
+  socialUrl          String?  @map("social_url")
+  category           String?
+  segment            String? // Micro-segmento: "infissi", "edilizia", "immobiliare", etc.
   // Buyer persona (fonte unica, vedi src/lib/buyer-personas.ts): "CASA" | "MICROTURISMO" | "PERSONA" | "ALTRO"
   // Deriva dal segmento/categoria ma e' sovrascrivibile a mano.
-  buyerPersona      String?   @map("buyer_persona")
-  googleRating      Decimal?  @map("google_rating") @db.Decimal(2, 1)
+  buyerPersona       String?  @map("buyer_persona")
+  googleRating       Decimal? @map("google_rating") @db.Decimal(2, 1)
   googleReviewsCount Int?     @map("google_reviews_count")
-  googleMapsUrl     String?   @map("google_maps_url")
-  placeId           String?   @unique @map("place_id")
+  googleMapsUrl      String?  @map("google_maps_url")
+  placeId            String?  @unique @map("place_id")
 
   // Risultato Audit
-  auditStatus       AuditStatus @default(PENDING) @map("audit_status")
-  auditCompletedAt  DateTime?   @map("audit_completed_at")
-  opportunityScore  Int?        @map("opportunity_score")
+  auditStatus      AuditStatus @default(PENDING) @map("audit_status")
+  auditCompletedAt DateTime?   @map("audit_completed_at")
+  opportunityScore Int?        @map("opportunity_score")
 
   // Audit details (JSON per flessibilita)
-  auditData         Json?       @map("audit_data")
+  auditData Json? @map("audit_data")
 
   // Talking points generati
-  talkingPoints     String[]    @map("talking_points")
+  talkingPoints String[] @map("talking_points")
 
   // ==========================================
   // SEGNALI COMMERCIALI (Sistema 5 chiamate/giorno)
   // ==========================================
   // Tag commerciale obbligatorio (1 solo per lead)
-  commercialTag     CommercialTag?  @map("commercial_tag")
-  commercialTagReason String?       @map("commercial_tag_reason")
+  commercialTag       CommercialTag? @map("commercial_tag")
+  commercialTagReason String?        @map("commercial_tag_reason")
 
   // I 5 segnali commerciali (JSON)
-  commercialSignals Json?           @map("commercial_signals")
-  /*
-    {
-      "adsEvidence": "strong" | "medium" | "weak" | "none",
-      "adsEvidenceReason": "...",
-      "trackingPresent": true | false,
-      "consentModeV2": "yes" | "no" | "uncertain",
-      "ctaClear": true | false,
-      "offerFocused": true | false,
-      "analyzedAt": "ISO date",
-      "errors": ["..."] // opzionale
-    }
-  */
+  commercialSignals Json? @map("commercial_signals")
+  /**
+   * {
+   * "adsEvidence": "strong" | "medium" | "weak" | "none",
+   * "adsEvidenceReason": "...",
+   * "trackingPresent": true | false,
+   * "consentModeV2": "yes" | "no" | "uncertain",
+   * "ctaClear": true | false,
+   * "offerFocused": true | false,
+   * "analyzedAt": "ISO date",
+   * "errors": ["..."] // opzionale
+   * }
+   */
 
   // Priorita commerciale (1=alta, 4=skip)
-  commercialPriority Int?           @map("commercial_priority")
+  commercialPriority Int? @map("commercial_priority")
 
   // Flag per dashboard "Chiamabili oggi"
-  isCallable        Boolean         @default(false) @map("is_callable")
+  isCallable Boolean @default(false) @map("is_callable")
 
   // CRM Pipeline
-  pipelineStage     PipelineStage @default(DA_ANALIZZARE) @map("pipeline_stage")
-  outreachChannel   String?       @map("outreach_channel") // "WA" | "EMAIL"
-  channelHistory    Json?         @map("channel_history") // [{channel, setAt, reason}]
-  email             String?       // Email del prospect (per fallback invio)
-  outreachMailSent  Json?         @map("outreach_mail_sent") // {subject, body, hook, generatedAt} — cosa ha ricevuto davvero (per registrare il video coerente)
-  outreachApprovedAt DateTime?    @map("outreach_approved_at") // HOT approvato da Alessio → in coda di drip (non ancora inviato)
-  optInSentAt       DateTime?     @map("opt_in_sent_at")       // T1: prima mail (dedup + tempistica follow-up)
-  optInFollowupAt   DateTime?     @map("opt_in_followup_at")   // T2: primo follow-up
-  optInFollowup2At  DateTime?     @map("opt_in_followup2_at")  // T3: secondo follow-up
-  coldCallTaskAt    DateTime?     @map("cold_call_task_at")    // T4: task telefonata creato (solo lead caldi/HOT)
-  coldBreakupAt     DateTime?     @map("cold_breakup_at")      // T5: break-up inviato → NURTURING
+  pipelineStage      PipelineStage @default(DA_ANALIZZARE) @map("pipeline_stage")
+  outreachChannel    String?       @map("outreach_channel") // "WA" | "EMAIL"
+  channelHistory     Json?         @map("channel_history") // [{channel, setAt, reason}]
+  email              String? // Email del prospect (per fallback invio)
+  outreachMailSent   Json?         @map("outreach_mail_sent") // {subject, body, hook, generatedAt} — cosa ha ricevuto davvero (per registrare il video coerente)
+  outreachApprovedAt DateTime?     @map("outreach_approved_at") // HOT approvato da Alessio → in coda di drip (non ancora inviato)
+  optInSentAt        DateTime?     @map("opt_in_sent_at") // T1: prima mail (dedup + tempistica follow-up)
+  optInFollowupAt    DateTime?     @map("opt_in_followup_at") // T2: primo follow-up
+  optInFollowup2At   DateTime?     @map("opt_in_followup2_at") // T3: secondo follow-up
+  coldCallTaskAt     DateTime?     @map("cold_call_task_at") // T4: task telefonata creato (solo lead caldi/HOT)
+  coldBreakupAt      DateTime?     @map("cold_breakup_at") // T5: break-up inviato → NURTURING
 
   // Questionario / self-assessment (segnale di calore → CALDO_REATTIVO)
   questionnaireCompletedAt DateTime? @map("questionnaire_completed_at")
@@ -92,106 +92,106 @@ model Lead {
   questionnaireScore       Int?      @map("questionnaire_score") // punteggio self-assessment (smistamento per fascia)
 
   // Bozza mail 1 pre-generata in attesa di approvazione ({subject, body, hook, generatedAt})
-  outreachDraft     Json?         @map("outreach_draft")
-  lostReason        LostReason?   @map("lost_reason")
-  lostReasonNotes   String?       @map("lost_reason_notes")
+  outreachDraft   Json?       @map("outreach_draft")
+  lostReason      LostReason? @map("lost_reason")
+  lostReasonNotes String?     @map("lost_reason_notes")
 
   // Contatore tentativi chiamata (per fase vendita)
-  callAttempts      Int           @default(0) @map("call_attempts")
+  callAttempts Int @default(0) @map("call_attempts")
 
   // Data/ora appuntamento (per CALL_FISSATA)
-  appointmentAt     DateTime?     @map("appointment_at")
+  appointmentAt DateTime? @map("appointment_at")
 
   // Data invio proposta (per tracking)
-  offerSentAt       DateTime?     @map("offer_sent_at")
+  offerSentAt            DateTime? @map("offer_sent_at")
   // Dedup alert scadenza proposta (14gg da offerSentAt, creato da check-proposal-deadline)
   proposalDeadlineTaskAt DateTime? @map("proposal_deadline_task_at")
 
   // ==========================================
   // 2-PROMPT CHAIN (Analista + Sceneggiatore)
   // ==========================================
-  analystOutput         Json?       @map("analyst_output")
-  analystApprovedAt     DateTime?   @map("analyst_approved_at")
-  analystApprovedBy     String?     @map("analyst_approved_by")
-  scriptApprovedAt      DateTime?   @map("script_approved_at")
-  scriptApprovedBy      String?     @map("script_approved_by")
-  puntoDoloreBreve      String?     @map("punto_dolore_breve") @db.Text
-  puntoDoloreLungo      String?     @map("punto_dolore_lungo") @db.Text
+  analystOutput     Json?     @map("analyst_output")
+  analystApprovedAt DateTime? @map("analyst_approved_at")
+  analystApprovedBy String?   @map("analyst_approved_by")
+  scriptApprovedAt  DateTime? @map("script_approved_at")
+  scriptApprovedBy  String?   @map("script_approved_by")
+  puntoDoloreBreve  String?   @map("punto_dolore_breve") @db.Text
+  puntoDoloreLungo  String?   @map("punto_dolore_lungo") @db.Text
 
   // ==========================================
   // VIDEO OUTREACH
   // ==========================================
   // Script video generato dall'app
-  videoScriptData   Json?         @map("video_script_data")
+  videoScriptData Json?     @map("video_script_data")
   // Tracking invio video
-  videoSentAt       DateTime?     @map("video_sent_at")
-  videoViewedAt     DateTime?     @map("video_viewed_at")
+  videoSentAt     DateTime? @map("video_sent_at")
+  videoViewedAt   DateTime? @map("video_viewed_at")
 
   // ==========================================
   // GEMINI AI ANALYSIS
   // ==========================================
-  geminiAnalysis    Json?         @map("gemini_analysis")
-  geminiAnalyzedAt  DateTime?     @map("gemini_analyzed_at")
+  geminiAnalysis   Json?     @map("gemini_analysis")
+  geminiAnalyzedAt DateTime? @map("gemini_analyzed_at")
 
   // Score breakdown (dettaglio punteggio per categoria)
-  scoreBreakdown    Json?         @map("score_breakdown")
+  scoreBreakdown Json? @map("score_breakdown")
 
   // Override manuale del tier settore ("high_ticket" | "standard" | "low_ticket")
-  tierOverride      String?       @map("tier_override")
+  tierOverride String? @map("tier_override")
 
   // ==========================================
   // ADS — Solo verifica manuale
   // ==========================================
-  hasActiveGoogleAds    Boolean     @default(false) @map("has_active_google_ads")
-  hasActiveMetaAds      Boolean     @default(false) @map("has_active_meta_ads")
-  adsVerifiedManually   Boolean     @default(false) @map("ads_verified_manually")
-  googleAdsCopy         String?     @map("google_ads_copy")
-  metaAdsCopy           String?     @map("meta_ads_copy")
-  landingPageUrl        String?     @map("landing_page_url")
-  landingPageText       String?     @map("landing_page_text") @db.Text
-  adsCheckedAt          DateTime?   @map("ads_checked_at")
-  adsCoherenceWarning   String?     @map("ads_coherence_warning")
-  emailCheckedAt        DateTime?   @map("email_checked_at") // ultimo tentativo di trovare l'email (cooldown recover-emails)
+  hasActiveGoogleAds  Boolean   @default(false) @map("has_active_google_ads")
+  hasActiveMetaAds    Boolean   @default(false) @map("has_active_meta_ads")
+  adsVerifiedManually Boolean   @default(false) @map("ads_verified_manually")
+  googleAdsCopy       String?   @map("google_ads_copy")
+  metaAdsCopy         String?   @map("meta_ads_copy")
+  landingPageUrl      String?   @map("landing_page_url")
+  landingPageText     String?   @map("landing_page_text") @db.Text
+  adsCheckedAt        DateTime? @map("ads_checked_at")
+  adsCoherenceWarning String?   @map("ads_coherence_warning")
+  emailCheckedAt      DateTime? @map("email_checked_at") // ultimo tentativo di trovare l'email (cooldown recover-emails)
 
   // ==========================================
   // VIDEO / SCRIPT TELLA
   // ==========================================
-  scriptRegeneratedAt DateTime?   @map("script_regenerated_at")
-  videoViewsCount     Int         @default(0) @map("video_views_count")
-  videoTrackingToken  String?     @unique @map("video_tracking_token")
-  videoYoutubeUrl     String?     @map("video_youtube_url")
-  videoYoutubeId      String?     @map("video_youtube_id")
-  videoTellaUrl       String?     @map("video_tella_url")
-  videoLandingUrl     String?     @map("video_landing_url")
-  videoLandingSlug    String?     @map("video_landing_slug")
-  videoWpPostId       Int?        @map("video_wp_post_id")  // ID del post WordPress per update/delete
-  landingPuntoDolore  String?     @map("landing_punto_dolore") @db.Text
+  scriptRegeneratedAt DateTime? @map("script_regenerated_at")
+  videoViewsCount     Int       @default(0) @map("video_views_count")
+  videoTrackingToken  String?   @unique @map("video_tracking_token")
+  videoYoutubeUrl     String?   @map("video_youtube_url")
+  videoYoutubeId      String?   @map("video_youtube_id")
+  videoTellaUrl       String?   @map("video_tella_url")
+  videoLandingUrl     String?   @map("video_landing_url")
+  videoLandingSlug    String?   @map("video_landing_slug")
+  videoWpPostId       Int?      @map("video_wp_post_id") // ID del post WordPress per update/delete
+  landingPuntoDolore  String?   @map("landing_punto_dolore") @db.Text
 
   // YouTube player tracking (eventi dalla landing page)
-  videoFirstPlayAt    DateTime?   @map("video_first_play_at")
-  videoMaxWatchPercent Int?       @map("video_max_watch_percent")
-  videoCompletedAt    DateTime?   @map("video_completed_at")
+  videoFirstPlayAt     DateTime? @map("video_first_play_at")
+  videoMaxWatchPercent Int?      @map("video_max_watch_percent")
+  videoCompletedAt     DateTime? @map("video_completed_at")
   // Dedup task "chiama per fissare la call" (creato al primo play)
-  videoFirstPlayTaskAt DateTime?  @map("video_first_play_task_at")
+  videoFirstPlayTaskAt DateTime? @map("video_first_play_task_at")
 
   // ==========================================
   // FOLLOW-UP TRACKING
   // ==========================================
-  letterSentAt      DateTime?     @map("letter_sent_at")
-  linkedinSentAt    DateTime?     @map("linkedin_sent_at")
+  letterSentAt   DateTime? @map("letter_sent_at")
+  linkedinSentAt DateTime? @map("linkedin_sent_at")
 
   // ==========================================
   // RISPOSTA PROSPECT
   // ==========================================
-  respondedAt       DateTime?     @map("responded_at")
-  respondedVia      String?       @map("responded_via") // "email" | "phone" | "linkedin" | "whatsapp"
+  respondedAt  DateTime? @map("responded_at")
+  respondedVia String?   @map("responded_via") // "email" | "phone" | "linkedin" | "whatsapp"
 
   // ==========================================
   // QUALIFICAZIONE (Daniela)
   // ==========================================
-  danielaNotes      String?       @map("daniela_notes")
-  qualifiedAt       DateTime?     @map("qualified_at")
-  qualifiedBy       String?       @map("qualified_by")
+  danielaNotes String?   @map("daniela_notes")
+  qualifiedAt  DateTime? @map("qualified_at")
+  qualifiedBy  String?   @map("qualified_by")
 
   // Verifica audit (checklist di Daniela)
   auditVerified           Boolean   @default(false) @map("audit_verified")
@@ -203,87 +203,91 @@ model Lead {
   // QUALIFICA AUTOMATICA PROSPECT
   // ==========================================
   // Punteggio qualifica (0-100) — scoring basato su sito + ads attive
-  qualificationScore    Int?        @map("qualification_score")
+  qualificationScore    Int?    @map("qualification_score")
   // Priorita derivata: "ALTA" / "MEDIA" / "BASSA"
-  qualificationPriority String?     @map("qualification_priority")
+  qualificationPriority String? @map("qualification_priority")
   // Angolo pre-compilato per video Loom
-  angoloLoom            String?     @map("angolo_loom")
+  angoloLoom            String? @map("angolo_loom")
 
   // Dati Google Ads (da DataForSEO)
-  googleAdsActive       Boolean?    @map("google_ads_active")
-  googleAdsCount        Int?        @map("google_ads_count")
+  googleAdsActive Boolean? @map("google_ads_active")
+  googleAdsCount  Int?     @map("google_ads_count")
 
   // Dati Meta Ads (da Meta Ad Library)
-  metaAdsActive         Boolean?    @map("meta_ads_active")
-  metaAdsCount          Int?        @map("meta_ads_count")
-  metaPageName          String?     @map("meta_page_name")
+  metaAdsActive Boolean? @map("meta_ads_active")
+  metaAdsCount  Int?     @map("meta_ads_count")
+  metaPageName  String?  @map("meta_page_name")
 
   // Flag titolare verificato (Daniela)
-  titolareVerificato    Boolean     @default(false) @map("titolare_verificato")
+  titolareVerificato Boolean @default(false) @map("titolare_verificato")
 
   // Output completo qualifica (JSON)
-  qualificationData     Json?       @map("qualification_data")
+  qualificationData   Json?     @map("qualification_data")
   // Errori non bloccanti durante qualifica
-  qualificationErrors   String[]    @map("qualification_errors")
+  qualificationErrors String[]  @map("qualification_errors")
   // Timestamp qualifica automatica
-  qualificationAt       DateTime?   @map("qualification_at")
+  qualificationAt     DateTime? @map("qualification_at")
 
   // ==========================================
   // UNSUBSCRIBE (GDPR)
   // ==========================================
-  unsubscribed      Boolean       @default(false)
-  unsubscribedAt    DateTime?     @map("unsubscribed_at")
+  unsubscribed   Boolean   @default(false)
+  unsubscribedAt DateTime? @map("unsubscribed_at")
 
   // ==========================================
   // RECONTACT (Da richiamare tra 6 mesi)
   // ==========================================
-  recontactAt       DateTime?     @map("recontact_at")
+  recontactAt DateTime? @map("recontact_at")
 
   // ==========================================
   // RETE BNI (referenze / interesse membri)
   // ==========================================
   // "referral" = persona presentata da un membro | "member_interest" = il membro stesso e' interessato
-  bniOriginType     String?       @map("bni_origin_type")
-  referralNeed      String?       @map("referral_need")    // Di cosa ha bisogno il referito / servizio d'interesse
+  bniOriginType String? @map("bni_origin_type")
+  referralNeed  String? @map("referral_need") // Di cosa ha bisogno il referito / servizio d'interesse
 
   // ==========================================
   // CRM MINIMALE per logging chiamate
   // ==========================================
   // Ultimo esito chiamata
-  lastCallOutcome   CallOutcome?  @map("last_call_outcome")
-  lastCallNotes     String?       @map("last_call_notes")
+  lastCallOutcome CallOutcome? @map("last_call_outcome")
+  lastCallNotes   String?      @map("last_call_notes")
 
   // Obiezione principale (per tracking pattern)
-  mainObjection     Objection?    @map("main_objection")
-  objectionNotes    String?       @map("objection_notes")
+  mainObjection  Objection? @map("main_objection")
+  objectionNotes String?    @map("objection_notes")
 
   // Next step (pianificazione follow-up)
-  nextStepType      NextStepType? @map("next_step_type")
-  nextStepNotes     String?       @map("next_step_notes")
+  nextStepType  NextStepType? @map("next_step_type")
+  nextStepNotes String?       @map("next_step_notes")
 
   // Activity tracking
-  lastContactedAt   DateTime?   @map("last_contacted_at")
-  nextFollowupAt    DateTime?   @map("next_followup_at")
-  assignedTo        String?     @map("assigned_to")
+  lastContactedAt DateTime? @map("last_contacted_at")
+  nextFollowupAt  DateTime? @map("next_followup_at")
+  assignedTo      String?   @map("assigned_to")
 
   // Metadata
-  source            String      @default("google_maps")
-  notes             String?
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
+  source    String   @default("google_maps")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relazioni
-  searchId          String?     @map("search_id")
-  search            Search?     @relation(fields: [searchId], references: [id])
-  activities          Activity[]
-  tasks               Task[]
+  searchId   String?    @map("search_id")
+  search     Search?    @relation(fields: [searchId], references: [id])
+  activities Activity[]
+  tasks      Task[]
 
   // Squadra di agenti (v3.44): il fascicolo dell'azienda vive in tabelle sue,
   // NON in colonne di Lead. Vedi PROGETTO-AGENTI.md.
-  agentRuns           AgentRun[]
-  agentReports        AgentReport[]
-  approvalItems       ApprovalItem[]
-  trattative          Trattativa[]
+  agentRuns     AgentRun[]
+  agentReports  AgentReport[]
+  approvalItems ApprovalItem[]
+  trattative    Trattativa[]
+  // Fase 1 Ricerca (v3.47): persone collegate (titolari) e chi l'ha trovata.
+  persone       Persona[]
+  ritrovamenti  Ritrovamento[]
+  membriBni     BniMembro[]    @relation("MembroAzienda")
 
   // Relazioni BNI
   referredByMembroId String?    @map("referred_by_membro_id")
@@ -324,17 +328,17 @@ model Lead {
 // ACTIVITY - Storico attivita sul lead
 // ==========================================
 model Activity {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
   type      ActivityType
   outcome   CallOutcome?
   notes     String?
-  createdBy String?  @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?      @map("created_by")
+  createdAt DateTime     @default(now()) @map("created_at")
 
   // Relazione
-  leadId    String   @map("lead_id")
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId String @map("lead_id")
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId], name: "idx_activities_lead")
   @@map("activities")
@@ -344,21 +348,21 @@ model Activity {
 // SEARCH - Ricerche salvate
 // ==========================================
 model Search {
-  id              String       @id @default(uuid())
+  id String @id @default(uuid())
 
-  query           String       // es. "Ristoranti"
-  location        String       // es. "Milano centro"
-  apifyRunId      String?      @map("apify_run_id")
-  status          SearchStatus @default(PENDING)
-  leadsFound      Int          @default(0) @map("leads_found")
-  leadsWithWebsite Int         @default(0) @map("leads_with_website")
-  errorMessage    String?      @map("error_message")
-  sortOrder       Int?         @map("sort_order") // Ordine manuale drag & drop
-  createdAt       DateTime     @default(now()) @map("created_at")
-  completedAt     DateTime?    @map("completed_at")
+  query            String // es. "Ristoranti"
+  location         String // es. "Milano centro"
+  apifyRunId       String?      @map("apify_run_id")
+  status           SearchStatus @default(PENDING)
+  leadsFound       Int          @default(0) @map("leads_found")
+  leadsWithWebsite Int          @default(0) @map("leads_with_website")
+  errorMessage     String?      @map("error_message")
+  sortOrder        Int?         @map("sort_order") // Ordine manuale drag & drop
+  createdAt        DateTime     @default(now()) @map("created_at")
+  completedAt      DateTime?    @map("completed_at")
 
   // Relazione
-  leads           Lead[]
+  leads Lead[]
 
   @@index([sortOrder], name: "idx_searches_sort_order")
   @@map("searches")
@@ -368,7 +372,7 @@ model Search {
 // TASK - Reminder e follow-up
 // ==========================================
 model Task {
-  id          String    @id @default(uuid())
+  id String @id @default(uuid())
 
   title       String
   description String?
@@ -377,8 +381,8 @@ model Task {
   createdAt   DateTime  @default(now()) @map("created_at")
 
   // Relazione
-  leadId      String    @map("lead_id")
-  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId String @map("lead_id")
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([dueAt], name: "idx_tasks_due")
   @@map("tasks")
@@ -388,19 +392,19 @@ model Task {
 // USER - Per autenticazione
 // ==========================================
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String    // Hash bcrypt
-  name          String?
-  role          UserRole  @default(USER)
-  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password         String // Hash bcrypt
+  name             String?
+  role             UserRole @default(USER)
+  twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relazioni
-  otpCodes      OtpCode[]
+  otpCodes       OtpCode[]
   passwordResets PasswordReset[]
-  memberships   Membership[]
+  memberships    Membership[]
 
   @@map("users")
 }
@@ -410,8 +414,8 @@ model User {
 // ==========================================
 model OtpCode {
   id        String   @id @default(uuid())
-  code      String   // Codice OTP a 6 cifre (hashed)
-  email     String   // Email destinatario
+  code      String // Codice OTP a 6 cifre (hashed)
+  email     String // Email destinatario
   type      OtpType  @default(TWO_FACTOR) // Tipo di OTP
   expiresAt DateTime @map("expires_at") // Scadenza (10 minuti)
   used      Boolean  @default(false) // Se già utilizzato
@@ -419,8 +423,8 @@ model OtpCode {
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relazione con utente
-  userId    String?  @map("user_id")
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([email, type], name: "idx_otp_email_type")
   @@index([expiresAt], name: "idx_otp_expires")
@@ -433,14 +437,14 @@ model OtpCode {
 model PasswordReset {
   id        String   @id @default(uuid())
   token     String   @unique // Token univoco (hashed)
-  email     String   // Email utente
+  email     String // Email utente
   expiresAt DateTime @map("expires_at") // Scadenza (1 ora)
   used      Boolean  @default(false) // Se già utilizzato
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relazione con utente
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([email], name: "idx_password_reset_email")
   @@index([expiresAt], name: "idx_password_reset_expires")
@@ -454,19 +458,19 @@ model PasswordReset {
 // Le opportunita' (interesse del membro o referenze ricevute) diventano Lead
 // con source="bni", collegati qui via Lead.referredByMembroId / Lead.oneToOneId.
 model BniMembro {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  name        String                                  // Nome e cognome
-  profession  String?                                 // Professione / categoria BNI
-  company     String?                                 // Azienda
-  chapter     String?                                 // Capitolo BNI (campo libero, autocompletato)
-  phone       String?
-  email       String?
-  website     String?
-  notes       String?  @db.Text
+  name       String // Nome e cognome
+  profession String? // Professione / categoria BNI
+  company    String? // Azienda
+  chapter    String? // Capitolo BNI (campo libero, autocompletato)
+  phone      String?
+  email      String?
+  website    String?
+  notes      String? @db.Text
 
-  status      BniMemberStatus @default(ATTIVO)
-  knownSince  DateTime?        @map("known_since")     // Membro / conosciuto dal
+  status     BniMemberStatus @default(ATTIVO)
+  knownSince DateTime?       @map("known_since") // Membro / conosciuto dal
 
   // ==========================================
   // I DUE ASSI (vedi PIANO-BNI-ESTREMO.md §2)
@@ -476,34 +480,34 @@ model BniMembro {
   //   ASSE 2 - il membro SERVE le mie buyer personas   -> mi PORTA clienti (121 prioritario)
   // Nel BNI l'asse 2 vale piu' dell'asse 1: un buon partner porta 10 clienti,
   // un membro-cliente e' uno solo.
-  buyerPersona   String? @map("buyer_persona")    // CASA | MICROTURISMO | PERSONA | ALTRO (asse 1)
-  memberRole     String? @map("member_role")      // CLIENTE | PARTNER | CONCORRENTE | NEUTRO
-  clientScore    Int     @default(0) @map("client_score")   // 0-100, quanto e' un cliente potenziale
-  partnerScore   Int     @default(0) @map("partner_score")  // 0-100, quanto e' un partner di potere
-  personasServed String? @map("personas_served")  // csv delle personas a cui da' accesso (asse 2)
-  classifiedAt   DateTime? @map("classified_at")  // ultima classificazione automatica
-  roleLocked     Boolean @default(false) @map("role_locked") // true = deciso a mano, non risovrascrivere
+  buyerPersona   String?   @map("buyer_persona") // CASA | MICROTURISMO | PERSONA | ALTRO (asse 1)
+  memberRole     String?   @map("member_role") // CLIENTE | PARTNER | CONCORRENTE | NEUTRO
+  clientScore    Int       @default(0) @map("client_score") // 0-100, quanto e' un cliente potenziale
+  partnerScore   Int       @default(0) @map("partner_score") // 0-100, quanto e' un partner di potere
+  personasServed String?   @map("personas_served") // csv delle personas a cui da' accesso (asse 2)
+  classifiedAt   DateTime? @map("classified_at") // ultima classificazione automatica
+  roleLocked     Boolean   @default(false) @map("role_locked") // true = deciso a mano, non risovrascrivere
 
   // ==========================================
   // RECIPROCITA' (Givers Gain)
   // ==========================================
   // "Chi cerca" e' la domanda che si fa in ogni 121: senza questo campo il matcher
   // dei referral da regalare non puo' funzionare.
-  seeking     String?  @db.Text                   // Il cliente ideale del membro, a parole sue
-  seekingTags String?  @map("seeking_tags")       // csv normalizzato per il matcher
+  seeking     String? @db.Text // Il cliente ideale del membro, a parole sue
+  seekingTags String? @map("seeking_tags") // csv normalizzato per il matcher
 
   // ==========================================
   // PIPELINE DI VENDITA BNI (vedi src/lib/bni/bni-stages.ts)
   // ==========================================
   // Dove sono con QUESTA persona: da avvicinare -> 121 richiesto -> preparo referenze ->
   // 121 fatto -> offerta -> recall -> consolidato. Parallela alla pipeline dei lead freddi.
-  bniStage    String   @default("DA_AVVICINARE") @map("bni_stage")
-  nextRecallAt DateTime? @map("next_recall_at")  // Quando ricontattarlo (tappa RECALL)
-  next121At   DateTime? @map("next_121_at")      // Data del 121 in programma (tappe RICHIESTA_121 / PREP_REFERENZE)
+  bniStage     String    @default("DA_AVVICINARE") @map("bni_stage")
+  nextRecallAt DateTime? @map("next_recall_at") // Quando ricontattarlo (tappa RECALL)
+  next121At    DateTime? @map("next_121_at") // Data del 121 in programma (tappe RICHIESTA_121 / PREP_REFERENZE)
 
   // Gia' mio cliente (acquisito): diverso da "cliente potenziale" (memberRole).
   // Alcuni colleghi di capitolo sono clienti reali di Karalisweb.
-  isCustomer  Boolean  @default(false) @map("is_customer")
+  isCustomer Boolean @default(false) @map("is_customer")
 
   // Squadra BNI (v3.45): ruolo nella dirigenza del capitolo, letto da BNI Connect dal
   // Cartografo (PRESIDENTE | VICEPRESIDENTE | FORMAZIONE), e quando Alessio l'ha conosciuto
@@ -511,21 +515,36 @@ model BniMembro {
   leadershipRole String?   @map("leadership_role")
   conosciutoAt   DateTime? @map("conosciuto_at")
 
+  // Fase 1 Ricerca (v3.47): la scheda del membro. "Referenze che cerca" = seeking.
+  linkedinUrl      String?   @map("linkedin_url")
+  cosaFa           String?   @map("cosa_fa") @db.Text
+  referenzePuoDare String?   @map("referenze_puo_dare") @db.Text
+  prossimoPasso    String?   @map("prossimo_passo")
+  prossimoPassoAt  DateTime? @map("prossimo_passo_at")
+  leadId           String?   @map("lead_id")
+  lead             Lead?     @relation("MembroAzienda", fields: [leadId], references: [id], onDelete: SetNull)
+  indicatoDa       String?   @map("indicato_da") // chi l'ha indicato come attivo (il presidente)
+  indicatoAt       DateTime? @map("indicato_at")
+  reteLettaAt      DateTime? @map("rete_letta_at") // ultima lettura della rete LinkedIn
+
   // Denormalizzati per dashboard veloce (aggiornati a ogni 121)
   oneToOneCount  Int       @default(0) @map("one_to_one_count")
   lastOneToOneAt DateTime? @map("last_one_to_one_at")
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relazioni
   oneToOnes      OneToOne[]
-  referredLeads  Lead[]          @relation("BniReferral")
+  referredLeads  Lead[]             @relation("BniReferral")
   referralsGiven ReferralGiven[]
   trattative     Trattativa[]
   agentRuns      AgentRun[]
   agentReports   AgentReport[]
   approvalItems  ApprovalItem[]
+  persone        Persona[]
+  presentazioni  BniPresentazione[]
+  chiaviRicerca  ChiaveRicerca[]
 
   @@index([chapter], name: "idx_bni_membro_chapter")
   @@index([lastOneToOneAt], name: "idx_bni_membro_last121")
@@ -542,17 +561,17 @@ model BniMembro {
 // Il CRM tracciava solo le referenze RICEVUTE. Ma nel BNI si riceve perche' si da':
 // senza misurare cosa do, non so con chi sono in credito e con chi in debito.
 model ReferralGiven {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  membroId  String    @map("membro_id")           // A CHI ho passato il contatto
-  membro    BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  membroId String    @map("membro_id") // A CHI ho passato il contatto
+  membro   BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
 
-  contactName String  @map("contact_name")        // Chi ho segnalato
-  contactInfo String? @map("contact_info")        // Telefono/email/riferimento
-  leadId      String? @map("lead_id")             // Se il contatto e' un lead del CRM
-  note        String? @db.Text                    // Contesto ("gli servivano sindaci di piccoli comuni")
+  contactName String  @map("contact_name") // Chi ho segnalato
+  contactInfo String? @map("contact_info") // Telefono/email/riferimento
+  leadId      String? @map("lead_id") // Se il contatto e' un lead del CRM
+  note        String? @db.Text // Contesto ("gli servivano sindaci di piccoli comuni")
 
-  outcome   String   @default("PROPOSTO")         // PROPOSTO | ACCETTATO | CHIUSO | NULLA
+  outcome   String   @default("PROPOSTO") // PROPOSTO | ACCETTATO | CHIUSO | NULLA
   givenAt   DateTime @default(now()) @map("given_at")
   createdBy String?  @map("created_by")
 
@@ -568,21 +587,22 @@ model ReferralGiven {
 // questo modello aggiunge solo i metadati che servono a decidere SE e QUANDO visitarlo.
 // Regola di Alessio: in Sardegna si visita di persona; fuori Sardegna solo se IBRIDO.
 model BniChapter {
-  id       String  @id @default(uuid())
-  name     String  @unique                        // Deve combaciare con BniMembro.chapter
-  city     String?
-  region   String?                                // sardegna_nord | sardegna_centro | sardegna_sud | altro
-  mode     String? @default("PRESENZA")           // PRESENZA | ONLINE | IBRIDO
+  id     String  @id @default(uuid())
+  name   String  @unique // Deve combaciare con BniMembro.chapter
+  city   String?
+  region String? // sardegna_nord | sardegna_centro | sardegna_sud | altro
+  mode   String? @default("PRESENZA") // PRESENZA | ONLINE | IBRIDO
 
-  meetingDay  String? @map("meeting_day")         // "Giovedi'"
-  meetingTime String? @map("meeting_time")        // "06:45"
+  meetingDay  String? @map("meeting_day") // "Giovedi'"
+  meetingTime String? @map("meeting_time") // "06:45"
+  sede        String? // indirizzo o link della riunione (v3.47)
 
   visitStatus    String    @default("DA_ANALIZZARE") @map("visit_status") // DA_ANALIZZARE | ANALIZZATO | VISITA_PIANIFICATA | VISITATO
   visitPlannedAt DateTime? @map("visit_planned_at")
   visitedAt      DateTime? @map("visited_at")
 
-  isMine   Boolean @default(false) @map("is_mine") // Il mio capitolo (Atlantide): 121 con OGNI membro
-  notes    String? @db.Text
+  isMine Boolean @default(false) @map("is_mine") // Il mio capitolo (Atlantide): 121 con OGNI membro
+  notes  String? @db.Text
 
   // Squadra BNI (v3.45): capitoli di tutta Italia, mappati dal Cartografo su BNI Connect.
   regioneItaliana String?   @map("regione_italiana") // "Sardegna", "Lombardia", …
@@ -607,21 +627,27 @@ model BniChapter {
 // ==========================================
 // L'evento centrale: salvarlo genera 0..N Lead (interesse del membro + referenze).
 model OneToOne {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  membroId  String    @map("membro_id")
-  membro    BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  membroId String    @map("membro_id")
+  membro   BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
 
-  date      DateTime                                  // Data del 121
-  location  String?                                   // Dove (caffe', ufficio, online)
-  notes     String?  @db.Text                         // Cosa fa / cosa cerca / come aiutarlo
+  date     DateTime // Data del 121
+  location String? // Dove (caffe', ufficio, online)
+  notes    String?  @db.Text // Cosa fa / cosa cerca / come aiutarlo
+
+  // Fase 1 Ricerca (v3.47): il 121 registrato per intero.
+  formato      String? // PRESENZA | ONLINE
+  trascrizione String? @db.Text
+  riassunto    String? @db.Text
+  promesse     String? @db.Text
 
   // Esito 1: interesse diretto del membro per i miei servizi
   memberInterested Boolean @default(false) @map("member_interested")
-  interestService  String? @map("interest_service")   // SEO / Ads / Sito / ...
+  interestService  String? @map("interest_service") // SEO / Ads / Sito / ...
 
   // Esito 2: referenze ricevute (i Lead generati sono collegati via Lead.oneToOneId)
-  referralsCount   Int     @default(0) @map("referrals_count")
+  referralsCount Int @default(0) @map("referrals_count")
 
   createdBy String?  @map("created_by")
   createdAt DateTime @default(now()) @map("created_at")
@@ -635,9 +661,9 @@ model OneToOne {
 }
 
 enum BniMemberStatus {
-  ATTIVO      // Membro attivo del capitolo
-  VISITATORE  // Ospite / visitatore (non membro)
-  EX_MEMBRO   // Uscito dal capitolo
+  ATTIVO // Membro attivo del capitolo
+  VISITATORE // Ospite / visitatore (non membro)
+  EX_MEMBRO // Uscito dal capitolo
 }
 
 // ==========================================
@@ -645,12 +671,12 @@ enum BniMemberStatus {
 // ==========================================
 
 enum AuditStatus {
-  PENDING     // In attesa
-  RUNNING     // In analisi
-  COMPLETED   // Completato
-  FAILED      // Errore
-  NO_WEBSITE  // Nessun sito web
-  TIMEOUT     // Timeout
+  PENDING // In attesa
+  RUNNING // In analisi
+  COMPLETED // Completato
+  FAILED // Errore
+  NO_WEBSITE // Nessun sito web
+  TIMEOUT // Timeout
 }
 
 // ==========================================
@@ -658,133 +684,133 @@ enum AuditStatus {
 // ==========================================
 enum PipelineStage {
   // === ANALISI ===
-  DA_ANALIZZARE       // Importato, serve analisi Gemini
-  HOT_LEAD            // Score ≥80, analizzato
-  WARM_LEAD           // Score 50-79, analizzato
-  COLD_LEAD           // Score <50, basso potenziale
+  DA_ANALIZZARE // Importato, serve analisi Gemini
+  HOT_LEAD // Score ≥80, analizzato
+  WARM_LEAD // Score 50-79, analizzato
+  COLD_LEAD // Score <50, basso potenziale
 
   // === RETE BNI ===
-  BNI_DA_LAVORARE     // Opportunita' da BNI (referenza o interesse membro) da lavorare
+  BNI_DA_LAVORARE // Opportunita' da BNI (referenza o interesse membro) da lavorare
 
   // === SEGNALE DI CALORE (questionario compilato / risposta / interesse) ===
-  CALDO_REATTIVO      // Ha dato un segnale → esce dalla sequenza fredda, va al video
-  NURTURING           // Non reattivo a fine sequenza: stop solleciti, tocchi lenti e radi
+  CALDO_REATTIVO // Ha dato un segnale → esce dalla sequenza fredda, va al video
+  NURTURING // Non reattivo a fine sequenza: stop solleciti, tocchi lenti e radi
 
   // === VIDEO ===
-  FARE_VIDEO          // Video da registrare
-  VIDEO_INVIATO       // Video inviato (WA o Email)
+  FARE_VIDEO // Video da registrare
+  VIDEO_INVIATO // Video inviato (WA o Email)
 
   // === FOLLOW-UP (3 round, stesso canale) ===
-  FOLLOW_UP_1         // Primo follow-up
-  FOLLOW_UP_2         // Secondo follow-up
-  FOLLOW_UP_3         // Terzo follow-up
+  FOLLOW_UP_1 // Primo follow-up
+  FOLLOW_UP_2 // Secondo follow-up
+  FOLLOW_UP_3 // Terzo follow-up
 
   // === LINKEDIN ===
-  LINKEDIN            // Outreach LinkedIn
+  LINKEDIN // Outreach LinkedIn
 
   // === TELEFONATE (solo canale email, 3 round) ===
-  TELEFONATA_1        // Prima telefonata
-  TELEFONATA_2        // Seconda telefonata
-  TELEFONATA_3        // Terza telefonata
+  TELEFONATA_1 // Prima telefonata
+  TELEFONATA_2 // Seconda telefonata
+  TELEFONATA_3 // Terza telefonata
 
   // === VENDITA ===
-  CALL_FISSATA        // Call conoscitiva fissata
-  IN_TRATTATIVA       // Trattativa in corso
+  CALL_FISSATA // Call conoscitiva fissata
+  IN_TRATTATIVA // Trattativa in corso
 
   // === CHIUSURA ===
-  CLIENTE             // Vinto
-  PERSO               // Perso
+  CLIENTE // Vinto
+  PERSO // Perso
 
   // === ARCHIVIO ===
-  ARCHIVIATO          // Archivio generico
-  NON_TARGET          // Non in target (auto)
-  SENZA_SITO          // Nessun sito web (auto)
+  ARCHIVIATO // Archivio generico
+  NON_TARGET // Non in target (auto)
+  SENZA_SITO // Nessun sito web (auto)
 }
 
 // Motivi per cui un lead e' stato perso
 enum LostReason {
-  NO_INTERESSE    // Non gli interessa (in chiamata)
-  NO_BUDGET       // Non ha budget
-  GHOST_CALL      // Non si presenta e sparisce
-  GHOST_OFFERTA   // Non paga dopo 20gg
-  COMPETITOR      // Ha scelto un competitor
-  TEMPISTICA      // Non e' il momento giusto
-  ALTRO           // Altro (specificare in notes)
+  NO_INTERESSE // Non gli interessa (in chiamata)
+  NO_BUDGET // Non ha budget
+  GHOST_CALL // Non si presenta e sparisce
+  GHOST_OFFERTA // Non paga dopo 20gg
+  COMPETITOR // Ha scelto un competitor
+  TEMPISTICA // Non e' il momento giusto
+  ALTRO // Altro (specificare in notes)
 }
 
 enum ActivityType {
-  CALL              // Chiamata
-  NOTE              // Nota
-  EMAIL_SENT        // Email inviata
-  MEETING           // Meeting
-  PROPOSAL_SENT     // Proposta inviata
-  STAGE_CHANGE      // Cambio stato
-  VIDEO_SENT        // Video Tella inviato
-  LETTER_SENT       // Lettera cartacea inviata
-  LINKEDIN_SENT     // Connessione/InMail LinkedIn inviata
+  CALL // Chiamata
+  NOTE // Nota
+  EMAIL_SENT // Email inviata
+  MEETING // Meeting
+  PROPOSAL_SENT // Proposta inviata
+  STAGE_CHANGE // Cambio stato
+  VIDEO_SENT // Video Tella inviato
+  LETTER_SENT // Lettera cartacea inviata
+  LINKEDIN_SENT // Connessione/InMail LinkedIn inviata
   RESPONSE_RECEIVED // Risposta ricevuta dal prospect
-  VIDEO_VIEWED      // Il prospect ha visto il video
-  QUALIFICATION     // Azione di qualificazione (Daniela)
-  WHATSAPP_SENT     // Messaggio WhatsApp inviato
-  EMAIL_OUTREACH    // Email outreach inviata dal CRM
-  CHANNEL_CHANGED   // Cambio canale comunicazione (WA->Email o viceversa)
+  VIDEO_VIEWED // Il prospect ha visto il video
+  QUALIFICATION // Azione di qualificazione (Daniela)
+  WHATSAPP_SENT // Messaggio WhatsApp inviato
+  EMAIL_OUTREACH // Email outreach inviata dal CRM
+  CHANNEL_CHANGED // Cambio canale comunicazione (WA->Email o viceversa)
 }
 
 enum CallOutcome {
-  ANSWERED        // Risposto
-  NO_ANSWER       // Non risponde
-  BUSY            // Occupato
-  NOT_INTERESTED  // Non interessato
-  CALLBACK        // Richiamare
-  INTERESTED      // Interessato
+  ANSWERED // Risposto
+  NO_ANSWER // Non risponde
+  BUSY // Occupato
+  NOT_INTERESTED // Non interessato
+  CALLBACK // Richiamare
+  INTERESTED // Interessato
 }
 
 enum SearchStatus {
-  PENDING     // In attesa
-  RUNNING     // In esecuzione
-  COMPLETED   // Completata
-  FAILED      // Fallita
+  PENDING // In attesa
+  RUNNING // In esecuzione
+  COMPLETED // Completata
+  FAILED // Fallita
 }
 
 enum ScheduledSearchStatus {
-  QUEUED      // In coda, da eseguire
-  RUNNING     // In esecuzione ora
-  COMPLETED   // Eseguita con successo
-  FAILED      // Fallita
+  QUEUED // In coda, da eseguire
+  RUNNING // In esecuzione ora
+  COMPLETED // Eseguita con successo
+  FAILED // Fallita
 }
 
 enum CommercialTag {
-  ADS_ATTIVE_CONTROLLO_ASSENTE    // Spendono ma non misurano - PRIORITA 1
-  TRAFFICO_SENZA_DIREZIONE        // Traffico ma niente CTA - PRIORITA 2
-  STRUTTURA_OK_NON_PRIORITIZZATA  // Funziona ma non ottimizzato - PRIORITA 3
-  DA_APPROFONDIRE                 // Ha GTM/tracking ma non chiaro se fa ads - PRIORITA 3
-  NON_TARGET                      // Non spendono in ads - SKIP
+  ADS_ATTIVE_CONTROLLO_ASSENTE // Spendono ma non misurano - PRIORITA 1
+  TRAFFICO_SENZA_DIREZIONE // Traffico ma niente CTA - PRIORITA 2
+  STRUTTURA_OK_NON_PRIORITIZZATA // Funziona ma non ottimizzato - PRIORITA 3
+  DA_APPROFONDIRE // Ha GTM/tracking ma non chiaro se fa ads - PRIORITA 3
+  NON_TARGET // Non spendono in ads - SKIP
 }
 
 // Obiezioni comuni durante le chiamate
 enum Objection {
-  BUDGET              // "Non abbiamo budget"
-  TIMING              // "Non e' il momento giusto"
-  ALREADY_HAVE        // "Abbiamo gia qualcuno che ci segue"
-  NOT_INTERESTED      // "Non ci interessa"
-  NEED_TO_THINK       // "Devo pensarci"
-  DECISION_MAKER      // "Devo parlare con..."
-  BAD_EXPERIENCE      // "Abbiamo avuto brutte esperienze"
-  NO_NEED             // "Non ne abbiamo bisogno"
-  OTHER               // Altro (specificare in notes)
+  BUDGET // "Non abbiamo budget"
+  TIMING // "Non e' il momento giusto"
+  ALREADY_HAVE // "Abbiamo gia qualcuno che ci segue"
+  NOT_INTERESTED // "Non ci interessa"
+  NEED_TO_THINK // "Devo pensarci"
+  DECISION_MAKER // "Devo parlare con..."
+  BAD_EXPERIENCE // "Abbiamo avuto brutte esperienze"
+  NO_NEED // "Non ne abbiamo bisogno"
+  OTHER // Altro (specificare in notes)
 }
 
 // Tipi di next step
 enum NextStepType {
-  SEND_VIDEO          // Preparare e inviare video
-  SEND_LETTER         // Inviare lettera cartacea
-  SEND_LINKEDIN       // Contattare su LinkedIn
-  CALLBACK            // Richiamare
-  SEND_INFO           // Inviare materiale
-  MEETING             // Fissare meeting
-  PROPOSAL            // Inviare proposta
-  WAIT                // Aspettare (loro richiameranno)
-  CLOSE               // Chiudere (vinto o perso)
+  SEND_VIDEO // Preparare e inviare video
+  SEND_LETTER // Inviare lettera cartacea
+  SEND_LINKEDIN // Contattare su LinkedIn
+  CALLBACK // Richiamare
+  SEND_INFO // Inviare materiale
+  MEETING // Fissare meeting
+  PROPOSAL // Inviare proposta
+  WAIT // Aspettare (loro richiameranno)
+  CLOSE // Chiudere (vinto o perso)
 }
 
 enum UserRole {
@@ -793,8 +819,8 @@ enum UserRole {
 }
 
 enum OtpType {
-  TWO_FACTOR      // 2FA al login
-  PASSWORD_RESET  // Reset password
+  TWO_FACTOR // 2FA al login
+  PASSWORD_RESET // Reset password
 }
 
 // ==========================================
@@ -806,9 +832,9 @@ model SearchCategory {
   icon       String   @default("🏢")
   order      Int      @default(0)
   active     Boolean  @default(true)
-  cluster    String   @default("casa")      // "casa" | "microturismo"
-  subcluster String   @default("altro")     // es. "arredo", "infissi", "edilizia_alto", etc.
-  priority   Int      @default(50)          // 1 = massima priorità, 100 = minima
+  cluster    String   @default("casa") // "casa" | "microturismo"
+  subcluster String   @default("altro") // es. "arredo", "infissi", "edilizia_alto", etc.
+  priority   Int      @default(50) // 1 = massima priorità, 100 = minima
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -818,7 +844,7 @@ model SearchCategory {
 model SearchLocation {
   id          String   @id @default(uuid())
   name        String   @unique
-  region      String   @default("")         // "Emilia-Romagna", "Veneto", etc.
+  region      String   @default("") // "Emilia-Romagna", "Veneto", etc.
   order       Int      @default(0)
   active      Boolean  @default(true)
   wave        Int      @default(1)
@@ -833,19 +859,19 @@ model SearchLocation {
 // SCHEDULED SEARCH - Ricerche automatiche notturne
 // ==========================================
 model ScheduledSearch {
-  id           String                @id @default(uuid())
-  query        String                // es. "Infissi"
-  location     String                // es. "Lecce"
-  status       ScheduledSearchStatus @default(QUEUED)
-  priority     Int                   @default(0) // Ordine esecuzione (0 = prima)
+  id       String                @id @default(uuid())
+  query    String // es. "Infissi"
+  location String // es. "Lecce"
+  status   ScheduledSearchStatus @default(QUEUED)
+  priority Int                   @default(0) // Ordine esecuzione (0 = prima)
 
   // Tracking esecuzione
-  lastRunAt    DateTime?             @map("last_run_at")
-  searchId     String?               @map("search_id")
-  errorMessage String?               @map("error_message")
+  lastRunAt    DateTime? @map("last_run_at")
+  searchId     String?   @map("search_id")
+  errorMessage String?   @map("error_message")
 
-  createdAt    DateTime              @default(now()) @map("created_at")
-  updatedAt    DateTime              @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([query, location])
   @@map("scheduled_searches")
@@ -855,66 +881,66 @@ model ScheduledSearch {
 // SETTINGS - Configurazioni app
 // ==========================================
 model Settings {
-  id        String   @id @default("default")
+  id String @id @default("default")
 
   // Giorni dopo invio video: se non guardato, crea promemoria follow-up (default 7)
-  followUpDaysVideo   Int    @default(7) @map("follow_up_days_video")
+  followUpDaysVideo Int @default(7) @map("follow_up_days_video")
 
   // Mesi prima di ricontattare DA_RICHIAMARE_6M (default 6)
-  recontactMonths     Int    @default(6) @map("recontact_months")
+  recontactMonths Int @default(6) @map("recontact_months")
 
   // Ricerche Programmate
-  scheduledSearchesPerRun  Int    @default(1)  @map("scheduled_searches_per_run")
-  scheduledSearchHour      Int    @default(2)  @map("scheduled_search_hour")
-  scheduledLeadsPerSearch  Int    @default(50) @map("scheduled_leads_per_search")
+  scheduledSearchesPerRun Int @default(1) @map("scheduled_searches_per_run")
+  scheduledSearchHour     Int @default(2) @map("scheduled_search_hour")
+  scheduledLeadsPerSearch Int @default(50) @map("scheduled_leads_per_search")
 
   // AI Configuration
-  aiProvider               String   @default("gemini") @map("ai_provider") // gemini | claude | openai
-  aiModelGemini            String?  @map("ai_model_gemini")   // es. gemini-2.5-flash
-  aiModelClaude            String?  @map("ai_model_claude")   // es. claude-sonnet-4-6
-  aiModelOpenai            String?  @map("ai_model_openai")   // es. gpt-4o
+  aiProvider    String  @default("gemini") @map("ai_provider") // gemini | claude | openai
+  aiModelGemini String? @map("ai_model_gemini") // es. gemini-2.5-flash
+  aiModelClaude String? @map("ai_model_claude") // es. claude-sonnet-4-6
+  aiModelOpenai String? @map("ai_model_openai") // es. gpt-4o
 
   // Prompt templates
-  strategicAnalysisPrompt  String?  @map("strategic_analysis_prompt") @db.Text
-  readingScriptPrompt      String?  @map("reading_script_prompt") @db.Text
-  analystPrompt            String?  @map("analyst_prompt") @db.Text
-  scriptwriterPrompt       String?  @map("scriptwriter_prompt") @db.Text
-  emailGenPrompt           String?  @map("email_gen_prompt") @db.Text  // Istruzioni AI per scrivere la mail 1 (opt-in)
-  optInSubjects            String?  @map("opt_in_subjects") @db.Text   // Lista oggetti mail opt-in (uno per riga, a rotazione)
+  strategicAnalysisPrompt String? @map("strategic_analysis_prompt") @db.Text
+  readingScriptPrompt     String? @map("reading_script_prompt") @db.Text
+  analystPrompt           String? @map("analyst_prompt") @db.Text
+  scriptwriterPrompt      String? @map("scriptwriter_prompt") @db.Text
+  emailGenPrompt          String? @map("email_gen_prompt") @db.Text // Istruzioni AI per scrivere la mail 1 (opt-in)
+  optInSubjects           String? @map("opt_in_subjects") @db.Text // Lista oggetti mail opt-in (uno per riga, a rotazione)
 
   // ==========================================
   // EMAIL & MESSAGGI
   // ==========================================
   // Mittente
-  emailFromAddress    String?  @map("email_from_address")    // default: env SMTP_FROM_OUTREACH
-  emailFromName       String?  @map("email_from_name")       // default: env SMTP_FROM_NAME
+  emailFromAddress String? @map("email_from_address") // default: env SMTP_FROM_OUTREACH
+  emailFromName    String? @map("email_from_name") // default: env SMTP_FROM_NAME
 
   // Footer GDPR
-  gdprCompanyName     String?  @map("gdpr_company_name")
-  gdprAddress         String?  @map("gdpr_address")
-  gdprVatNumber       String?  @map("gdpr_vat_number")       // P.IVA
-  gdprFooterText      String?  @map("gdpr_footer_text")      @db.Text // "Hai ricevuto questa email..."
-  gdprUnsubscribeText String?  @map("gdpr_unsubscribe_text") // "Non desidero ricevere..."
+  gdprCompanyName     String? @map("gdpr_company_name")
+  gdprAddress         String? @map("gdpr_address")
+  gdprVatNumber       String? @map("gdpr_vat_number") // P.IVA
+  gdprFooterText      String? @map("gdpr_footer_text") @db.Text // "Hai ricevuto questa email..."
+  gdprUnsubscribeText String? @map("gdpr_unsubscribe_text") // "Non desidero ricevere..."
 
   // Firma usata nelle mail di outreach opt-in
-  signatureAlessio      String?  @map("signature_alessio") @db.Text
+  signatureAlessio String? @map("signature_alessio") @db.Text
 
   // Outreach opt-in (mail 1: invita a compilare il questionario / self-assessment)
-  sdLandingUrl          String?  @map("sd_landing_url")          // Landing Metodo SD (es. karalisweb.net/web-marketing)
-  alessioLinkedinUrl    String?  @map("alessio_linkedin_url")    // Profilo LinkedIn di Alessio (prova sociale)
-  questionnaireUrl      String?  @map("questionnaire_url")       // Link self-assessment/questionario ({{QUESTIONARIO}}) — unico link della mail 1
-  emailDailyCap         Int      @default(20) @map("email_daily_cap") // Quante aziende contattare via mail al giorno
-  pausedSegments        String?  @map("paused_segments")          // Settori (segment key, separati da virgola) da NON contattare ora: esclusi da coda e mailer
+  sdLandingUrl       String? @map("sd_landing_url") // Landing Metodo SD (es. karalisweb.net/web-marketing)
+  alessioLinkedinUrl String? @map("alessio_linkedin_url") // Profilo LinkedIn di Alessio (prova sociale)
+  questionnaireUrl   String? @map("questionnaire_url") // Link self-assessment/questionario ({{QUESTIONARIO}}) — unico link della mail 1
+  emailDailyCap      Int     @default(20) @map("email_daily_cap") // Quante aziende contattare via mail al giorno
+  pausedSegments     String? @map("paused_segments") // Settori (segment key, separati da virgola) da NON contattare ora: esclusi da coda e mailer
 
   // Gate di approvazione: se true, la mail 1 NON parte in automatico → coda di approvazione (Alessio approva/ritocca)
-  outreachRequireApproval Boolean @default(true) @map("outreach_require_approval")
+  outreachRequireApproval  Boolean @default(true) @map("outreach_require_approval")
   // Soglia score per entrare nella coda di approvazione (sotto = lasciati da parte)
-  outreachApprovalMinScore Int    @default(60) @map("outreach_approval_min_score")
+  outreachApprovalMinScore Int     @default(60) @map("outreach_approval_min_score")
 
   // Notifiche
   // Email destinatarie delle notifiche video views (separate da virgola)
   // es. "alessio@karalisweb.net,consulenza@karalisweb.net"
-  notificationEmails    String?  @map("notification_emails") @db.Text
+  notificationEmails String? @map("notification_emails") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -930,32 +956,32 @@ model Settings {
 // che arriva da chiunque. Modello a se' per non inquinare le liste Hot/Warm/Cold.
 // Il campo chiave e' nextFollowupAt: il promemoria che evita di dimenticarli.
 model Opportunita {
-  id           String    @id @default(uuid())
+  id String @id @default(uuid())
 
-  name         String                                   // Persona o azienda
-  source       String    @default("altro")             // collega | referral | evento | ex_cliente | bni | altro
-  sourceDetail String?   @map("source_detail")          // Chi l'ha passato / dove l'ho conosciuto
+  name         String // Persona o azienda
+  source       String  @default("altro") // collega | referral | evento | ex_cliente | bni | altro
+  sourceDetail String? @map("source_detail") // Chi l'ha passato / dove l'ho conosciuto
 
-  phone        String?
-  email        String?
-  website      String?
-  about        String?   @db.Text                       // Di cosa si tratta
+  phone   String?
+  email   String?
+  website String?
+  about   String? @db.Text // Di cosa si tratta
 
-  stage        String    @default("DA_SENTIRE")         // DA_SENTIRE | IN_CORSO | PREVENTIVO | VINTO | PERSO
-  estimatedValue Int?    @map("estimated_value")        // Valore stimato in euro (opzionale)
+  stage          String @default("DA_SENTIRE") // DA_SENTIRE | IN_CORSO | PREVENTIVO | VINTO | PERSO
+  estimatedValue Int?   @map("estimated_value") // Valore stimato in euro (opzionale)
 
-  nextFollowupAt DateTime? @map("next_followup_at")     // Promemoria: quando risentirlo
+  nextFollowupAt  DateTime? @map("next_followup_at") // Promemoria: quando risentirlo
   lastContactedAt DateTime? @map("last_contacted_at")
 
-  notes        String?   @db.Text
-  createdBy    String?   @map("created_by")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  notes      String?      @db.Text
+  createdBy  String?      @map("created_by")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+  trattative Trattativa[]
 
   @@index([stage], name: "idx_opportunita_stage")
   @@index([nextFollowupAt], name: "idx_opportunita_followup")
   @@map("opportunita")
-  trattative   Trattativa[]
 }
 
 // ==========================================
@@ -973,36 +999,36 @@ model Opportunita {
 // Vedi docs/decisions/OPEN-01.md.
 
 model Subject {
-  id            String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Etichetta leggibile. Non è una chiave: la ragione sociale non deduplica
   // (piano, sezione 3.2: "Nessuna deduplicazione automatica su ragione sociale").
-  displayName   String   @map("display_name")
+  displayName String @map("display_name")
 
   // Chiave di deduplicazione 1 — priorità massima.
-  googlePlaceId String?  @unique @map("google_place_id")
+  googlePlaceId String? @unique @map("google_place_id")
 
   // Chiave di deduplicazione 2 — dominio normalizzato (minuscolo, senza
   // schema, senza "www.", senza porta, senza percorso, senza punto finale).
-  primaryDomain String?  @map("primary_domain")
+  primaryDomain String? @map("primary_domain")
 
   // Chiave di deduplicazione 3 — oggi SEMPRE null: nessuna delle sei
   // anagrafiche raccoglie la partita IVA. Colonna predisposta, non usata.
   // Vedi docs/decisions/OPEN-02.md.
-  vatNumber     String?  @map("vat_number")
+  vatNumber String? @map("vat_number")
 
-  countryCode   String?  @map("country_code")
+  countryCode String? @map("country_code")
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Azienda che osserva questo soggetto. Nullable finche la migrazione dei
   // dati non e completata: renderla obbligatoria e un secondo passo, non
   // questo, perche una colonna NOT NULL su tabella popolata perde dati.
-  companyId     String?  @map("company_id")
-  company       Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  companyId String?  @map("company_id")
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
-  identities    SubjectIdentity[]
+  identities      SubjectIdentity[]
   leftCandidates  ReconciliationCandidate[] @relation("ReconLeft")
   rightCandidates ReconciliationCandidate[] @relation("ReconRight")
 
@@ -1013,21 +1039,21 @@ model Subject {
 }
 
 model SubjectIdentity {
-  id         String        @id @default(uuid())
+  id String @id @default(uuid())
 
-  subjectId  String        @map("subject_id")
-  subject    Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId String  @map("subject_id")
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   source     SubjectSource
   externalId String        @map("external_id")
 
   // Fotografia dei campi di origine utili alla riconciliazione.
   // Non è una copia dell'anagrafica: non va usata come sorgente di verità.
-  payload    Json?
+  payload Json?
 
   // Quando questa identità è stata vista l'ultima volta dall'importazione.
-  seenAt     DateTime      @default(now()) @map("seen_at")
-  createdAt  DateTime      @default(now()) @map("created_at")
+  seenAt    DateTime @default(now()) @map("seen_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([source, externalId], name: "uq_identity_source_external")
   @@index([subjectId], name: "idx_identity_subject")
@@ -1038,7 +1064,7 @@ model SubjectIdentity {
 // Coda di riconciliazione manuale (piano, sezione 3.2).
 // Ci finisce ogni corrispondenza NON certa. Il codice non la risolve.
 model ReconciliationCandidate {
-  id            String   @id @default(uuid())
+  id String @id @default(uuid())
 
   leftSubjectId  String  @map("left_subject_id")
   leftSubject    Subject @relation("ReconLeft", fields: [leftSubjectId], references: [id], onDelete: Cascade)
@@ -1047,16 +1073,16 @@ model ReconciliationCandidate {
 
   // Perché è dubbio: "same_normalized_name", "shared_email_domain",
   // "domain_host_mismatch", "similar_name" ...
-  reason        String
-  score         Float?
-  evidence      Json?
+  reason   String
+  score    Float?
+  evidence Json?
 
-  status        ReconciliationStatus @default(PENDING)
-  decidedAt     DateTime? @map("decided_at")
-  decidedBy     String?   @map("decided_by")
-  notes         String?
+  status    ReconciliationStatus @default(PENDING)
+  decidedAt DateTime?            @map("decided_at")
+  decidedBy String?              @map("decided_by")
+  notes     String?
 
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([leftSubjectId, rightSubjectId], name: "uq_recon_pair")
   @@index([status], name: "idx_recon_status")
@@ -1102,8 +1128,8 @@ model Organization {
 }
 
 model Company {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   name      String
@@ -1150,7 +1176,7 @@ model Project {
   linkedProfiles     String?   @map("linked_profiles") @db.Text
   knowledgeUpdatedAt DateTime? @map("knowledge_updated_at")
   knowledgeUpdatedBy String?   @map("knowledge_updated_by")
-  referenceContact String? @map("reference_contact")
+  referenceContact   String?   @map("reference_contact")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1209,13 +1235,13 @@ enum TenantStatus {
 
 // Le sette figure della sezione 2 del piano.
 enum MembershipRole {
-  PLATFORM_ADMIN     // Alessio. Vede e amministra tutto.
-  PLATFORM_OPERATOR  // Team Karalisweb. Nessun accesso a fatturazione.
-  ORG_OWNER          // Titolare di più Aziende.
-  COMPANY_OWNER      // Cliente licenziatario.
-  COMPANY_MEMBER     // Utente del cliente, tutti i Progetti dell'Azienda.
-  PROJECT_MEMBER     // Un solo Progetto. Nessun dato commerciale.
-  GUEST_LINK         // Nessun account: magic link firmato e scadenzato.
+  PLATFORM_ADMIN // Alessio. Vede e amministra tutto.
+  PLATFORM_OPERATOR // Team Karalisweb. Nessun accesso a fatturazione.
+  ORG_OWNER // Titolare di più Aziende.
+  COMPANY_OWNER // Cliente licenziatario.
+  COMPANY_MEMBER // Utente del cliente, tutti i Progetti dell'Azienda.
+  PROJECT_MEMBER // Un solo Progetto. Nessun dato commerciale.
+  GUEST_LINK // Nessun account: magic link firmato e scadenzato.
 }
 
 enum ScopeType {
@@ -1260,33 +1286,33 @@ model ModuleEntitlement {
 // Un lavoro: un agente su un'azienda. Sostituisce le code in memoria (p-queue):
 // sopravvive ai riavvii e si ispeziona.
 model AgentRun {
-  id         String         @id @default(uuid())
+  id           String         @id @default(uuid())
   // Su cosa lavora: un'azienda, un capitolo BNI o un membro BNI (uno dei tre, o nessuno
   // per gli agenti che cercano aziende nuove come l'Esploratore).
-  leadId     String?        @map("lead_id")
-  lead       Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  bniChapterId String?      @map("bni_chapter_id")
-  bniChapter   BniChapter?  @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
-  bniMembroId  String?      @map("bni_membro_id")
-  bniMembro    BniMembro?   @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
-  agent      String         // chiave del registro, es. "tecnico", "seo", "blog"
-  status     AgentRunStatus @default(IN_CODA)
-  attempts   Int            @default(0)
-  error      String?
-  costCents  Float          @default(0) @map("cost_cents") // costo esterno (API), in centesimi di euro (con decimali: una chiamata costa frazioni di centesimo)
-  input      Json?          // istruzioni del lavoro, se servono (es. la regione da mappare per il Cartografo)
-  queuedAt   DateTime       @default(now()) @map("queued_at")
-  startedAt  DateTime?      @map("started_at")
-  finishedAt DateTime?      @map("finished_at")
-  report     AgentReport?
+  leadId       String?        @map("lead_id")
+  lead         Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  bniChapterId String?        @map("bni_chapter_id")
+  bniChapter   BniChapter?    @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
+  bniMembroId  String?        @map("bni_membro_id")
+  bniMembro    BniMembro?     @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
+  agent        String // chiave del registro, es. "tecnico", "seo", "blog"
+  status       AgentRunStatus @default(IN_CODA)
+  attempts     Int            @default(0)
+  error        String?
+  costCents    Float          @default(0) @map("cost_cents") // costo esterno (API), in centesimi di euro (con decimali: una chiamata costa frazioni di centesimo)
+  input        Json? // istruzioni del lavoro, se servono (es. la regione da mappare per il Cartografo)
+  queuedAt     DateTime       @default(now()) @map("queued_at")
+  startedAt    DateTime?      @map("started_at")
+  finishedAt   DateTime?      @map("finished_at")
+  report       AgentReport?
+  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
+  trattativaId String?        @map("trattativa_id")
+  trattativa   Trattativa?    @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
 
   @@index([status, queuedAt])
   @@index([leadId, agent])
   @@index([bniChapterId])
   @@index([bniMembroId])
-  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
-  trattativaId String?     @map("trattativa_id")
-  trattativa   Trattativa? @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
   @@index([trattativaId])
   @@map("agent_runs")
 }
@@ -1300,30 +1326,30 @@ enum AgentRunStatus {
 
 // Il referto: cosa ha trovato l'agente, con le prove e fino a quando vale.
 model AgentReport {
-  id          String          @id @default(uuid())
-  leadId      String?         @map("lead_id")
-  lead        Lead?           @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  bniChapterId String?        @map("bni_chapter_id")
-  bniChapter   BniChapter?    @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
-  bniMembroId  String?        @map("bni_membro_id")
-  bniMembro    BniMembro?     @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
-  agent       String
-  runId       String?         @unique @map("run_id")
-  run         AgentRun?       @relation(fields: [runId], references: [id], onDelete: SetNull)
-  summary     String          // una riga leggibile
-  findings    Json            // dati strutturati dell'agente
-  levers      Json            @default("[]") // leve commerciali: [{servizio, testo, prova}]
-  evidence    Json            @default("[]") // prove: [{cosa, fonte, citazione}]
-  confidence  AgentConfidence @default(MEDIA)
-  collectedAt DateTime        @default(now()) @map("collected_at")
-  validUntil  DateTime        @map("valid_until")
+  id           String          @id @default(uuid())
+  leadId       String?         @map("lead_id")
+  lead         Lead?           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  bniChapterId String?         @map("bni_chapter_id")
+  bniChapter   BniChapter?     @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
+  bniMembroId  String?         @map("bni_membro_id")
+  bniMembro    BniMembro?      @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
+  agent        String
+  runId        String?         @unique @map("run_id")
+  run          AgentRun?       @relation(fields: [runId], references: [id], onDelete: SetNull)
+  summary      String // una riga leggibile
+  findings     Json // dati strutturati dell'agente
+  levers       Json            @default("[]") // leve commerciali: [{servizio, testo, prova}]
+  evidence     Json            @default("[]") // prove: [{cosa, fonte, citazione}]
+  confidence   AgentConfidence @default(MEDIA)
+  collectedAt  DateTime        @default(now()) @map("collected_at")
+  validUntil   DateTime        @map("valid_until")
+  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
+  trattativaId String?         @map("trattativa_id")
+  trattativa   Trattativa?     @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
 
   @@index([leadId, agent, collectedAt])
   @@index([bniChapterId, agent])
   @@index([bniMembroId, agent])
-  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
-  trattativaId String?     @map("trattativa_id")
-  trattativa   Trattativa? @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
   @@index([trattativaId])
   @@map("agent_reports")
 }
@@ -1336,30 +1362,30 @@ enum AgentConfidence {
 
 // La cassetta: tutto ciò che aspetta una decisione di Alessio.
 model ApprovalItem {
-  id        String         @id @default(uuid())
-  leadId    String?        @map("lead_id")
-  lead      Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  bniChapterId String?     @map("bni_chapter_id")
-  bniChapter   BniChapter? @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
-  bniMembroId  String?     @map("bni_membro_id")
-  bniMembro    BniMembro?  @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
-  kind      String         // "FASCICOLO_BASE" (approva la raccolta approfondita), poi bozze di contatto…
-  agent     String         // chi l'ha proposto
-  title     String
-  payload   Json
-  status    ApprovalStatus @default(IN_ATTESA)
-  note      String?
-  createdAt DateTime       @default(now()) @map("created_at")
-  decidedAt DateTime?      @map("decided_at")
-  decidedBy String?        @map("decided_by")
+  id           String         @id @default(uuid())
+  leadId       String?        @map("lead_id")
+  lead         Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  bniChapterId String?        @map("bni_chapter_id")
+  bniChapter   BniChapter?    @relation(fields: [bniChapterId], references: [id], onDelete: Cascade)
+  bniMembroId  String?        @map("bni_membro_id")
+  bniMembro    BniMembro?     @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
+  kind         String // "FASCICOLO_BASE" (approva la raccolta approfondita), poi bozze di contatto…
+  agent        String // chi l'ha proposto
+  title        String
+  payload      Json
+  status       ApprovalStatus @default(IN_ATTESA)
+  note         String?
+  createdAt    DateTime       @default(now()) @map("created_at")
+  decidedAt    DateTime?      @map("decided_at")
+  decidedBy    String?        @map("decided_by")
+  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
+  trattativaId String?        @map("trattativa_id")
+  trattativa   Trattativa?    @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
 
   @@index([status, createdAt])
   @@index([leadId, kind])
   @@index([bniChapterId, kind])
   @@index([bniMembroId, kind])
-  // Pipeline di vendita (v3.46): lavori, referti e voci di cassetta su una trattativa.
-  trattativaId String?     @map("trattativa_id")
-  trattativa   Trattativa? @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
   @@index([trattativaId])
   @@map("approval_items")
 }
@@ -1378,36 +1404,36 @@ enum ApprovalStatus {
 // da un'opportunità o dal passaparola. Gli agenti V1-V4 preparano, Alessio decide in cassetta.
 
 model Trattativa {
-  id            String           @id @default(uuid())
-  nome          String           // azienda o persona
-  origine       String           // squadra | bni | opportunita | passaparola | sito | cliente
-  stadio        TrattativaStadio @default(CALL_FISSATA)
+  id      String           @id @default(uuid())
+  nome    String // azienda o persona
+  origine String // squadra | bni | opportunita | passaparola | sito | cliente
+  stadio  TrattativaStadio @default(CALL_FISSATA)
 
-  leadId        String?          @map("lead_id")
-  lead          Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  bniMembroId   String?          @map("bni_membro_id")
-  bniMembro     BniMembro?       @relation(fields: [bniMembroId], references: [id], onDelete: SetNull)
-  opportunitaId String?          @map("opportunita_id")
-  opportunita   Opportunita?     @relation(fields: [opportunitaId], references: [id], onDelete: SetNull)
+  leadId        String?      @map("lead_id")
+  lead          Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  bniMembroId   String?      @map("bni_membro_id")
+  bniMembro     BniMembro?   @relation(fields: [bniMembroId], references: [id], onDelete: SetNull)
+  opportunitaId String?      @map("opportunita_id")
+  opportunita   Opportunita? @relation(fields: [opportunitaId], references: [id], onDelete: SetNull)
 
-  referente     String?          // con chi si parla
-  telefono      String?
-  email         String?
+  referente String? // con chi si parla
+  telefono  String?
+  email     String?
 
-  callAt        DateTime?        @map("call_at")
+  callAt       DateTime? @map("call_at")
   // Trascrizione di Google Meet o appunti di Gemini, incollati da Alessio dopo la call.
-  trascrizione  String?          @db.Text
-  valoreEuro    Int?             @map("valore_euro")
+  trascrizione String?   @db.Text
+  valoreEuro   Int?      @map("valore_euro")
 
-  prossimoPasso String?          @map("prossimo_passo")
-  prossimaData  DateTime?        @map("prossima_data")
-  recallFatti   Int              @default(0) @map("recall_fatti")
-  motivoUscita  String?          @map("motivo_uscita")
-  ultimoNurturingAt DateTime?    @map("ultimo_nurturing_at")
+  prossimoPasso     String?   @map("prossimo_passo")
+  prossimaData      DateTime? @map("prossima_data")
+  recallFatti       Int       @default(0) @map("recall_fatti")
+  motivoUscita      String?   @map("motivo_uscita")
+  ultimoNurturingAt DateTime? @map("ultimo_nurturing_at")
 
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
-  chiusaAt      DateTime?        @map("chiusa_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  chiusaAt  DateTime? @map("chiusa_at")
 
   eventi        TrattativaEvento[]
   agentRuns     AgentRun[]
@@ -1435,13 +1461,134 @@ model TrattativaEvento {
   id           String     @id @default(uuid())
   trattativaId String     @map("trattativa_id")
   trattativa   Trattativa @relation(fields: [trattativaId], references: [id], onDelete: Cascade)
-  tipo         String     // STADIO | NOTA | MESSAGGIO | CALL
+  tipo         String // STADIO | NOTA | MESSAGGIO | CALL
   testo        String?    @db.Text
-  da           String?    // stadio di partenza
-  a            String?    // stadio di arrivo
+  da           String? // stadio di partenza
+  a            String? // stadio di arrivo
   createdAt    DateTime   @default(now()) @map("created_at")
   createdBy    String?    @map("created_by")
 
   @@index([trattativaId, createdAt])
   @@map("trattativa_eventi")
+}
+
+// ==========================================
+// FASE 1 RICERCA (v3.47) — vedi FASE-1-RICERCA.md
+// ==========================================
+
+// Un caso studio (PDF caricato da Alessio): un filtro di priorità per la ricerca, valido 6 mesi.
+model CasoStudio {
+  id              String    @id @default(uuid())
+  titolo          String
+  pdfNome         String    @map("pdf_nome")
+  pdf             Bytes?
+  testo           String?   @db.Text
+  storia          String?   @db.Text // la versione da 30 secondi
+  settore         String?
+  aziendaNome     String?   @map("azienda_nome")
+  aziendaSito     String?   @map("azienda_sito")
+  personaNome     String?   @map("persona_nome")
+  personaRuolo    String?   @map("persona_ruolo")
+  personaLinkedin String?   @map("persona_linkedin")
+  termini         Json      @default("[]") // parole di ricerca per le aziende simili
+  stato           String    @default("DA_CONFERMARE") // DA_CONFERMARE | ATTIVO | SCADUTO
+  validoFino      DateTime? @map("valido_fino")
+  costCents       Float     @default(0) @map("cost_cents")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  confermatoAt    DateTime? @map("confermato_at")
+
+  chiavi ChiaveRicerca[]
+
+  @@map("casi_studio")
+}
+
+// Da cosa parte una ricerca: settore, azienda, persona (dai casi studio) o rete di un membro BNI.
+model ChiaveRicerca {
+  id           String      @id @default(uuid())
+  tipo         String // SETTORE | AZIENDA | PERSONA | RETE_MEMBRO
+  valore       String
+  termini      Json        @default("[]")
+  casoStudioId String?     @map("caso_studio_id")
+  casoStudio   CasoStudio? @relation(fields: [casoStudioId], references: [id], onDelete: Cascade)
+  bniMembroId  String?     @map("bni_membro_id")
+  bniMembro    BniMembro?  @relation(fields: [bniMembroId], references: [id], onDelete: Cascade)
+  attiva       Boolean     @default(true)
+  scadeAt      DateTime?   @map("scade_at")
+  zonaIndice   Int         @default(0) @map("zona_indice")
+  usi          Int         @default(0)
+  trovati      Int         @default(0)
+  ultimoUsoAt  DateTime?   @map("ultimo_uso_at")
+  esauritaAt   DateTime?   @map("esaurita_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  persone      Persona[]
+  ritrovamenti Ritrovamento[]
+
+  @@index([attiva, ultimoUsoAt])
+  @@map("chiavi_ricerca")
+}
+
+// Una persona (contenitore LinkedIn): sempre collegata alla sua azienda quando si sa qual è.
+model Persona {
+  id               String         @id @default(uuid())
+  nome             String
+  ruolo            String?
+  aziendaNome      String?        @map("azienda_nome")
+  linkedinUrl      String?        @unique @map("linkedin_url")
+  localita         String?
+  leadId           String?        @map("lead_id")
+  lead             Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  bniMembroId      String?        @map("bni_membro_id")
+  bniMembro        BniMembro?     @relation(fields: [bniMembroId], references: [id], onDelete: SetNull)
+  contattoInComune String?        @map("contatto_in_comune")
+  chiaveId         String?        @map("chiave_id")
+  chiave           ChiaveRicerca? @relation(fields: [chiaveId], references: [id], onDelete: SetNull)
+  fonte            String         @default("linkedin") // linkedin | rete_membro | sito
+  note             String?        @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  presentazioni BniPresentazione[]
+  ritrovamenti  Ritrovamento[]
+
+  @@index([leadId])
+  @@index([bniMembroId])
+  @@map("persone")
+}
+
+// Chi ha trovato cosa: per contare quanto rende una chiave e per filtrare i contenitori.
+model Ritrovamento {
+  id        String        @id @default(uuid())
+  chiaveId  String        @map("chiave_id")
+  chiave    ChiaveRicerca @relation(fields: [chiaveId], references: [id], onDelete: Cascade)
+  leadId    String?       @map("lead_id")
+  lead      Lead?         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  personaId String?       @map("persona_id")
+  persona   Persona?      @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  canale    String // google | maps | facebook | instagram | linkedin
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@index([chiaveId])
+  @@index([leadId])
+  @@map("ritrovamenti")
+}
+
+// Le persone da farsi presentare da un membro BNI (dalla sua rete LinkedIn o nominate al 121).
+model BniPresentazione {
+  id          String    @id @default(uuid())
+  membroId    String    @map("membro_id")
+  membro      BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  personaId   String?   @map("persona_id")
+  persona     Persona?  @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  nome        String
+  ruolo       String?
+  linkedinUrl String?   @map("linkedin_url")
+  perche      String?
+  stato       String    @default("DA_CHIEDERE") // DA_CHIEDERE | CHIESTA | PRESENTATO | NO
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([membroId])
+  @@map("bni_presentazioni")
 }

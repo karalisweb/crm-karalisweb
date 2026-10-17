@@ -109,8 +109,23 @@ export default function GuidaPage() {
             <Step n={4}>
               <p>In Cassetta arriva la <strong>scheda pronta per il contatto</strong>: leve con prova, come aprire la chiamata, il messaggio da copiare e la scaletta del video. Il messaggio lo mandi tu.</p>
             </Step>
+          </div>
+          <h4 className="font-semibold mt-4 mb-1">La ricerca: BNI per primo (menu RICERCA)</h4>
+          <div className="space-y-3">
+            <Step n={1}>
+              <p><strong>121 BNI</strong>: obiettivo 10 a settimana. Ogni mattina in Cassetta trovi le richieste di 121 con &quot;Apri WhatsApp&quot;: in ogni capitolo prima chi fa il tuo mestiere, poi presidente e formazione/eventi, poi tutti gli altri. Quando ti rispondono premi &quot;Fissato&quot; e metti la data.</p>
+            </Step>
+            <Step n={2}>
+              <p>Fissato il 121, l&apos;agente guarda la rete LinkedIn del membro e ti prepara 3-5 persone da farti presentare. Il giorno prima trovi il foglio del 121 in Cassetta.</p>
+            </Step>
+            <Step n={3}>
+              <p>Dopo il 121: nella scheda del membro <strong>Registra il 121</strong> (trascrizione di Meet o vocale dettato). La scheda si compila da sola: cosa fa, referenze che cerca, referenze che può dare.</p>
+            </Step>
+            <Step n={4}>
+              <p>Qualcuno ti chiede una referenza? In <strong>Membri BNI</strong> scrivi il bisogno e trovi a chi girarla.</p>
+            </Step>
             <Step n={5}>
-              <p><strong>BNI</strong>: in Cassetta trovi l&apos;azione per ogni capitolo e, se la approvi, i messaggi pronti con &quot;Apri WhatsApp&quot;.</p>
+              <p><strong>Casi studio</strong>: carica il PDF di un cliente e conferma. Per 6 mesi la ricerca di aziende (5 al giorno, prima la Sardegna) parte da lì: stesso settore, aziende simili, persone simili al titolare su LinkedIn.</p>
             </Step>
           </div>
           <Tip>
@@ -547,6 +562,10 @@ export default function GuidaPage() {
 
         {/* SEZIONE 11: Rete BNI */}
         <Section title="Rete BNI — 121, partner e reciprocità" icon={Handshake}>
+          <p className="text-muted-foreground">
+            <strong>Dalla v3.47 il lavoro BNI si fa nel menu RICERCA</strong> (121 BNI, Membri BNI): la pagina
+            Rete BNI descritta qui sotto resta raggiungibile ma non è più nel menu.
+          </p>
           <p className="text-muted-foreground">
             Il BNI e il passaparola sono il canale che porta pi&ugrave; fatturato. Questa sezione
             serve a renderlo <strong>sistematico</strong> invece che mnemonico.

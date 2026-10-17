@@ -23,6 +23,9 @@ import {
   LayoutGrid,
   Bot,
   Inbox,
+  Users,
+  FileText,
+  Contact,
 } from "lucide-react";
 
 // Badge types per colore
@@ -59,6 +62,15 @@ export const navSections: NavSection[] = [
     ],
   },
   {
+    title: "RICERCA",
+    items: [
+      { href: "/bni", label: "121 BNI", icon: Handshake },
+      { href: "/bni/membri", label: "Membri BNI", icon: Users },
+      { href: "/casi-studio", label: "Casi studio", icon: FileText },
+      { href: "/persone", label: "Persone LinkedIn", icon: Contact },
+    ],
+  },
+  {
     title: "ANALISI",
     items: [
       { href: "/da-analizzare", label: "Da Analizzare", icon: ScanSearch, badgeKey: "daAnalizzare", badgeColor: "default" },
@@ -72,13 +84,6 @@ export const navSections: NavSection[] = [
     items: [
       { href: "/moduli", label: "Moduli", icon: LayoutGrid },
       { href: "/registro-soggetti", label: "Registro soggetti", icon: Database },
-    ],
-  },
-  {
-    title: "RETE BNI",
-    items: [
-      { href: "/rete-bni", label: "Rete BNI", icon: Handshake, badgeKey: "bniDaLavorare", badgeColor: "green" },
-      { href: "/opportunita", label: "Opportunità", icon: Target, badgeKey: "opportunitaFollowup", badgeColor: "red" },
     ],
   },
   {
@@ -98,6 +103,7 @@ export const navSections: NavSection[] = [
     items: [
       { href: "/risposto", label: "Ha Risposto", icon: MessageCircle, badgeKey: "risposto", badgeColor: "green" },
       { href: "/trattative", label: "Trattative", icon: CalendarCheck, badgeKey: "trattative", badgeColor: "red" },
+      { href: "/opportunita", label: "Opportunità", icon: Target, badgeKey: "opportunitaFollowup", badgeColor: "red" },
       { href: "/clienti", label: "Clienti", icon: Trophy, badgeKey: "clienti", badgeColor: "green" },
     ],
   },
@@ -128,3 +134,14 @@ export const dotColorClasses: Record<BadgeColor, string> = {
   green: "bg-green-500",
   default: "bg-[#d4a726]",
 };
+
+/**
+ * La voce attiva per un percorso: la più specifica che corrisponde (così "/bni/membri" accende
+ * "Membri BNI" e non anche "121 BNI").
+ */
+export function voceAttiva(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  if (pathname !== href && !pathname.startsWith(href + "/")) return false;
+  const tutte = [...navSections.flatMap((s) => s.items), ...fixedNavItems].map((i) => i.href);
+  return !tutte.some((h) => h.length > href.length && h.startsWith(href + "/") && (pathname === h || pathname.startsWith(h + "/")));
+}

@@ -27,7 +27,9 @@ export const AZIONI: Record<string, { si: string; no: string; etichetta: string 
   FASCICOLO_BASE: { si: "Approfondisci", no: "Scarta", etichetta: "Da approfondire?" },
   SCHEDA_CONTATTO: { si: "Lo contatto", no: "Scarta", etichetta: "Pronta per il contatto" },
   AZIONE_BNI: { si: "Prepara i messaggi", no: "Non ora", etichetta: "BNI · azione" },
-  MESSAGGIO_BNI: { si: "Mandato", no: "Scarta", etichetta: "BNI · messaggio" },
+  MESSAGGIO_BNI: { si: "Mandato", no: "Non ora", etichetta: "BNI · richiesta di 121" },
+  VISITA_CAPITOLO: { si: "Mandato", no: "Non ora", etichetta: "BNI · visita al capitolo" },
+  PREPARAZIONE_121: { si: "Letto", no: "Non serve", etichetta: "BNI · prepara il 121" },
   PREPARAZIONE_CALL: { si: "Letta", no: "Non serve", etichetta: "Vendita · prepara la call" },
   DOPO_CALL: { si: "Mandata", no: "Scarta", etichetta: "Vendita · dopo la call" },
   RECALL: { si: "Fatto", no: "Rimanda", etichetta: "Vendita · recall" },
@@ -96,7 +98,7 @@ function Intestazione({ v }: { v: VoceCassetta }) {
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-2">
-        <Link href="/rete-bni" className="font-semibold hover:underline break-words">{v.title}</Link>
+        <Link href={v.bniMembro ? `/bni/membri/${v.bniMembro.id}` : v.bniChapter ? `/bni/capitoli/${v.bniChapter.id}` : "/bni"} className="font-semibold hover:underline break-words">{v.title}</Link>
         <Badge variant="secondary" className="text-[10px]">{AZIONI[v.kind]?.etichetta ?? v.kind}</Badge>
       </div>
       {v.bniMembro && (
@@ -229,11 +231,58 @@ function CorpoAzioneBni({ p }: { p: Record<string, unknown> }) {
   );
 }
 
+const FORMATI_121: Record<string, string> = { PRESENZA: "di persona", ONLINE: "online (Meet)", A_SCELTA: "di persona o online" };
+
 function CorpoMessaggioBni({ p, telefono }: { p: Record<string, unknown>; telefono: string | null }) {
   return (
     <div className="space-y-2">
+      {(s(p.perche) || s(p.formato)) && (
+        <div className="flex flex-wrap gap-2">
+          {s(p.perche) && <span className="text-sm">{s(p.perche)}</span>}
+          {FORMATI_121[s(p.formato)] && <Badge variant="outline">121 {FORMATI_121[s(p.formato)]}</Badge>}
+        </div>
+      )}
       <Messaggio testo={s(p.messaggio)} telefono={telefono ?? s(p.telefono)} />
       {s(p.nota_per_alessio) && <p className="text-xs text-muted-foreground">Per te: {s(p.nota_per_alessio)}</p>}
+    </div>
+  );
+}
+
+function CorpoVisitaCapitolo({ p, telefono }: { p: Record<string, unknown>; telefono: string | null }) {
+  return (
+    <div className="space-y-2">
+      {s(p.perche) && <p className="text-sm">{s(p.perche)}</p>}
+      <div className="text-xs text-muted-foreground">
+        {[s(p.formato).toLowerCase(), s(p.quando), s(p.sede)].filter(Boolean).join(" · ")}
+      </div>
+      <Messaggio testo={s(p.messaggio)} telefono={telefono ?? s(p.telefono)} />
+    </div>
+  );
+}
+
+function CorpoPreparazione121({ p }: { p: Record<string, unknown> }) {
+  const quando = s(p.quando) ? new Date(s(p.quando)).toLocaleString("it-IT", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "";
+  const pres = arr<{ nome: string; ruolo?: string | null; perche?: string | null; linkedin?: string | null }>(p.presentazioni);
+  const caso = (p.casoStudio ?? null) as { titolo?: string; storia?: string } | null;
+  return (
+    <div className="space-y-3">
+      <Blocco titolo="Chi è">{s(p.chi)}{quando && <div className="text-xs text-muted-foreground mt-0.5">{quando}</div>}</Blocco>
+      {s(p.cosaFa) && <Blocco titolo="Cosa fa">{s(p.cosaFa)}</Blocco>}
+      {pres.length > 0 && (
+        <Blocco titolo="Chiedigli di presentarti">
+          {pres.map((x, i) => (
+            <div key={i}>
+              {x.nome} {x.ruolo && <span className="text-muted-foreground">— {x.ruolo}</span>}{" "}
+              {x.linkedin && <a className="text-xs underline" href={x.linkedin} target="_blank" rel="noopener noreferrer">profilo</a>}
+              {x.perche && <div className="text-xs text-muted-foreground">{x.perche}</div>}
+            </div>
+          ))}
+        </Blocco>
+      )}
+      {caso?.storia && <Blocco titolo={`La storia da raccontare: ${caso.titolo ?? ""}`}><p className="whitespace-pre-wrap">{caso.storia}</p></Blocco>}
+      <Blocco titolo="Le domande">
+        <ul className="list-disc pl-4 space-y-0.5">{arr<string>(p.domande).map((d, i) => <li key={i}>{d}</li>)}</ul>
+      </Blocco>
     </div>
   );
 }
@@ -338,6 +387,8 @@ export function CorpoVoce({ v }: { v: VoceCassetta }) {
       {v.kind === "SCHEDA_CONTATTO" && <CorpoSchedaContatto p={v.payload} />}
       {v.kind === "AZIONE_BNI" && <CorpoAzioneBni p={v.payload} />}
       {v.kind === "MESSAGGIO_BNI" && <CorpoMessaggioBni p={v.payload} telefono={v.bniMembro?.phone ?? null} />}
+      {v.kind === "VISITA_CAPITOLO" && <CorpoVisitaCapitolo p={v.payload} telefono={v.bniMembro?.phone ?? null} />}
+      {v.kind === "PREPARAZIONE_121" && <CorpoPreparazione121 p={v.payload} />}
       {v.kind === "PREPARAZIONE_CALL" && <CorpoPreparazione p={v.payload} />}
       {v.kind === "DOPO_CALL" && <CorpoDopoCall p={v.payload} telefono={v.trattativa?.telefono} />}
       {(v.kind === "RECALL" || v.kind === "NURTURING_PROPOSTO") && <CorpoRecall p={v.payload} telefono={v.trattativa?.telefono} />}

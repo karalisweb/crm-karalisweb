@@ -3,7 +3,8 @@
 Questo file lo legge Claude quando parte l'attività programmata "Squadra CRM — agenti di browser".
 Gli agenti di browser sono la parte della squadra che ha bisogno di un browser vero e degli accessi
 di Alessio: Social (6), Meta Ad Library (7), LinkedIn azienda (8), Decision maker (9), Cartografo
-BNI (B1). L'app li mette in coda; tu li prendi, li fai, consegni il referto.
+BNI (B1), Rete del membro (B5), Cercatore Meta (R2), Cercatore LinkedIn (R3). L'app li mette in coda
+(i lavori BNI per primi); tu li prendi, li fai, consegni il referto.
 
 ## 0. Prima di tutto
 
@@ -20,7 +21,8 @@ curl -s -H "Authorization: Bearer $AGENTI_BROWSER_KEY" "$AGENTI_URL/api/agenti/b
 
 Ogni lavoro ha `runId`, `agente`, `istruzioni` (cosa fare, passo per passo, e la forma dei
 `findings`), `azienda` (nome, sito, categoria, indirizzo, link social già noti) oppure `input`
-(per il Cartografo: la regione). Un lavoro preso va chiuso **entro 3 ore**.
+(Cartografo: la regione; Rete del membro: il membro BNI; Cercatore Meta: termine e zona; Cercatore
+LinkedIn: la persona del caso studio o il membro BNI, la zona). Un lavoro preso va chiuso **entro 3 ore**.
 
 ## 2. Fai il lavoro
 
@@ -30,6 +32,10 @@ Ogni lavoro ha `runId`, `agente`, `istruzioni` (cosa fare, passo per passo, e la
 - Cookie: rifiuta quelli facoltativi.
 - **LinkedIn: al massimo 20 aziende al giorno** in tutto (conta i lavori `linkedin_azienda` e
   `decision_maker` già fatti oggi). Oltre, chiudi come FALLITO con "limite giornaliero LinkedIn".
+  `rete_membro` e `cerca_linkedin` sono al massimo 2 al giorno (li limita già l'app): apri al più una
+  quindicina di profili per lavoro.
+- **Mai richieste di collegamento né messaggi** su LinkedIn, Facebook o Instagram: le persone che
+  trovi le contatta Alessio (o si fa presentare dal membro BNI).
 - **CAPTCHA, accesso richiesto, pagina bloccata:** non provare ad aggirarli. Chiudi il lavoro come
   FALLITO spiegando cosa è successo.
 - Decision maker: solo nome, ruolo e link al profilo pubblico di chi decide (max 2 persone).
@@ -70,7 +76,12 @@ Lavoro non fatto:
 Se la risposta è 400, il referto non rispetta lo schema: leggi `dettaglio`, correggi e rimanda.
 
 Per il Cartografo (`cartografo_bni`) i `findings` sono la mappa della regione: l'app crea o
-completa da sola capitoli e membri (non cancella nulla).
+completa da sola capitoli e membri (non cancella nulla). I ruoli di dirigenza riportali come sono
+**adesso**: l'app sovrascrive quelli vecchi.
+
+Per `cerca_meta` i `findings` sono `{ aziende: [...] }`, per `cerca_linkedin` e `rete_membro`
+`{ persone: [...] }` (più `profiloMembro` per la rete): l'app salva aziende e persone, le collega fra
+loro e ai membri BNI, senza doppioni. `levers` ed `evidence` possono restare vuoti.
 
 ## 4. Alla fine
 

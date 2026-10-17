@@ -1562,3 +1562,65 @@ rimanda di 7), `NURTURING_PROPOSTO`, `MESSAGGIO_NURTURING` (approvare → +45 gi
 Pagine: `/trattative`, `/trattative/[id]`; `/call-fissate` rimanda a `/trattative`. Badge `trattative` = in ritardo.
 
 Orologio: `0 7-20 * * *` vendita (ogni ora).
+
+## Fase 1 Ricerca (v3.47.0)
+
+Specifica: `FASE-1-RICERCA.md`; processo deciso con Alessio: `PROGETTO-AGENTI.md` (v3, Fase 1).
+BNI fa da motore: 10 121 a settimana; i casi studio dicono cosa cercare prima; le reti dei membri
+diventano chiavi di ricerca.
+
+### Database (migrazione `20261017090000_fase_ricerca`, additiva, via psql)
+
+- `casi_studio` (`CasoStudio`): PDF (`bytea`, max 15 MB), storia da 30 secondi, settore, azienda,
+  persona, `termini` (ricerche per i simili), stato `DA_CONFERMARE|ATTIVO|SCADUTO`, `valido_fino` (+6 mesi).
+- `chiavi_ricerca` (`ChiaveRicerca`): `SETTORE|AZIENDA|PERSONA|RETE_MEMBRO`, `termini`, caso o membro di
+  origine, `zona_indice` (dove è arrivata), `usi`, `trovati`, `scade_at`, `esaurita_at`.
+- `persone` (`Persona`): il contenitore LinkedIn; `linkedin_url` unico; `lead_id` (l'azienda),
+  `bni_membro_id` (se è un membro BNI), `contatto_in_comune`, `fonte` (`linkedin|rete_membro`).
+- `ritrovamenti`: chi ha trovato cosa (`chiave_id`, `lead_id`/`persona_id`, `canale`).
+- `bni_presentazioni`: persone da farsi presentare da un membro (`DA_CHIEDERE|CHIESTA|PRESENTATO|NO`).
+- Colonne: `bni_membri.linkedin_url, cosa_fa, referenze_puo_dare, prossimo_passo(_at), lead_id,
+  indicato_da/_at, rete_letta_at` ("referenze che cerca" = `seeking`); `one_to_ones.formato,
+  trascrizione, riassunto, promesse`; `bni_chapters.sede`. Nessuna colonna nuova su `leads`.
+
+### Codice
+
+| File | Contenuto |
+|---|---|
+| `src/lib/agents/bni-regole.ts` | **Puro**: `gruppiCapitolo` (stesso ruolo → presidente + formazione/eventi → indicati → altri; senza stesso ruolo: presidente → indicati → altri; senza dirigenza nota solo lo stesso ruolo), `prossimiDelCapitolo` (un gruppo alla volta; chiuso quando ognuno è conosciuto, rinviato o non risponde da 7 giorni), `capitoliInCorso` (2, Sardegna prima), `visitaDaProporre` (a 1/3, mai il proprio capitolo), `settimanaDi`/`mezzanotteRoma`, costanti (10 121, 15 richieste aperte) |
+| `src/lib/agents/bni.ts` | `importaMappaBni` (+ sede; i ruoli si sovrascrivono), `caricaCapitoli`, `statoSettimana`, `scegliProssimi`, `eseguiTurnoBni` (chiude le vecchie `AZIONE_BNI`, copertura, visita, richieste — max 8 nuove al giorno —, rete del membro e foglio del giorno prima, Cartografo: Sardegna ogni 30 giorni), `accodaReteMembro`, `chiudiRichiesteSuperate` |
+| `src/lib/ricerca/regole.ts` | **Puro**: zone (18 sarde, poi Italia), `prossimaChiave`, `passoRicerca` (termine × zona), `normalizzaLinkedin`, `stessoNome`, `punteggioBisogno` |
+| `src/lib/ricerca/dopo-121.ts` | `registra121`: salva il 121, membro conosciuto, chiude la richiesta in cassetta, accoda la rete; con testo ≥150 caratteri l'AI compila la scheda, le presentazioni e i membri indicati |
+| `src/lib/ricerca/casi-studio.ts` | `caricaCasoStudio` (PDF all'AI: Claude `document`, Gemini `inlineData`), `confermaCasoStudio` (nascono/si aggiornano le 3 chiavi), `sospendiCasoStudio`, `scadenzeCasi` |
+| `src/lib/ricerca/filtro.ts` | `filtraSimili`: l'AI tiene solo chi fa lo stesso mestiere del cliente del caso (se l'AI non risponde tiene tutto) |
+| `src/lib/ricerca/cercatore.ts` | `eseguiTurnoRicerca` (quota 5 aziende nuove al giorno, max 4 ricerche a turno; Maps e, se porta poco, Google; i simili oltre la quota restano per il giro dopo e la zona non avanza; senza chiavi → Esploratore classico; accoda 1 `cerca_meta` al giorno e fino a 2 lavori LinkedIn), `salvaAzienda`/`salvaPersona` (doppioni per place_id, dominio, pagina social, nome+città; profilo LinkedIn; membri BNI riconosciuti), importazioni `importaAziendeMeta`, `importaPersoneLinkedin`, `importaReteMembro` |
+
+`src/lib/agents/ai.ts`: `RichiestaAI.pdf` (base64). `src/lib/agents/browser.ts`: lavori BNI
+(`cartografo_bni`, `rete_membro`) presi per primi; chiusure di `cerca_meta`, `cerca_linkedin`, `rete_membro`.
+
+Agenti nuovi nel registro: `pianificatore_121` (B2, al posto dello Stratega), `rete_membro` (B5, browser),
+`dopo_121` (B6), `lettore_casi` (R1), `cerca_meta` (R2, browser), `cerca_linkedin` (R3, browser).
+Voci di cassetta nuove: `VISITA_CAPITOLO` (approvare → capitolo `VISITA_PIANIFICATA`), `PREPARAZIONE_121`
+(foglio del giorno prima, senza AI). `MESSAGGIO_BNI` porta `perche` e `formato`. `AZIONE_BNI` non si crea più.
+
+### API (tutte con sessione)
+
+| Rotta | Cosa fa |
+|---|---|
+| `GET /api/ricerca/bni` | Settimana, calendario, richieste aperte, capitoli con avanzamento e prossimi |
+| `GET/PATCH /api/ricerca/bni/capitoli/[id]` | Scheda del capitolo con i gruppi in ordine / sede, formato, giorno, ora, zona, visita |
+| `GET /api/ricerca/bni/membri?q=` | Elenco o ricerca per bisogno |
+| `GET/PATCH /api/ricerca/bni/membri/[id]` | Scheda del membro / correzioni, `next121At` (chiude la richiesta e accoda la rete), `conosciuto` |
+| `POST /api/ricerca/bni/membri/[id]/121` | Registra un 121 (Dopo-121), 20 ogni 10 minuti |
+| `PATCH /api/ricerca/bni/presentazioni/[id]` | Stato di una presentazione |
+| `GET/POST /api/ricerca/casi-studio` | Elenco / carica un PDF (multipart `pdf`), 10 ogni 10 minuti |
+| `GET/PATCH /api/ricerca/casi-studio/[id]` | Caso con chiavi e trovati / `conferma`, `rileggi`, `sospendi` |
+| `GET /api/ricerca/casi-studio/[id]/pdf` | Il PDF originale |
+| `GET /api/ricerca/persone` | Contenitore LinkedIn (`q`, `fonte`, `bni`) |
+
+`POST /api/cron/esploratore` ora esegue `eseguiTurnoRicerca` (stesso orario, `30 6,14 * * 1-5`).
+`POST /api/squadra/lancia` accetta `squadra: "ricerca"`.
+
+Pagine: `/bni`, `/bni/capitoli/[id]`, `/bni/membri`, `/bni/membri/[id]`, `/casi-studio`,
+`/casi-studio/[id]`, `/persone` (sezione di menu RICERCA). `/rete-bni` resta raggiungibile ma non è
+più nel menu; Opportunità è passata in VENDITA. La voce di menu attiva è la più specifica (`voceAttiva`).

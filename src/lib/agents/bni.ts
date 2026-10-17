@@ -1,36 +1,54 @@
 /**
- * Squadra BNI — la parte che lavora sul database.
+ * Squadra BNI — la parte che lavora sul database. Le regole sono in bni-regole.ts.
  *
- *   B1 Cartografo        → lavoro di browser (BNI Connect); qui si importa quello che porta.
- *   B2 Stratega          → per ogni capitolo decide l'azione (regole in bni-regole.ts) e la
- *                          mette in cassetta.
- *   B3 Preparatore 121   → per ogni azione approvata scrive il messaggio a ciascun
- *                          destinatario (in cassetta: lo manda Alessio).
- *   B4 Copertura Sardegna→ quanti membri sardi conosci, capitolo per capitolo.
+ *   Cartografo (B1)       → lavoro di browser su BNI Connect; qui si importa quello che porta.
+ *                           La Sardegna si rilegge ogni 30 giorni: i ruoli cambiano.
+ *   Pianificatore 121     → tiene 15 richieste di 121 aperte, 2 capitoli alla volta, con l'ordine
+ *                           di Alessio dentro ogni capitolo. Obiettivo: 10 121 a settimana.
+ *   Preparatore 121 (B3)  → il messaggio di richiesta (in cassetta: lo manda Alessio) e il foglio
+ *                           del giorno prima.
+ *   Copertura (B4)        → conosciuti su totale per capitolo; la visita a un terzo.
+ *
+ * Il dopo-121 (la scheda del membro dalla trascrizione) è in src/lib/ricerca/dopo-121.ts.
  */
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { classifyMembro } from "@/lib/bni/member-classifier";
 import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import {
-  azioneCapitolo,
+  capitoliInCorso,
   coperturaCapitolo,
   dirigenzaDa,
+  dirigenzaNota,
   eSardo,
+  formato121,
   formatoDa,
+  giorniTraMappe,
   norm,
+  prossimiDelCapitolo,
   REGIONI_ITALIA,
-  type AzioneCapitolo,
+  RICHIESTE_APERTE,
+  GIORNI_SENZA_RISPOSTA,
+  settimanaDi,
+  visitaDaProporre,
+  OBIETTIVO_121_SETTIMANA,
   type MembroPerRegole,
+  type Motivo,
+  type ProssimoMembro,
 } from "./bni-regole";
 
-export const KIND_AZIONE_BNI = "AZIONE_BNI";
 export const KIND_MESSAGGIO_BNI = "MESSAGGIO_BNI";
-/** Fuori Sardegna un capitolo si rivaluta ogni 60 giorni; in Sardegna (copertura) ogni 7. */
-const GIORNI_TRA_AZIONI = 60;
-const GIORNI_TRA_AZIONI_SARDEGNA = 7;
-const GIORNI_TRA_MAPPE = 90;
+export const KIND_VISITA_CAPITOLO = "VISITA_CAPITOLO";
+export const KIND_PREPARAZIONE_121 = "PREPARAZIONE_121";
+/** Vecchio tipo (v3.45): un'azione per capitolo. Le voci rimaste si chiudono da sole. */
+const KIND_AZIONE_BNI = "AZIONE_BNI";
+
+/** Una richiesta scartata ("non ora") non si ripropone per 30 giorni. */
+const GIORNI_RINVIO = 30;
+/** Richieste nuove al giorno al massimo, per non sommergere la cassetta. */
+const RICHIESTE_AL_GIORNO = 8;
+/** Il foglio del giorno prima: per i 121 delle prossime 36 ore. */
+const ORE_PREPARAZIONE = 36;
 
 // ─── B1: importazione della mappa portata dal Cartografo ────────────────────
 
@@ -55,6 +73,7 @@ interface CapitoloMappa {
   formato?: unknown;
   giorno?: unknown;
   ora?: unknown;
+  sede?: unknown;
   url?: unknown;
   membri?: unknown;
 }
@@ -62,8 +81,9 @@ interface CapitoloMappa {
 const testo = (v: unknown, max = 200): string | null => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
 /**
- * Salva capitoli e membri letti da BNI Connect. Non cancella nulla: aggiunge i nuovi e
- * completa i campi vuoti (dirigenza, formato, telefono) di quelli che già esistono.
+ * Salva capitoli e membri letti da BNI Connect. Non cancella nulla: aggiunge i nuovi e completa
+ * i dati di quelli che già esistono. I ruoli di dirigenza si sovrascrivono sempre: valgono quelli
+ * letti adesso (chi non ha più un ruolo lo perde).
  */
 export async function importaMappaBni(findings: Record<string, unknown>, oggi = new Date()): Promise<EsitoMappa> {
   const esito: EsitoMappa = { capitoliNuovi: 0, capitoliAggiornati: 0, membriNuovi: 0, membriAggiornati: 0 };
@@ -80,6 +100,7 @@ export async function importaMappaBni(findings: Record<string, unknown>, oggi = 
       mode: formatoDa(testo(c.formato)),
       meetingDay: testo(c.giorno, 30),
       meetingTime: testo(c.ora, 10),
+      sede: testo(c.sede, 300),
       bniConnectUrl: testo(c.url, 500),
       mappedAt: oggi,
     };
@@ -90,6 +111,9 @@ export async function importaMappaBni(findings: Record<string, unknown>, oggi = 
         data: {
           ...dati,
           city: esistente.city ?? dati.city,
+          sede: dati.sede ?? esistente.sede,
+          meetingDay: dati.meetingDay ?? esistente.meetingDay,
+          meetingTime: dati.meetingTime ?? esistente.meetingTime,
           // La regione interna (sardegna_nord/centro/sud) la decide Alessio: non si tocca.
           region: esistente.region ?? (norm(regione) === "sardegna" ? null : "altro"),
         },
@@ -116,29 +140,15 @@ export async function importaMappaBni(findings: Record<string, unknown>, oggi = 
           where: { id: gia.id },
           data: {
             company: gia.company ?? azienda,
-            profession: gia.profession ?? categoria,
+            profession: categoria ?? gia.profession,
             phone: gia.phone ?? telefono,
             leadershipRole: dirigenza,
           },
         });
         esito.membriAggiornati++;
       } else {
-        const cl = classifyMembro({ profession: categoria, company: azienda });
         await db.bniMembro.create({
-          data: {
-            name: nomeM,
-            company: azienda,
-            profession: categoria,
-            phone: telefono,
-            chapter: nome,
-            leadershipRole: dirigenza,
-            buyerPersona: cl.buyerPersona,
-            memberRole: cl.memberRole,
-            clientScore: cl.clientScore,
-            partnerScore: cl.partnerScore,
-            personasServed: cl.personasServed.join(",") || null,
-            classifiedAt: oggi,
-          },
+          data: { name: nomeM, company: azienda, profession: categoria, phone: telefono, chapter: nome, leadershipRole: dirigenza },
         });
         esito.membriNuovi++;
       }
@@ -149,31 +159,53 @@ export async function importaMappaBni(findings: Record<string, unknown>, oggi = 
 
 // ─── Lettura dei capitoli con i loro membri ────────────────────────────────
 
-async function capitoliConMembri() {
-  const [capitoli, membri] = await Promise.all([
-    db.bniChapter.findMany(),
+export interface CapitoloCaricato {
+  capitolo: Prisma.BniChapterGetPayload<object>;
+  membri: MembroPerRegole[];
+}
+
+/** Capitoli e membri attivi, con lo stato delle richieste di 121 di ciascun membro. */
+export async function caricaCapitoli(oggi = new Date()): Promise<CapitoloCaricato[]> {
+  const [capitoli, membri, richieste] = await Promise.all([
+    db.bniChapter.findMany({ orderBy: { name: "asc" } }),
     db.bniMembro.findMany({
       where: { status: "ATTIVO" },
       select: {
         id: true, name: true, profession: true, company: true, phone: true, chapter: true, leadershipRole: true,
-        conosciutoAt: true, oneToOneCount: true, isCustomer: true, clientScore: true, partnerScore: true,
+        conosciutoAt: true, oneToOneCount: true, isCustomer: true, indicatoAt: true, next121At: true,
       },
     }),
+    db.approvalItem.findMany({
+      where: { kind: KIND_MESSAGGIO_BNI, bniMembroId: { not: null } },
+      select: { bniMembroId: true, status: true, createdAt: true, decidedAt: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
+  const ultima = new Map<string, (typeof richieste)[number]>();
+  for (const r of richieste) if (!ultima.has(r.bniMembroId!)) ultima.set(r.bniMembroId!, r);
+  const limiteRinvio = oggi.getTime() - GIORNI_RINVIO * 86400_000;
+
   return capitoli.map((c) => ({
     capitolo: c,
     membri: membri
       .filter((m) => norm(m.chapter) === norm(c.name))
-      .map<MembroPerRegole>((m) => ({
-        id: m.id,
-        name: m.name,
-        profession: m.profession,
-        company: m.company,
-        phone: m.phone,
-        leadershipRole: m.leadershipRole,
-        conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer,
-        priorita: Math.max(m.clientScore, m.partnerScore),
-      })),
+      .map<MembroPerRegole>((m) => {
+        const r = ultima.get(m.id);
+        const scartata = r?.status === "SCARTATO";
+        return {
+          id: m.id,
+          name: m.name,
+          profession: m.profession,
+          company: m.company,
+          phone: m.phone,
+          leadershipRole: m.leadershipRole,
+          conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer,
+          indicato: !!m.indicatoAt,
+          richiestaAt: r && !scartata ? r.createdAt : null,
+          fissato121At: m.next121At && m.next121At.getTime() > oggi.getTime() - 86400_000 ? m.next121At : null,
+          rinviato: scartata && (r!.decidedAt ?? r!.createdAt).getTime() > limiteRinvio,
+        };
+      }),
   }));
 }
 
@@ -195,114 +227,211 @@ async function salvaRefertoCapitolo(chapterId: string, agent: string, summary: s
   });
 }
 
+// ─── La settimana ──────────────────────────────────────────────────────────
+
+export interface StatoSettimana {
+  obiettivo: number;
+  fatti: number;
+  fissati: number;
+  richiesteAperte: number;
+  inizio: Date;
+  fine: Date;
+}
+
+export async function statoSettimana(oggi = new Date(), caricati?: CapitoloCaricato[]): Promise<StatoSettimana> {
+  const { inizio, fine } = settimanaDi(oggi);
+  const [fatti, fissati, tutti] = await Promise.all([
+    db.oneToOne.count({ where: { date: { gte: inizio, lt: fine } } }),
+    db.bniMembro.count({ where: { next121At: { gte: oggi, lt: fine } } }),
+    caricati ? Promise.resolve(caricati) : caricaCapitoli(oggi),
+  ]);
+  return { obiettivo: OBIETTIVO_121_SETTIMANA, fatti, fissati, richiesteAperte: contaAperte(tutti, oggi), inizio, fine };
+}
+
+/** Richieste mandate (o in cassetta) da meno di 14 giorni, a chi non è ancora stato incontrato. */
+function contaAperte(tutti: CapitoloCaricato[], oggi: Date): number {
+  const limite = oggi.getTime() - 2 * GIORNI_SENZA_RISPOSTA * 86400_000;
+  return tutti.flatMap((t) => t.membri).filter((m) => !m.conosciuto && !m.fissato121At && m.richiestaAt && m.richiestaAt.getTime() > limite).length;
+}
+
+/** Le prossime persone a cui chiedere, dai capitoli in corso; se non bastano, dagli altri. */
+export function scegliProssimi(tutti: CapitoloCaricato[], quanti: number, oggi: Date): (ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] })[] {
+  const candidati = tutti.map((t) => ({ t, prossimi: prossimiDelCapitolo(t.membri, oggi, dirigenzaNota(t.capitolo, t.membri)) }));
+  const perScelta = candidati.map(({ t, prossimi }) => {
+    const cop = coperturaCapitolo(t.membri);
+    return { id: t.capitolo.id, nome: t.capitolo.name, sardo: eSardo(t.capitolo), mio: t.capitolo.isMine, conosciuti: cop.conosciuti, totale: cop.totale, daChiedere: prossimi.length };
+  });
+  const ordine = capitoliInCorso(perScelta, perScelta.length).map((c) => c.id);
+  const code = ordine.map((id) => {
+    const x = candidati.find((c) => c.t.capitolo.id === id)!;
+    return x.prossimi.map((p) => ({ ...p, capitolo: x.t.capitolo }));
+  });
+  const scelti: (ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] })[] = [];
+  // Prima i 2 capitoli in corso, a turno; poi, se non bastano, gli altri nello stesso ordine.
+  const giri = [code.slice(0, 2), code.slice(2)];
+  for (const gruppo of giri) {
+    let preso = true;
+    while (scelti.length < quanti && preso) {
+      preso = false;
+      for (const coda of gruppo) {
+        const p = coda.shift();
+        if (p && scelti.length < quanti) {
+          scelti.push(p);
+          preso = true;
+        }
+      }
+    }
+  }
+  return scelti;
+}
+
 // ─── Il turno BNI ──────────────────────────────────────────────────────────
 
 export interface RiepilogoBni {
-  capitoliValutati: number;
-  azioniInCassetta: number;
-  messaggiInCassetta: number;
+  settimana: StatoSettimana;
+  richiesteNuove: number;
+  visiteProposte: number;
+  preparazioni: number;
+  retiAccodate: number;
   mappeAccodate: number;
   saltatiPerBudget: number;
+  vecchieChiuse: number;
   coperturaSardegna: { capitoli: number; membri: number; conosciuti: number; percentuale: number } | null;
 }
 
 export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
-  const r: RiepilogoBni = { capitoliValutati: 0, azioniInCassetta: 0, messaggiInCassetta: 0, mappeAccodate: 0, saltatiPerBudget: 0, coperturaSardegna: null };
-  const tutti = await capitoliConMembri();
-  const daMappare = new Set<string>();
+  // Le azioni per capitolo della v3.45 non esistono più: si chiudono quelle rimaste aperte.
+  const vecchie = await db.approvalItem.updateMany({
+    where: { kind: KIND_AZIONE_BNI, status: "IN_ATTESA" },
+    data: { status: "SCARTATO", note: "Superata: dalla v3.47 i 121 si pianificano persona per persona", decidedAt: oggi },
+  });
 
-  // B4 — Copertura Sardegna (ogni giorno: è un conteggio, non costa nulla).
-  const sardi = tutti.filter((t) => eSardo(t.capitolo));
+  let tutti = await caricaCapitoli(oggi);
+  const r: RiepilogoBni = {
+    settimana: await statoSettimana(oggi, tutti),
+    richiesteNuove: 0, visiteProposte: 0, preparazioni: 0, retiAccodate: 0, mappeAccodate: 0, saltatiPerBudget: 0,
+    vecchieChiuse: vecchie.count, coperturaSardegna: null,
+  };
+
+  // B4 — Copertura (ogni giorno: è un conteggio, non costa nulla) e visita a un terzo.
   let membriSardi = 0;
   let conosciutiSardi = 0;
-  for (const { capitolo, membri } of sardi) {
+  let capitoliSardi = 0;
+  for (const { capitolo, membri } of tutti) {
+    if (!membri.length) continue;
     const cop = coperturaCapitolo(membri);
-    membriSardi += cop.totale;
-    conosciutiSardi += cop.conosciuti;
+    if (eSardo(capitolo)) {
+      capitoliSardi++;
+      membriSardi += cop.totale;
+      conosciutiSardi += cop.conosciuti;
+    }
     await salvaRefertoCapitolo(capitolo.id, "copertura_sardegna", `${capitolo.name}: conosci ${cop.conosciuti} su ${cop.totale} (${cop.percentuale}%)`, cop, 1, oggi);
+    if (visitaDaProporre({ ...cop, visitStatus: capitolo.visitStatus, mio: capitolo.isMine })) {
+      const gia = await db.approvalItem.findFirst({ where: { bniChapterId: capitolo.id, kind: KIND_VISITA_CAPITOLO } });
+      if (!gia) {
+        const fatto = await proponiVisita(capitolo, membri, cop, oggi);
+        if (fatto === "budget") r.saltatiPerBudget++;
+        else if (fatto) r.visiteProposte++;
+      }
+    }
   }
-  if (sardi.length) {
+  if (capitoliSardi) {
     r.coperturaSardegna = {
-      capitoli: sardi.length,
+      capitoli: capitoliSardi,
       membri: membriSardi,
       conosciuti: conosciutiSardi,
       percentuale: membriSardi ? Math.round((conosciutiSardi / membriSardi) * 100) : 0,
     };
   }
 
-  // B2 — Stratega: un'azione per capitolo in cassetta (Sardegna ogni 7 giorni, altrove ogni 60).
-  for (const { capitolo, membri } of tutti) {
-    const giorni = eSardo(capitolo) ? GIORNI_TRA_AZIONI_SARDEGNA : GIORNI_TRA_AZIONI;
-    const limite = new Date(oggi.getTime() - giorni * 86400_000);
-    if (!membri.length) {
-      if (capitolo.regioneItaliana) daMappare.add(capitolo.regioneItaliana);
-      continue;
+  // Pianificatore — 15 richieste aperte, al massimo 8 nuove al giorno.
+  const nuoveOggi = await db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, createdAt: { gte: new Date(oggi.getTime() - 20 * 3600_000) } } });
+  const quante = Math.max(0, Math.min(RICHIESTE_APERTE - r.settimana.richiesteAperte, RICHIESTE_AL_GIORNO - nuoveOggi));
+  for (const p of scegliProssimi(tutti, quante, oggi)) {
+    const fatto = await preparaRichiesta(p, oggi);
+    if (fatto === "budget") {
+      r.saltatiPerBudget++;
+      break;
     }
-    const aperta = await db.approvalItem.findFirst({
-      where: { bniChapterId: capitolo.id, kind: KIND_AZIONE_BNI, OR: [{ status: "IN_ATTESA" }, { decidedAt: { gt: limite } }] },
-    });
-    if (aperta) continue;
-    r.capitoliValutati++;
-    const azione = azioneCapitolo({
-      nome: capitolo.name,
-      sardo: eSardo(capitolo),
-      formato: formatoDa(capitolo.mode),
-      giorno: capitolo.meetingDay,
-      ora: capitolo.meetingTime,
-      membri,
-    });
-    await salvaRefertoCapitolo(capitolo.id, "stratega_bni", azione.motivo, azione, 30, oggi);
-    if (azione.tipo === "MAPPARE") {
-      if (capitolo.regioneItaliana) daMappare.add(capitolo.regioneItaliana);
-      continue;
-    }
-    if (azione.tipo === "COPERTURA" && azione.destinatari.length === 0) continue; // tutti conosciuti
-    await db.approvalItem.create({
-      data: {
-        bniChapterId: capitolo.id,
-        kind: KIND_AZIONE_BNI,
-        agent: "stratega_bni",
-        title: `${capitolo.name}: ${TITOLI[azione.tipo]}`,
-        payload: {
-          ...azione,
-          capitolo: { nome: capitolo.name, citta: capitolo.city, formato: capitolo.mode, giorno: capitolo.meetingDay, ora: capitolo.meetingTime },
-        } as unknown as Prisma.InputJsonValue,
-      },
-    });
-    r.azioniInCassetta++;
+    if (fatto) r.richiesteNuove++;
+  }
+  if (r.richiesteNuove) {
+    tutti = await caricaCapitoli(oggi);
+    r.settimana = await statoSettimana(oggi, tutti);
   }
 
-  // B1 — Cartografo: una regione per volta, prima quelle che servono, poi la Sardegna e il resto.
-  r.mappeAccodate = await accodaMappa([...daMappare], oggi);
+  // Prima del 121: la rete LinkedIn del membro e il foglio del giorno prima.
+  const imminenti = await db.bniMembro.findMany({
+    where: { next121At: { gte: new Date(oggi.getTime() - 3600_000), lte: new Date(oggi.getTime() + 7 * 86400_000) } },
+    select: { id: true, next121At: true, reteLettaAt: true },
+  });
+  for (const m of imminenti) {
+    if (!m.reteLettaAt && (await accodaReteMembro(m.id, oggi))) r.retiAccodate++;
+    if (m.next121At!.getTime() <= oggi.getTime() + ORE_PREPARAZIONE * 3600_000 && (await preparaFoglio121(m.id, m.next121At!))) r.preparazioni++;
+  }
 
-  // B3 — Preparatore 121: messaggi per le azioni approvate.
-  const m = await preparaMessaggi(oggi);
-  r.messaggiInCassetta = m.creati;
-  r.saltatiPerBudget = m.saltatiPerBudget;
+  // B1 — Cartografo: una regione per volta; la Sardegna ogni 30 giorni.
+  r.mappeAccodate = await accodaMappa(tutti, oggi);
   return r;
 }
 
-const TITOLI: Record<AzioneCapitolo["tipo"], string> = {
-  COPERTURA: "prossimi membri da conoscere",
-  COLLABORAZIONE: "proponi una collaborazione al collega",
-  VISITA: "partecipa alla riunione",
-  "121_DIRIGENZA": "121 con la dirigenza",
-  MAPPARE: "da mappare",
-};
+// ─── Cartografo: quale regione rileggere ───────────────────────────────────
 
-async function accodaMappa(prioritarie: string[], oggi: Date): Promise<number> {
+async function accodaMappa(tutti: CapitoloCaricato[], oggi: Date): Promise<number> {
   const attivo = await db.agentRun.findFirst({ where: { agent: "cartografo_bni", status: { in: ["IN_CODA", "IN_CORSO"] } } });
   if (attivo) return 0;
-  const dopo = new Date(oggi.getTime() - GIORNI_TRA_MAPPE * 86400_000);
-  const recenti = await db.agentRun.findMany({ where: { agent: "cartografo_bni", queuedAt: { gt: dopo } }, select: { input: true } });
-  const fatte = new Set(recenti.map((x) => norm((x.input as { regione?: string } | null)?.regione)));
-  const regione = [...prioritarie, ...REGIONI_ITALIA].find((g) => !fatte.has(norm(g)));
+  const recenti = await db.agentRun.findMany({
+    where: { agent: "cartografo_bni", status: { in: ["FATTO", "IN_CODA", "IN_CORSO"] }, queuedAt: { gt: new Date(oggi.getTime() - 90 * 86400_000) } },
+    select: { input: true, queuedAt: true },
+  });
+  const ultimaVolta = (regione: string) =>
+    Math.max(0, ...recenti.filter((x) => norm((x.input as { regione?: string } | null)?.regione) === norm(regione)).map((x) => x.queuedAt.getTime()));
+  // Prima le regioni dei capitoli senza membri, poi l'ordine fisso (Sardegna per prima).
+  const senzaMembri = tutti.filter((t) => !t.membri.length && t.capitolo.regioneItaliana).map((t) => t.capitolo.regioneItaliana!);
+  const regione = [...senzaMembri, ...REGIONI_ITALIA].find((g) => oggi.getTime() - ultimaVolta(g) > giorniTraMappe(g) * 86400_000);
   if (!regione) return 0;
   await db.agentRun.create({ data: { agent: "cartografo_bni", status: "IN_CODA", input: { regione } } });
   return 1;
 }
 
-// ─── B3: Preparatore 121 ───────────────────────────────────────────────────
+/**
+ * La richiesta di 121 ancora in cassetta non serve più quando il 121 è fissato o fatto: si chiude
+ * da sola (come "mandata": evidentemente è partita).
+ */
+export async function chiudiRichiesteSuperate(membroId: string, motivo: string, oggi = new Date()): Promise<number> {
+  const r = await db.approvalItem.updateMany({
+    where: { bniMembroId: membroId, kind: KIND_MESSAGGIO_BNI, status: "IN_ATTESA" },
+    data: { status: "APPROVATO", note: motivo, decidedAt: oggi },
+  });
+  return r.count;
+}
+
+// ─── Rete del membro (lavoro di browser su LinkedIn) ───────────────────────
+
+/** Accoda la lettura della rete LinkedIn di un membro, se non è già in corso o fatta da poco. */
+export async function accodaReteMembro(membroId: string, oggi = new Date()): Promise<boolean> {
+  const gia = await db.agentRun.findFirst({
+    where: { agent: "rete_membro", bniMembroId: membroId, OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { queuedAt: { gt: new Date(oggi.getTime() - 30 * 86400_000) } }] },
+  });
+  if (gia) return false;
+  const membro = await db.bniMembro.findUnique({ where: { id: membroId }, select: { name: true, company: true, profession: true, chapter: true, linkedinUrl: true } });
+  if (!membro) return false;
+  const settori = await db.casoStudio.findMany({ where: { stato: "ATTIVO" }, select: { settore: true } });
+  await db.agentRun.create({
+    data: {
+      agent: "rete_membro",
+      bniMembroId: membroId,
+      status: "IN_CODA",
+      input: {
+        membro: { nome: membro.name, azienda: membro.company, categoria: membro.profession, capitolo: membro.chapter, linkedin: membro.linkedinUrl },
+        settoriCasiStudio: settori.map((s) => s.settore).filter(Boolean),
+      },
+    },
+  });
+  return true;
+}
+
+// ─── Preparatore 121: la richiesta ─────────────────────────────────────────
 
 interface RispostaMessaggio {
   messaggio: string;
@@ -318,78 +447,179 @@ const SCHEMA_MESSAGGIO: Schema = {
   required: ["messaggio", "nota_per_alessio"],
 };
 
-const SCOPI: Record<string, string> = {
-  COPERTURA: "chiedere un 121 per conoscersi: in Sardegna Alessio vuole conoscere tutti i membri BNI",
-  COLLABORAZIONE: "proporre una collaborazione a un collega che fa il suo stesso mestiere in un altro capitolo (scambio di lavoro, non concorrenza)",
-  VISITA: "chiedere di poter partecipare come ospite alla prossima riunione del capitolo",
-  "121_DIRIGENZA": "chiedere un 121 a chi guida il capitolo, per presentarsi: nel capitolo nessuno fa il suo mestiere",
+const SCOPI: Record<Motivo, string> = {
+  STESSO_RUOLO:
+    "presentarsi a un collega che nel suo capitolo fa il suo stesso mestiere (web, marketing, comunicazione). Alessio lo contatta per primo per rispetto: occupa quella posizione nel capitolo. Proponi di conoscersi e di capire come collaborare, senza nessuna concorrenza",
+  DIRIGENZA: "chiedere un 121 a chi guida il capitolo (presidenza, formazione o eventi) per presentarsi e conoscersi",
+  PRESIDENTE:
+    "chiedere un 121 al presidente del capitolo per presentarsi. Nel 121 Alessio gli chiederà chi sono i membri più attivi: nel messaggio basta proporre di conoscersi",
+  INDICATO: "chiedere un 121 per conoscersi: è stato indicato ad Alessio come uno dei membri più attivi del capitolo",
+  ALTRI: "chiedere un 121 per conoscersi: Alessio vuole conoscere tutti i membri BNI, una segnalazione può nascere da chiunque",
 };
 
-async function preparaMessaggi(oggi: Date): Promise<{ creati: number; saltatiPerBudget: number }> {
-  const approvate = await db.approvalItem.findMany({
-    where: { kind: KIND_AZIONE_BNI, status: "APPROVATO", decidedAt: { gt: new Date(oggi.getTime() - 30 * 86400_000) } },
-    include: { bniChapter: true },
-  });
-  let creati = 0;
-  let saltatiPerBudget = 0;
-  for (const voce of approvate) {
-    const azione = voce.payload as unknown as AzioneCapitolo;
-    for (const d of azione.destinatari ?? []) {
-      const gia = await db.approvalItem.findFirst({ where: { kind: KIND_MESSAGGIO_BNI, bniMembroId: d.membroId, createdAt: { gt: voce.createdAt } } });
-      if (gia) continue;
-      if (!(await budgetDisponibile(oggi)).ok) {
-        saltatiPerBudget++;
-        continue;
-      }
-      const membro = await db.bniMembro.findUnique({ where: { id: d.membroId } });
-      if (!membro) continue;
-      const run = await db.agentRun.create({ data: { bniMembroId: membro.id, agent: "preparatore_121", status: "IN_CORSO", attempts: 1, startedAt: new Date() } });
-      try {
-        const ai = await chiediJSON<RispostaMessaggio>({
-          sistema: `${REGOLE_COMUNI}\n\nSei il Preparatore 121 della squadra BNI di Alessio Loi (Karalisweb, siti web e marketing digitale con il Metodo SD, capitolo BNI Atlantide di Cagliari). Scrivi il messaggio WhatsApp che Alessio manderà a un membro BNI. Breve, personale (usa il nome e il mestiere del membro), niente vendita: lo scopo è solo l'incontro.`,
-          testo: [
-            `SCOPO: ${SCOPI[azione.tipo] ?? "presentarsi"}`,
-            `PERCHÉ: ${azione.motivo}`,
-            `MEMBRO: ${membro.name}${membro.company ? `, ${membro.company}` : ""}${membro.profession ? ` (${membro.profession})` : ""}`,
-            `CAPITOLO: ${voce.bniChapter?.name ?? membro.chapter ?? "?"}${voce.bniChapter?.city ? `, ${voce.bniChapter.city}` : ""}`,
-            d.ruolo ? `RUOLO NEL CAPITOLO: ${d.ruolo}` : null,
-            membro.seeking ? `COSA CERCA (il suo cliente ideale): ${membro.seeking}` : null,
-          ].filter(Boolean).join("\n"),
-          schema: SCHEMA_MESSAGGIO,
-        });
-        await db.$transaction([
-          db.agentReport.create({
-            data: {
-              bniMembroId: membro.id,
-              agent: "preparatore_121",
-              runId: run.id,
-              summary: `Messaggio per ${membro.name} (${azione.tipo})`,
-              findings: { ...ai.dati, motoreAI: `${ai.motore} ${ai.modello}` } as Prisma.InputJsonValue,
-              confidence: "MEDIA",
-              collectedAt: oggi,
-              validUntil: new Date(oggi.getTime() + 30 * 86400_000),
-            },
-          }),
-          db.agentRun.update({ where: { id: run.id }, data: { status: "FATTO", finishedAt: new Date(), costCents: ai.costCents } }),
-          db.approvalItem.create({
-            data: {
-              bniMembroId: membro.id,
-              bniChapterId: voce.bniChapterId,
-              kind: KIND_MESSAGGIO_BNI,
-              agent: "preparatore_121",
-              title: `Messaggio a ${membro.name}`,
-              payload: { ...ai.dati, tipo: azione.tipo, telefono: membro.phone, capitolo: voce.bniChapter?.name ?? membro.chapter } as Prisma.InputJsonValue,
-            },
-          }),
-        ]);
-        creati++;
-      } catch (err) {
-        await db.agentRun.update({
-          where: { id: run.id },
-          data: { status: "FALLITO", finishedAt: new Date(), error: (err instanceof Error ? err.message : String(err)).slice(0, 500) },
-        });
-      }
-    }
+const FORMATI: Record<ReturnType<typeof formato121>, string> = {
+  PRESENZA: "proponi di vedersi di persona per un caffè (oppure online su Google Meet, se preferisce)",
+  ONLINE: "proponi un 121 online su Google Meet",
+  A_SCELTA: "proponi di vedersi di persona oppure online su Google Meet, come preferisce",
+};
+
+const NOTE_MOTIVO: Record<Motivo, string> = {
+  STESSO_RUOLO: "Fa il tuo mestiere: va per primo, per rispetto e per collaborare.",
+  DIRIGENZA: "Guida il capitolo.",
+  PRESIDENTE: "Nel capitolo nessuno fa il tuo mestiere: si parte dal presidente. Chiedigli chi sono i più attivi.",
+  INDICATO: "Indicato come uno dei più attivi.",
+  ALTRI: "Da conoscere: in BNI contano tutti.",
+};
+
+async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] }, oggi: Date): Promise<boolean | "budget"> {
+  if (!(await budgetDisponibile(oggi)).ok) return "budget";
+  const membro = await db.bniMembro.findUnique({ where: { id: p.membro.id } });
+  if (!membro) return false;
+  const formato = formato121(formatoDa(p.capitolo.mode));
+  const run = await db.agentRun.create({ data: { bniMembroId: membro.id, agent: "preparatore_121", status: "IN_CORSO", attempts: 1, startedAt: new Date() } });
+  try {
+    const ai = await chiediJSON<RispostaMessaggio>({
+      sistema: `${REGOLE_COMUNI}\n\nSei il Preparatore 121 della squadra BNI di Alessio Loi (Karalisweb, siti web e marketing digitale con il Metodo SD, capitolo BNI Atlantide di Cagliari). Scrivi il messaggio WhatsApp che Alessio manderà a un membro BNI. Breve, personale (usa il nome e il mestiere del membro), niente vendita: lo scopo è solo l'incontro.`,
+      testo: [
+        `SCOPO: ${SCOPI[p.motivo]}`,
+        `FORMATO: ${FORMATI[formato]}`,
+        `MEMBRO: ${membro.name}${membro.company ? `, ${membro.company}` : ""}${membro.profession ? ` (${membro.profession})` : ""}`,
+        `CAPITOLO: ${p.capitolo.name}${p.capitolo.city ? `, ${p.capitolo.city}` : ""}${p.capitolo.isMine ? " (è il capitolo di Alessio)" : ""}`,
+        membro.indicatoDa ? `CHI L'HA INDICATO: ${membro.indicatoDa}` : null,
+      ].filter(Boolean).join("\n"),
+      schema: SCHEMA_MESSAGGIO,
+    });
+    await db.$transaction([
+      db.agentReport.create({
+        data: {
+          bniMembroId: membro.id,
+          agent: "preparatore_121",
+          runId: run.id,
+          summary: `Richiesta di 121 per ${membro.name} (${p.motivo})`,
+          findings: { ...ai.dati, motivo: p.motivo, formato, motoreAI: `${ai.motore} ${ai.modello}` } as Prisma.InputJsonValue,
+          confidence: "MEDIA",
+          collectedAt: oggi,
+          validUntil: new Date(oggi.getTime() + 30 * 86400_000),
+        },
+      }),
+      db.agentRun.update({ where: { id: run.id }, data: { status: "FATTO", finishedAt: new Date(), costCents: ai.costCents } }),
+      db.approvalItem.create({
+        data: {
+          bniMembroId: membro.id,
+          bniChapterId: p.capitolo.id,
+          kind: KIND_MESSAGGIO_BNI,
+          agent: "preparatore_121",
+          title: `121 con ${membro.name}`,
+          payload: {
+            ...ai.dati,
+            tipo: p.motivo,
+            perche: NOTE_MOTIVO[p.motivo],
+            formato,
+            telefono: membro.phone,
+            capitolo: p.capitolo.name,
+          } as Prisma.InputJsonValue,
+        },
+      }),
+    ]);
+    return true;
+  } catch (err) {
+    await db.agentRun.update({
+      where: { id: run.id },
+      data: { status: "FALLITO", finishedAt: new Date(), error: (err instanceof Error ? err.message : String(err)).slice(0, 500) },
+    });
+    return false;
   }
-  return { creati, saltatiPerBudget };
+}
+
+// ─── Visita al capitolo ────────────────────────────────────────────────────
+
+async function proponiVisita(
+  capitolo: CapitoloCaricato["capitolo"],
+  membri: MembroPerRegole[],
+  cop: { conosciuti: number; totale: number },
+  oggi: Date
+): Promise<boolean | "budget"> {
+  if (!(await budgetDisponibile(oggi)).ok) return "budget";
+  const presidente = membri.find((m) => m.leadershipRole === "PRESIDENTE") ?? null;
+  const formato = formatoDa(capitolo.mode);
+  const quando = [capitolo.meetingDay, capitolo.meetingTime].filter(Boolean).join(" alle ");
+  try {
+    const ai = await chiediJSON<RispostaMessaggio>({
+      sistema: `${REGOLE_COMUNI}\n\nSei il Preparatore 121 della squadra BNI di Alessio Loi. Scrivi il messaggio WhatsApp con cui Alessio chiede al presidente di un capitolo BNI di partecipare come visitatore a una riunione. Alessio ha già conosciuto con un 121 una parte dei membri del capitolo: dillo con naturalezza, senza numeri precisi.`,
+      testo: [
+        `CAPITOLO: ${capitolo.name}${capitolo.city ? `, ${capitolo.city}` : ""}`,
+        `RIUNIONE: ${formato === "ONLINE" ? "online" : formato === "IBRIDO" ? "ibrida (in presenza e online)" : "in presenza"}${quando ? `, ${quando}` : ""}${capitolo.sede ? `, ${capitolo.sede}` : ""}`,
+        presidente ? `PRESIDENTE: ${presidente.name}` : "PRESIDENTE: non noto. Saluta con un semplice \"Ciao\", senza nome e senza titoli.",
+      ].join("\n"),
+      schema: SCHEMA_MESSAGGIO,
+    });
+    await db.approvalItem.create({
+      data: {
+        bniChapterId: capitolo.id,
+        bniMembroId: presidente?.id ?? null,
+        kind: KIND_VISITA_CAPITOLO,
+        agent: "copertura_sardegna",
+        title: `Visita al capitolo ${capitolo.name}`,
+        payload: {
+          ...ai.dati,
+          perche: `Hai conosciuto ${cop.conosciuti} membri su ${cop.totale}: è il momento della visita, ti conoscono già.`,
+          telefono: presidente?.phone ?? null,
+          capitolo: capitolo.name,
+          formato,
+          quando: quando || null,
+          sede: capitolo.sede,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Il foglio del giorno prima (niente AI: solo fatti della scheda) ────────
+
+async function preparaFoglio121(membroId: string, quando: Date): Promise<boolean> {
+  const gia = await db.approvalItem.findFirst({
+    where: { kind: KIND_PREPARAZIONE_121, bniMembroId: membroId, createdAt: { gt: new Date(quando.getTime() - 3 * 86400_000) } },
+  });
+  if (gia) return false;
+  const [m, presentazioni, caso, capitolo] = await Promise.all([
+    db.bniMembro.findUnique({ where: { id: membroId } }),
+    db.bniPresentazione.findMany({ where: { membroId, stato: "DA_CHIEDERE" }, orderBy: { createdAt: "asc" }, take: 5 }),
+    db.casoStudio.findFirst({ where: { stato: "ATTIVO", storia: { not: null } }, orderBy: { confermatoAt: "desc" } }),
+    db.bniMembro.findUnique({ where: { id: membroId }, select: { chapter: true } }).then((x) => (x?.chapter ? db.bniChapter.findFirst({ where: { name: { equals: x.chapter, mode: "insensitive" } } }) : null)),
+  ]);
+  if (!m) return false;
+  const altri = capitolo
+    ? await db.bniMembro.count({ where: { chapter: { equals: capitolo.name, mode: "insensitive" }, status: "ATTIVO" } })
+    : 0;
+  await db.approvalItem.create({
+    data: {
+      bniMembroId: m.id,
+      bniChapterId: capitolo?.id ?? null,
+      kind: KIND_PREPARAZIONE_121,
+      agent: "preparatore_121",
+      title: `Domani: 121 con ${m.name}`,
+      payload: {
+        quando: quando.toISOString(),
+        chi: [m.name, m.company, m.profession].filter(Boolean).join(" · "),
+        capitolo: m.chapter,
+        ruolo: m.leadershipRole,
+        cosaFa: m.cosaFa,
+        referenzeCerca: m.seeking,
+        referenzePuoDare: m.referenzePuoDare,
+        linkedin: m.linkedinUrl,
+        presentazioni: presentazioni.map((p) => ({ nome: p.nome, ruolo: p.ruolo, perche: p.perche, linkedin: p.linkedinUrl })),
+        casoStudio: caso ? { titolo: caso.titolo, storia: caso.storia } : null,
+        domande: [
+          "Chi è il tuo cliente ideale? Fammi un esempio concreto dell'ultima persona giusta per te.",
+          "Chi conosci tra i tuoi clienti e nel tuo giro? Che tipo di aziende vedi ogni settimana?",
+          ...(presentazioni.length ? ["Ho visto che conosci alcune persone su LinkedIn: me le presenteresti?"] : []),
+          ...(m.leadershipRole === "PRESIDENTE" ? [`Chi sono i membri più attivi o più interessanti del capitolo${altri ? ` (${altri} membri)` : ""}?`] : []),
+        ],
+      } as Prisma.InputJsonValue,
+    },
+  });
+  return true;
 }

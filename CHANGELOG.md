@@ -13,6 +13,30 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.47.0] - 2026-10-17
+
+### Added
+- **Fase 1 — Ricerca**, definita con Alessio (vedi `PROGETTO-AGENTI.md`). Nuova sezione di menu **RICERCA**.
+- **121 BNI** (`/bni`): obiettivo **10 121 a settimana**. Il Pianificatore tiene 15 richieste aperte, 2 capitoli alla volta, con l'ordine di Alessio in ogni capitolo: **prima chi fa il suo mestiere** (per rispetto), poi **presidente e responsabile formazione/eventi**, poi **tutti gli altri**; senza un collega si parte dal **presidente** e chi lui indica sale in cima. Contatore della settimana, 121 in calendario, richieste aperte con "Fissato", capitoli con quanti membri conosci.
+- **Scheda del capitolo**: nome, zona, formato, giorno, ora, sede, avanzamento, l'ordine dei membri, "Già conosciuto" per i 121 del passato. **Visita al capitolo** proposta quando ne conosci un terzo.
+- **Scheda del membro** in 7 parti: chi è, cosa fa, **referenze che cerca**, **referenze che può dare**, persone da farsi presentare, la vostra storia, prossimo passo. **Ricerca per bisogno** ("commercialista a Cagliari") in **Membri BNI**.
+- **Dopo-121**: incolli la trascrizione di Meet (online) o detti un vocale (di persona) e la scheda si compila da sola.
+- **Prima del 121**: l'agente legge la **rete LinkedIn** del membro e prepara 3-5 persone da farsi presentare; il giorno prima, in Cassetta, il foglio del 121.
+- **Casi studio** (`/casi-studio`): carichi il PDF, l'AI scrive la storia da 30 secondi e le chiavi (settore, aziende simili, persone simili), tu confermi; valgono 6 mesi.
+- **Ricerca clienti guidata dalle chiavi**: 5 aziende nuove al giorno da Google Maps e Google (server), Facebook e Instagram (browser); persone simili e reti BNI su LinkedIn (browser, max 2 lavori al giorno). Prima la Sardegna, poi l'Italia. Un filtro AI tiene solo chi fa lo stesso mestiere del cliente del caso.
+- **Persone LinkedIn** (`/persone`): il contenitore LinkedIn, persona sempre collegata alla sua azienda; i membri BNI trovati restano relazione.
+- Agenti nuovi: Pianificatore 121, Rete del membro, Dopo-121, Lettore casi studio, Cercatore Meta, Cercatore LinkedIn.
+
+### Changed
+- La Squadra BNI non propone più "un'azione per capitolo" (collaborazione/visita/121 con la dirigenza): le vecchie voci `AZIONE_BNI` in attesa si chiudono da sole.
+- Il Cartografo rilegge la Sardegna ogni 30 giorni (i ruoli cambiano) e porta anche la sede.
+- I lavori di browser BNI passano davanti a tutti gli altri.
+- L'Esploratore usa le chiavi dei casi studio; senza chiavi torna a categorie × città.
+- Menu: "Rete BNI" esce dal menu (la pagina resta), "Opportunità" passa in VENDITA.
+
+### Note
+- Prove sulla copia di produzione: dopo-121 da trascrizione 0,1 centesimi; caso studio da PDF letto bene; una ricerca "costruzione piscine Cagliari" con filtro 0,2 centesimi (5 ditte di piscine salvate, 10 scartate perché fuori mestiere, 5 rimandate).
+
 ## [3.46.0] - 2026-10-16
 
 ### Added

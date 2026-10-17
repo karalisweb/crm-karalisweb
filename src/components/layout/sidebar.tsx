@@ -17,6 +17,7 @@ import {
   fixedNavItems,
   badgeColorClasses,
   dotColorClasses,
+  voceAttiva,
   type BadgeColor,
 } from "./nav-items";
 
@@ -28,8 +29,7 @@ export function Sidebar() {
   const isAdmin = userRole === "ADMIN";
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(href + "/");
+    return voceAttiva(pathname, href);
   };
 
   return (

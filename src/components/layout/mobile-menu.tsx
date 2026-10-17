@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./sidebar-context";
-import { navSections, fixedNavItems, badgeColorClasses, type BadgeColor } from "./nav-items";
+import { navSections, fixedNavItems, badgeColorClasses, voceAttiva, type BadgeColor } from "./nav-items";
 import { LogOut, Settings, X } from "lucide-react";
 
 /**
@@ -46,8 +46,7 @@ export function MobileMenu() {
   }, [open]);
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(href + "/");
+    return voceAttiva(pathname, href);
   };
 
   return (

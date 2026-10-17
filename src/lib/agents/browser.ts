@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { CHIAVI_BROWSER, schedaDi } from "./registro";
 import { SERVIZI } from "./tipi";
 import { importaMappaBni, type EsitoMappa } from "./bni";
+import { importaAziendeMeta, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
 /** Quanto vale un referto di browser prima di essere rifatto. */
 export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
@@ -19,8 +20,14 @@ export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
   meta_ads: 30,
   linkedin_azienda: 60,
   decision_maker: 180,
-  cartografo_bni: 90,
+  cartografo_bni: 30,
+  rete_membro: 180,
+  cerca_meta: 60,
+  cerca_linkedin: 60,
 };
+
+/** I lavori BNI passano davanti: i 121 vengono prima di tutto. */
+const BROWSER_BNI = ["cartografo_bni", "rete_membro"];
 
 export interface LavoroBrowser {
   runId: string;
@@ -50,12 +57,19 @@ function linkSocialNoti(auditData: unknown, socialUrl: string | null): Record<st
 
 /** Prende in carico fino a `limit` lavori, i più vecchi per primi. */
 export async function prendiLavori(limit: number): Promise<LavoroBrowser[]> {
-  const candidati = await db.agentRun.findMany({
-    where: { status: "IN_CODA", agent: { in: CHIAVI_BROWSER } },
+  const prima = await db.agentRun.findMany({
+    where: { status: "IN_CODA", agent: { in: BROWSER_BNI } },
     orderBy: { queuedAt: "asc" },
     take: limit,
     select: { id: true },
   });
+  const dopo = prima.length >= limit ? [] : await db.agentRun.findMany({
+    where: { status: "IN_CODA", agent: { in: CHIAVI_BROWSER.filter((k) => !BROWSER_BNI.includes(k)) } },
+    orderBy: { queuedAt: "asc" },
+    take: limit - prima.length,
+    select: { id: true },
+  });
+  const candidati = [...prima, ...dopo];
   const presi: LavoroBrowser[] = [];
   for (const c of candidati) {
     // Presa atomica: se due Mac chiedono insieme, il lavoro va a uno solo.
@@ -122,7 +136,7 @@ export class ErroreLavoro extends Error {
 }
 
 /** Chiude un lavoro di browser con il referto (o con il motivo del fallimento). */
-export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: EsitoMappa }> {
+export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: EsitoMappa; importazione?: EsitoImport }> {
   const run = await db.agentRun.findUnique({ where: { id: c.runId } });
   if (!run || !CHIAVI_BROWSER.includes(run.agent)) throw new ErroreLavoro(404, "Lavoro non trovato");
   if (run.status !== "IN_CORSO") throw new ErroreLavoro(409, `Lavoro non in corso (stato ${run.status})`);
@@ -135,7 +149,11 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
   const oggi = new Date();
   const giorni = VALIDITA_BROWSER_GIORNI[run.agent] ?? 30;
   let mappa: EsitoMappa | undefined;
+  let importazione: EsitoImport | undefined;
   if (run.agent === "cartografo_bni") mappa = await importaMappaBni(c.referto.findings, oggi);
+  if (run.agent === "cerca_meta") importazione = await importaAziendeMeta(run.input, c.referto.findings);
+  if (run.agent === "cerca_linkedin") importazione = await importaPersoneLinkedin(run.input, c.referto.findings);
+  if (run.agent === "rete_membro") importazione = await importaReteMembro(run.bniMembroId, c.referto.findings, oggi);
 
   await db.$transaction([
     db.agentReport.create({
@@ -146,7 +164,7 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
         agent: run.agent,
         runId: run.id,
         summary: c.referto.summary,
-        findings: { ...c.referto.findings, ...(mappa ? { importazione: mappa } : {}) } as Prisma.InputJsonValue,
+        findings: { ...c.referto.findings, ...(mappa ? { importazione: mappa } : {}), ...(importazione ? { importazione } : {}) } as Prisma.InputJsonValue,
         levers: c.referto.levers as Prisma.InputJsonValue,
         evidence: c.referto.evidence as Prisma.InputJsonValue,
         confidence: c.referto.confidence,
@@ -156,5 +174,5 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
     }),
     db.agentRun.update({ where: { id: run.id }, data: { status: "FATTO", finishedAt: new Date() } }),
   ]);
-  return { ok: true, mappa };
+  return { ok: true, mappa, importazione };
 }
