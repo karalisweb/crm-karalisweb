@@ -524,8 +524,10 @@ print_success "Prisma client generato"
 # ═══════════════════════════════════════════
 
 print_step "Step 8/9 - Build Next.js sul server..."
-ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build"
-print_success "Build completata"
+# Con output "standalone" il server non serve .next/static né public: vanno copiati dentro
+# .next/standalone, altrimenti le pagine escono senza grafica (CSS e JS in 404).
+ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public"
+print_success "Build completata (file statici copiati nello standalone)"
 
 # ═══════════════════════════════════════════
 # STEP 9: Restart PM2 + Health check
@@ -560,13 +562,23 @@ for i in 1 2 3 4 5 6; do
     echo -e "  ${YELLOW}tentativo $i/6: HTTP $HTTP_STATUS, riprovo...${NC}"
 done
 
+# Anche la grafica: il primo CSS della pagina di login deve rispondere 200 (vedi la copia nello standalone).
+if [ "$HEALTH_OK" = true ]; then
+    CSS_STATUS=$(ssh $SSH_OPTS $VPS_HOST "u=\$(curl -s http://localhost:${SERVER_PORT}/login | grep -o '/_next/static/[^\"]*\.css' | head -1); [ -n \"\$u\" ] && curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}\$u || echo 000" 2>/dev/null || echo "000")
+    if [ "$CSS_STATUS" != "200" ]; then
+        HEALTH_OK=false
+        HTTP_STATUS="CSS-$CSS_STATUS"
+        print_error "La pagina risponde ma senza grafica (CSS HTTP $CSS_STATUS)"
+    fi
+fi
+
 if [ "$HEALTH_OK" = true ]; then
     print_success "Health check OK (HTTP 200 su /api/health)"
 else
     # 9d: ROLLBACK automatico al commit precedente.
     print_error "Health check fallito (HTTP $HTTP_STATUS) → ROLLBACK automatico..."
     if [ -n "$ROLLBACK_COMMIT" ]; then
-        ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && git reset --hard $ROLLBACK_COMMIT && npm install && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build && pm2 restart $PM2_PROCESS --update-env && pm2 save" \
+        ssh $SSH_OPTS $VPS_HOST "cd $VPS_PATH && git reset --hard $ROLLBACK_COMMIT && npm install && export NODE_OPTIONS='--max-old-space-size=4096' && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && pm2 restart $PM2_PROCESS --update-env && pm2 save" \
             || print_warning "Errori durante il rollback, verifico comunque lo stato..."
         sleep 5
         ROLLBACK_STATUS=$(ssh $SSH_OPTS $VPS_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:${SERVER_PORT}/api/health" 2>/dev/null || echo "000")
