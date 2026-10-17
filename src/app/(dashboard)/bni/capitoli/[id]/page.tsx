@@ -89,7 +89,7 @@ export default function CapitoloPage({ params }: { params: Promise<{ id: string 
 
   return (
     <div className="space-y-5 min-w-0">
-      <Link href="/bni" className="text-sm text-muted-foreground hover:underline flex items-center gap-1"><ArrowLeft className="h-4 w-4" /> 121 BNI</Link>
+      <Link href="/bni" className="text-sm text-muted-foreground hover:underline flex items-center gap-1"><ArrowLeft className="h-4 w-4" /> Incontri BNI</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold break-words">{c.nome}</h1>

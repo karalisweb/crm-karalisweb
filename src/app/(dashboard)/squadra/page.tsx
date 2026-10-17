@@ -132,10 +132,10 @@ export default function SquadraPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Bot className="h-6 w-6 text-primary" />
-            Squadra
+            Agenti al lavoro
           </h1>
           <p className="text-sm text-muted-foreground">
-            Gli agenti che lavorano al posto tuo. Di notte analizzano; la mattina trovi in Cassetta le aziende che meritano.
+            Chi lavora al posto tuo, cosa ha fatto e quanto è costato questo mese.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

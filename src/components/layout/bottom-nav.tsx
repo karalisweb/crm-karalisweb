@@ -4,18 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  ClipboardCheck,
-  Video,
-  Repeat,
-  Search,
+  Home,
+  Inbox,
+  Handshake,
+  Users,
   Menu,
 } from "lucide-react";
 
 const links = [
-  { name: "Analizza", href: "/da-analizzare", icon: ClipboardCheck },
-  { name: "Video", href: "/fare-video", icon: Video },
-  { name: "Follow-up", href: "/follow-up", icon: Repeat },
-  { name: "Cerca", href: "/search", icon: Search },
+  { name: "Oggi", href: "/", icon: Home },
+  { name: "Approva", href: "/cassetta", icon: Inbox },
+  { name: "Incontri", href: "/bni", icon: Handshake },
+  { name: "Rubrica", href: "/bni/membri", icon: Users },
 ];
 
 export function BottomNav() {
@@ -27,7 +27,7 @@ export function BottomNav() {
         {links.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
+            (item.href !== "/" && pathname.startsWith(item.href) && !(item.href === "/bni" && pathname.startsWith("/bni/membri")));
 
           return (
             <Link

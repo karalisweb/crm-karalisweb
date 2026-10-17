@@ -6,14 +6,10 @@ import {
   Repeat,
   CalendarCheck,
   Handshake,
-  Flame,
-  Sun,
   Archive,
-  ScanSearch,
   Video,
   Phone,
   Trophy,
-  Snowflake,
   MessageCircle,
   Mail,
   Eye,
@@ -26,6 +22,7 @@ import {
   Users,
   FileText,
   Contact,
+  Building2,
 } from "lucide-react";
 
 // Badge types per colore
@@ -52,31 +49,20 @@ export interface NavSection {
 export const navSections: NavSection[] = [
   {
     title: "",
-    items: [{ href: "/", label: "Home", icon: Home }],
-  },
-  {
-    title: "SQUADRA",
     items: [
-      { href: "/cassetta", label: "Cassetta", icon: Inbox, badgeKey: "cassetta", badgeColor: "yellow" },
-      { href: "/squadra", label: "Squadra", icon: Bot },
+      { href: "/", label: "Oggi", icon: Home },
+      { href: "/cassetta", label: "Da approvare", icon: Inbox, badgeKey: "cassetta", badgeColor: "yellow" },
     ],
   },
   {
-    title: "RICERCA",
+    // Fase 1 del processo (PROGETTO-AGENTI.md): BNI per primo, poi i clienti dai casi studio.
+    title: "1 · RICERCA",
     items: [
-      { href: "/bni", label: "121 BNI", icon: Handshake },
-      { href: "/bni/membri", label: "Membri BNI", icon: Users },
+      { href: "/bni", label: "Incontri BNI", icon: Handshake },
+      { href: "/bni/membri", label: "Rubrica BNI", icon: Users },
       { href: "/casi-studio", label: "Casi studio", icon: FileText },
-      { href: "/persone", label: "Persone LinkedIn", icon: Contact },
-    ],
-  },
-  {
-    title: "ANALISI",
-    items: [
-      { href: "/da-analizzare", label: "Da Analizzare", icon: ScanSearch, badgeKey: "daAnalizzare", badgeColor: "default" },
-      { href: "/hot-leads", label: "Hot Leads", icon: Flame, badgeKey: "hotLeads", badgeColor: "red" },
-      { href: "/warm-leads", label: "Warm Leads", icon: Sun, badgeKey: "warmLeads", badgeColor: "yellow" },
-      { href: "/cold-leads", label: "Cold Leads", icon: Snowflake, badgeKey: "coldLeads", badgeColor: "blue" },
+      { href: "/aziende-trovate", label: "Aziende trovate", icon: Building2 },
+      { href: "/persone", label: "Persone trovate", icon: Contact },
     ],
   },
   {
@@ -109,7 +95,10 @@ export const navSections: NavSection[] = [
   },
   {
     title: "ALTRO",
-    items: [{ href: "/archivio", label: "Archivio", icon: Archive }],
+    items: [
+      { href: "/squadra", label: "Agenti al lavoro", icon: Bot },
+      { href: "/archivio", label: "Archivio", icon: Archive },
+    ],
   },
 ];
 

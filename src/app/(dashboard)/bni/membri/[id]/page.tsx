@@ -160,7 +160,7 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="space-y-4 min-w-0">
-      <Link href="/bni/membri" className="text-sm text-muted-foreground hover:underline flex items-center gap-1"><ArrowLeft className="h-4 w-4" /> Membri BNI</Link>
+      <Link href="/bni/membri" className="text-sm text-muted-foreground hover:underline flex items-center gap-1"><ArrowLeft className="h-4 w-4" /> Rubrica BNI</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold break-words">{m.nome}</h1>

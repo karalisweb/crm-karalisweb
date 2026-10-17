@@ -13,6 +13,18 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.47.1] - 2026-10-17
+
+### Changed
+- **Home = "Oggi"**: solo quello che serve adesso — cosa fare (richieste di incontro da mandare, fogli per gli incontri, casi da confermare), gli incontri e le call di oggi e domani, e tre numeri che partono dalla nuova procedura: incontri BNI della settimana (su 10), aziende nuove di oggi (su 5), membri BNI sardi conosciuti. Avviso se gli agenti sul Mac sono fermi.
+- **Menu con i nomi del processo**: "Oggi", "Da approvare" (era Cassetta), sezione "1 · Ricerca" con Incontri BNI, Rubrica BNI, Casi studio, Aziende trovate (nuova pagina), Persone trovate; "Agenti al lavoro" (era Squadra) in fondo. Il menu Analisi esce dal menu (le pagine restano). Barra del telefono: Oggi, Approva, Incontri, Rubrica.
+- Pulsanti "Cerca adesso" e "Prepara le richieste adesso".
+- La ricerca tiene solo aziende nella zona cercata.
+- L'analisi notturna della vecchia squadra è in pausa finché non si definisce la fase di analisi.
+
+### Fixed
+- In produzione le pagine uscivano senza grafica: `deploy.sh` ora copia i file statici nello standalone e verifica il CSS dopo il deploy.
+
 ## [3.47.0] - 2026-10-17
 
 ### Added

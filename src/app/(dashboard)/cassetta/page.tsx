@@ -93,10 +93,10 @@ export default function CassettaPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Inbox className="h-6 w-6 text-primary" />
-            Cassetta
+            Da approvare
           </h1>
           <p className="text-sm text-muted-foreground">
-            Quello che la squadra ha preparato e aspetta una tua decisione. Niente parte senza di te.
+            Messaggi e proposte che gli agenti hanno preparato per te. Niente parte finché non lo approvi.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} aria-label="Aggiorna">

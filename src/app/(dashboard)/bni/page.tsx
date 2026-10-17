@@ -115,8 +115,8 @@ export default function Bni121Page() {
     <div className="space-y-5 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Handshake className="h-6 w-6 text-primary" /> 121 BNI</h1>
-          <p className="text-sm text-muted-foreground">Tutti i membri, capitolo per capitolo: prima chi fa il tuo mestiere, poi la dirigenza, poi tutti gli altri.</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><Handshake className="h-6 w-6 text-primary" /> Incontri BNI</h1>
+          <p className="text-sm text-muted-foreground">I 121 da fare: 10 a settimana, con tutti i membri, capitolo per capitolo (prima chi fa il tuo mestiere, poi chi guida il capitolo, poi tutti gli altri).</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LanciaAdesso squadra="bni" etichetta="Prepara le richieste adesso" onFatto={carica} />

@@ -62,8 +62,8 @@ export default function PersonePage() {
   return (
     <div className="space-y-5 min-w-0">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Contact className="h-6 w-6 text-primary" /> Persone LinkedIn</h1>
-        <p className="text-sm text-muted-foreground">Le persone trovate su LinkedIn: simili ai titolari dei casi studio e nelle reti dei membri BNI, ognuna con la sua azienda.</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2"><Contact className="h-6 w-6 text-primary" /> Persone trovate</h1>
+        <p className="text-sm text-muted-foreground">Titolari trovati su LinkedIn dagli agenti: simili ai titolari dei tuoi casi studio, o nella rete dei membri BNI che hai incontrato. Ognuno con la sua azienda.</p>
       </div>
       <div className="relative">
         <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

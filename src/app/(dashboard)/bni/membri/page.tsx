@@ -50,8 +50,8 @@ export default function MembriBniPage() {
   return (
     <div className="space-y-5 min-w-0">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Membri BNI</h1>
-        <p className="text-sm text-muted-foreground">Qualcuno ti chiede una referenza? Scrivi di cosa ha bisogno.</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Rubrica BNI</h1>
+        <p className="text-sm text-muted-foreground">Chi fa cosa nei capitoli BNI. Qualcuno ti chiede una referenza? Scrivi di cosa ha bisogno e trovi a chi girarla.</p>
       </div>
       <div className="relative">
         <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
