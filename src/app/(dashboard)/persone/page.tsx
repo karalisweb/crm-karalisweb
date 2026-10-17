@@ -90,7 +90,7 @@ export default function PersonePage() {
               </div>
               <div className="text-xs text-muted-foreground break-words">
                 {[p.ruolo, p.localita].filter(Boolean).join(" · ")}
-                {p.lead ? <> · <Link href={`/leads/${p.lead.id}`} className="hover:underline">{p.lead.name}</Link></> : p.aziendaNome ? ` · ${p.aziendaNome}` : ""}
+                {p.lead ? <> · <Link href={`/aziende-trovate/${p.lead.id}`} className="hover:underline">{p.lead.name}</Link></> : p.aziendaNome ? ` · ${p.aziendaNome}` : ""}
               </div>
               <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3">
                 {p.contattoInComune && <span>contatto in comune: {p.contattoInComune}</span>}

@@ -54,7 +54,7 @@ export default function AziendeTrovatePage() {
             return (
               <Card key={a.id}><CardContent className="p-3 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link href={`/leads/${a.id}`} className="font-medium hover:underline break-words">{a.name}</Link>
+                  <Link href={`/aziende-trovate/${a.id}`} className="font-medium hover:underline break-words">{a.name}</Link>
                   <Badge variant="secondary" className="text-[10px]">{CANALI[a.canale] ?? a.canale}</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground break-words">{[a.category, a.address].filter(Boolean).join(" · ")}</div>
