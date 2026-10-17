@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     where: { status: "ATTIVO", ...(capitolo ? { chapter: { equals: capitolo, mode: "insensitive" } } : {}) },
     select: {
       id: true, name: true, profession: true, company: true, chapter: true, phone: true, linkedinUrl: true,
-      cosaFa: true, seeking: true, referenzePuoDare: true, conosciutoAt: true, oneToOneCount: true, isCustomer: true, next121At: true,
+      cosaFa: true, seeking: true, referenzePuoDare: true, conosciutoAt: true, leadershipRole: true, oneToOneCount: true, isCustomer: true, next121At: true,
     },
   });
   const righe = membri.map((m) => ({ ...m, conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer }));

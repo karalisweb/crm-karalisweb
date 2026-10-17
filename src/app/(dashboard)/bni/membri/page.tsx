@@ -19,7 +19,10 @@ interface Membro {
   referenzePuoDare: string | null;
   conosciuto: boolean;
   next121At: string | null;
+  leadershipRole: string | null;
 }
+
+const RUOLI: Record<string, string> = { PRESIDENTE: "presidente", VICEPRESIDENTE: "vicepresidente", FORMAZIONE: "formazione", EVENTI: "eventi" };
 
 type Stato = "CONOSCIUTO" | "FISSATO" | "DA_INCONTRARE";
 
@@ -50,7 +53,10 @@ function RigaMembro({ m, conCapitolo, dettaglio }: { m: Membro; conCapitolo?: bo
   return (
     <Link href={`/bni/membri/${m.id}`} className={`flex items-start justify-between gap-3 rounded-lg border p-3 hover:border-primary transition ${STATI[statoDi(m)].bordo}`}>
       <div className="min-w-0">
-        <div className="font-medium break-words">{m.name}</div>
+        <div className="font-medium break-words flex flex-wrap items-center gap-2">
+          {m.name}
+          {m.leadershipRole && RUOLI[m.leadershipRole] && <span className="text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 bg-primary/15 text-primary">{RUOLI[m.leadershipRole]}</span>}
+        </div>
         <div className="text-xs text-muted-foreground break-words">{[m.profession, m.company, conCapitolo ? m.chapter : null].filter(Boolean).join(" · ")}</div>
         {dettaglio && (m.cosaFa || m.referenzePuoDare) && <div className="text-xs mt-1 break-words line-clamp-2">{m.cosaFa ?? m.referenzePuoDare}</div>}
       </div>
