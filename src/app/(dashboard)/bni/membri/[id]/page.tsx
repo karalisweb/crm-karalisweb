@@ -25,6 +25,7 @@ interface Scheda {
     azienda_collegata: { id: string; name: string; website: string | null } | null;
   };
   capitolo: { id: string; name: string; mode: string | null; meetingDay: string | null; meetingTime: string | null; sede: string | null } | null;
+  capitoli: string[];
   storia: { id: string; date: string; formato: string | null; location: string | null; notes: string | null; riassunto: string | null; promesse: string | null; haTrascrizione: boolean }[];
   presentazioni: { id: string; nome: string; ruolo: string | null; linkedinUrl: string | null; perche: string | null; stato: string }[];
   inCassetta: { id: string; kind: string; title: string; payload: Record<string, unknown> }[];
@@ -177,8 +178,20 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
             {m.indicatoDa && <span className="text-xs text-muted-foreground">indicato da {m.indicatoDa}</span>}
           </div>
         </div>
-        <Registra121 id={m.id} formatoCapitolo={d.capitolo?.mode ?? null} onFatto={carica} />
+        <div className="flex flex-wrap gap-2">
+          <Registra121 id={m.id} formatoCapitolo={d.capitolo?.mode ?? null} onFatto={carica} />
+        </div>
       </div>
+
+      <Card><CardContent className="p-3 flex flex-wrap items-center gap-2 text-sm">
+        <CalendarClock className="h-4 w-4 text-blue-600" />
+        <span>{m.next121At ? `Incontro fissato: ${dataOra(m.next121At)}` : "Hai fissato un incontro?"}</span>
+        <Input type="datetime-local" value={quando121} onChange={(e) => setQuando121(e.target.value)} className="h-8 w-auto" />
+        <Button size="sm" onClick={() => { const iso = localeAIso(quando121); if (iso) patch({ next121At: iso }, "Incontro fissato: lo trovi in Incontri BNI"); else toast.error("Scegli data e ora"); }}>
+          {m.next121At ? "Sposta" : "Segna come fissato"}
+        </Button>
+        {m.next121At && <Button size="sm" variant="ghost" onClick={() => patch({ next121At: null }, "Incontro tolto dal calendario")}>Annulla l&apos;incontro</Button>}
+      </CardContent></Card>
 
       {d.inCassetta.map((v) => (
         <Card key={v.id} className="border-amber-400"><CardContent className="p-3 space-y-2">
@@ -210,6 +223,19 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
             {m.email && <a href={`mailto:${m.email}`} className="flex items-center gap-1 hover:underline"><Mail className="h-3.5 w-3.5" />{m.email}</a>}
             {m.linkedin && <a href={m.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline"><Linkedin className="h-3.5 w-3.5" />LinkedIn</a>}
             {m.azienda_collegata && <Link href={`/leads/${m.azienda_collegata.id}`} className="hover:underline">Scheda azienda</Link>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <select
+              value={m.capitolo ?? ""}
+              onChange={(e) => e.target.value && e.target.value !== m.capitolo && patch({ capitolo: e.target.value }, `Spostato in ${e.target.value}`)}
+              className="h-8 rounded-md border bg-background px-2 text-xs"
+              aria-label="Capitolo"
+            >
+              {d.capitoli.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <Button size="sm" variant="ghost" className="h-8 text-xs text-red-600" onClick={() => { if (confirm(`${m.nome} non è più nel capitolo ${m.capitolo ?? ""}? Sparisce dalla Rubrica e dagli incontri (i dati restano).`)) patch({ stato: "EX_MEMBRO" }, "Tolto dal capitolo"); }}>
+              Non è più nel capitolo
+            </Button>
           </div>
           {!m.linkedin && (
             <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -273,15 +299,6 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
       <Sezione n={7} titolo="Prossimo passo">
         <TestoModificabile id={m.id} campo="prossimoPasso" valore={m.prossimoPasso} vuoto="Nessuno." onSalvato={carica} />
         {m.prossimoPassoAt && <div className="text-xs text-muted-foreground mt-1">entro il {data(m.prossimoPassoAt)}</div>}
-        {m.stato !== "CONOSCIUTO" && (
-          <div className="flex flex-wrap items-center gap-2 pt-3">
-            <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            <Input type="datetime-local" value={quando121} onChange={(e) => setQuando121(e.target.value)} className="h-8 w-auto" />
-            <Button size="sm" variant="outline" onClick={() => { const iso = localeAIso(quando121); if (iso) patch({ next121At: iso }, "121 in calendario"); else toast.error("Scegli data e ora"); }}>
-              {m.next121At ? "Sposta il 121" : "121 fissato"}
-            </Button>
-          </div>
-        )}
       </Sezione>
     </div>
   );

@@ -54,6 +54,10 @@ describe("Regole BNI: riconoscimenti", () => {
     expect(stessoRuolo("Social media manager")).toBe(true);
     expect(stessoRuolo("Commercialista")).toBe(false);
     expect(stessoRuolo("Serramenti e infissi")).toBe(false);
+    expect(stessoRuolo("Prodotti/Servizi Per Le Telecomunicazioni")).toBe(false);
+    expect(stessoRuolo("Stampa Grandi formati", "Grafiche Ghiani SRL")).toBe(false);
+    expect(stessoRuolo("Branding")).toBe(true);
+    expect(stessoRuolo("Agenzia di comunicazione")).toBe(true);
   });
 
   it("capitoli sardi, formato e dirigenza", () => {

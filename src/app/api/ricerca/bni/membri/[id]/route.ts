@@ -20,10 +20,11 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
     },
   });
   if (!m) return NextResponse.json({ error: "Membro non trovato" }, { status: 404 });
-  const [capitolo, inCassetta, reteInCorso] = await Promise.all([
+  const [capitolo, inCassetta, reteInCorso, capitoli] = await Promise.all([
     m.chapter ? db.bniChapter.findFirst({ where: { name: { equals: m.chapter, mode: "insensitive" } }, select: { id: true, name: true, mode: true, meetingDay: true, meetingTime: true, sede: true } }) : null,
     db.approvalItem.findMany({ where: { bniMembroId: id, status: "IN_ATTESA" }, select: { id: true, kind: true, title: true, createdAt: true, payload: true } }),
     db.agentRun.findFirst({ where: { bniMembroId: id, agent: "rete_membro", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } }),
+    db.bniChapter.findMany({ select: { name: true }, orderBy: { name: "asc" } }),
   ]);
   const conosciuto = !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer;
   const stato = conosciuto ? "CONOSCIUTO" : m.next121At && m.next121At.getTime() > Date.now() - 86400_000 ? "FISSATO" : "DA_INCONTRARE";
@@ -36,6 +37,7 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
       azienda_collegata: m.lead,
     },
     capitolo,
+    capitoli: capitoli.map((c) => c.name),
     storia: m.oneToOnes.map((o) => ({ ...o, trascrizione: undefined, haTrascrizione: !!o.trascrizione })),
     presentazioni: m.presentazioni,
     inCassetta,
@@ -58,6 +60,8 @@ const Schema = z.object({
   categoria: testo(200),
   note: testo(5000),
   conosciuto: z.boolean().optional(),
+  capitolo: z.string().min(1).max(120).optional(),
+  stato: z.enum(["ATTIVO", "EX_MEMBRO"]).optional(),
 });
 
 /** PATCH /api/ricerca/bni/membri/[id] — Alessio corregge la scheda o fissa la data del 121. */
@@ -70,6 +74,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const esistente = await db.bniMembro.findUnique({ where: { id }, select: { id: true, oneToOneCount: true, conosciutoAt: true, reteLettaAt: true } });
     if (!esistente) return NextResponse.json({ error: "Membro non trovato" }, { status: 404 });
     const p = (v: string | null | undefined) => (v === undefined ? undefined : v?.trim() || null);
+    if (d.stato === "EX_MEMBRO") {
+      // Non è più nel capitolo: le sue richieste ancora da mandare non servono più.
+      await db.approvalItem.updateMany({ where: { bniMembroId: id, status: "IN_ATTESA" }, data: { status: "SCARTATO", note: "Non è più nel capitolo", decidedAt: new Date() } });
+    }
     const data = {
       linkedinUrl: d.linkedin === undefined ? undefined : normalizzaLinkedin(d.linkedin),
       cosaFa: p(d.cosaFa),
@@ -84,6 +92,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       company: p(d.azienda),
       profession: p(d.categoria),
       notes: p(d.note),
+      chapter: d.capitolo?.trim(),
+      status: d.stato,
       // "Già conosciuto" (un 121 fatto in passato, senza registrarlo): non si toglie se ci sono 121 registrati.
       ...(d.conosciuto === true && !esistente.conosciutoAt ? { conosciutoAt: new Date() } : {}),
       ...(d.conosciuto === false && esistente.oneToOneCount === 0 ? { conosciutoAt: null } : {}),

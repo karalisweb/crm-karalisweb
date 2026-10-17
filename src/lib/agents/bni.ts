@@ -20,6 +20,7 @@ import {
   coperturaCapitolo,
   dirigenzaDa,
   dirigenzaNota,
+  gruppiCapitolo,
   eSardo,
   formato121,
   formatoDa,
@@ -296,6 +297,7 @@ export interface RiepilogoBni {
   mappeAccodate: number;
   saltatiPerBudget: number;
   vecchieChiuse: number;
+  riscritte: number;
   coperturaSardegna: { capitoli: number; membri: number; conosciuti: number; percentuale: number } | null;
 }
 
@@ -310,7 +312,7 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
   const r: RiepilogoBni = {
     settimana: await statoSettimana(oggi, tutti),
     richiesteNuove: 0, visiteProposte: 0, preparazioni: 0, retiAccodate: 0, mappeAccodate: 0, saltatiPerBudget: 0,
-    vecchieChiuse: vecchie.count, coperturaSardegna: null,
+    vecchieChiuse: vecchie.count, riscritte: 0, coperturaSardegna: null,
   };
 
   // B4 — Copertura (ogni giorno: è un conteggio, non costa nulla) e visita a un terzo.
@@ -343,6 +345,9 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
       percentuale: membriSardi ? Math.round((conosciutiSardi / membriSardi) * 100) : 0,
     };
   }
+
+  // Le richieste in attesa scritte col modello vecchio si riscrivono con quello di Alessio.
+  r.riscritte = await riscriviRichiesteVecchie(tutti, oggi);
 
   // Pianificatore — 15 richieste aperte, al massimo 8 nuove al giorno.
   const nuoveOggi = await db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, createdAt: { gte: new Date(oggi.getTime() - 20 * 3600_000) } } });
@@ -441,7 +446,7 @@ interface RispostaMessaggio {
 const SCHEMA_MESSAGGIO: Schema = {
   type: "object",
   properties: {
-    messaggio: { type: "string", description: "Messaggio WhatsApp di massimo 5 righe, in italiano, tono cordiale fra membri BNI, firmato Alessio" },
+    messaggio: { type: "string", description: "Il messaggio WhatsApp, un solo paragrafo, con il link alle disponibilità, firmato Alessio" },
     nota_per_alessio: { type: "string", description: "Una riga per Alessio: cosa chiedere o portare al 121" },
   },
   required: ["messaggio", "nota_per_alessio"],
@@ -471,6 +476,30 @@ const NOTE_MOTIVO: Record<Motivo, string> = {
   ALTRI: "Da conoscere: in BNI contano tutti.",
 };
 
+/** Il link alle disponibilità di Alessio (Google Calendar), messo in ogni richiesta di 121. */
+export const LINK_DISPONIBILITA = process.env.BNI_LINK_DISPONIBILITA || "https://calendar.app.google/XUssH72ZnzNSB6fy6";
+/** Versione del modello di messaggio: le richieste in attesa scritte col modello vecchio si riscrivono. */
+const MODELLO_MESSAGGIO = 2;
+
+const ESEMPIO_MESSAGGIO = `Ciao Cosima, sono Alessio Loi di Karalisweb, web e marketing digitale, Capitolo Atlantide di Cagliari. Ho visto che sei nel Saint Remy come geologa: collabori con studi tecnici e imprese che spesso hanno bisogno di farsi trovare online, e potremmo passarci referenze. Ti va di fare un 121, con un caffè o in videochiamata? Qui vedi le mie disponibilità: ${LINK_DISPONIBILITA} , scegli tu il momento che ti è comodo. Alessio`;
+
+type Capitolo121 = { name: string; city: string | null; isMine: boolean };
+
+/** Scrive la richiesta di 121 con il modello di Alessio. */
+async function scriviRichiesta(membro: { name: string; company: string | null; profession: string | null; indicatoDa: string | null }, capitolo: Capitolo121, motivo: Motivo) {
+  return chiediJSON<RispostaMessaggio>({
+    sistema: `${REGOLE_COMUNI}\n\nSei il Preparatore 121 della squadra BNI di Alessio Loi. Scrivi il messaggio WhatsApp con cui Alessio chiede un 121 a un membro BNI. Segui ESATTAMENTE la struttura di questo esempio, cambiando solo nome, capitolo, mestiere e la frase sul perché ha senso conoscersi:\n\n"${ESEMPIO_MESSAGGIO}"\n\nRegole: presentazione sempre "Alessio Loi di Karalisweb, web e marketing digitale, Capitolo Atlantide di Cagliari" (se il membro è anche lui dell'Atlantide scrivi "anche io nel Capitolo Atlantide"). La frase sul perché deve essere concreta per il suo mestiere: con chi lavora lui che potrebbe aver bisogno di Alessio, e viceversa; niente frasi generiche, niente vendita. Il link alle disponibilità va sempre, identico. Firma "Alessio". Un solo paragrafo, niente a capo.`,
+    testo: [
+      `MOTIVO DEL CONTATTO: ${SCOPI[motivo]}`,
+      `MEMBRO: ${membro.name}${membro.company ? `, azienda ${membro.company}` : ""}${membro.profession ? `, mestiere: ${membro.profession}` : ""}`,
+      `CAPITOLO DEL MEMBRO: ${capitolo.name}${capitolo.city ? ` (${capitolo.city})` : ""}${capitolo.isMine ? " — è lo stesso capitolo di Alessio" : ""}`,
+      membro.indicatoDa ? `CHI L'HA INDICATO: ${membro.indicatoDa}` : null,
+      `LINK DISPONIBILITÀ: ${LINK_DISPONIBILITA}`,
+    ].filter(Boolean).join("\n"),
+    schema: SCHEMA_MESSAGGIO,
+  });
+}
+
 async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] }, oggi: Date): Promise<boolean | "budget"> {
   if (!(await budgetDisponibile(oggi)).ok) return "budget";
   const membro = await db.bniMembro.findUnique({ where: { id: p.membro.id } });
@@ -478,17 +507,7 @@ async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato
   const formato = formato121(formatoDa(p.capitolo.mode));
   const run = await db.agentRun.create({ data: { bniMembroId: membro.id, agent: "preparatore_121", status: "IN_CORSO", attempts: 1, startedAt: new Date() } });
   try {
-    const ai = await chiediJSON<RispostaMessaggio>({
-      sistema: `${REGOLE_COMUNI}\n\nSei il Preparatore 121 della squadra BNI di Alessio Loi (Karalisweb, siti web e marketing digitale con il Metodo SD, capitolo BNI Atlantide di Cagliari). Scrivi il messaggio WhatsApp che Alessio manderà a un membro BNI. Breve, personale (usa il nome e il mestiere del membro), niente vendita: lo scopo è solo l'incontro.`,
-      testo: [
-        `SCOPO: ${SCOPI[p.motivo]}`,
-        `FORMATO: ${FORMATI[formato]}`,
-        `MEMBRO: ${membro.name}${membro.company ? `, ${membro.company}` : ""}${membro.profession ? ` (${membro.profession})` : ""}`,
-        `CAPITOLO: ${p.capitolo.name}${p.capitolo.city ? `, ${p.capitolo.city}` : ""}${p.capitolo.isMine ? " (è il capitolo di Alessio)" : ""}`,
-        membro.indicatoDa ? `CHI L'HA INDICATO: ${membro.indicatoDa}` : null,
-      ].filter(Boolean).join("\n"),
-      schema: SCHEMA_MESSAGGIO,
-    });
+    const ai = await scriviRichiesta(membro, p.capitolo, p.motivo);
     await db.$transaction([
       db.agentReport.create({
         data: {
@@ -517,6 +536,7 @@ async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato
             formato,
             telefono: membro.phone,
             capitolo: p.capitolo.name,
+            modello: MODELLO_MESSAGGIO,
           } as Prisma.InputJsonValue,
         },
       }),
@@ -529,6 +549,41 @@ async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato
     });
     return false;
   }
+}
+
+/**
+ * Le richieste ancora da mandare scritte con un modello vecchio si riscrivono (stesso membro, motivo
+ * ricalcolato con le regole di oggi). Quelle di chi nel frattempo è conosciuto si chiudono.
+ */
+export async function riscriviRichiesteVecchie(tutti: CapitoloCaricato[], oggi = new Date()): Promise<number> {
+  const voci = await db.approvalItem.findMany({ where: { kind: KIND_MESSAGGIO_BNI, status: "IN_ATTESA" } });
+  let riscritte = 0;
+  for (const v of voci) {
+    const pl = v.payload as { modello?: number };
+    if (pl.modello === MODELLO_MESSAGGIO || !v.bniMembroId) continue;
+    const t = tutti.find((x) => x.membri.some((m) => m.id === v.bniMembroId));
+    const m = t?.membri.find((x) => x.id === v.bniMembroId);
+    if (!t || !m || m.conosciuto) {
+      await db.approvalItem.update({ where: { id: v.id }, data: { status: "SCARTATO", note: "Superata: membro già conosciuto o non più nel capitolo", decidedAt: oggi } });
+      continue;
+    }
+    if (!(await budgetDisponibile(oggi)).ok) break;
+    const gruppo = gruppiCapitolo(t.membri).find((g) => g.membri.some((x) => x.id === m.id));
+    const motivo: Motivo = gruppo?.motivo ?? "ALTRI";
+    const membro = await db.bniMembro.findUnique({ where: { id: m.id } });
+    if (!membro) continue;
+    try {
+      const ai = await scriviRichiesta(membro, t.capitolo, motivo);
+      await db.approvalItem.update({
+        where: { id: v.id },
+        data: { payload: { ...(v.payload as object), ...ai.dati, tipo: motivo, perche: NOTE_MOTIVO[motivo], telefono: membro.phone, modello: MODELLO_MESSAGGIO } as Prisma.InputJsonValue },
+      });
+      riscritte++;
+    } catch {
+      /* si riprova al prossimo turno */
+    }
+  }
+  return riscritte;
 }
 
 // ─── Visita al capitolo ────────────────────────────────────────────────────

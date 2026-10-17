@@ -16,17 +16,22 @@ export type Dirigenza = "PRESIDENTE" | "VICEPRESIDENTE" | "FORMAZIONE" | "EVENTI
 
 /** Il ruolo di Alessio: chi fa siti, marketing digitale, comunicazione. */
 const MIO_RUOLO = [
-  /\bweb\b/, /siti\b|\bsito\b|sviluppo web|web design|web agency/, /marketing/, /comunicazion/,
-  /social media|\bsocial\b/, /\bseo\b/, /digital/, /pubblicit|advertising/, /grafic/, /e-?commerce/,
+  /\bweb\b/, /siti\b|\bsito\b|sviluppo web|web design|web agency/, /marketing/, /(?<!tele)comunicazion/,
+  /social media|\bsocial\b/, /\bseo\b/, /digital/, /pubblicit|advertising/, /grafic/, /e-?commerce/, /branding/,
 ];
 
 export function norm(s: string | null | undefined): string {
   return (s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
-/** Il membro fa il mio stesso mestiere (un "collega" nel capitolo)? */
-export function stessoRuolo(categoria: string | null | undefined, azienda?: string | null): boolean {
-  const t = `${norm(categoria)} ${norm(azienda)}`;
+/**
+ * Il membro fa il mio stesso mestiere (un "collega" nel capitolo)? Conta solo la categoria BNI:
+ * il nome dell'azienda inganna ("Grafiche Ghiani" fa stampa, non grafica). Chi fa telecomunicazioni
+ * vende telefonia: non è un collega.
+ */
+export function stessoRuolo(categoria: string | null | undefined, _azienda?: string | null): boolean {
+  const t = norm(categoria);
+  if (/telecomunicazion|telefon/.test(t)) return false;
   return MIO_RUOLO.some((r) => r.test(t));
 }
 

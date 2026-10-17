@@ -60,16 +60,23 @@ export default function Bni121Page() {
         <div className="space-y-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}</div>
       ) : dati && s ? (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card><CardContent className="p-4">
-              <div className={`text-2xl font-bold ${fatti >= s.obiettivo ? "text-green-600 dark:text-green-400" : ""}`}>{fatti}/{s.obiettivo}</div>
-              <div className="text-xs text-muted-foreground">121 questa settimana</div>
-              <div className="mt-2 h-1.5 rounded bg-muted overflow-hidden"><div className="h-full bg-primary" style={{ width: `${Math.min(100, (fatti / s.obiettivo) * 100)}%` }} /></div>
-            </CardContent></Card>
-            <Card><CardContent className="p-4"><div className="text-2xl font-bold">{s.fatti}</div><div className="text-xs text-muted-foreground">Fatti</div></CardContent></Card>
-            <Card><CardContent className="p-4"><div className="text-2xl font-bold">{s.fissati}</div><div className="text-xs text-muted-foreground">In calendario</div></CardContent></Card>
-            <Card><CardContent className="p-4"><div className="text-2xl font-bold">{s.richiesteAperte}</div><div className="text-xs text-muted-foreground">Richieste aperte (obiettivo 15)</div></CardContent></Card>
-          </div>
+          <Card><CardContent className="p-4 space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="text-sm font-semibold">Questa settimana</div>
+              <div className={`text-sm ${fatti >= s.obiettivo ? "text-green-600 dark:text-green-400 font-semibold" : "text-muted-foreground"}`}>
+                {fatti >= s.obiettivo ? "Obiettivo raggiunto" : `Ne mancano ${s.obiettivo - fatti} per arrivare a ${s.obiettivo}`}
+              </div>
+            </div>
+            <div className="h-3 rounded bg-muted overflow-hidden flex">
+              <div className="h-full bg-green-600" style={{ width: `${Math.min(100, (s.fatti / s.obiettivo) * 100)}%` }} />
+              <div className="h-full bg-blue-600" style={{ width: `${Math.min(100 - Math.min(100, (s.fatti / s.obiettivo) * 100), (s.fissati / s.obiettivo) * 100)}%` }} />
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+              <span><span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-600 mr-1.5" />{s.fatti} fatti</span>
+              <span><span className="inline-block h-2.5 w-2.5 rounded-sm bg-blue-600 mr-1.5" />{s.fissati} fissati entro domenica</span>
+              <span className="text-muted-foreground">obiettivo {s.obiettivo}</span>
+            </div>
+          </CardContent></Card>
 
           <TrackerIncontri tracker={dati.tracker} fissati={dati.calendario} visite={dati.visite} onCambio={carica} />
 
