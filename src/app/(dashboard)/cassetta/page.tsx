@@ -13,9 +13,9 @@ type Stato = "IN_ATTESA" | "APPROVATO" | "SCARTATO";
 type Area = "tutto" | "vendita" | "aziende" | "bni";
 
 const TAB: { stato: Stato; label: string }[] = [
-  { stato: "IN_ATTESA", label: "Da decidere" },
-  { stato: "APPROVATO", label: "Approvate" },
-  { stato: "SCARTATO", label: "Scartate" },
+  { stato: "IN_ATTESA", label: "Da approvare" },
+  { stato: "APPROVATO", label: "Già fatte" },
+  { stato: "SCARTATO", label: "Messe da parte" },
 ];
 
 const AREE: { area: Area; label: string }[] = [
