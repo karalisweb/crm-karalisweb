@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { STATI_CASO, data } from "@/components/ricerca/etichette";
+import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
 
 interface Chiave {
   id: string;
@@ -72,7 +73,8 @@ export default function CasiStudioPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><FileText className="h-6 w-6 text-primary" /> Casi studio</h1>
           <p className="text-sm text-muted-foreground">Ogni caso dice cosa cercare prima: aziende dello stesso settore, aziende simili, persone simili al titolare. Vale 6 mesi.</p>
         </div>
-        <div>
+        <div className="flex flex-wrap gap-2">
+          <LanciaAdesso squadra="ricerca" etichetta="Cerca adesso" onFatto={carica} />
           <input ref={input} type="file" accept="application/pdf" className="hidden" onChange={(e) => e.target.files?.[0] && caricaPdf(e.target.files[0])} />
           <Button onClick={() => input.current?.click()} disabled={carico}>
             {carico ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />} {carico ? "Lo sto leggendo…" : "Carica un PDF"}

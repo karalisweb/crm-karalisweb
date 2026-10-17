@@ -11,6 +11,7 @@ import { AlertTriangle, CalendarClock, Handshake, MapPin, RefreshCw, Send } from
 import { toast } from "sonner";
 import { localeAIso } from "@/components/vendita/call-fissata-dialog";
 import { FORMATI, MOTIVI, dataOra } from "@/components/ricerca/etichette";
+import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
 
 interface Settimana {
   obiettivo: number;
@@ -117,7 +118,10 @@ export default function Bni121Page() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><Handshake className="h-6 w-6 text-primary" /> 121 BNI</h1>
           <p className="text-sm text-muted-foreground">Tutti i membri, capitolo per capitolo: prima chi fa il tuo mestiere, poi la dirigenza, poi tutti gli altri.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={carica} disabled={loading} aria-label="Aggiorna"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <LanciaAdesso squadra="bni" etichetta="Prepara le richieste adesso" onFatto={carica} />
+          <Button variant="outline" size="sm" onClick={carica} disabled={loading} aria-label="Aggiorna"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></Button>
+        </div>
       </div>
 
       {error && <Card className="border-red-500"><CardContent className="p-4 text-red-500"><AlertTriangle className="h-4 w-4 inline mr-2" />{error}</CardContent></Card>}
