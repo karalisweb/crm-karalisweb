@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Users } from "lucide-react";
+import { stessoRuolo } from "@/lib/agents/bni-regole";
 
 interface Membro {
   id: string;
@@ -48,6 +49,26 @@ function perCapitolo(membri: Membro[]): [string, Membro[]][] {
   for (const lista of gruppi.values()) lista.sort((a, b) => STATI[statoDi(a)].ordine - STATI[statoDi(b)].ordine || a.name.localeCompare(b.name, "it"));
   // I capitoli più grandi per primi.
   return [...gruppi.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], "it"));
+}
+
+const ORDINE_RUOLI = ["PRESIDENTE", "VICEPRESIDENTE", "FORMAZIONE", "EVENTI"];
+
+/**
+ * Le sezioni di un capitolo: 121 fatti, 121 da fare, colleghi (chi fa il tuo mestiere), leadership.
+ * Colleghi e leadership hanno la loro sezione qualunque sia lo stato (lo dice il colore);
+ * gli altri stanno tra fatti o da fare.
+ */
+function sezioniCapitolo(lista: Membro[]): { titolo: string; membri: Membro[] }[] {
+  const leadership = lista.filter((m) => m.leadershipRole && ORDINE_RUOLI.includes(m.leadershipRole))
+    .sort((a, b) => ORDINE_RUOLI.indexOf(a.leadershipRole!) - ORDINE_RUOLI.indexOf(b.leadershipRole!));
+  const colleghi = lista.filter((m) => !leadership.includes(m) && stessoRuolo(m.profession));
+  const resto = lista.filter((m) => !leadership.includes(m) && !colleghi.includes(m));
+  return [
+    { titolo: "121 fatti", membri: resto.filter((m) => statoDi(m) === "CONOSCIUTO") },
+    { titolo: "121 da fare", membri: resto.filter((m) => statoDi(m) !== "CONOSCIUTO") },
+    { titolo: "Colleghi (fanno il tuo mestiere)", membri: colleghi },
+    { titolo: "Leadership", membri: leadership },
+  ].filter((x) => x.membri.length);
 }
 
 function RigaMembro({ m, conCapitolo, dettaglio }: { m: Membro; conCapitolo?: boolean; dettaglio?: boolean }) {
@@ -138,7 +159,12 @@ export default function MembriBniPage() {
                   {capitoli[capitolo.toLowerCase()] && (
                     <Link href={`/bni/capitoli/${capitoli[capitolo.toLowerCase()]}`} className="inline-block text-xs text-primary hover:underline mb-1">Scheda del capitolo: giorno, sede, ordine degli incontri →</Link>
                   )}
-                  {lista.map((m) => <RigaMembro key={m.id} m={m} />)}
+                  {sezioniCapitolo(lista).map((sez) => (
+                    <div key={sez.titolo} className="pt-2 space-y-1.5">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{sez.titolo} ({sez.membri.length})</div>
+                      {sez.membri.map((m) => <RigaMembro key={m.id} m={m} />)}
+                    </div>
+                  ))}
                 </div>
               </details>
             );
