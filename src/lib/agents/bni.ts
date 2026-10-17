@@ -379,7 +379,7 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
     if (m.next121At!.getTime() <= oggi.getTime() + ORE_PREPARAZIONE * 3600_000 && (await preparaFoglio121(m.id, m.next121At!))) r.preparazioni++;
   }
 
-  // Collegarsi su LinkedIn con tutti i membri: 15 profili al giorno da cercare.
+  // Collegarsi su LinkedIn con tutti i membri: 20 profili al giorno da cercare (LinkedIn accetta circa 100 inviti a settimana).
   r.profiliLinkedin = await accodaProfiliLinkedin(oggi);
 
   // B1 — Cartografo: una regione per volta; la Sardegna ogni 30 giorni.
@@ -421,11 +421,11 @@ export async function chiudiRichiesteSuperate(membroId: string, motivo: string, 
 // ─── Collegarsi su LinkedIn con tutti i membri ─────────────────────────────
 
 /** Profili da cercare ogni giorno: LinkedIn non va stressato. */
-export const PROFILI_LINKEDIN_AL_GIORNO = 15;
+export const PROFILI_LINKEDIN_AL_GIORNO = 20;
 export const STATI_LINKEDIN = ["NON_TROVATO", "DA_COLLEGARE", "RICHIESTA_INVIATA", "COLLEGATI"] as const;
 
 /**
- * Accoda la ricerca dei profili LinkedIn dei prossimi 15 membri (prima quelli che Alessio conosce
+ * Accoda la ricerca dei profili LinkedIn dei prossimi 20 membri (prima quelli che Alessio conosce
  * già: accettano più volentieri). Chi ha già un profilo salvato passa direttamente a "da collegare".
  */
 export async function accodaProfiliLinkedin(oggi = new Date()): Promise<number> {

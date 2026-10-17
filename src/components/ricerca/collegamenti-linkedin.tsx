@@ -47,7 +47,7 @@ export function CollegamentiLinkedin({ dati, onCambio }: { dati: StatoLinkedin; 
       </div>
       <div className="h-2 rounded bg-muted overflow-hidden"><div className="h-full bg-[#0a66c2]" style={{ width: `${totale ? (collegati / totale) * 100 : 0}%` }} /></div>
       {dati.daCollegare.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nessun profilo pronto. L&apos;agente sul tuo Mac ne trova 15 al giorno (serve l&apos;attività programmata attiva).</p>
+        <p className="text-xs text-muted-foreground">Nessun profilo pronto. L&apos;agente sul tuo Mac ne trova 20 al giorno (serve l&apos;attività programmata attiva).</p>
       ) : (
         <div className="space-y-2">
           {dati.daCollegare.map((m) => (
