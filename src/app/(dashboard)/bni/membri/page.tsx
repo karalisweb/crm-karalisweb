@@ -54,20 +54,23 @@ function perCapitolo(membri: Membro[]): [string, Membro[]][] {
 const ORDINE_RUOLI = ["PRESIDENTE", "VICEPRESIDENTE", "FORMAZIONE", "EVENTI"];
 
 /**
- * Le sezioni di un capitolo: 121 fatti, 121 da fare, colleghi (chi fa il tuo mestiere), leadership.
- * Colleghi e leadership hanno la loro sezione qualunque sia lo stato (lo dice il colore);
- * gli altri stanno tra fatti o da fare.
+ * Le sezioni di un capitolo, in quest'ordine: 121 fatti, colleghi (chi fa il tuo mestiere),
+ * leadership, 121 da fare. Chi è già stato incontrato sta solo tra i fatti, anche se è un
+ * collega o un leader.
  */
 function sezioniCapitolo(lista: Membro[]): { titolo: string; membri: Membro[] }[] {
-  const leadership = lista.filter((m) => m.leadershipRole && ORDINE_RUOLI.includes(m.leadershipRole))
+  const fatti = lista.filter((m) => statoDi(m) === "CONOSCIUTO");
+  const daIncontrare = lista.filter((m) => statoDi(m) !== "CONOSCIUTO");
+  const leadership = daIncontrare
+    .filter((m) => m.leadershipRole && ORDINE_RUOLI.includes(m.leadershipRole))
     .sort((a, b) => ORDINE_RUOLI.indexOf(a.leadershipRole!) - ORDINE_RUOLI.indexOf(b.leadershipRole!));
-  const colleghi = lista.filter((m) => !leadership.includes(m) && stessoRuolo(m.profession));
-  const resto = lista.filter((m) => !leadership.includes(m) && !colleghi.includes(m));
+  const colleghi = daIncontrare.filter((m) => !leadership.includes(m) && stessoRuolo(m.profession));
+  const daFare = daIncontrare.filter((m) => !leadership.includes(m) && !colleghi.includes(m));
   return [
-    { titolo: "121 fatti", membri: resto.filter((m) => statoDi(m) === "CONOSCIUTO") },
-    { titolo: "121 da fare", membri: resto.filter((m) => statoDi(m) !== "CONOSCIUTO") },
+    { titolo: "121 fatti", membri: fatti },
     { titolo: "Colleghi (fanno il tuo mestiere)", membri: colleghi },
     { titolo: "Leadership", membri: leadership },
+    { titolo: "121 da fare", membri: daFare },
   ].filter((x) => x.membri.length);
 }
 
