@@ -233,7 +233,7 @@ function CorpoAzioneBni({ p }: { p: Record<string, unknown> }) {
 
 const FORMATI_121: Record<string, string> = { PRESENZA: "di persona", ONLINE: "online (Meet)", A_SCELTA: "di persona o online" };
 
-function CorpoMessaggioBni({ p, telefono }: { p: Record<string, unknown>; telefono: string | null }) {
+export function CorpoMessaggioBni({ p, telefono }: { p: Record<string, unknown>; telefono: string | null }) {
   return (
     <div className="space-y-2">
       {(s(p.perche) || s(p.formato)) && (
@@ -248,7 +248,7 @@ function CorpoMessaggioBni({ p, telefono }: { p: Record<string, unknown>; telefo
   );
 }
 
-function CorpoVisitaCapitolo({ p, telefono }: { p: Record<string, unknown>; telefono: string | null }) {
+export function CorpoVisitaCapitolo({ p, telefono }: { p: Record<string, unknown>; telefono: string | null }) {
   return (
     <div className="space-y-2">
       {s(p.perche) && <p className="text-sm">{s(p.perche)}</p>}
@@ -260,7 +260,7 @@ function CorpoVisitaCapitolo({ p, telefono }: { p: Record<string, unknown>; tele
   );
 }
 
-function CorpoPreparazione121({ p }: { p: Record<string, unknown> }) {
+export function CorpoPreparazione121({ p }: { p: Record<string, unknown> }) {
   const quando = s(p.quando) ? new Date(s(p.quando)).toLocaleString("it-IT", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "";
   const pres = arr<{ nome: string; ruolo?: string | null; perche?: string | null; linkedin?: string | null }>(p.presentazioni);
   const caso = (p.casoStudio ?? null) as { titolo?: string; storia?: string } | null;

@@ -63,6 +63,7 @@ export default function MembriBniPage() {
   const [q, setQ] = useState("");
   const [cerca, setCerca] = useState("");
   const [risultato, setRisultato] = useState<{ per: string; membri: Membro[]; totale: number } | null>(null);
+  const [capitoli, setCapitoli] = useState<Record<string, string>>({});
   const membri = risultato?.membri ?? [];
   const totale = risultato?.totale ?? 0;
   const loading = risultato?.per !== cerca;
@@ -78,7 +79,9 @@ export default function MembriBniPage() {
     fetch(`/api/ricerca/bni/membri${cerca ? `?q=${encodeURIComponent(cerca)}` : ""}`)
       .then((r) => r.json())
       .then((d) => {
-        if (vivo) setRisultato({ per: cerca, membri: d.membri ?? [], totale: d.totale ?? 0 });
+        if (!vivo) return;
+        setRisultato({ per: cerca, membri: d.membri ?? [], totale: d.totale ?? 0 });
+        if (d.capitoli) setCapitoli(Object.fromEntries((d.capitoli as { id: string; name: string }[]).map((c) => [c.name.toLowerCase(), c.id])));
       });
     return () => {
       vivo = false;
@@ -116,7 +119,12 @@ export default function MembriBniPage() {
                     {" "}su {lista.length}
                   </span>
                 </summary>
-                <div className="px-3 pb-3 space-y-1.5">{lista.map((m) => <RigaMembro key={m.id} m={m} />)}</div>
+                <div className="px-3 pb-3 space-y-1.5">
+                  {capitoli[capitolo.toLowerCase()] && (
+                    <Link href={`/bni/capitoli/${capitoli[capitolo.toLowerCase()]}`} className="inline-block text-xs text-primary hover:underline mb-1">Scheda del capitolo: giorno, sede, ordine degli incontri →</Link>
+                  )}
+                  {lista.map((m) => <RigaMembro key={m.id} m={m} />)}
+                </div>
               </details>
             );
           })}

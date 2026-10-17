@@ -21,7 +21,7 @@ export async function GET() {
 
   const membriPerId = new Map(tutti.flatMap((t) => t.membri.map((m) => [m.id, { ...m, capitolo: t.capitolo.name }] as const)));
   const limiteRisposta = oggi.getTime() - GIORNI_SENZA_RISPOSTA * 86400_000;
-  const [calendario, richieste, fattiRecenti] = await Promise.all([
+  const [calendario, richieste, fattiRecenti, voci] = await Promise.all([
     db.bniMembro.findMany({
       where: { next121At: { gte: new Date(oggi.getTime() - 86400_000) } },
       orderBy: { next121At: "asc" },
@@ -40,7 +40,15 @@ export async function GET() {
       select: { id: true, date: true, formato: true, membro: { select: { id: true, name: true, chapter: true } } },
       take: 50,
     }),
+    db.approvalItem.findMany({
+      where: { kind: { in: ["VISITA_CAPITOLO", "PREPARAZIONE_121"] }, status: "IN_ATTESA" },
+      select: { id: true, kind: true, bniMembroId: true, payload: true, bniChapter: { select: { name: true } } },
+    }),
   ]);
+  const visite = voci
+    .filter((v) => v.kind === "VISITA_CAPITOLO")
+    .map((v) => ({ voceId: v.id, capitolo: v.bniChapter?.name ?? "", payload: v.payload, telefono: (v.payload as { telefono?: string | null }).telefono ?? null }));
+  const conFoglio = new Set(voci.filter((v) => v.kind === "PREPARAZIONE_121" && v.bniMembroId).map((v) => v.bniMembroId!));
   // Una richiesta sola per membro (la più recente), e solo per chi non è ancora conosciuto né fissato.
   const viste = new Set<string>();
   const righe = richieste
@@ -95,7 +103,8 @@ export async function GET() {
 
   return NextResponse.json({
     settimana,
-    calendario,
+    calendario: calendario.map((c) => ({ ...c, foglio: conFoglio.has(c.id) })),
+    visite,
     richiesteAperte,
     tracker: {
       daMandare,

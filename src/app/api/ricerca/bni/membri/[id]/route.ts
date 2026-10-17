@@ -22,7 +22,7 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
   if (!m) return NextResponse.json({ error: "Membro non trovato" }, { status: 404 });
   const [capitolo, inCassetta, reteInCorso] = await Promise.all([
     m.chapter ? db.bniChapter.findFirst({ where: { name: { equals: m.chapter, mode: "insensitive" } }, select: { id: true, name: true, mode: true, meetingDay: true, meetingTime: true, sede: true } }) : null,
-    db.approvalItem.findMany({ where: { bniMembroId: id, status: "IN_ATTESA" }, select: { id: true, kind: true, title: true, createdAt: true } }),
+    db.approvalItem.findMany({ where: { bniMembroId: id, status: "IN_ATTESA" }, select: { id: true, kind: true, title: true, createdAt: true, payload: true } }),
     db.agentRun.findFirst({ where: { bniMembroId: id, agent: "rete_membro", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } }),
   ]);
   const conosciuto = !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer;

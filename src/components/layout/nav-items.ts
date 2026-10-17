@@ -9,7 +9,6 @@ import {
   MessageCircle,
   Target,
   Bot,
-  Inbox,
   Users,
   FileText,
   Contact,
@@ -42,7 +41,6 @@ export const navSections: NavSection[] = [
     title: "",
     items: [
       { href: "/", label: "Oggi", icon: Home },
-      { href: "/cassetta", label: "Da approvare", icon: Inbox, badgeKey: "cassetta", badgeColor: "yellow" },
     ],
   },
   {

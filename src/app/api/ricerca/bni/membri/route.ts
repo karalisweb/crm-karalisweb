@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
   const righe = membri.map((m) => ({ ...m, conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer }));
   if (!q) {
     righe.sort((a, b) => norm(a.chapter).localeCompare(norm(b.chapter)) || a.name.localeCompare(b.name, "it"));
-    return NextResponse.json({ membri: righe.slice(0, 500), totale: righe.length });
+    const capitoli = await db.bniChapter.findMany({ select: { id: true, name: true, region: true } });
+    return NextResponse.json({ membri: righe.slice(0, 1000), totale: righe.length, capitoli });
   }
   const trovati = righe
     .map((m) => ({ ...m, punteggio: punteggioBisogno(q, m) }))

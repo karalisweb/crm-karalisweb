@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Check, Copy, MessageCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { localeAIso } from "@/components/vendita/call-fissata-dialog";
-import { linkWhatsApp } from "@/components/agents/voci-cassetta";
+import { CorpoVisitaCapitolo, linkWhatsApp } from "@/components/agents/voci-cassetta";
 import { data, dataOra } from "@/components/ricerca/etichette";
 
 export interface RigaRichiesta {
@@ -29,7 +29,14 @@ export interface Tracker {
   senzaRisposta: RigaRichiesta[];
   fatti: { id: string; data: string; formato: string | null; membroId: string; nome: string; capitolo: string | null }[];
 }
+export interface Visita {
+  voceId: string;
+  capitolo: string;
+  telefono: string | null;
+  payload: Record<string, unknown>;
+}
 export interface Fissato {
+  foglio?: boolean;
   id: string;
   name: string;
   company: string | null;
@@ -118,7 +125,14 @@ function RigaSemplice({ r, nota, onFatto }: { r: RigaRichiesta; nota: string; on
 }
 
 /** Dove sono gli incontri: da mandare → aspetto risposta → (non hanno risposto) → fissati → fatti. */
-export function TrackerIncontri({ tracker, fissati, onCambio }: { tracker: Tracker; fissati: Fissato[]; onCambio: () => void }) {
+async function decidi(voceId: string, decisione: "APPROVATO" | "SCARTATO", ok: string, onFatto: () => void) {
+  const res = await fetch(`/api/cassetta/${voceId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decisione }) });
+  if (!res.ok) return toast.error("Non sono riuscito a salvare");
+  toast.success(ok);
+  onFatto();
+}
+
+export function TrackerIncontri({ tracker, fissati, visite = [], onCambio }: { tracker: Tracker; fissati: Fissato[]; visite?: Visita[]; onCambio: () => void }) {
   const conteggi: Record<Scheda, number> = {
     daMandare: tracker.daMandare.length,
     inAttesa: tracker.inAttesa.length,
@@ -144,6 +158,16 @@ export function TrackerIncontri({ tracker, fissati, onCambio }: { tracker: Track
 
   return (
     <section className="space-y-3">
+      {visite.map((v) => (
+        <Card key={v.voceId} className="border-green-600"><CardContent className="p-3 space-y-2">
+          <div className="font-medium">È il momento di visitare il capitolo {v.capitolo}</div>
+          <CorpoVisitaCapitolo p={v.payload} telefono={v.telefono} />
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => decidi(v.voceId, "APPROVATO", "Visita chiesta", onCambio)}><Check className="h-3.5 w-3.5 mr-1" /> Mandato</Button>
+            <Button size="sm" variant="ghost" onClick={() => decidi(v.voceId, "SCARTATO", "Non ora", onCambio)}><X className="h-3.5 w-3.5 mr-1" /> Non ora</Button>
+          </div>
+        </CardContent></Card>
+      ))}
       <h2 className="font-semibold">I tuoi incontri</h2>
       <div className="flex flex-wrap gap-1.5">
         {schede.map((s) => (
@@ -168,7 +192,10 @@ export function TrackerIncontri({ tracker, fissati, onCambio }: { tracker: Track
                   <div className="font-medium">{m.name}</div>
                   <div className="text-xs text-muted-foreground">{[m.profession, m.chapter].filter(Boolean).join(" · ")}</div>
                 </div>
-                <Badge variant="outline">{dataOra(m.next121At)}</Badge>
+                <div className="flex items-center gap-2">
+                  {m.foglio && <Badge className="bg-green-600 text-white border-transparent">foglio pronto</Badge>}
+                  <Badge variant="outline">{dataOra(m.next121At)}</Badge>
+                </div>
               </CardContent></Card>
             </Link>
           ))}

@@ -49,9 +49,9 @@ export default function HomePage() {
 
   const cose: { href: string; testo: string }[] = [];
   const f = d.daFare;
-  if (f.richiesteDaMandare) cose.push({ href: "/cassetta", testo: `Manda ${f.richiesteDaMandare} ${f.richiesteDaMandare === 1 ? "richiesta" : "richieste"} di incontro BNI (messaggio già scritto)` });
-  if (f.fogli) cose.push({ href: "/cassetta", testo: `Leggi ${f.fogli === 1 ? "il foglio" : `i ${f.fogli} fogli`} per gli incontri di domani` });
-  if (f.visiteDaMandare) cose.push({ href: "/cassetta", testo: `Chiedi ${f.visiteDaMandare === 1 ? "la visita" : `${f.visiteDaMandare} visite`} a un capitolo BNI` });
+  if (f.richiesteDaMandare) cose.push({ href: "/bni", testo: `Manda ${f.richiesteDaMandare} ${f.richiesteDaMandare === 1 ? "richiesta" : "richieste"} di incontro BNI (messaggio già scritto)` });
+  if (f.fogli) cose.push({ href: "/bni", testo: `Leggi ${f.fogli === 1 ? "il foglio" : `i ${f.fogli} fogli`} per gli incontri di domani` });
+  if (f.visiteDaMandare) cose.push({ href: "/bni", testo: `Chiedi ${f.visiteDaMandare === 1 ? "la visita" : `${f.visiteDaMandare} visite`} a un capitolo BNI` });
   if (f.casiDaConfermare) cose.push({ href: "/casi-studio", testo: `Conferma ${f.casiDaConfermare === 1 ? "il caso studio caricato" : `${f.casiDaConfermare} casi studio`}` });
   if (f.altreDecisioni) cose.push({ href: "/cassetta", testo: `${f.altreDecisioni} altre cose da approvare` });
   const s = d.settimana;

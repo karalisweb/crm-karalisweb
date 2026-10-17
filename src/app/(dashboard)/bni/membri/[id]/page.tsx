@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CalendarClock, Inbox, Linkedin, Loader2, Mail, MessageSquarePlus, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, CalendarClock, Linkedin, Loader2, Mail, MessageSquarePlus, Pencil, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { localeAIso } from "@/components/vendita/call-fissata-dialog";
 import { FORMATI, STATI_PRESENTAZIONE, data, dataOra } from "@/components/ricerca/etichette";
+import { CorpoMessaggioBni, CorpoPreparazione121, CorpoVisitaCapitolo } from "@/components/agents/voci-cassetta";
 
 interface Scheda {
   membro: {
@@ -26,7 +27,7 @@ interface Scheda {
   capitolo: { id: string; name: string; mode: string | null; meetingDay: string | null; meetingTime: string | null; sede: string | null } | null;
   storia: { id: string; date: string; formato: string | null; location: string | null; notes: string | null; riassunto: string | null; promesse: string | null; haTrascrizione: boolean }[];
   presentazioni: { id: string; nome: string; ruolo: string | null; linkedinUrl: string | null; perche: string | null; stato: string }[];
-  inCassetta: { id: string; kind: string; title: string }[];
+  inCassetta: { id: string; kind: string; title: string; payload: Record<string, unknown> }[];
 }
 
 const STATI: Record<Scheda["membro"]["stato"], string> = { DA_INCONTRARE: "da incontrare", FISSATO: "121 fissato", CONOSCIUTO: "conosciuto" };
@@ -149,6 +150,12 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
     toast.success(ok);
     carica();
   }
+  async function decidi(voceId: string, decisione: "APPROVATO" | "SCARTATO") {
+    const r = await fetch(`/api/cassetta/${voceId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decisione }) });
+    if (!r.ok) return toast.error("Non sono riuscito a salvare");
+    toast.success("Fatto");
+    carica();
+  }
   async function statoPresentazione(pid: string, stato: string) {
     const r = await fetch(`/api/ricerca/bni/presentazioni/${pid}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stato }) });
     if (!r.ok) return toast.error("Non sono riuscito a salvare");
@@ -173,9 +180,20 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
         <Registra121 id={m.id} formatoCapitolo={d.capitolo?.mode ?? null} onFatto={carica} />
       </div>
 
-      {d.inCassetta.length > 0 && (
-        <Link href="/cassetta" className="block"><Card className="border-amber-400"><CardContent className="p-3 text-sm flex items-center gap-2"><Inbox className="h-4 w-4 text-amber-500" /> In Cassetta: {d.inCassetta.map((v) => v.title).join(" · ")}</CardContent></Card></Link>
-      )}
+      {d.inCassetta.map((v) => (
+        <Card key={v.id} className="border-amber-400"><CardContent className="p-3 space-y-2">
+          <div className="text-sm font-semibold">
+            {v.kind === "PREPARAZIONE_121" ? "Il foglio per l'incontro" : v.kind === "VISITA_CAPITOLO" ? "Chiedi la visita al capitolo" : "Messaggio da mandare"}
+          </div>
+          {v.kind === "PREPARAZIONE_121" && <CorpoPreparazione121 p={v.payload} />}
+          {v.kind === "VISITA_CAPITOLO" && <CorpoVisitaCapitolo p={v.payload} telefono={m.telefono} />}
+          {v.kind === "MESSAGGIO_BNI" && <CorpoMessaggioBni p={v.payload} telefono={m.telefono} />}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => decidi(v.id, "APPROVATO")}>{v.kind === "PREPARAZIONE_121" ? "Letto" : "Mandato"}</Button>
+            <Button size="sm" variant="ghost" onClick={() => decidi(v.id, "SCARTATO")}>{v.kind === "PREPARAZIONE_121" ? "Non serve" : "Non ora"}</Button>
+          </div>
+        </CardContent></Card>
+      ))}
 
       <Sezione n={1} titolo="Chi è">
         <div className="space-y-1">

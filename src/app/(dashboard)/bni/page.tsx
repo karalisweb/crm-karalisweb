@@ -1,15 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, Handshake, MapPin, RefreshCw } from "lucide-react";
-import { FORMATI, MOTIVI } from "@/components/ricerca/etichette";
+import { AlertTriangle, Handshake, RefreshCw } from "lucide-react";
 import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
-import { TrackerIncontri, type Fissato, type Tracker } from "@/components/ricerca/tracker-incontri";
+import { TrackerIncontri, type Fissato, type Tracker, type Visita } from "@/components/ricerca/tracker-incontri";
 
 interface Settimana {
   obiettivo: number;
@@ -18,28 +15,9 @@ interface Settimana {
   richiesteAperte: number;
   inizio: string;
 }
-interface Capitolo {
-  id: string;
-  nome: string;
-  zona: string;
-  sardo: boolean;
-  formato: string;
-  giorno: string | null;
-  ora: string | null;
-  sede: string | null;
-  mio: boolean;
-  visitStatus: string;
-  visitaDaFare: boolean;
-  totale: number;
-  conosciuti: number;
-  percentuale: number;
-  inCorso: boolean;
-  prossimi: { id: string; nome: string; motivo: string }[];
-  attesaMappa: boolean;
-}
 
 export default function Bni121Page() {
-  const [dati, setDati] = useState<{ settimana: Settimana; calendario: Fissato[]; tracker: Tracker; capitoli: Capitolo[] } | null>(null);
+  const [dati, setDati] = useState<{ settimana: Settimana; calendario: Fissato[]; tracker: Tracker; visite: Visita[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +46,7 @@ export default function Bni121Page() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Handshake className="h-6 w-6 text-primary" /> Incontri BNI</h1>
-          <p className="text-sm text-muted-foreground">I 121 da fare: 10 a settimana, con tutti i membri, capitolo per capitolo (prima chi fa il tuo mestiere, poi chi guida il capitolo, poi tutti gli altri).</p>
+          <p className="text-sm text-muted-foreground">Cosa fare con i 121: obiettivo 10 a settimana. I messaggi sono già scritti: li mandi da qui con WhatsApp. Chi è chi nei capitoli lo trovi nella Rubrica BNI.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <LanciaAdesso squadra="bni" etichetta="Prepara le richieste adesso" onFatto={carica} />
@@ -93,46 +71,8 @@ export default function Bni121Page() {
             <Card><CardContent className="p-4"><div className="text-2xl font-bold">{s.richiesteAperte}</div><div className="text-xs text-muted-foreground">Richieste aperte (obiettivo 15)</div></CardContent></Card>
           </div>
 
-          <TrackerIncontri tracker={dati.tracker} fissati={dati.calendario} onCambio={carica} />
+          <TrackerIncontri tracker={dati.tracker} fissati={dati.calendario} visite={dati.visite} onCambio={carica} />
 
-          <section className="space-y-2">
-            <h2 className="font-semibold">Capitoli</h2>
-            <div className="grid gap-3 md:grid-cols-2">
-              {dati.capitoli.map((c) => (
-                <Link key={c.id} href={`/bni/capitoli/${c.id}`} className="block">
-                  <Card className={`hover:border-primary transition h-full ${c.inCorso ? "border-primary/60" : ""}`}><CardContent className="p-4 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold">{c.nome}</span>
-                      {c.inCorso && <Badge className="text-[10px]">in corso</Badge>}
-                      {c.mio && <Badge variant="secondary" className="text-[10px]">il tuo</Badge>}
-                      {c.visitaDaFare && <Badge className="text-[10px] bg-green-600 text-white">visita!</Badge>}
-                      {c.visitStatus === "VISITA_PIANIFICATA" && <Badge variant="outline" className="text-[10px]">visita chiesta</Badge>}
-                      {c.visitStatus === "VISITATO" && <Badge variant="outline" className="text-[10px]">visitato</Badge>}
-                    </div>
-                    <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-                      {c.zona && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{c.zona}</span>}
-                      <span>{FORMATI[c.formato] ?? c.formato}</span>
-                      {(c.giorno || c.ora) && <span>{[c.giorno, c.ora].filter(Boolean).join(" ")}</span>}
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-xs"><span>Conosciuti {c.conosciuti}/{c.totale}</span><span>{c.percentuale}%</span></div>
-                      <div className="mt-1 h-1.5 rounded bg-muted overflow-hidden relative">
-                        <div className="h-full bg-primary" style={{ width: `${c.percentuale}%` }} />
-                        <div className="absolute top-0 h-full w-px bg-foreground/40" style={{ left: "33.3%" }} title="Un terzo: la visita" />
-                      </div>
-                    </div>
-                    {c.prossimi.length > 0 && (
-                      <div className="text-xs text-muted-foreground break-words">
-                        Prossimi: {c.prossimi.map((p) => `${p.nome} (${MOTIVI[p.motivo] ?? p.motivo})`).join(", ")}
-                      </div>
-                    )}
-                    {c.totale === 0 && <div className="text-xs text-muted-foreground">Membri non ancora letti da BNI Connect.</div>}
-                    {c.totale > 0 && c.attesaMappa && <div className="text-xs text-amber-600 dark:text-amber-400">Non si sa ancora chi guida il capitolo: aspetto la lettura da BNI Connect (intanto solo chi fa il tuo mestiere).</div>}
-                  </CardContent></Card>
-                </Link>
-              ))}
-            </div>
-          </section>
         </>
       ) : null}
     </div>
