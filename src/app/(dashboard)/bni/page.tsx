@@ -14,6 +14,9 @@ interface Settimana {
   fissati: number;
   richiesteAperte: number;
   inizio: string;
+  nomiFatti: string[];
+  nomiFissati: string[];
+  prossima: { nome: string; quando: string }[];
 }
 
 export default function Bni121Page() {
@@ -76,6 +79,23 @@ export default function Bni121Page() {
               <span><span className="inline-block h-2.5 w-2.5 rounded-sm bg-blue-600 mr-1.5" />{s.fissati} fissati entro domenica</span>
               <span className="text-muted-foreground">obiettivo {s.obiettivo}</span>
             </div>
+            {s.nomiFatti.length > 0 && <div className="text-xs text-muted-foreground">Fatti: {s.nomiFatti.join(", ")}</div>}
+            {s.nomiFissati.length > 0 && <div className="text-xs text-muted-foreground">Fissati: {s.nomiFissati.join(", ")}</div>}
+          </CardContent></Card>
+
+          <Card><CardContent className="p-4 space-y-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="text-sm font-semibold">Settimana prossima</div>
+              <div className={`text-sm ${s.prossima.length >= s.obiettivo ? "text-green-600 dark:text-green-400 font-semibold" : "text-muted-foreground"}`}>
+                {s.prossima.length} fissati su {s.obiettivo}
+              </div>
+            </div>
+            <div className="h-3 rounded bg-muted overflow-hidden"><div className="h-full bg-blue-600" style={{ width: `${Math.min(100, (s.prossima.length / s.obiettivo) * 100)}%` }} /></div>
+            {s.prossima.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {s.prossima.map((p) => `${p.nome} (${new Date(p.quando).toLocaleDateString("it-IT", { weekday: "short", day: "numeric" })})`).join(", ")}
+              </div>
+            )}
           </CardContent></Card>
 
           <TrackerIncontri tracker={dati.tracker} fissati={dati.calendario} visite={dati.visite} onCambio={carica} />

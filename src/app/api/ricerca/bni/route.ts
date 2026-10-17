@@ -101,8 +101,24 @@ export async function GET() {
   });
   capitoli.sort((a, b) => Number(b.inCorso) - Number(a.inCorso) || Number(b.sardo) - Number(a.sardo) || b.conosciuti / (b.totale || 1) - a.conosciuti / (a.totale || 1) || a.nome.localeCompare(b.nome, "it"));
 
+  // Per la barra: chi ho incontrato questa settimana e chi è fissato la settimana prossima, per nome.
+  const [fattiSettimana, prossima] = await Promise.all([
+    db.oneToOne.findMany({ where: { date: { gte: settimana.inizio, lt: settimana.fine } }, orderBy: { date: "asc" }, select: { date: true, membro: { select: { name: true } } } }),
+    db.bniMembro.findMany({
+      where: { next121At: { gte: settimana.fine, lt: new Date(settimana.fine.getTime() + 7 * 86400_000) }, status: "ATTIVO" },
+      orderBy: { next121At: "asc" },
+      select: { name: true, next121At: true },
+    }),
+  ]);
+  const fissatiSettimana = calendario.filter((c) => c.next121At && c.next121At >= oggi && c.next121At < settimana.fine).map((c) => c.name);
+
   return NextResponse.json({
-    settimana,
+    settimana: {
+      ...settimana,
+      nomiFatti: fattiSettimana.map((f) => f.membro.name),
+      nomiFissati: fissatiSettimana,
+      prossima: prossima.map((p) => ({ nome: p.name, quando: p.next121At })),
+    },
     calendario: calendario.map((c) => ({ ...c, foglio: conFoglio.has(c.id) })),
     visite,
     richiesteAperte,
