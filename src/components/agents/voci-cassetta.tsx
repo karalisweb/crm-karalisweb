@@ -49,7 +49,7 @@ function copia(testo: string) {
   );
 }
 
-function linkWhatsApp(telefono: string | null | undefined, testo: string): string | null {
+export function linkWhatsApp(telefono: string | null | undefined, testo: string): string | null {
   if (!telefono) return null;
   let cifre = telefono.replace(/\D/g, "");
   if (cifre.startsWith("00")) cifre = cifre.slice(2);

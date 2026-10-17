@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { caricaCapitoli, statoSettimana, scegliProssimi } from "@/lib/agents/bni";
-import { coperturaCapitolo, dirigenzaNota, eSardo, formatoDa, prossimiDelCapitolo, visitaDaProporre, CAPITOLI_IN_CORSO } from "@/lib/agents/bni-regole";
+import { coperturaCapitolo, dirigenzaNota, eSardo, formatoDa, prossimiDelCapitolo, visitaDaProporre, CAPITOLI_IN_CORSO, GIORNI_SENZA_RISPOSTA } from "@/lib/agents/bni-regole";
 
 /**
  * GET /api/ricerca/bni — la pagina "121 BNI": la settimana (obiettivo 10), i 121 in calendario,
@@ -20,30 +20,53 @@ export async function GET() {
   const inCorso = new Set(ordineInCorso.slice(0, CAPITOLI_IN_CORSO));
 
   const membriPerId = new Map(tutti.flatMap((t) => t.membri.map((m) => [m.id, { ...m, capitolo: t.capitolo.name }] as const)));
-  const [calendario, richieste] = await Promise.all([
+  const limiteRisposta = oggi.getTime() - GIORNI_SENZA_RISPOSTA * 86400_000;
+  const [calendario, richieste, fattiRecenti] = await Promise.all([
     db.bniMembro.findMany({
       where: { next121At: { gte: new Date(oggi.getTime() - 86400_000) } },
       orderBy: { next121At: "asc" },
       select: { id: true, name: true, company: true, profession: true, chapter: true, next121At: true, phone: true },
-      take: 50,
-    }),
-    db.approvalItem.findMany({
-      where: { kind: "MESSAGGIO_BNI", status: { in: ["IN_ATTESA", "APPROVATO"] }, createdAt: { gt: new Date(oggi.getTime() - 21 * 86400_000) } },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, status: true, createdAt: true, bniMembroId: true, payload: true },
       take: 100,
     }),
+    db.approvalItem.findMany({
+      where: { kind: "MESSAGGIO_BNI", status: { in: ["IN_ATTESA", "APPROVATO"] }, createdAt: { gt: new Date(oggi.getTime() - 60 * 86400_000) } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, status: true, createdAt: true, decidedAt: true, bniMembroId: true, payload: true },
+      take: 300,
+    }),
+    db.oneToOne.findMany({
+      where: { date: { gte: new Date(oggi.getTime() - 14 * 86400_000) } },
+      orderBy: { date: "desc" },
+      select: { id: true, date: true, formato: true, membro: { select: { id: true, name: true, chapter: true } } },
+      take: 50,
+    }),
   ]);
-  const aperte = richieste
-    .filter((r) => r.bniMembroId && membriPerId.has(r.bniMembroId))
+  // Una richiesta sola per membro (la più recente), e solo per chi non è ancora conosciuto né fissato.
+  const viste = new Set<string>();
+  const righe = richieste
+    .filter((r) => r.bniMembroId && membriPerId.has(r.bniMembroId) && !viste.has(r.bniMembroId) && viste.add(r.bniMembroId))
     .map((r) => {
       const m = membriPerId.get(r.bniMembroId!)!;
-      return { voceId: r.id, inCassetta: r.status === "IN_ATTESA", chiestaIl: r.createdAt, membroId: m.id, nome: m.name, capitolo: m.capitolo, telefono: m.phone, conosciuto: m.conosciuto, fissato: !!m.fissato121At, perche: (r.payload as { perche?: string })?.perche ?? null };
+      const p = r.payload as { perche?: string; messaggio?: string; telefono?: string | null; formato?: string };
+      return {
+        voceId: r.id,
+        membroId: m.id,
+        nome: m.name,
+        capitolo: m.capitolo,
+        telefono: p.telefono ?? m.phone,
+        perche: p.perche ?? null,
+        messaggio: p.messaggio ?? "",
+        formato: p.formato ?? null,
+        mandataIl: r.status === "APPROVATO" ? (r.decidedAt ?? r.createdAt) : null,
+        conosciuto: m.conosciuto,
+        fissato: !!m.fissato121At,
+      };
     })
     .filter((r) => !r.conosciuto && !r.fissato);
-  // Una richiesta sola per membro (la più recente).
-  const viste = new Set<string>();
-  const richiesteAperte = aperte.filter((r) => (viste.has(r.membroId) ? false : (viste.add(r.membroId), true)));
+  const daMandare = righe.filter((r) => !r.mandataIl);
+  const inAttesa = righe.filter((r) => r.mandataIl && r.mandataIl.getTime() > limiteRisposta);
+  const senzaRisposta = righe.filter((r) => r.mandataIl && r.mandataIl.getTime() <= limiteRisposta);
+  const richiesteAperte = [...daMandare, ...inAttesa];
 
   const capitoli = tutti.map(({ capitolo: c, membri }) => {
     const cop = coperturaCapitolo(membri);
@@ -70,5 +93,16 @@ export async function GET() {
   });
   capitoli.sort((a, b) => Number(b.inCorso) - Number(a.inCorso) || Number(b.sardo) - Number(a.sardo) || b.conosciuti / (b.totale || 1) - a.conosciuti / (a.totale || 1) || a.nome.localeCompare(b.nome, "it"));
 
-  return NextResponse.json({ settimana, calendario, richiesteAperte, capitoli });
+  return NextResponse.json({
+    settimana,
+    calendario,
+    richiesteAperte,
+    tracker: {
+      daMandare,
+      inAttesa,
+      senzaRisposta,
+      fatti: fattiRecenti.map((f) => ({ id: f.id, data: f.date, formato: f.formato, membroId: f.membro.id, nome: f.membro.name, capitolo: f.membro.chapter })),
+    },
+    capitoli,
+  });
 }

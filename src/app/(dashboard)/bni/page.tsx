@@ -5,13 +5,11 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, CalendarClock, Handshake, MapPin, RefreshCw, Send } from "lucide-react";
-import { toast } from "sonner";
-import { localeAIso } from "@/components/vendita/call-fissata-dialog";
-import { FORMATI, MOTIVI, dataOra } from "@/components/ricerca/etichette";
+import { AlertTriangle, Handshake, MapPin, RefreshCw } from "lucide-react";
+import { FORMATI, MOTIVI } from "@/components/ricerca/etichette";
 import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
+import { TrackerIncontri, type Fissato, type Tracker } from "@/components/ricerca/tracker-incontri";
 
 interface Settimana {
   obiettivo: number;
@@ -19,23 +17,6 @@ interface Settimana {
   fissati: number;
   richiesteAperte: number;
   inizio: string;
-}
-interface InCalendario {
-  id: string;
-  name: string;
-  company: string | null;
-  profession: string | null;
-  chapter: string | null;
-  next121At: string;
-}
-interface Richiesta {
-  voceId: string;
-  inCassetta: boolean;
-  chiestaIl: string;
-  membroId: string;
-  nome: string;
-  capitolo: string;
-  perche: string | null;
 }
 interface Capitolo {
   id: string;
@@ -57,37 +38,8 @@ interface Capitolo {
   attesaMappa: boolean;
 }
 
-function giorniFa(iso: string): string {
-  const g = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  return g <= 0 ? "oggi" : g === 1 ? "ieri" : `${g} giorni fa`;
-}
-
-function FissaData({ membroId, onFatto }: { membroId: string; onFatto: () => void }) {
-  const [aperto, setAperto] = useState(false);
-  const [quando, setQuando] = useState("");
-  const [salvo, setSalvo] = useState(false);
-  async function salva() {
-    const iso = localeAIso(quando);
-    if (!iso) return toast.error("Scegli data e ora");
-    setSalvo(true);
-    const r = await fetch(`/api/ricerca/bni/membri/${membroId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ next121At: iso }) });
-    setSalvo(false);
-    if (!r.ok) return toast.error("Non sono riuscito a salvare");
-    toast.success("121 in calendario");
-    setAperto(false);
-    onFatto();
-  }
-  if (!aperto) return <Button size="sm" variant="outline" onClick={() => setAperto(true)}><CalendarClock className="h-3.5 w-3.5 mr-1" /> Fissato</Button>;
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} className="h-8 w-auto" />
-      <Button size="sm" onClick={salva} disabled={salvo}>Salva</Button>
-    </div>
-  );
-}
-
 export default function Bni121Page() {
-  const [dati, setDati] = useState<{ settimana: Settimana; calendario: InCalendario[]; richiesteAperte: Richiesta[]; capitoli: Capitolo[] } | null>(null);
+  const [dati, setDati] = useState<{ settimana: Settimana; calendario: Fissato[]; tracker: Tracker; capitoli: Capitolo[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -141,52 +93,7 @@ export default function Bni121Page() {
             <Card><CardContent className="p-4"><div className="text-2xl font-bold">{s.richiesteAperte}</div><div className="text-xs text-muted-foreground">Richieste aperte (obiettivo 15)</div></CardContent></Card>
           </div>
 
-          <section className="space-y-2">
-            <h2 className="font-semibold">In calendario</h2>
-            {dati.calendario.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nessun 121 in calendario. Quando qualcuno ti risponde, premi &quot;Fissato&quot; qui sotto e metti la data.</p>
-            ) : (
-              <div className="space-y-2">
-                {dati.calendario.map((m) => (
-                  <Link key={m.id} href={`/bni/membri/${m.id}`} className="block">
-                    <Card className="hover:border-primary transition"><CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-medium break-words">{m.name}</div>
-                        <div className="text-xs text-muted-foreground break-words">{[m.profession, m.company, m.chapter].filter(Boolean).join(" · ")}</div>
-                      </div>
-                      <Badge variant="outline">{dataOra(m.next121At)}</Badge>
-                    </CardContent></Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="space-y-2">
-            <h2 className="font-semibold">Richieste aperte</h2>
-            {dati.richiesteAperte.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nessuna richiesta aperta. Ogni mattina alle 7 il Pianificatore prepara le prossime in Cassetta.</p>
-            ) : (
-              <div className="space-y-2">
-                {dati.richiesteAperte.map((r) => (
-                  <Card key={r.voceId}><CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <Link href={`/bni/membri/${r.membroId}`} className="font-medium hover:underline break-words">{r.nome}</Link>
-                      <div className="text-xs text-muted-foreground break-words">{r.capitolo}{r.perche ? ` · ${r.perche}` : ""}</div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {r.inCassetta ? (
-                        <Link href="/cassetta"><Badge className="bg-amber-500/90 text-white gap-1"><Send className="h-3 w-3" /> da mandare</Badge></Link>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">mandata {giorniFa(r.chiestaIl)}</span>
-                      )}
-                      {!r.inCassetta && <FissaData membroId={r.membroId} onFatto={carica} />}
-                    </div>
-                  </CardContent></Card>
-                ))}
-              </div>
-            )}
-          </section>
+          <TrackerIncontri tracker={dati.tracker} fissati={dati.calendario} onCambio={carica} />
 
           <section className="space-y-2">
             <h2 className="font-semibold">Capitoli</h2>
