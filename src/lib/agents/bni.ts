@@ -370,7 +370,8 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
 
   // Prima del 121: la rete LinkedIn del membro e il foglio del giorno prima.
   const imminenti = await db.bniMembro.findMany({
-    where: { next121At: { gte: new Date(oggi.getTime() - 3600_000), lte: new Date(oggi.getTime() + 7 * 86400_000) } },
+    where: { next121At: { gte: new Date(oggi.getTime() - 3600_000), lte: new Date(oggi.getTime() + GIORNI_PRIMA_RETE * 86400_000) } },
+    orderBy: { next121At: "asc" },
     select: { id: true, next121At: true, reteLettaAt: true },
   });
   for (const m of imminenti) {
@@ -477,8 +478,15 @@ export async function importaProfiliMembri(findings: Record<string, unknown>, og
 
 // ─── Rete del membro (lavoro di browser su LinkedIn) ───────────────────────
 
+/** Reti LinkedIn dei membri lette al giorno, e quanti giorni prima del 121. */
+const RETI_AL_GIORNO = 2;
+const GIORNI_PRIMA_RETE = 2;
+
 /** Accoda la lettura della rete LinkedIn di un membro, se non è già in corso o fatta da poco. */
 export async function accodaReteMembro(membroId: string, oggi = new Date()): Promise<boolean> {
+  // LinkedIn non va stressato: al massimo 2 reti al giorno, le altre aspettano il loro turno.
+  const oggiGia = await db.agentRun.count({ where: { agent: "rete_membro", queuedAt: { gte: mezzanotteRoma(oggi) } } });
+  if (oggiGia >= RETI_AL_GIORNO) return false;
   const gia = await db.agentRun.findFirst({
     where: { agent: "rete_membro", bniMembroId: membroId, OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { queuedAt: { gt: new Date(oggi.getTime() - 30 * 86400_000) } }] },
   });

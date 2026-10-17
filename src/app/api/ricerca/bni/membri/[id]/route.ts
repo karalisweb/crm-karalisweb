@@ -107,7 +107,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     await db.bniMembro.update({ where: { id }, data });
     // Fissato il 121: la richiesta è partita, e si guarda subito la sua rete LinkedIn.
     if (d.next121At) await chiudiRichiesteSuperate(id, "Superata: il 121 è in calendario");
-    if (d.next121At && !esistente.reteLettaAt) await accodaReteMembro(id);
+    // La rete LinkedIn la legge il turno BNI nei 2 giorni prima dell'incontro (max 2 al giorno).
+    if (d.next121At && !esistente.reteLettaAt && new Date(d.next121At).getTime() - Date.now() < 2 * 86400_000) await accodaReteMembro(id);
     return NextResponse.json({ success: true });
   } catch (e) {
     if (e instanceof ZodError) return NextResponse.json({ error: "Dati non validi", dettagli: e.issues }, { status: 400 });
