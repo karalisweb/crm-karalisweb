@@ -76,7 +76,7 @@ function FissaData({ membroId, onFatto }: { membroId: string; onFatto: () => voi
   );
 }
 
-function DaMandare({ r, onFatto }: { r: RigaRichiesta; onFatto: () => void }) {
+export function DaMandare({ r, onFatto }: { r: RigaRichiesta; onFatto: () => void }) {
   const [occupato, setOccupato] = useState(false);
   const [testo, setTesto] = useState(r.messaggio);
   const [modifica, setModifica] = useState(false);

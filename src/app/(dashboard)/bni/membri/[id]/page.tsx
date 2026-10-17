@@ -10,11 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CalendarClock, Linkedin, Loader2, Mail, MessageSquarePlus, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, CalendarClock, Linkedin, Loader2, Mail, MessageCircle, MessageSquarePlus, Pencil, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { localeAIso } from "@/components/vendita/call-fissata-dialog";
 import { FORMATI, STATI_PRESENTAZIONE, data, dataOra } from "@/components/ricerca/etichette";
-import { CorpoMessaggioBni, CorpoPreparazione121, CorpoVisitaCapitolo } from "@/components/agents/voci-cassetta";
+import { CorpoPreparazione121, CorpoVisitaCapitolo } from "@/components/agents/voci-cassetta";
+import { DaMandare } from "@/components/ricerca/tracker-incontri";
 
 interface Scheda {
   membro: {
@@ -151,6 +152,21 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
     toast.success(ok);
     carica();
   }
+  const [invitando, setInvitando] = useState(false);
+  async function invita() {
+    setInvitando(true);
+    try {
+      const r = await fetch(`/api/ricerca/bni/membri/${id}/invito`, { method: "POST" });
+      const x = await r.json();
+      if (!r.ok) throw new Error(x.error || "Errore");
+      toast.success("Messaggio pronto: controllalo e mandalo su WhatsApp");
+      carica();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore");
+    } finally {
+      setInvitando(false);
+    }
+  }
   async function decidi(voceId: string, decisione: "APPROVATO" | "SCARTATO") {
     const r = await fetch(`/api/cassetta/${voceId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decisione }) });
     if (!r.ok) return toast.error("Non sono riuscito a salvare");
@@ -179,6 +195,11 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {!d.inCassetta.some((v) => v.kind === "MESSAGGIO_BNI") && (
+            <Button size="sm" variant="outline" onClick={invita} disabled={invitando}>
+              {invitando ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-1" />} Invitalo a un 121
+            </Button>
+          )}
           <Registra121 id={m.id} formatoCapitolo={d.capitolo?.mode ?? null} onFatto={carica} />
         </div>
       </div>
@@ -200,11 +221,16 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
           </div>
           {v.kind === "PREPARAZIONE_121" && <CorpoPreparazione121 p={v.payload} />}
           {v.kind === "VISITA_CAPITOLO" && <CorpoVisitaCapitolo p={v.payload} telefono={m.telefono} />}
-          {v.kind === "MESSAGGIO_BNI" && <CorpoMessaggioBni p={v.payload} telefono={m.telefono} />}
-          <div className="flex flex-wrap gap-2">
+          {v.kind === "MESSAGGIO_BNI" && (
+            <DaMandare
+              r={{ voceId: v.id, membroId: m.id, nome: m.nome, capitolo: m.capitolo ?? "", telefono: m.telefono, perche: (v.payload.perche as string) ?? null, messaggio: (v.payload.messaggio as string) ?? "", formato: (v.payload.formato as string) ?? null, mandataIl: null }}
+              onFatto={carica}
+            />
+          )}
+          {v.kind !== "MESSAGGIO_BNI" && <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => decidi(v.id, "APPROVATO")}>{v.kind === "PREPARAZIONE_121" ? "Letto" : "Mandato"}</Button>
             <Button size="sm" variant="ghost" onClick={() => decidi(v.id, "SCARTATO")}>{v.kind === "PREPARAZIONE_121" ? "Non serve" : "Non ora"}</Button>
-          </div>
+          </div>}
         </CardContent></Card>
       ))}
 

@@ -350,7 +350,8 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
   r.riscritte = await riscriviRichiesteVecchie(tutti, oggi);
 
   // Pianificatore — 12 richieste aperte, al massimo 8 nuove al giorno.
-  const nuoveOggi = await db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, createdAt: { gte: new Date(oggi.getTime() - 20 * 3600_000) } } });
+  // Gli inviti fatti da Alessio di sua iniziativa non tolgono posto a quelli del Pianificatore.
+  const nuoveOggi = await db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, agent: { not: "alessio" }, createdAt: { gte: new Date(oggi.getTime() - 20 * 3600_000) } } });
   const quante = Math.max(0, Math.min(RICHIESTE_APERTE - r.settimana.richiesteAperte, RICHIESTE_AL_GIORNO - nuoveOggi));
   for (const p of scegliProssimi(tutti, quante, oggi)) {
     const fatto = await preparaRichiesta(p, oggi);
@@ -462,11 +463,6 @@ const SCOPI: Record<Motivo, string> = {
   ALTRI: "chiedere un 121 per conoscersi: Alessio vuole conoscere tutti i membri BNI, una segnalazione può nascere da chiunque",
 };
 
-const FORMATI: Record<ReturnType<typeof formato121>, string> = {
-  PRESENZA: "proponi di vedersi di persona per un caffè (oppure online su Google Meet, se preferisce)",
-  ONLINE: "proponi un 121 online su Google Meet",
-  A_SCELTA: "proponi di vedersi di persona oppure online su Google Meet, come preferisce",
-};
 
 const NOTE_MOTIVO: Record<Motivo, string> = {
   STESSO_RUOLO: "Fa il tuo mestiere: va per primo, per rispetto e per collaborare.",
@@ -549,6 +545,42 @@ async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato
     });
     return false;
   }
+}
+
+/**
+ * L'invito scritto al volo quando Alessio apre un membro e vuole invitarlo di sua iniziativa.
+ * Se c'è già una richiesta da mandare per lui, si riusa quella.
+ */
+export async function invitoManuale(membroId: string, oggi = new Date()): Promise<string> {
+  const gia = await db.approvalItem.findFirst({ where: { bniMembroId: membroId, kind: KIND_MESSAGGIO_BNI, status: "IN_ATTESA" }, select: { id: true } });
+  if (gia) return gia.id;
+  const membro = await db.bniMembro.findUnique({ where: { id: membroId } });
+  if (!membro) throw new Error("Membro non trovato");
+  const tutti = await caricaCapitoli(oggi);
+  const t = tutti.find((x) => x.membri.some((m) => m.id === membroId));
+  const capitolo = t?.capitolo ?? { id: null, name: membro.chapter ?? "", city: null, isMine: false, mode: null };
+  const motivo: Motivo = (t ? gruppiCapitolo(t.membri).find((g) => g.membri.some((x) => x.id === membroId))?.motivo : null) ?? "ALTRI";
+  const ai = await scriviRichiesta(membro, capitolo, motivo);
+  const voce = await db.approvalItem.create({
+    data: {
+      bniMembroId: membro.id,
+      bniChapterId: capitolo.id,
+      kind: KIND_MESSAGGIO_BNI,
+      agent: "alessio",
+      title: `121 con ${membro.name}`,
+      payload: {
+        ...ai.dati,
+        tipo: motivo,
+        perche: "Invito tuo",
+        formato: formato121(formatoDa(capitolo.mode)),
+        telefono: membro.phone,
+        capitolo: capitolo.name,
+        modello: MODELLO_MESSAGGIO,
+        manuale: true,
+      } as Prisma.InputJsonValue,
+    },
+  });
+  return voce.id;
 }
 
 /**
