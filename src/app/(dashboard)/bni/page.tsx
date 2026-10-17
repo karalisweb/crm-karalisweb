@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Handshake, RefreshCw } from "lucide-react";
 import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
+import { CollegaCalendario } from "@/components/ricerca/collega-calendario";
 import { TrackerIncontri, type Fissato, type Tracker, type Visita } from "@/components/ricerca/tracker-incontri";
 
 interface Settimana {
@@ -63,6 +64,8 @@ export default function Bni121Page() {
         <div className="space-y-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}</div>
       ) : dati && s ? (
         <>
+          <CollegaCalendario onCambio={carica} />
+
           <Card><CardContent className="p-4 space-y-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div className="text-sm font-semibold">Questa settimana</div>

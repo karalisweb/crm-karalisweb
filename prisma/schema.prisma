@@ -942,6 +942,12 @@ model Settings {
   // es. "alessio@karalisweb.net,consulenza@karalisweb.net"
   notificationEmails String? @map("notification_emails") @db.Text
 
+  // Calendario di Alessio (link segreto iCal): gli incontri BNI prenotati entrano da soli (v3.47)
+  calendarIcsUrl    String?   @map("calendar_ics_url") @db.Text
+  calendarSyncedAt  DateTime? @map("calendar_synced_at")
+  calendarSyncError String?   @map("calendar_sync_error")
+  calendarSyncInfo  String?   @map("calendar_sync_info")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

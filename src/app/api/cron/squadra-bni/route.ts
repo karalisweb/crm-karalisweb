@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eseguiTurnoBni } from "@/lib/agents/bni";
+import { sincronizzaIncontri } from "@/lib/ricerca/calendario";
 
 /**
  * POST /api/cron/squadra-bni — un turno della squadra BNI (copertura Sardegna, stratega
@@ -13,7 +14,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const riepilogo = await eseguiTurnoBni();
+    // Prima il calendario: chi ha già prenotato non riceve una nuova richiesta.
+    const calendario = await sincronizzaIncontri().catch((e) => ({ errore: e instanceof Error ? e.message : String(e) }));
+    const riepilogo = { ...(await eseguiTurnoBni()), calendario };
     console.log("[squadra-bni] turno:", JSON.stringify(riepilogo));
     return NextResponse.json({ success: true, ...riepilogo });
   } catch (error) {

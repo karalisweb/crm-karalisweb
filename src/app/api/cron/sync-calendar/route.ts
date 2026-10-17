@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getRecentAppointments } from "@/lib/google-calendar";
 import { creaTrattativa } from "@/lib/vendita/trattative";
+import { sincronizzaIncontri } from "@/lib/ricerca/calendario";
 
 /**
  * POST /api/cron/sync-calendar
@@ -21,6 +22,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Gli incontri BNI dal calendario di Alessio (link iCal): indipendente dal resto.
+  let incontriBni: Awaited<ReturnType<typeof sincronizzaIncontri>> | { errore: string } | null = null;
+  try {
+    incontriBni = await sincronizzaIncontri();
+  } catch (err) {
+    incontriBni = { errore: err instanceof Error ? err.message : String(err) };
+  }
+  console.log("[calendario BNI]", JSON.stringify(incontriBni));
+
   try {
     const appointments = await getRecentAppointments(24);
 
@@ -28,6 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         synced: 0,
         message: "Nessun appuntamento trovato o Google Calendar non configurato",
+        incontriBni,
       });
     }
 

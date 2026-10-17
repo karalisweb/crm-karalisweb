@@ -38,7 +38,7 @@ const STATI: Record<Stato, { etichetta: string; ordine: number; badge: string; b
   DA_INCONTRARE: { etichetta: "da incontrare", ordine: 2, badge: "bg-muted text-muted-foreground border-transparent", bordo: "border-l-4 border-l-transparent" },
 };
 
-/** I membri raggruppati per capitolo (in ordine alfabetico); dentro, per stato e poi per nome. */
+/** I membri raggruppati per capitolo (dal più grande); dentro, per stato e poi per nome. */
 function perCapitolo(membri: Membro[]): [string, Membro[]][] {
   const gruppi = new Map<string, Membro[]>();
   for (const m of membri) {
@@ -46,7 +46,8 @@ function perCapitolo(membri: Membro[]): [string, Membro[]][] {
     gruppi.set(k, [...(gruppi.get(k) ?? []), m]);
   }
   for (const lista of gruppi.values()) lista.sort((a, b) => STATI[statoDi(a)].ordine - STATI[statoDi(b)].ordine || a.name.localeCompare(b.name, "it"));
-  return [...gruppi.entries()].sort((a, b) => a[0].localeCompare(b[0], "it"));
+  // I capitoli più grandi per primi.
+  return [...gruppi.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], "it"));
 }
 
 function RigaMembro({ m, conCapitolo, dettaglio }: { m: Membro; conCapitolo?: boolean; dettaglio?: boolean }) {
@@ -114,16 +115,24 @@ export default function MembriBniPage() {
       ) : (
         <div className="space-y-2">
           {perCapitolo(membri).map(([capitolo, lista]) => {
-            const conosciuti = lista.filter((m) => m.conosciuto).length;
+            const conosciuti = lista.filter((m) => statoDi(m) === "CONOSCIUTO").length;
+            const fissati = lista.filter((m) => statoDi(m) === "FISSATO").length;
             return (
               <details key={capitolo} className="rounded-xl border bg-card group">
-                <summary className="cursor-pointer list-none p-4 flex items-center justify-between gap-3">
-                  <span className="font-semibold">{capitolo}</span>
-                  <span className="text-xs text-muted-foreground">
-                    <span className="text-green-600 dark:text-green-400 font-medium">{conosciuti} conosciuti</span>
-                    {lista.some((m) => statoDi(m) === "FISSATO") && <span className="text-blue-600 dark:text-blue-400 font-medium"> · {lista.filter((m) => statoDi(m) === "FISSATO").length} fissati</span>}
-                    {" "}su {lista.length}
-                  </span>
+                <summary className="cursor-pointer list-none p-4 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">{capitolo}</span>
+                    <span className="text-xs">
+                      <span className="text-green-600 dark:text-green-400 font-medium">{conosciuti} conosciuti</span>
+                      {fissati > 0 && <span className="text-blue-600 dark:text-blue-400 font-medium"> · {fissati} fissati</span>}
+                      <span className="text-foreground font-semibold"> · ne mancano {lista.length - conosciuti - fissati}</span>
+                      <span className="text-muted-foreground"> su {lista.length}</span>
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded bg-muted overflow-hidden flex">
+                    <div className="h-full bg-green-600" style={{ width: `${(conosciuti / lista.length) * 100}%` }} />
+                    <div className="h-full bg-blue-600" style={{ width: `${(fissati / lista.length) * 100}%` }} />
+                  </div>
                 </summary>
                 <div className="px-3 pb-3 space-y-1.5">
                   {capitoli[capitolo.toLowerCase()] && (

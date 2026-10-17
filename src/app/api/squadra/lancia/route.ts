@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin, enforceUserRateLimit } from "@/lib/api-auth";
 import { eseguiTurno } from "@/lib/agents/turno";
 import { eseguiTurnoBni } from "@/lib/agents/bni";
+import { sincronizzaIncontri } from "@/lib/ricerca/calendario";
 import { eseguiTurnoRicerca } from "@/lib/ricerca/cercatore";
 
 /**
@@ -17,7 +18,10 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   try {
-    if (body?.squadra === "bni") return NextResponse.json({ success: true, squadra: "bni", ...(await eseguiTurnoBni()) });
+    if (body?.squadra === "bni") {
+      await sincronizzaIncontri().catch(() => null);
+      return NextResponse.json({ success: true, squadra: "bni", ...(await eseguiTurnoBni()) });
+    }
     if (body?.squadra === "esploratore" || body?.squadra === "ricerca") return NextResponse.json({ success: true, squadra: "ricerca", ...(await eseguiTurnoRicerca()) });
     const limit = Math.min(Math.max(Number(body?.limit) || 5, 1), 10);
     return NextResponse.json({ success: true, squadra: "commerciale", ...(await eseguiTurno({ limit })) });
