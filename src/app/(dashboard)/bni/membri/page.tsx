@@ -21,25 +21,40 @@ interface Membro {
   next121At: string | null;
 }
 
-/** I membri raggruppati per capitolo, i capitoli in ordine alfabetico. */
+type Stato = "CONOSCIUTO" | "FISSATO" | "DA_INCONTRARE";
+
+function statoDi(m: Membro): Stato {
+  if (m.conosciuto) return "CONOSCIUTO";
+  if (m.next121At && new Date(m.next121At).getTime() > Date.now() - 86400000) return "FISSATO";
+  return "DA_INCONTRARE";
+}
+
+const STATI: Record<Stato, { etichetta: string; ordine: number; badge: string; bordo: string }> = {
+  CONOSCIUTO: { etichetta: "conosciuto", ordine: 0, badge: "bg-green-600 text-white border-transparent", bordo: "border-l-4 border-l-green-600" },
+  FISSATO: { etichetta: "incontro fissato", ordine: 1, badge: "bg-blue-600 text-white border-transparent", bordo: "border-l-4 border-l-blue-600" },
+  DA_INCONTRARE: { etichetta: "da incontrare", ordine: 2, badge: "bg-muted text-muted-foreground border-transparent", bordo: "border-l-4 border-l-transparent" },
+};
+
+/** I membri raggruppati per capitolo (in ordine alfabetico); dentro, per stato e poi per nome. */
 function perCapitolo(membri: Membro[]): [string, Membro[]][] {
   const gruppi = new Map<string, Membro[]>();
   for (const m of membri) {
     const k = m.chapter || "Senza capitolo";
     gruppi.set(k, [...(gruppi.get(k) ?? []), m]);
   }
+  for (const lista of gruppi.values()) lista.sort((a, b) => STATI[statoDi(a)].ordine - STATI[statoDi(b)].ordine || a.name.localeCompare(b.name, "it"));
   return [...gruppi.entries()].sort((a, b) => a[0].localeCompare(b[0], "it"));
 }
 
 function RigaMembro({ m, conCapitolo, dettaglio }: { m: Membro; conCapitolo?: boolean; dettaglio?: boolean }) {
   return (
-    <Link href={`/bni/membri/${m.id}`} className="flex items-start justify-between gap-3 rounded-lg border p-3 hover:border-primary transition">
+    <Link href={`/bni/membri/${m.id}`} className={`flex items-start justify-between gap-3 rounded-lg border p-3 hover:border-primary transition ${STATI[statoDi(m)].bordo}`}>
       <div className="min-w-0">
         <div className="font-medium break-words">{m.name}</div>
         <div className="text-xs text-muted-foreground break-words">{[m.profession, m.company, conCapitolo ? m.chapter : null].filter(Boolean).join(" · ")}</div>
         {dettaglio && (m.cosaFa || m.referenzePuoDare) && <div className="text-xs mt-1 break-words line-clamp-2">{m.cosaFa ?? m.referenzePuoDare}</div>}
       </div>
-      {m.conosciuto ? <Badge variant="outline" className="text-[10px] shrink-0">conosciuto</Badge> : <Badge variant="secondary" className="text-[10px] shrink-0">da incontrare</Badge>}
+      <Badge className={`text-[10px] shrink-0 ${STATI[statoDi(m)].badge}`}>{STATI[statoDi(m)].etichetta}</Badge>
     </Link>
   );
 }
@@ -95,7 +110,11 @@ export default function MembriBniPage() {
               <details key={capitolo} className="rounded-xl border bg-card group">
                 <summary className="cursor-pointer list-none p-4 flex items-center justify-between gap-3">
                   <span className="font-semibold">{capitolo}</span>
-                  <span className="text-xs text-muted-foreground">{conosciuti} conosciuti su {lista.length}</span>
+                  <span className="text-xs text-muted-foreground">
+                    <span className="text-green-600 dark:text-green-400 font-medium">{conosciuti} conosciuti</span>
+                    {lista.some((m) => statoDi(m) === "FISSATO") && <span className="text-blue-600 dark:text-blue-400 font-medium"> · {lista.filter((m) => statoDi(m) === "FISSATO").length} fissati</span>}
+                    {" "}su {lista.length}
+                  </span>
                 </summary>
                 <div className="px-3 pb-3 space-y-1.5">{lista.map((m) => <RigaMembro key={m.id} m={m} />)}</div>
               </details>
