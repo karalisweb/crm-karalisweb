@@ -4,7 +4,7 @@ import {
   type MembroPerRegole, type CapitoloPerScelta,
 } from "@/lib/agents/bni-regole";
 import {
-  prossimaChiave, passoRicerca, terminiDi, normalizzaLinkedin, stessoNome, punteggioBisogno, chiaveUsabile,
+  prossimaChiave, passoRicerca, terminiDi, normalizzaLinkedin, nellaZona, stessoNome, punteggioBisogno, chiaveUsabile,
   type ChiavePerScelta, type MembroPerBisogno,
 } from "../regole";
 
@@ -140,6 +140,17 @@ describe("Chiavi di ricerca", () => {
     expect(passoRicerca(t, 1)).toEqual({ termine: "Costruzione piscine", zona: "Cagliari" });
     expect(passoRicerca(t, 2)).toEqual({ termine: "piscine", zona: "Quartu Sant'Elena" });
     expect(passoRicerca(t, 10_000)).toBeNull();
+  });
+});
+
+describe("Zona", () => {
+  it("cercando in Sardegna scarta le aziende di altre regioni", () => {
+    expect(nellaZona("Via Cassia, 1864, 00123 Roma RM", "Cagliari")).toBe(false);
+    expect(nellaZona("S.p n, 86/Km 2.700, 09015 Domusnovas SU", "Cagliari")).toBe(true);
+    expect(nellaZona("Via Is Maglias, 47, 09122 Cagliari CA", "Cagliari")).toBe(true);
+    expect(nellaZona("Cagliari", "Cagliari")).toBe(true);
+    expect(nellaZona("Via Roma 1, 20121 Milano MI", "Milano")).toBe(true);
+    expect(nellaZona("Via Roma 1, 20121 Milano MI", "Roma")).toBe(false);
   });
 });
 

@@ -36,6 +36,29 @@ export const ZONE: readonly string[] = [
 
 export const ZONE_SARDEGNA = 18;
 
+const SIGLE_SARDEGNA = ["CA", "SU", "SS", "NU", "OR"];
+const SIGLA_CITTA: Record<string, string> = {
+  Roma: "RM", Milano: "MI", Torino: "TO", Bologna: "BO", Firenze: "FI", Napoli: "NA", Bari: "BA", Verona: "VR", Padova: "PD",
+  Brescia: "BS", Bergamo: "BG", Genova: "GE", Venezia: "VE", Treviso: "TV", Modena: "MO", Parma: "PR", "Reggio Emilia": "RE",
+  Perugia: "PG", Ancona: "AN", Pescara: "PE", Palermo: "PA", Catania: "CT", Lecce: "LE", Salerno: "SA", Trento: "TN",
+  Bolzano: "BZ", Udine: "UD", Trieste: "TS",
+};
+
+/**
+ * Il risultato è nella zona cercata? Google Maps a volte porta aziende lontane (una ditta di Roma
+ * cercando a Cagliari). Si guarda la sigla della provincia nell'indirizzo: per le zone sarde basta
+ * una provincia sarda; senza sigla leggibile si tiene.
+ */
+export function nellaZona(indirizzo: string | null | undefined, zona: string): boolean {
+  const sigle = (indirizzo ?? "").match(/\b\d{5}\s+.+?\s([A-Z]{2})\b/);
+  if (!sigle) return true;
+  const sigla = sigle[1];
+  const i = ZONE.indexOf(zona);
+  if (i >= 0 && i < ZONE_SARDEGNA) return SIGLE_SARDEGNA.includes(sigla);
+  const attesa = SIGLA_CITTA[zona];
+  return !attesa || attesa === sigla;
+}
+
 export function zonaDi(indice: number): string | null {
   return ZONE[indice] ?? null;
 }

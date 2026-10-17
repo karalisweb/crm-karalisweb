@@ -22,7 +22,7 @@ import { scadenzeCasi } from "./casi-studio";
 import { filtraSimili } from "./filtro";
 import {
   AZIENDE_AL_GIORNO, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO, ZONE_SARDEGNA,
-  nomeConfrontabile, normalizzaLinkedin, passoRicerca, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
+  nellaZona, nomeConfrontabile, normalizzaLinkedin, passoRicerca, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
 } from "./regole";
 
 type Canale = "google" | "maps" | "facebook" | "instagram" | "linkedin";
@@ -253,7 +253,7 @@ async function cercaSuMaps(termine: string, zona: string, chiaveId: string, cont
     mapsUrl: i.place_id ? `https://www.google.com/maps/place/?q=place_id:${i.place_id}` : null,
   }));
   const filtro = await filtraSimili(contesto, candidati);
-  const simili = candidati.filter((_, i) => filtro.tenere.has(i));
+  const simili = candidati.filter((c, i) => filtro.tenere.has(i) && nellaZona(c.indirizzo, zona));
   const e: EsitoPasso = { ricerca, canale: "maps", trovati: items.length, diversi: candidati.length - simili.length, nuove: 0, esistenti: 0, scartate: 0, rimandati: 0, costCents: costCents + filtro.costCents };
   await salvaFinoAQuota(simili, quota, chiaveId, "maps", "google_maps", e);
   return e;
