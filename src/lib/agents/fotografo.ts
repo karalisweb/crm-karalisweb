@@ -133,11 +133,13 @@ export async function leggiPaginaPubblica(url: string, attesaMs = 5000): Promise
     await p.goto(url, { waitUntil: "domcontentloaded", timeout: 40_000 });
     await p.waitForTimeout(attesaMs);
     await chiudiCookie(p);
-    // Facebook mostra un riquadro "Accedi" sopra la pagina: si chiude se c'è.
+    // Si legge PRIMA di toccare la pagina: scorrere o chiudere riquadri su Facebook fa spuntare l'accesso.
+    const primo = await p.evaluate(() => document.body.innerText);
     await p.getByRole("button", { name: /chiudi|close/i }).first().click({ timeout: 1500 }).catch(() => {});
-    await p.mouse.wheel(0, 2500).catch(() => {});
-    await p.waitForTimeout(1500);
-    const testo = (await p.evaluate(() => document.body.innerText)).replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n");
+    await p.waitForTimeout(800);
+    const dopo = await p.evaluate(() => document.body.innerText).catch(() => "");
+    const grezzo = dopo.length > primo.length ? dopo : primo;
+    const testo = grezzo.replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n");
     return { url: p.url(), testo, html: await p.content() };
   } finally {
     await browser.close();

@@ -66,7 +66,8 @@ export const agenteSocialServer: AgenteEseguibile = {
     let costCents = 0;
     if (facebook) {
       const p = await leggiPaginaPubblica(facebook);
-      if (/accedi|log in/i.test(p.testo.slice(0, 200)) && p.testo.length < 800) throw new Error("Facebook chiede l'accesso per questa pagina");
+      // Facebook a volte mostra solo il riquadro di accesso: senza follower né post non c'è niente da leggere.
+      if (!/follower|mi piace|persone seguono|post/i.test(p.testo)) throw new Error("Facebook chiede l'accesso per questa pagina");
       const oggi = ctx.oggi.toISOString().slice(0, 10);
       const ai = await chiediJSON<RispostaFacebook>({
         sistema: `${REGOLE_COMUNI}\n\nLeggi il testo di una pagina Facebook aziendale (come la vede chi non ha fatto l'accesso) e ricavi solo i dati scritti. Oggi è ${oggi}.`,
@@ -79,9 +80,8 @@ export const agenteSocialServer: AgenteEseguibile = {
       const giorni = fb.ultimo_post ? Math.round((ctx.oggi.getTime() - new Date(fb.ultimo_post).getTime()) / 86400_000) : null;
       if (giorni != null && giorni > 90) {
         levers.push({ servizio: "social", testo: `La pagina Facebook è ferma: l'ultimo post è di ${Math.round(giorni / 30)} mesi fa`, prova: `${p.url} — ultimo post visibile: ${fb.ultimo_post}` });
-      } else if (fb.ultimo_post && (fb.post_ultimi_3_mesi ?? 0) <= 3) {
-        levers.push({ servizio: "social", testo: `Su Facebook pubblicano poco: ${fb.post_ultimi_3_mesi ?? 0} post negli ultimi 3 mesi`, prova: p.url });
       }
+      // Quanti post fanno non si dice: da fuori si vede solo l'ultimo, il conteggio non è affidabile.
     } else {
       levers.push({ servizio: "social", testo: "Dal sito non si arriva a nessuna pagina Facebook", prova: "Nessun link a Facebook nella homepage" });
     }
