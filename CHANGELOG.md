@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.50.1] - 2026-10-18
+
+### Changed
+- **Le aziende non si cercano più su LinkedIn**: tolta "Aziende su LinkedIn" dalla casella Parti da qui e spenta la ricerca automatica di pagine aziendali (per "costruzione piscine" in Sardegna erano solo 5). Le aziende si trovano con Google Maps, Google e Meta; LinkedIn serve dopo, per trovare chi decide (da rifare dopo la prova con Alessio).
+
 ## [3.50.0] - 2026-10-18
 
 ### Changed

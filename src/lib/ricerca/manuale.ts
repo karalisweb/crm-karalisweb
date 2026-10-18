@@ -96,32 +96,22 @@ export async function aggiungiAMano(r: RichiestaManuale): Promise<EsitoManuale> 
   if (testo.length < 3) throw new Error("Scrivi almeno 3 lettere");
   const citta = r.citta?.trim() || null;
 
-  if (r.tipo === "linkedin") {
-    // Solo LinkedIn: le pagine aziendali per quei termini, nella zona scritta (altrimenti la Sardegna).
-    const termini = terminiDi(testo, []);
-    const k = await db.chiaveRicerca.create({ data: { tipo: "SETTORE", valore: testo.slice(0, 200), termini, attiva: false } });
-    await db.agentRun.create({
-      data: { agent: "cerca_linkedin", status: "IN_CODA", input: { modo: "aziende", chiaveId: k.id, tipo: "SETTORE", termini, zona: citta ?? "Sardegna", provinceEscluse: [], giaVisti: 0 } },
-    });
-    return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `Ricerca "${testo}" su LinkedIn (${citta ?? "Sardegna"}) in coda: la fa l'agente sul Mac entro mezz'ora, le aziende arrivano qui in "Da decidere".` };
-  }
+  // Decisione del 2026-10-18: le aziende non si cercano su LinkedIn (troppe piccole imprese non hanno
+  // la pagina). LinkedIn serve dopo, azienda per azienda, per trovare chi decide.
+  if (r.tipo === "linkedin") throw new Error("Le aziende non si cercano più su LinkedIn: usa Un settore (Google Maps e Google)");
 
   if (r.tipo === "settore") {
     const termini = terminiDi(testo, []);
     const k = await db.chiaveRicerca.create({ data: { tipo: "SETTORE", valore: testo.slice(0, 200), termini, attiva: true } });
-    // Anche su LinkedIn: le pagine aziendali di quel settore (le cerca l'agente sul Mac).
-    await db.agentRun.create({
-      data: { agent: "cerca_linkedin", status: "IN_CODA", input: { modo: "aziende", chiaveId: k.id, tipo: "SETTORE", termini, zona: citta ?? "Sardegna", provinceEscluse: [], giaVisti: 0 } },
-    });
     // Con la città la ricerca parte subito; il settore resta anche nelle ricerche dei giorni dopo.
-    if (!citta) return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `"${testo}" è nelle ricerche dei prossimi giorni, e su LinkedIn lo cerca l'agente sul Mac entro mezz'ora. Scrivi anche una città per cercare subito su Google.` };
+    if (!citta) return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `"${testo}" è nelle ricerche dei prossimi giorni. Scrivi anche una città per cercare subito.` };
     // Si risponde subito: la ricerca va avanti per conto suo e l'elenco si aggiorna da solo.
     void cercaSettoreAdesso(k.id, testo, citta)
       .then((e) => { if (e.nuove) avviaAnalisiVeloci(); })
       .catch((err) => console.error("[settore a mano] fallito:", err));
     return {
       leadId: null, personaId: null, chiaveId: k.id,
-      messaggio: `Sto cercando "${testo}" a ${citta} su Google Maps e Google: le aziende nuove compaiono qui sotto in 1-2 minuti, con l'analisi veloce già partita. Su LinkedIn le cerca l'agente sul Mac entro mezz'ora.`,
+      messaggio: `Sto cercando "${testo}" a ${citta} su Google Maps e Google: le aziende nuove compaiono qui sotto in 1-2 minuti, con l'analisi veloce già partita.`,
     };
   }
 

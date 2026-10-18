@@ -132,11 +132,26 @@ da usare nella prima frase della chiamata.
 4. **Numeri economici** (fatturato, dipendenti) come filtro: da fare più avanti. Fonte preferita Creditsafe se il
    prezzo dell'API sta nel tetto, altrimenti un servizio a consumo (es. Openapi). La fonte deve essere sostituibile.
 5. Oltre ai casi studio, Alessio può scrivere **a mano un settore, una persona o un'azienda** da cui partire.
-6. **LinkedIn: prima l'azienda, poi la persona** (deciso il 2026-10-18). L'agente cerca le **pagine aziendali** del
-   settore (nicchia, poi settore; prima la Sardegna) e prende nome, sito, città e dipendenti dalla pagina; chi decide
-   si trova dalla pagina dell'azienda. Niente più "persone simili al titolare" (davano aziende indovinate dal profilo:
-   le 14 trovate così sono state messe in Eliminate). Le persone arrivano solo dai contatti in comune e dalle reti
-   dei membri BNI.
+6. **LinkedIn e chi decide** (decisione del 2026-10-18, dopo la prova).
+   - *Cosa abbiamo visto:* il Cercatore LinkedIn (R3, modo "aziende") cerca le pagine aziendali per parola chiave. Per
+     "costruzione piscine" in Sardegna ha trovato solo 5 aziende: LinkedIn trova solo chi ha una pagina aziendale con
+     quella parola. Molte piccole imprese sarde la pagina non ce l'hanno, ma il titolare un profilo personale quasi
+     sempre sì.
+   - **Le aziende NON si cercano su LinkedIn.** Si trovano come già avviene: Google Maps e Google (DataForSEO) e Meta.
+     Il modo "aziende" del Cercatore LinkedIn è spento (non è più nel turno né nella casella "Parti da qui").
+   - **LinkedIn serve dopo, azienda per azienda**, per un'azienda già nel CRM:
+     a) cercare la pagina aziendale per nome (anche senza "srl", o con il dominio del sito);
+     b) se la pagina non c'è o non mostra persone: cercare le PERSONE che nel profilo scrivono quell'azienda
+        (es. "Titolare – Idrotech Piscine"), filtro località Sardegna.
+   - **Chi decide:** al massimo 2 persone (titolare, socio, amministratore): solo nome, ruolo, link al profilo pubblico e
+     i contatti in comune con Alessio o con un membro BNI (un membro in comune = chi lo presenta).
+   - Regole di sempre: solo lettura, niente richieste di collegamento né messaggi, max 20 aziende LinkedIn al giorno,
+     CAPTCHA o blocco = lavoro FALLITO.
+   - *Prima di costruire, la prova:* Alessio sfoltisce le aziende "approfondite"; su quelle che restano l'agente di browser
+     fa a mano i punti a, b e chi decide; si guarda insieme cosa esce e solo dopo si aggiornano il Decision maker
+     (agente 9: istruzioni e forma dei findings) e il codice.
+   - Le persone "simili al titolare" non si cercano più (davano aziende indovinate dal profilo: le 14 trovate così
+     sono in Eliminate). Le persone arrivano solo da chi decide, dai contatti in comune e dalle reti dei membri BNI.
 
 ### Trovare il sito (prima di tutto)
 

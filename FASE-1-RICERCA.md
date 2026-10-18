@@ -159,11 +159,16 @@ che può dare. Prima chi corrisponde a più parole, poi chi è conosciuto.
 | SETTORE, AZIENDA | Google Maps | DataForSEO `serp/google/maps` ("termine città"): nome, sito, telefono, indirizzo, recensioni | Meta + Google |
 | SETTORE, AZIENDA | Google | DataForSEO organico (come l'Esploratore di oggi) | Meta + Google |
 | SETTORE, AZIENDA | Facebook, Instagram | lavoro di browser **cerca su Meta**: pagine e profili di aziende per termine e città | Meta + Google |
-| PERSONA | LinkedIn | lavoro di browser **cerca su LinkedIn**: titolari con profilo simile, i collegamenti della persona del caso, gli amici in comune | LinkedIn |
 | RETE_MEMBRO | LinkedIn | lavoro di browser: tra i collegamenti del membro | LinkedIn |
 
+> **Decisione del 2026-10-18:** le aziende **non si cercano su LinkedIn** (né per persone simili al titolare, né per pagine
+> aziendali: per "costruzione piscine" in Sardegna le pagine erano solo 5, molte piccole imprese non ce l'hanno). Le
+> aziende si trovano con Google Maps, Google e Meta. LinkedIn serve dopo, azienda per azienda, per trovare **chi decide**
+> (pagina per nome o dominio; se non c'è, le persone che scrivono quell'azienda nel profilo, in Sardegna; max 2 persone,
+> con i contatti in comune). Dettagli e prova prima del codice: `PROGETTO-AGENTI.md`, Fase 2, punto 6.
+
 **Obiettivo: 5 aziende nuove al giorno.** Il turno (cron `esploratore`, feriali 06:30 e 14:30) prova le chiavi finché
-arriva a 5 o fa 4 ricerche. Su LinkedIn al massimo **2 lavori al giorno** (circa 20 profili).
+arriva a 5 o fa 4 ricerche. Su LinkedIn al massimo **2 lavori al giorno** (oggi solo le reti dei membri BNI).
 
 ### 4.4 Doppioni e collegamenti
 

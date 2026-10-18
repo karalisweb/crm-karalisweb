@@ -21,7 +21,7 @@ import { mezzanotteRoma, norm } from "@/lib/agents/bni-regole";
 import { scadenzeCasi } from "./casi-studio";
 import { filtraSimili } from "./filtro";
 import {
-  AZIENDE_AL_GIORNO, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO, ZONE, ZONE_SARDEGNA,
+  AZIENDE_AL_GIORNO, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO,
   nellaZona, nomeConfrontabile, normalizzaLinkedin, passoRicerca, prioritaChiave, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
 } from "./regole";
 
@@ -300,7 +300,6 @@ export interface RiepilogoRicerca {
 }
 
 const TIPI_AZIENDE: TipoChiave[] = ["SETTORE", "AZIENDA"];
-const TIPI_PERSONE: TipoChiave[] = ["PERSONA", "RETE_MEMBRO"];
 
 function terminiChiave(k: { tipo: string; valore: string; termini: Prisma.JsonValue }): string[] {
   // AZIENDA è la nicchia: il valore è il nome del cliente, si cercano solo i termini dei "simili".
@@ -415,34 +414,11 @@ export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?:
     }
   }
 
-  // 3) Browser: LinkedIn, al massimo 2 lavori al giorno (contano anche le reti dei membri BNI).
-  //    Prima l'AZIENDA: le pagine aziendali del settore (nicchia, poi settore; prima la Sardegna).
-  //    Le persone solo dalla rete di un membro BNI. Mai più "persone simili al titolare" (2026-10-18).
-  let linkedinOggi = await db.agentRun.count({ where: { agent: { in: ["cerca_linkedin", "rete_membro"] }, queuedAt: { gte: daOggi } } });
-  const aziendeOggi = await db.agentRun.count({ where: { agent: "cerca_linkedin", queuedAt: { gte: daOggi }, input: { path: ["modo"], equals: "aziende" } } });
-  if (linkedinOggi < LAVORI_LINKEDIN_AL_GIORNO && !aziendeOggi) {
-    const k = prossimaChiave(chiavi, TIPI_AZIENDE, oggi, priorita);
-    if (k) {
-      const passo = passoDi(k);
-      await db.agentRun.create({
-        data: {
-          agent: "cerca_linkedin",
-          status: "IN_CODA",
-          input: {
-            modo: "aziende",
-            chiaveId: k.id,
-            tipo: k.tipo,
-            termini: terminiChiave(k),
-            zona: !passo || ZONE.indexOf(passo.zona) < ZONE_SARDEGNA ? "Sardegna" : "Italia",
-            provinceEscluse: escluseDi(k),
-            giaVisti: k.usi,
-          },
-        },
-      });
-      linkedinOggi++;
-      r.lavoriLinkedin++;
-    }
-  }
+  // 3) Browser: LinkedIn, al massimo 2 lavori al giorno. Decisione del 2026-10-18: le aziende NON si
+  //    cercano su LinkedIn (molte piccole imprese non hanno la pagina aziendale; le si trova con Google
+  //    Maps, Google e Meta). LinkedIn serve dopo, azienda per azienda, per trovare chi decide. Qui resta
+  //    solo la rete dei membri BNI.
+  const linkedinOggi = await db.agentRun.count({ where: { agent: { in: ["cerca_linkedin", "rete_membro"] }, queuedAt: { gte: daOggi } } });
   if (linkedinOggi < LAVORI_LINKEDIN_AL_GIORNO) {
     const k = prossimaChiave(chiavi, ["RETE_MEMBRO"], oggi);
     const membro = k?.bniMembroId ? await db.bniMembro.findUnique({ where: { id: k.bniMembroId }, select: { name: true, linkedinUrl: true, company: true } }) : null;
