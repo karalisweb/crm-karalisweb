@@ -102,7 +102,7 @@ export async function aggiungiAMano(r: RichiestaManuale): Promise<EsitoManuale> 
     const leadId = await aggiungiAzienda(testo, citta, chiaveId);
     if (!leadId) throw new Error("Non sono riuscito a salvare l'azienda");
     avviaGiroVeloce(leadId);
-    return { leadId, personaId: null, chiaveId, messaggio: "Azienda aggiunta: il giro veloce è partito, tra qualche minuto trovi la scheda piena" };
+    return { leadId, personaId: null, chiaveId, messaggio: "Azienda aggiunta: l'analisi veloce è partita, tra qualche minuto trovi la scheda piena" };
   }
 
   // Persona: con la sua azienda, se Alessio la sa.
@@ -119,6 +119,6 @@ export async function aggiungiAMano(r: RichiestaManuale): Promise<EsitoManuale> 
     leadId,
     personaId: p?.personaId ?? null,
     chiaveId,
-    messaggio: leadId ? "Persona e azienda aggiunte: il giro veloce sull'azienda è partito" : "Persona aggiunta: scrivi anche la sua azienda per analizzarla",
+    messaggio: leadId ? "Persona e azienda aggiunte: l'analisi veloce dell'azienda è partita" : "Persona aggiunta: scrivi anche la sua azienda per analizzarla",
   };
 }

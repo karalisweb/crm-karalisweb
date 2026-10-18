@@ -163,7 +163,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
                   {an.ganci ? "Le frasi qui sotto sono già usabili." : "Gli agenti stanno lavorando."} Social, inserzioni Meta, LinkedIn e chi è il titolare li cerca l&apos;agente sul tuo Mac (nei giorni feriali alle 10 e alle 16): quando arrivano, le frasi si aggiornano da sole.
                 </div>
               ) : (
-                <span className="text-sm">{an.ganci ? ": tutto fatto" : ": in corso"}</span>
+                <span className="text-sm">{an.ganci ? ": tutto fatto" : ": gli agenti stanno lavorando"}</span>
               )}
             </div>
           ) : stato === "SCARTATO" ? (
@@ -203,7 +203,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
               <div className="text-muted-foreground">{titolare.ruolo ?? "Titolare"}</div>
             </div>
           ) : (
-            <div><div className="font-medium">Titolare: da trovare</div><div className="text-muted-foreground">Lo cerca l&apos;agente su LinkedIn nel giro completo</div></div>
+            <div><div className="font-medium">Titolare: da trovare</div><div className="text-muted-foreground">Lo cerca l&apos;agente su LinkedIn nell&apos;analisi completa</div></div>
           )}
         </div>
 

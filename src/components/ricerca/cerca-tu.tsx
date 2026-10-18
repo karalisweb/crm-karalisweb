@@ -10,9 +10,9 @@ import { Loader2, Plus } from "lucide-react";
 type Tipo = "azienda" | "settore" | "persona";
 
 const TIPI: { k: Tipo; label: string; esempio: string }[] = [
-  { k: "azienda", label: "Un'azienda", esempio: "Officina 3MT" },
-  { k: "settore", label: "Un settore", esempio: "costruzione piscine" },
-  { k: "persona", label: "Una persona", esempio: "Mario Rossi" },
+  { k: "azienda", label: "Un'azienda", esempio: "Nome dell'azienda" },
+  { k: "settore", label: "Un settore", esempio: "Cosa fanno (come lo cercheresti su Google)" },
+  { k: "persona", label: "Una persona", esempio: "Nome e cognome" },
 ];
 
 /** La casella "parti da qui": Alessio scrive un'azienda, un settore o una persona. */
@@ -69,7 +69,7 @@ export function CercaTu({ onFatto }: { onFatto?: () => void }) {
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}Aggiungi</Button>
           <span className="text-xs text-muted-foreground">
-            {tipo === "azienda" ? "La cerco su Google Maps e parte subito il giro veloce" : tipo === "settore" ? "Entra nelle ricerche, prima degli altri" : "Se scrivi la sua azienda, parte il giro veloce"}
+            {tipo === "azienda" ? "La cerco su Google Maps e parte subito l'analisi veloce" : tipo === "settore" ? "Entra nelle ricerche, prima degli altri" : "Se scrivi la sua azienda, parte l'analisi veloce"}
           </span>
         </div>
         {esito && <div className={`text-sm ${esito.ok ? "text-green-600 dark:text-green-400" : "text-red-600"}`}>{esito.testo}</div>}

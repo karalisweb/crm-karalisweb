@@ -47,7 +47,7 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
       html: `<div style="border:1px solid #ddd;border-radius:10px;padding:14px 16px;margin:0 0 14px">
   <div style="font-size:16px;font-weight:600">${esc(l.name)}${nuova ? ' <span style="font-size:11px;color:#0b6e4f">nuova</span>' : ""}</div>
   <div style="font-size:13px;color:#666">${esc([l.category, l.address].filter(Boolean).join(" · "))} — ${esc(perche)}</div>
-  ${leve.length ? `<ul style="font-size:14px;padding-left:18px;margin:8px 0">${leve.map((x) => `<li>${esc(x.testo)}</li>`).join("")}</ul>` : '<div style="font-size:14px;margin:8px 0">Il giro veloce non ha trovato ganci forti.</div>'}
+  ${leve.length ? `<ul style="font-size:14px;padding-left:18px;margin:8px 0">${leve.map((x) => `<li>${esc(x.testo)}</li>`).join("")}</ul>` : '<div style="font-size:14px;margin:8px 0">L’analisi veloce non ha trovato niente di forte.</div>'}
   <a href="${base}/aziende-trovate/${l.id}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:14px">Apri e decidi</a>
 </div>`,
       testo: `• ${l.name} (${perche})\n${leve.map((x) => `  - ${x.testo}`).join("\n")}\n  ${base}/aziende-trovate/${l.id}`,
@@ -56,7 +56,7 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
 
   const titolo = `${totale} ${totale === 1 ? "azienda da decidere" : "aziende da decidere"}`;
   const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#111">
-<p style="font-size:15px">Buongiorno Alessio. Il giro veloce è finito su queste aziende: apri la scheda e scegli <b>Approfondisci</b> o <b>Scarta</b>.</p>
+<p style="font-size:15px">Buongiorno Alessio. L'analisi veloce è fatta su queste aziende: apri la scheda e scegli <b>Approfondisci</b> (parte l'analisi completa) o <b>Scarta</b>.</p>
 ${blocchi.map((b) => b.html).join("\n")}
 ${totale > voci.length ? `<p style="font-size:13px;color:#666">E altre ${totale - voci.length} in <a href="${base}/aziende-trovate">Aziende trovate</a>.</p>` : ""}
 </div>`;

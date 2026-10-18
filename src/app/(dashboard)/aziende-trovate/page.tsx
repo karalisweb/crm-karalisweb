@@ -30,12 +30,13 @@ interface Azienda {
 
 const FILTRI: { k: string; label: string; ok: (a: Azienda) => boolean }[] = [
   { k: "decidere", label: "Da decidere", ok: (a) => !a.provinciaCliente && (a.decisione === "IN_ATTESA" || a.decisione === null) },
-  { k: "approfondire", label: "Da approfondire", ok: (a) => a.decisione === "APPROVATO" },
+  { k: "approfondite", label: "Approfondite", ok: (a) => a.decisione === "APPROVATO" },
   { k: "scartate", label: "Scartate", ok: (a) => a.decisione === "SCARTATO" },
   { k: "tutte", label: "Tutte", ok: () => true },
 ];
 
-const STATO: Record<string, string> = { IN_ATTESA: "da decidere", APPROVATO: "da approfondire", SCARTATO: "scartata" };
+// Lo stato dice cosa è già successo, non cosa resta da fare.
+const STATO: Record<string, string> = { IN_ATTESA: "analisi veloce fatta: decidi", APPROVATO: "analisi completa", SCARTATO: "scartata" };
 
 export default function AziendeTrovatePage() {
   const [aziende, setAziende] = useState<Azienda[] | null>(null);
@@ -54,7 +55,7 @@ export default function AziendeTrovatePage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="h-6 w-6 text-primary" /> Aziende trovate</h1>
-          <p className="text-sm text-muted-foreground">Aziende che fanno lo stesso mestiere dei tuoi clienti dei casi studio (prima la nicchia, poi il settore; mai nella provincia del cliente), più quelle che aggiungi tu. Su ognuna gli agenti fanno da soli il giro veloce; tu decidi se approfondire.</p>
+          <p className="text-sm text-muted-foreground">Aziende che fanno lo stesso mestiere dei tuoi clienti dei casi studio (prima la nicchia, poi il settore; mai nella provincia del cliente), più quelle che aggiungi tu. Su ognuna gli agenti fanno da soli l'analisi veloce; tu decidi se fare quella completa.</p>
         </div>
         <LanciaAdesso squadra="ricerca" etichetta="Cerca adesso" onFatto={() => setVersione((v) => v + 1)} />
       </div>
@@ -80,8 +81,8 @@ export default function AziendeTrovatePage() {
               <Card key={a.id}><CardContent className="p-3 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href={`/aziende-trovate/${a.id}`} className="font-medium hover:underline break-words">{a.name}</Link>
-                  <Badge variant="secondary" className="text-[10px]">{a.manuale ? "aggiunta da te" : CANALI[a.canale] ?? a.canale}</Badge>
-                  <Badge variant="outline" className="text-[10px]">{a.decisione ? STATO[a.decisione] : a.provinciaCliente ? "concorrente diretto del cliente: esclusa" : "giro veloce in corso"}</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{a.manuale ? "aggiunta a mano" : `trovata su ${CANALI[a.canale] ?? a.canale}`}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{a.decisione ? STATO[a.decisione] : a.provinciaCliente ? "esclusa: concorrente del cliente" : "analisi veloce in corso"}</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground break-words">{[a.category, a.address].filter(Boolean).join(" · ")}</div>
                 <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
