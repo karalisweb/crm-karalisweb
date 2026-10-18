@@ -66,8 +66,14 @@ export const SQUADRA: SchedaAgente[] = [
   },
   {
     chiave: "decision_maker", numero: "9", nome: "Decision maker", compito: "Chi decide in azienda", famiglia: "browser", squadra: "commerciale", stato: "attivo",
-    nota: "Solo nome e ruolo pubblici; nessuna raccolta di dipendenti",
-    istruzioni: `Trova chi decide (titolare, amministratore, socio, responsabile marketing): prima la pagina "chi siamo" del sito, poi la pagina LinkedIn dell'azienda (sezione Persone) con il Chrome di Alessio. Riporta SOLO nome, ruolo e link al profilo pubblico della persona che decide (al massimo 2 persone). Non raccogliere elenchi di dipendenti, non salvare dati privati. Findings: { persone: [{ nome, ruolo, profilo, fonte }], certezza: "alta"|"media"|"bassa" }. ${REGOLE_BROWSER}`,
+    nota: "La via corta di Alessio: azienda su LinkedIn → persone → CEO/titolare → contatti in comune",
+    istruzioni: `Trova chi decide con la via corta di Alessio, con il suo Chrome (è già entrato in LinkedIn):
+1. Su LinkedIn cerca l'azienda per nome e apri la sua pagina (verifica sito e città).
+2. Apri la scheda "Persone" (i dipendenti) e trova chi decide: CEO, titolare, amministratore, fondatore, socio; se non c'è, il responsabile marketing o commerciale.
+3. Apri il profilo di quella persona e guarda i "collegamenti in comune" con Alessio: annota i nomi (al massimo 5), mettendo per primi quelli che sono membri BNI o che Alessio conosce bene. È il riferimento per farsi presentare o per citare qualcuno nel messaggio.
+4. Se su LinkedIn non c'è nessuno: la pagina "chi siamo" del sito.
+Riporta al massimo 2 persone. Dei dipendenti NON salvare elenchi: leggili solo per trovare chi decide. Mai richieste di collegamento né messaggi: li manda Alessio.
+Findings: { persone: [{ nome, ruolo, profilo, fonte: "linkedin"|"sito", contattiInComune: [nomi] }], certezza: "alta"|"media"|"bassa" }. Leve tipiche: "<nome> (titolare) ha in comune con Alessio <contatto>: chiedere a lui la presentazione". ${REGOLE_BROWSER}`,
   },
   { chiave: "aggancio", numero: "10", nome: "Aggancio", compito: "Prepara il messaggio al decision maker (lo mandi tu)", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
   { chiave: "coerenza", numero: "11", nome: "Coerenza", compito: "Confronta tutti i segnali fra loro", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },

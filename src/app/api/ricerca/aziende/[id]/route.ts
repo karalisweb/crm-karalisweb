@@ -73,7 +73,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   else if (ponti.size > 0) {
     const primo = [...ponti.values()][0];
     prossimo = primo.stato === "CHIESTA" ? `Aspetti la presentazione di ${primo.name}` : `Chiedi a ${primo.name} di presentarti ${titolare.nome}`;
-  } else if (titolare.linkedinUrl) prossimo = `Collegati con ${titolare.nome} su LinkedIn`;
+  } else if (titolare.contattoInComune) prossimo = `Contatta ${titolare.nome} facendo il nome di ${titolare.contattoInComune.split(",")[0].trim()} (contatto in comune su LinkedIn)`;
+  else if (titolare.linkedinUrl) prossimo = `Collegati con ${titolare.nome} su LinkedIn`;
   else prossimo = `Contatta ${titolare.nome}`;
 
   const storia = [

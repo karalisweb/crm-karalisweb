@@ -550,3 +550,52 @@ export async function importaReteMembro(membroId: string | null, findings: Recor
   return e;
 }
 
+
+// ─── Decision maker (agente di browser) ────────────────────────────────────
+
+/**
+ * Chi decide in un'azienda, trovato su LinkedIn (azienda → persone → CEO/titolare): si salva come
+ * persona dell'azienda, con i contatti in comune con Alessio. Se uno dei contatti in comune è un
+ * membro BNI, nasce la presentazione da chiedere a lui: è la via più corta per arrivarci.
+ */
+export async function importaDecisionMaker(leadId: string | null, findings: Record<string, unknown>): Promise<EsitoImport> {
+  const e: EsitoImport = { nuove: 0, esistenti: 0, scartate: 0, bni: 0, presentazioni: 0 };
+  if (!leadId) return e;
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
+  const persone = Array.isArray(findings.persone) ? (findings.persone as Record<string, unknown>[]) : [];
+  for (const p of persone.slice(0, 2)) {
+    const nome = str(p.nome, 120);
+    if (!nome) {
+      e.scartate++;
+      continue;
+    }
+    const comuni = (Array.isArray(p.contattiInComune) ? p.contattiInComune : [])
+      .map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome, 120)))
+      .filter((x): x is string => !!x)
+      .slice(0, 5);
+    const url = normalizzaLinkedin(str(p.profilo, 300));
+    const gia = url ? await db.persona.findUnique({ where: { linkedinUrl: url }, select: { id: true } }) : await db.persona.findFirst({ where: { leadId, nome }, select: { id: true } });
+    const dati = { nome, ruolo: str(p.ruolo, 120), aziendaNome: lead?.name ?? null, leadId, contattoInComune: comuni.join(", ") || null, fonte: "linkedin", note: str(p.fonte, 200) };
+    const persona = gia
+      ? await db.persona.update({ where: { id: gia.id }, data: dati, select: { id: true } })
+      : await db.persona.create({ data: { ...dati, linkedinUrl: url }, select: { id: true } });
+    if (gia) e.esistenti++;
+    else e.nuove++;
+
+    // Un contatto in comune che è membro BNI: è lui che può presentarlo.
+    for (const c of comuni) {
+      const parole = norm(c).split(/[^a-z]+/).filter((w) => w.length >= 3);
+      if (parole.length < 2) continue;
+      const candidati = await db.bniMembro.findMany({ where: { name: { contains: parole[parole.length - 1], mode: "insensitive" }, status: "ATTIVO" }, select: { id: true, name: true } });
+      const m = candidati.find((x) => stessoNome(x.name, c));
+      if (!m) continue;
+      e.bni = (e.bni ?? 0) + 1;
+      const esiste = await db.bniPresentazione.findFirst({ where: { membroId: m.id, personaId: persona.id }, select: { id: true } });
+      if (!esiste) {
+        await db.bniPresentazione.create({ data: { membroId: m.id, personaId: persona.id, nome, ruolo: dati.ruolo, linkedinUrl: url, perche: `Decide in ${lead?.name ?? "un'azienda trovata"}: chiedi a ${m.name} di presentartelo` } });
+        e.presentazioni = (e.presentazioni ?? 0) + 1;
+      }
+    }
+  }
+  return e;
+}

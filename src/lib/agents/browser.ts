@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { CHIAVI_BROWSER, schedaDi } from "./registro";
 import { SERVIZI } from "./tipi";
 import { importaMappaBni, importaProfiliMembri, type EsitoMappa } from "./bni";
-import { importaAziendeMeta, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
+import { importaAziendeMeta, importaDecisionMaker, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
 /** Quanto vale un referto di browser prima di essere rifatto. */
 export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
@@ -156,6 +156,7 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
   if (run.agent === "cerca_linkedin") importazione = await importaPersoneLinkedin(run.input, c.referto.findings);
   if (run.agent === "rete_membro") importazione = await importaReteMembro(run.bniMembroId, c.referto.findings, oggi);
   if (run.agent === "linkedin_membri") importazione = await importaProfiliMembri(c.referto.findings, oggi);
+  if (run.agent === "decision_maker") importazione = await importaDecisionMaker(run.leadId, c.referto.findings);
 
   await db.$transaction([
     db.agentReport.create({
