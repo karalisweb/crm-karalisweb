@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     where: { id },
     select: {
       id: true, name: true, website: true, address: true, category: true, phone: true,
-      googleRating: true, googleReviewsCount: true, googleMapsUrl: true, socialUrl: true, createdAt: true,
+      googleRating: true, googleReviewsCount: true, googleMapsUrl: true, socialUrl: true, createdAt: true, pipelineStage: true,
       activities: { orderBy: { createdAt: "desc" }, take: 20, select: { id: true, type: true, notes: true, createdAt: true } },
     },
   });

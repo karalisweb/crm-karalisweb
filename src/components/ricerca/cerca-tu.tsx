@@ -63,13 +63,13 @@ export function CercaTu({ onFatto }: { onFatto?: () => void }) {
         </div>
         <div className="grid gap-2 sm:grid-cols-[1fr_10rem]">
           <Input value={testo} onChange={(e) => { setTesto(e.target.value); setEsito(null); }} placeholder={es.esempio} aria-label={es.label} />
-          {tipo !== "settore" && <Input value={citta} onChange={(e) => setCitta(e.target.value)} placeholder="Città" aria-label="Città" />}
+          <Input value={citta} onChange={(e) => setCitta(e.target.value)} placeholder="Città" aria-label="Città" />
         </div>
         {tipo === "persona" && <Input value={azienda} onChange={(e) => setAzienda(e.target.value)} placeholder="La sua azienda (se la sai)" aria-label="Azienda della persona" />}
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}Aggiungi</Button>
+          <Button type="submit" size="sm" disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}{tipo === "settore" ? "Cerca" : "Aggiungi"}</Button>
           <span className="text-xs text-muted-foreground">
-            {tipo === "azienda" ? "La cerco su Google Maps e parte subito l'analisi veloce" : tipo === "settore" ? "Entra nelle ricerche, prima degli altri" : "Se scrivi la sua azienda, parte l'analisi veloce"}
+            {tipo === "azienda" ? "La cerco su Google Maps e parte subito l'analisi veloce" : tipo === "settore" ? "Con la città cerco subito fino a 5 aziende nuove; il settore resta anche nelle ricerche dei giorni dopo" : "Se scrivi la sua azienda, parte l'analisi veloce"}
           </span>
         </div>
         {esito && <div className={`text-sm ${esito.ok ? "text-green-600 dark:text-green-400" : "text-red-600"}`}>{esito.testo}</div>}

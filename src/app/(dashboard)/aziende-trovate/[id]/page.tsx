@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Check, Globe, Laptop, Linkedin, Loader2, MapPin, Phone, Play, RotateCcw, Search, Server, Target, User, X } from "lucide-react";
+import { ArrowLeft, Check, Globe, Laptop, Linkedin, Loader2, MapPin, Phone, Play, RotateCcw, Search, Server, Target, Trash2, User, X } from "lucide-react";
 import { CANALI, STATI_PRESENTAZIONE, data } from "@/components/ricerca/etichette";
 
 interface Leva { servizio: string; testo: string; prova: string }
@@ -16,6 +16,7 @@ interface Scheda {
   azienda: {
     id: string; name: string; website: string | null; address: string | null; category: string | null; phone: string | null;
     googleRating: number | null; googleReviewsCount: number | null; googleMapsUrl: string | null; socialUrl: string | null;
+    pipelineStage: string;
   };
   perche: { canale: string; createdAt: string; chiave: { tipo: string; casoStudio: { id: string; titolo: string } | null; bniMembro: { id: string; name: string } | null } } | null;
   casi: { id: string; titolo: string }[];
@@ -169,7 +170,8 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
     return () => clearInterval(t);
   }, [lavorando]);
 
-  const decidi = useCallback(async (azione: "approfondisci" | "scarta" | "ripensaci") => {
+  const decidi = useCallback(async (azione: "approfondisci" | "scarta" | "ripensaci" | "elimina" | "ripristina") => {
+    if (azione === "elimina" && !window.confirm("Eliminare questa azienda? Esce dagli elenchi e gli agenti si fermano. La ritrovi in Aziende trovate → Eliminate, dove puoi ripristinarla.")) return;
     setOccupato(true);
     await fetch(`/api/ricerca/aziende/${id}/decisione`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ azione }) });
     setOccupato(false);
@@ -214,7 +216,15 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             {a.phone && <Button asChild variant="outline" size="sm"><a href={`tel:${a.phone}`}><Phone className="h-4 w-4 mr-1.5" />Chiama</a></Button>}
             {a.googleMapsUrl && <Button asChild variant="outline" size="sm"><a href={a.googleMapsUrl} target="_blank" rel="noopener noreferrer"><MapPin className="h-4 w-4 mr-1.5" />Mappa</a></Button>}
             <CambiaSito id={a.id} attuale={a.website} onFatto={() => setVersione((v) => v + 1)} />
+            {a.pipelineStage !== "ARCHIVIATO" && <Button variant="ghost" size="sm" className="text-red-600 dark:text-red-400 ml-auto" onClick={() => decidi("elimina")} disabled={occupato}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>}
           </div>
+
+          {a.pipelineStage === "ARCHIVIATO" && (
+            <div className="mt-4 rounded-md border border-red-300 bg-red-50 dark:bg-red-950/30 px-3 py-2.5 text-sm flex flex-wrap items-center justify-between gap-2">
+              <span>Eliminata: non compare negli elenchi e gli agenti non ci lavorano.</span>
+              <Button size="sm" variant="outline" onClick={() => decidi("ripristina")} disabled={occupato}>Ripristina</Button>
+            </div>
+          )}
 
           {s.perche && (
             <div className="mt-4 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 px-3 py-2.5 text-sm">

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   if (!gate.ok) return gate.response;
   const canale = request.nextUrl.searchParams.get("canale");
   const ritrovamenti = await db.ritrovamento.findMany({
-    where: { leadId: { not: null }, canale: canale && ["maps", "google", "facebook", "instagram"].includes(canale) ? canale : { not: "linkedin" } },
+    where: { leadId: { not: null }, ...(canale && ["maps", "google", "facebook", "instagram", "linkedin"].includes(canale) ? { canale } : {}) },
     orderBy: { createdAt: "desc" },
     take: 300,
     include: {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     .map((r) => {
       const { approvalItems, ...l } = r.lead!;
       // decisione: null = giro veloce in corso; IN_ATTESA = da decidere; APPROVATO; SCARTATO.
-      return { ...l, canale: r.canale, trovataIl: r.createdAt, caso: r.chiave.casoStudio, provinciaCliente: r.chiave.tipo === "AZIENDA" && !!r.chiave.casoStudio?.provincia && siglaIndirizzo(l.address) === r.chiave.casoStudio.provincia, manuale: r.chiave.tipo === "MANUALE", decisione: approvalItems[0]?.status ?? null, sintesi: approvalItems[0]?.title ?? null };
+      return { ...l, eliminata: l.pipelineStage === "ARCHIVIATO", canale: r.canale, trovataIl: r.createdAt, caso: r.chiave.casoStudio, provinciaCliente: r.chiave.tipo === "AZIENDA" && !!r.chiave.casoStudio?.provincia && siglaIndirizzo(l.address) === r.chiave.casoStudio.provincia, manuale: r.chiave.tipo === "MANUALE", decisione: approvalItems[0]?.status ?? null, sintesi: approvalItems[0]?.title ?? null };
     });
   return NextResponse.json({ aziende, totale: aziende.length });
 }

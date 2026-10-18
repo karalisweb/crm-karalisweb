@@ -4,6 +4,7 @@ import { eseguiTurno } from "@/lib/agents/turno";
 import { eseguiTurnoBni } from "@/lib/agents/bni";
 import { sincronizzaIncontri } from "@/lib/ricerca/calendario";
 import { eseguiTurnoRicerca } from "@/lib/ricerca/cercatore";
+import { avviaAnalisiVeloci } from "@/lib/ricerca/manuale";
 
 /**
  * POST /api/squadra/lancia — un turno lanciato a mano dalla pagina Squadra.
@@ -22,7 +23,12 @@ export async function POST(request: Request) {
       await sincronizzaIncontri().catch(() => null);
       return NextResponse.json({ success: true, squadra: "bni", ...(await eseguiTurnoBni()) });
     }
-    if (body?.squadra === "esploratore" || body?.squadra === "ricerca") return NextResponse.json({ success: true, squadra: "ricerca", ...(await eseguiTurnoRicerca()) });
+    if (body?.squadra === "esploratore" || body?.squadra === "ricerca") {
+      // Lanciata a mano: fino a 5 aziende nuove in più, e l'analisi veloce parte subito.
+      const r = await eseguiTurnoRicerca(new Date(), { manuale: true });
+      if (r.nuove) avviaAnalisiVeloci();
+      return NextResponse.json({ success: true, squadra: "ricerca", ...r });
+    }
     const limit = Math.min(Math.max(Number(body?.limit) || 5, 1), 10);
     return NextResponse.json({ success: true, squadra: "commerciale", ...(await eseguiTurno({ limit })) });
   } catch (error) {

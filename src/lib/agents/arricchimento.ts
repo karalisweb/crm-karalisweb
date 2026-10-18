@@ -59,7 +59,8 @@ export async function concorrenteDelCliente(leadId: string): Promise<boolean> {
 async function daGiroVeloce(limit: number) {
   const candidati = await db.lead.findMany({
     where: {
-      ritrovamenti: { some: { canale: { not: "linkedin" } } },
+      // Anche quelle trovate su LinkedIn (titolari simili al caso studio, reti dei membri BNI).
+      ritrovamenti: { some: {} },
       pipelineStage: { notIn: STADI_ESCLUSI as never },
       approvalItems: { none: { kind: KIND_FASCICOLO_BASE } },
     },

@@ -24,15 +24,17 @@ interface Azienda {
   caso: { id: string; titolo: string } | null;
   manuale: boolean;
   provinciaCliente: boolean;
+  eliminata: boolean;
   decisione: "IN_ATTESA" | "APPROVATO" | "SCARTATO" | null;
   sintesi: string | null;
 }
 
 const FILTRI: { k: string; label: string; ok: (a: Azienda) => boolean }[] = [
-  { k: "decidere", label: "Da decidere", ok: (a) => !a.provinciaCliente && (a.decisione === "IN_ATTESA" || a.decisione === null) },
-  { k: "approfondite", label: "Approfondite", ok: (a) => a.decisione === "APPROVATO" },
-  { k: "scartate", label: "Scartate", ok: (a) => a.decisione === "SCARTATO" },
-  { k: "tutte", label: "Tutte", ok: () => true },
+  { k: "decidere", label: "Da decidere", ok: (a) => !a.eliminata && !a.provinciaCliente && (a.decisione === "IN_ATTESA" || a.decisione === null) },
+  { k: "approfondite", label: "Approfondite", ok: (a) => !a.eliminata && a.decisione === "APPROVATO" },
+  { k: "scartate", label: "Scartate", ok: (a) => !a.eliminata && a.decisione === "SCARTATO" },
+  { k: "tutte", label: "Tutte", ok: (a) => !a.eliminata },
+  { k: "eliminate", label: "Eliminate", ok: (a) => a.eliminata },
 ];
 
 // Lo stato dice cosa è già successo, non cosa resta da fare.
@@ -55,7 +57,7 @@ export default function AziendeTrovatePage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="h-6 w-6 text-primary" /> Aziende trovate</h1>
-          <p className="text-sm text-muted-foreground">Aziende che fanno lo stesso mestiere dei tuoi clienti dei casi studio (prima la nicchia, poi il settore; mai nella provincia del cliente), più quelle che aggiungi tu. Su ognuna gli agenti fanno da soli l'analisi veloce; tu decidi se fare quella completa.</p>
+          <p className="text-sm text-muted-foreground">Le aziende trovate dagli agenti (simili ai clienti dei casi studio, su Google, Maps e LinkedIn) e quelle che aggiungi tu. Su ognuna parte da sola l&apos;analisi veloce; tu decidi se fare quella completa.</p>
         </div>
         <LanciaAdesso squadra="ricerca" etichetta="Cerca adesso" onFatto={() => setVersione((v) => v + 1)} />
       </div>

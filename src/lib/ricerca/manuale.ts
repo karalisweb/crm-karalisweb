@@ -7,8 +7,8 @@
  */
 import { db } from "@/lib/db";
 import { chiamaDataForSeo, dataForSeoConfigurato, LOCATION_ITALIA } from "@/lib/agents/dataforseo";
-import { giroVeloce } from "@/lib/agents/arricchimento";
-import { salvaAzienda, salvaPersona } from "./cercatore";
+import { eseguiTurnoArricchimento, giroVeloce } from "@/lib/agents/arricchimento";
+import { cercaSettoreAdesso, salvaAzienda, salvaPersona } from "./cercatore";
 import { stessoNome, terminiDi } from "./regole";
 import { paroleNome } from "./trova-sito";
 import { norm } from "@/lib/agents/bni-regole";
@@ -81,6 +81,11 @@ async function aggiungiAzienda(nome: string, citta: string | null, chiaveId: str
   return r.leadId;
 }
 
+/** Le analisi veloci sulle aziende appena trovate partono subito, senza far aspettare la pagina. */
+export function avviaAnalisiVeloci() {
+  void eseguiTurnoArricchimento().catch((e) => console.error("[manuale] analisi veloci fallite:", e));
+}
+
 /** Il giro veloce parte subito, senza far aspettare la pagina. */
 function avviaGiroVeloce(leadId: string) {
   void giroVeloce(leadId).catch((e) => console.error("[manuale] giro veloce fallito:", e));
@@ -94,7 +99,14 @@ export async function aggiungiAMano(r: RichiestaManuale): Promise<EsitoManuale> 
   if (r.tipo === "settore") {
     const termini = terminiDi(testo, []);
     const k = await db.chiaveRicerca.create({ data: { tipo: "SETTORE", valore: testo.slice(0, 200), termini, attiva: true } });
-    return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `"${testo}" è nelle ricerche: parte al prossimo giro (o con "Cerca adesso")` };
+    // Con la città la ricerca parte subito; il settore resta anche nelle ricerche dei giorni dopo.
+    if (!citta) return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `"${testo}" è nelle ricerche dei prossimi giorni. Scrivi anche una città per cercare subito.` };
+    const e = await cercaSettoreAdesso(k.id, testo, citta);
+    if (e.nuove) avviaAnalisiVeloci();
+    return {
+      leadId: null, personaId: null, chiaveId: k.id,
+      messaggio: e.nuove ? `Trovate ${e.nuove} aziende nuove: l'analisi veloce è partita, le trovi qui sotto in "Da decidere"` : `Nessuna azienda nuova per "${testo}" a ${citta} (${e.trovati} risultati, già nel CRM o di un altro mestiere)`,
+    };
   }
 
   if (r.tipo === "azienda") {

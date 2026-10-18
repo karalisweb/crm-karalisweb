@@ -322,9 +322,10 @@ async function nuoveDiOggi(oggi: Date): Promise<number> {
   return db.ritrovamento.count({ where: { createdAt: { gte: da }, canale: { not: "linkedin" }, lead: { createdAt: { gte: da } } } });
 }
 
-export async function eseguiTurnoRicerca(oggi = new Date()): Promise<RiepilogoRicerca> {
+export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?: boolean } = {}): Promise<RiepilogoRicerca> {
   const r: RiepilogoRicerca = {
-    casiScaduti: await scadenzeCasi(oggi), nuoveOggiPrima: await nuoveDiOggi(oggi), passi: [], nuove: 0, costCents: 0,
+    // Lanciata da Alessio: fino a 5 aziende nuove in più, anche se la quota del giorno è già piena.
+    casiScaduti: await scadenzeCasi(oggi), nuoveOggiPrima: opzioni.manuale ? 0 : await nuoveDiOggi(oggi), passi: [], nuove: 0, costCents: 0,
     lavoriMeta: 0, lavoriLinkedin: 0, esploratoreClassico: false,
   };
   const chiavi = await db.chiaveRicerca.findMany({ where: { attiva: true } });
@@ -598,4 +599,24 @@ export async function importaDecisionMaker(leadId: string | null, findings: Reco
     }
   }
   return e;
+}
+
+
+/**
+ * Una ricerca lanciata da Alessio su un settore e una città: subito, fino a 5 aziende nuove
+ * (Google Maps, e Google se Maps porta poco). Il filtro dei "simili" usa il settore stesso.
+ */
+export async function cercaSettoreAdesso(chiaveId: string, termine: string, citta: string): Promise<{ nuove: number; trovati: number }> {
+  if (!dataForSeoConfigurato()) throw new Error("DataForSEO non configurato");
+  const contesto = `settore: ${termine}`;
+  const e1 = await cercaSuMaps(termine, citta, chiaveId, contesto, AZIENDE_AL_GIORNO);
+  let nuove = e1.nuove;
+  let trovati = e1.trovati;
+  if (nuove < 3) {
+    const e2 = await cercaSuGoogle(termine, citta, chiaveId, contesto, AZIENDE_AL_GIORNO - nuove);
+    nuove += e2.nuove;
+    trovati += e2.trovati;
+  }
+  await db.chiaveRicerca.update({ where: { id: chiaveId }, data: { usi: { increment: 1 }, trovati: { increment: nuove }, ultimoUsoAt: new Date() } });
+  return { nuove, trovati };
 }
