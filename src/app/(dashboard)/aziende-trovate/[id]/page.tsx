@@ -157,8 +157,14 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             <div className="text-sm flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Gli agenti stanno lavorando ({s.inCorso.length})…</div>
           ) : stato === "APPROVATO" ? (
             <div className="text-sm">
-              <Check className="h-4 w-4 inline mr-1 text-green-600" /><b>Analisi completa</b>{an.ganci ? " fatta" : ": in corso"}
-              {s.sulMac.length > 0 && <div className="text-xs text-muted-foreground mt-1">Manca ancora la parte che fa l&apos;agente sul tuo Mac (social, Meta, LinkedIn, chi è il titolare). Quando arriva, le frasi si aggiornano da sole.</div>}
+              <Check className="h-4 w-4 inline mr-1 text-green-600" /><b>Analisi completa</b>
+              {s.sulMac.length > 0 ? (
+                <div className="text-xs text-muted-foreground mt-1">
+                  {an.ganci ? "Le frasi qui sotto sono già usabili." : "Gli agenti stanno lavorando."} Social, inserzioni Meta, LinkedIn e chi è il titolare li cerca l&apos;agente sul tuo Mac (nei giorni feriali alle 10 e alle 16): quando arrivano, le frasi si aggiornano da sole.
+                </div>
+              ) : (
+                <span className="text-sm">{an.ganci ? ": tutto fatto" : ": in corso"}</span>
+              )}
             </div>
           ) : stato === "SCARTATO" ? (
             <div className="text-sm flex flex-wrap items-center gap-2">Scartata <Button variant="ghost" size="sm" onClick={() => decidi("ripensaci")} disabled={occupato}>Ripensaci</Button></div>
