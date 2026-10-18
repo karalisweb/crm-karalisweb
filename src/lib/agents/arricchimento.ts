@@ -237,3 +237,21 @@ export async function lanciaAgente(leadId: string, chiave: string, oggi = new Da
 }
 
 export { CATALOGO };
+
+/**
+ * "Cambia sito": Alessio scrive l'indirizzo giusto. Si salva e ripartono subito, sul server, le
+ * ricerche che dipendono dal sito (quelle dell'analisi veloce e, se è approfondita, anche le altre),
+ * poi le frasi per il telefono. Le ricerche su LinkedIn restano come sono.
+ */
+export async function cambiaSito(leadId: string, sito: string, oggi = new Date()): Promise<void> {
+  await db.lead.update({ where: { id: leadId }, data: { website: sito } });
+  const l = await db.lead.findUnique({ where: { id: leadId }, select: SELEZIONE });
+  const azienda = l && aziendaContesto(l);
+  if (!azienda) return;
+  const approvata = !!(await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE, status: "APPROVATO" }, select: { id: true } }));
+  const piano = CATALOGO.filter((v) => v.dove === "server" && v.momento !== "sintesi" && (v.momento === "trovata" || approvata)).map((v) => v.chiave);
+  void (async () => {
+    await eseguiAgenti(azienda, piano, oggi);
+    if (approvata || (await db.agentReport.findFirst({ where: { leadId, agent: "ganci" }, select: { id: true } }))) await eseguiAgenti(azienda, ["ganci"], new Date());
+  })().catch((e) => console.error("[cambia sito] fallito:", e));
+}

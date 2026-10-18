@@ -26,6 +26,26 @@ export const HEADERS_BROWSER: Record<string, string> = {
   "Upgrade-Insecure-Requests": "1",
 };
 
+/**
+ * Header minimi, come un fetch qualunque: alcuni siti (firewall dell'hosting) chiudono la connessione
+ * a chi manda gli header "da browser" completi ma rispondono a una richiesta semplice
+ * (Sardegna Piscine, 2026-10-18). Si usano come secondo tentativo.
+ */
+const HEADERS_SEMPLICI: Record<string, string> = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36",
+  Accept: "text/html,*/*",
+  "Accept-Language": "it-IT,it;q=0.9",
+};
+
+/** Una GET con gli header da browser e, se la connessione cade, di nuovo con quelli semplici. */
+async function scaricaConRipiego(url: string, timeoutMs: number): Promise<Response> {
+  try {
+    return await safeFetch(url, { signal: AbortSignal.timeout(timeoutMs), headers: HEADERS_BROWSER });
+  } catch {
+    return safeFetch(url, { signal: AbortSignal.timeout(timeoutMs), headers: HEADERS_SEMPLICI });
+  }
+}
+
 export function normalizzaSito(website: string): string {
   const w = website.trim();
   return /^https?:\/\//i.test(w) ? w : `https://${w}`;
@@ -39,11 +59,11 @@ export async function scaricaPagina(website: string): Promise<PaginaScaricata> {
   let url = normalizzaSito(website);
   let res: Response;
   try {
-    res = await safeFetch(url, { signal: AbortSignal.timeout(15000), headers: HEADERS_BROWSER });
+    res = await scaricaConRipiego(url, 15000);
   } catch (err) {
     if (!url.startsWith("https://")) throw err;
     url = url.replace("https://", "http://");
-    res = await safeFetch(url, { signal: AbortSignal.timeout(15000), headers: HEADERS_BROWSER });
+    res = await scaricaConRipiego(url, 15000);
   }
   if (!res.ok) throw new Error(`Il sito risponde ${res.status}`);
 
@@ -62,7 +82,7 @@ export async function scaricaPagina(website: string): Promise<PaginaScaricata> {
 /** GET di una risorsa secondaria del sito (feed, API WordPress). Null se non c'è. */
 export async function scaricaTesto(url: string, timeoutMs = 10000): Promise<string | null> {
   try {
-    const res = await safeFetch(url, { signal: AbortSignal.timeout(timeoutMs), headers: HEADERS_BROWSER });
+    const res = await scaricaConRipiego(url, timeoutMs);
     if (!res.ok) return null;
     const text = await res.text();
     return text.length > MAX_HTML_BYTES ? null : text;

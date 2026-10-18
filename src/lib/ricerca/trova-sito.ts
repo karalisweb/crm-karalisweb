@@ -153,6 +153,15 @@ export async function trovaSito(a: { nome: string; citta?: string | null; telefo
     esito.sito = migliore.sito;
     esito.come = migliore.come;
   }
+  // Il sito scritto nella scheda Google (o messo a mano) vale più di un indirizzo indovinato: si
+  // sostituisce solo con uno che ha il loro stesso telefono. Se non si riesce a scaricarlo, resta.
+  if (a.sitoNoto) {
+    const noto = dominio(a.sitoNoto);
+    if (!migliore || (dominio(migliore.sito) !== noto && migliore.punti < 3)) {
+      esito.sito = `https://${noto}`;
+      esito.come = "scheda";
+    }
+  }
 
   if (organici.length) {
     const mio = esito.sito ? dominio(esito.sito) : null;

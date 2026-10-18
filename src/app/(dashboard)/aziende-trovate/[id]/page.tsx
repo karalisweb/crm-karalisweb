@@ -44,7 +44,7 @@ const Ctx = createContext<{ agenti: Agente[]; analisi: Record<string, Referto>; 
 
 function Sezione({ n, titolo, children }: { n: number; titolo: string; children: React.ReactNode }) {
   return (
-    <section className="mt-6">
+    <section className="mb-6 break-inside-avoid">
       <div className="text-sm font-semibold mb-2"><span className="text-muted-foreground mr-1">{n}.</span>{titolo}</div>
       <div className="space-y-2">{children}</div>
     </section>
@@ -108,6 +108,36 @@ function Blocco({ agente, children }: { agente: string; children?: React.ReactNo
   );
 }
 
+/** "Cambia sito": se l'agente ha sbagliato o non l'ha trovato, lo scrivi tu e le ricerche ripartono. */
+function CambiaSito({ id, attuale, onFatto }: { id: string; attuale: string | null; onFatto: () => void }) {
+  const [aperto, setAperto] = useState(false);
+  const [sito, setSito] = useState(attuale ?? "");
+  const [errore, setErrore] = useState<string | null>(null);
+  const [occupato, setOccupato] = useState(false);
+  if (!aperto) return <Button variant="ghost" size="sm" onClick={() => setAperto(true)}>{attuale ? "Cambia sito" : "Aggiungi il sito"}</Button>;
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2 w-full sm:w-auto"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (sito.trim().length < 4) return setErrore("Scrivi l'indirizzo del sito");
+        setOccupato(true);
+        const r = await fetch(`/api/ricerca/aziende/${id}/sito`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sito }) });
+        const d = await r.json().catch(() => ({}));
+        setOccupato(false);
+        if (!r.ok) return setErrore(d.error ?? "Errore");
+        setAperto(false);
+        onFatto();
+      }}
+    >
+      <input value={sito} onChange={(e) => { setSito(e.target.value); setErrore(null); }} placeholder="indirizzo del sito" aria-label="Sito dell'azienda" className="h-8 rounded-md border bg-transparent px-2 text-sm min-w-0 flex-1 sm:w-64" />
+      <Button size="sm" type="submit" disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salva e rifai le ricerche"}</Button>
+      <Button size="sm" variant="ghost" type="button" onClick={() => setAperto(false)}>Annulla</Button>
+      {errore && <span className="text-xs text-red-600 w-full">{errore}</span>}
+    </form>
+  );
+}
+
 export default function SchedaAziendaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [s, setS] = useState<Scheda | null>(null);
@@ -154,7 +184,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   if (errore) return <Card><CardContent className="p-6 text-sm text-red-500">{errore}</CardContent></Card>;
-  if (!s) return <div className="space-y-3 max-w-2xl"><Skeleton className="h-24 w-full rounded-xl" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
+  if (!s) return <div className="space-y-3 max-w-6xl"><Skeleton className="h-24 w-full rounded-xl" /><Skeleton className="h-64 w-full rounded-xl" /></div>;
 
   const a = s.azienda;
   const an = s.analisi;
@@ -172,7 +202,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
 
   return (
     <Ctx.Provider value={{ agenti: s.agenti, analisi: an, lancia, inLancio }}>
-      <div className="max-w-2xl min-w-0 space-y-3">
+      <div className="max-w-6xl min-w-0 space-y-3">
         <Link href="/aziende-trovate" className="text-sm text-muted-foreground hover:underline inline-flex items-center gap-1"><ArrowLeft className="h-4 w-4" /> Aziende trovate</Link>
         <Card><CardContent className="p-4 sm:p-5">
           <h1 className="text-2xl font-bold break-words">{a.name}</h1>
@@ -183,6 +213,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             {a.website && <Button asChild variant="outline" size="sm"><a href={a.website} target="_blank" rel="noopener noreferrer"><Globe className="h-4 w-4 mr-1.5" />Sito</a></Button>}
             {a.phone && <Button asChild variant="outline" size="sm"><a href={`tel:${a.phone}`}><Phone className="h-4 w-4 mr-1.5" />Chiama</a></Button>}
             {a.googleMapsUrl && <Button asChild variant="outline" size="sm"><a href={a.googleMapsUrl} target="_blank" rel="noopener noreferrer"><MapPin className="h-4 w-4 mr-1.5" />Mappa</a></Button>}
+            <CambiaSito id={a.id} attuale={a.website} onFatto={() => setVersione((v) => v + 1)} />
           </div>
 
           {s.perche && (
@@ -214,6 +245,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
+          <div className="mt-6 lg:columns-2 lg:gap-6">
           <Sezione n={1} titolo="Si fa trovare?">
             <Blocco agente="trova_sito" />
             <Blocco agente="posizioni" />
@@ -223,8 +255,8 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             <Blocco agente="sito_visto">
               {(foto.telefono || foto.computer) && (
                 <div className="flex gap-2 mt-2 items-start">
-                  {foto.telefono && <img src={foto.telefono} alt="Il sito sul telefono" className="w-24 rounded border" />}
-                  {foto.computer && <img src={foto.computer} alt="Il sito sul computer" className="w-48 max-w-[60%] rounded border" />}
+                  {foto.telefono && <a href={foto.telefono} target="_blank" rel="noopener noreferrer" className="w-[30%] max-w-40"><img src={foto.telefono} alt="Il sito sul telefono" className="w-full rounded border" /></a>}
+                  {foto.computer && <a href={foto.computer} target="_blank" rel="noopener noreferrer" className="flex-1"><img src={foto.computer} alt="Il sito sul computer" className="w-full rounded border" /></a>}
                 </div>
               )}
               {str(sitoVisto?.impressione) && <div className="text-sm mt-1.5">{str(sitoVisto?.impressione)}</div>}
@@ -296,6 +328,8 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
               {s.casi.length > 0 && <div className="text-muted-foreground">Caso da raccontare: {s.casi.map((c, i) => <span key={c.id}>{i > 0 && ", "}<Link href={`/casi-studio/${c.id}`} className="hover:underline">{c.titolo}</Link></span>)}</div>}
             </div>
           </Sezione>
+
+          </div>
 
           <Sezione n={7} titolo="Cosa dirgli al telefono">
             <Blocco agente="ganci">
