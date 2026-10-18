@@ -160,7 +160,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
               <Check className="h-4 w-4 inline mr-1 text-green-600" /><b>Analisi completa</b>
               {s.sulMac.length > 0 ? (
                 <div className="text-xs text-muted-foreground mt-1">
-                  {an.ganci ? "Le frasi qui sotto sono già usabili." : "Gli agenti stanno lavorando."} Social, inserzioni Meta, LinkedIn e chi è il titolare li cerca l&apos;agente sul tuo Mac (nei giorni feriali alle 10 e alle 16): quando arrivano, le frasi si aggiornano da sole.
+                  {an.ganci ? "Le frasi qui sotto sono già usabili." : "Gli agenti stanno lavorando."} Social, inserzioni Meta, LinkedIn e chi è il titolare li cerca l&apos;agente sul tuo Mac entro mezz'ora (dalle 8 alle 20, se il Mac è acceso): quando arrivano, le frasi si aggiornano da sole.
                 </div>
               ) : (
                 <span className="text-sm">{an.ganci ? ": tutto fatto" : ": gli agenti stanno lavorando"}</span>
