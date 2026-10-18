@@ -71,9 +71,14 @@ const compatta = (s: string) => norm(s).replace(/[^a-z0-9]/g, "");
  * Quanto è sicuro che questa homepage sia dell'azienda: telefono uguale 3, nome nel dominio 2,
  * nome nel titolo 2, nome solo nel testo 1 (può essere un "sito realizzato da…"). Serve almeno 2.
  */
+/** Domini "parcheggiati" o in vendita: non sono il sito di nessuno. */
+export function paginaParcheggio(html: string): boolean {
+  return /domain (is )?for sale|this domain (may be|is) for sale|dominio in vendita|parked (free|domain)|sedoparking|domain parking|buy this domain|hugedomains|dan\.com|afternic|zum verkauf|à vendre|en venta|\bsedo\b|parkingcrew|bodis/i.test(html.slice(0, 200_000));
+}
+
 export function punteggioHome(html: string, dom: string, nome: string, telefono?: string | null, citta?: string | null): number {
   const parole = paroleNome(nome);
-  if (!parole.length) return 0;
+  if (!parole.length || paginaParcheggio(html)) return 0;
   const tutte = (t: string) => parole.every((p) => t.includes(p));
   const titolo = compatta(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "");
   const testo = compatta(html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " "));
@@ -133,13 +138,13 @@ export async function trovaSito(a: { nome: string; citta?: string | null; telefo
   };
   if (a.sitoNoto) aggiungi(a.sitoNoto, "noto");
   for (const i of perTelefono.slice(0, 5)) aggiungi(i.domain!, "telefono");
-  for (const i of organici.slice(0, 8)) aggiungi(i.domain!, "google");
+  for (const i of organici.slice(0, 10)) aggiungi(i.domain!, "google");
   for (const d of dominiDaEmail(organici.map((i) => `${i.title ?? ""} ${i.description ?? ""}`))) aggiungi(d, "email");
   for (const d of dominiDaNome(a.nome)) aggiungi(d, "dominio");
 
   // Si tiene il candidato più sicuro (almeno 2 punti); con telefono e nome uguali ci si ferma subito.
   let migliore: { sito: string; punti: number; come: string } | null = null;
-  for (const c of candidati.slice(0, 14)) {
+  for (const c of candidati.slice(0, 18)) {
     const v = await verifica(c.dom, a.nome, a.telefono, a.citta);
     if (v && v.punti >= 2 && (!migliore || v.punti > migliore.punti)) migliore = { ...v, come: c.come };
     if (migliore && migliore.punti >= 5) break;

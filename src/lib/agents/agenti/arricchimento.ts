@@ -93,9 +93,9 @@ export const agenteSitoVisto: AgenteEseguibile = {
     const evidence: Prova[] = [];
     const sec = (n: number | null) => (n != null ? String(n).replace(".", ",") : "?");
     if (tel.lcpSecondi != null && tel.lcpSecondi >= 4) {
-      levers.push({ servizio: "sito", testo: `Sul telefono il sito ci mette ${sec(tel.lcpSecondi)} secondi a mostrare il contenuto principale: oltre i 3 secondi metà delle persone se ne va`, prova: "Misurato aprendo la homepage come un telefono con 4G normale" });
+      levers.push({ servizio: "sito", testo: `Nel test di velocità come quello di Google (telefono con 4G lento) il sito ci mette ${sec(tel.lcpSecondi)} secondi a mostrare il contenuto principale: chi ha una connessione debole se ne va prima`, prova: "Homepage aperta come un telefono con 4G lento (150 ms, 1,6 Mbit/s), lo stesso profilo dei test di Google PageSpeed" });
     }
-    evidence.push({ cosa: `Sul telefono (4G) il contenuto principale si vede dopo ${sec(tel.lcpSecondi)} s`, fonte: url });
+    evidence.push({ cosa: `Sul telefono con 4G lento il contenuto principale si vede dopo ${sec(tel.lcpSecondi)} s`, fonte: url });
 
     const immagini = [tel.jpeg, pc?.jpeg]
       .filter((f): f is string => !!f)
@@ -117,7 +117,7 @@ export const agenteSitoVisto: AgenteEseguibile = {
       for (const p of visto.problemi.slice(0, 2)) levers.push({ servizio: "sito", testo: p.problema, prova: `Si vede nella foto (${p.dove})` });
     }
     return {
-      summary: `Sembra ${visto.sembra_anno}. Sul telefono si vede in ${sec(tel.lcpSecondi)} s`,
+      summary: `Sembra ${visto.sembra_anno}. Telefono con 4G lento: si vede in ${sec(tel.lcpSecondi)} s`,
       findings: {
         telefono: { lcpSecondi: tel.lcpSecondi, caricamentoSecondi: tel.caricamentoSecondi },
         computer: pc ? { lcpSecondi: pc.lcpSecondi, caricamentoSecondi: pc.caricamentoSecondi } : null,
@@ -342,9 +342,11 @@ export const agenteConcorrenti: AgenteEseguibile = {
   aPagamento: true,
   async esegui(ctx) {
     const l = ctx.lead;
+    // La stessa ricerca di Posizioni (nicchia o servizio dal titolo del sito), non la categoria di Maps.
+    const daPosizioni = (await ctx.referti()).find((r) => r.agent === "posizioni")?.findings.parolaChiave;
     const cosa = l.ricerca ?? l.category;
-    if (!cosa || !l.citta) throw new Error("Manca cosa cercare o la città");
-    const ricerca = `${cosa} ${l.citta}`.toLowerCase();
+    if (typeof daPosizioni !== "string" && (!cosa || !l.citta)) throw new Error("Manca cosa cercare o la città");
+    const ricerca = typeof daPosizioni === "string" ? daPosizioni : `${cosa} ${l.citta}`.toLowerCase();
     const { result, costCents } = await chiamaDataForSeo<{ items?: ItemMaps[] }>("/serp/google/maps/live/advanced", {
       keyword: ricerca, location_code: LOCATION_ITALIA, language_code: "it", depth: 20,
     });
@@ -424,7 +426,7 @@ export const agenteGanci: AgenteEseguibile = {
     const lista = leve.map((l, i) => `${i + 1}. [${l.agente}] ${l.testo} — prova: ${l.prova}`).join("\n");
     const riassunti = referti.map((r) => `- ${r.agent}: ${r.summary}`).join("\n");
     const ai = await chiediJSON<RispostaGanci>({
-      sistema: `${REGOLE_COMUNI}\n\nScegli i 3 ganci più forti per la prima telefonata di Alessio al titolare. Preferisci i fatti con un numero o un confronto con i concorrenti, quelli che il titolare può verificare da solo e che toccano i clienti persi. Scarta i consigli generici. Usa SOLO le leve della lista.`,
+      sistema: `${REGOLE_COMUNI}\n\nScegli i 3 ganci più forti per la prima telefonata di Alessio al titolare. Preferisci i fatti con un numero o un confronto con i concorrenti, quelli che il titolare può verificare da solo e che toccano i clienti persi. Scarta i consigli generici. Usa SOLO le leve della lista e riporta ogni numero con le sue condizioni (es. "nel test con 4G lento"): il titolare deve poterlo verificare e trovarlo vero.`,
       testo: `Azienda: ${ctx.lead.name}${ctx.lead.category ? ` (${ctx.lead.category})` : ""}, ${ctx.lead.citta ?? ""}\n\nCOSA HANNO TROVATO GLI AGENTI:\n${riassunti}\n\nLEVE:\n${lista}`,
       schema: SCHEMA_GANCI,
     });

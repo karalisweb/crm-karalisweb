@@ -59,3 +59,10 @@ describe("Posizioni: il servizio dal titolo del sito", () => {
     expect(servizioDalTitolo("<title>Home - Officina 3MT</title>", "Officina 3MT", null)).toBeNull();
   });
 });
+
+describe("Trova sito: domini parcheggiati", () => {
+  it("una pagina in vendita non è il sito di nessuno", async () => {
+    const { punteggioHome } = await import("../trova-sito");
+    expect(punteggioHome("<title>adsolutions.net</title><body>Diese Website steht zum Verkauf!</body>", "adsolutions.net", "AD Solutions")).toBe(0);
+  });
+});
