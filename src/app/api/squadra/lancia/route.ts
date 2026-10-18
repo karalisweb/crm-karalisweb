@@ -25,9 +25,11 @@ export async function POST(request: Request) {
     }
     if (body?.squadra === "esploratore" || body?.squadra === "ricerca") {
       // Lanciata a mano: fino a 5 aziende nuove in più, e l'analisi veloce parte subito.
-      const r = await eseguiTurnoRicerca(new Date(), { manuale: true });
-      if (r.nuove) avviaAnalisiVeloci();
-      return NextResponse.json({ success: true, squadra: "ricerca", ...r });
+      // Si risponde subito: la ricerca dura 1-2 minuti e la pagina non deve restare appesa.
+      void eseguiTurnoRicerca(new Date(), { manuale: true })
+        .then((r) => { if (r.nuove) avviaAnalisiVeloci(); })
+        .catch((e) => console.error("[ricerca a mano] fallita:", e));
+      return NextResponse.json({ success: true, squadra: "ricerca", avviata: true });
     }
     const limit = Math.min(Math.max(Number(body?.limit) || 5, 1), 10);
     return NextResponse.json({ success: true, squadra: "commerciale", ...(await eseguiTurno({ limit })) });

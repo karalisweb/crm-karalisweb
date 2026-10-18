@@ -44,6 +44,20 @@ export default function AziendeTrovatePage() {
   const [aziende, setAziende] = useState<Azienda[] | null>(null);
   const [versione, setVersione] = useState(0);
   const [filtro, setFiltro] = useState("decidere");
+  // Dopo un lancio l'elenco si aggiorna da solo per 3 minuti (la ricerca lavora in sottofondo).
+  const [aggiornaFino, setAggiornaFino] = useState(0);
+  useEffect(() => {
+    if (!aggiornaFino) return;
+    const t = setInterval(() => {
+      if (Date.now() > aggiornaFino) return setAggiornaFino(0);
+      setVersione((v) => v + 1);
+    }, 15000);
+    return () => clearInterval(t);
+  }, [aggiornaFino]);
+  const dopoLancio = () => {
+    setVersione((v) => v + 1);
+    setAggiornaFino(Date.now() + 180_000);
+  };
   useEffect(() => {
     let vivo = true;
     fetch("/api/ricerca/aziende").then((r) => r.json()).then((d) => vivo && setAziende(d.aziende ?? []));
@@ -59,9 +73,9 @@ export default function AziendeTrovatePage() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="h-6 w-6 text-primary" /> Aziende trovate</h1>
           <p className="text-sm text-muted-foreground">Le aziende trovate dagli agenti (simili ai clienti dei casi studio, su Google, Maps e LinkedIn) e quelle che aggiungi tu. Su ognuna parte da sola l&apos;analisi veloce; tu decidi se fare quella completa.</p>
         </div>
-        <LanciaAdesso squadra="ricerca" etichetta="Cerca adesso" onFatto={() => setVersione((v) => v + 1)} />
+        <LanciaAdesso squadra="ricerca" etichetta="Cerca adesso" onFatto={dopoLancio} />
       </div>
-      <CercaTu onFatto={() => setVersione((v) => v + 1)} />
+      <CercaTu onFatto={dopoLancio} />
       {aziende && (
         <div className="flex flex-wrap gap-1.5">
           {FILTRI.map((f) => (

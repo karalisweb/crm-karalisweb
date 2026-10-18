@@ -115,11 +115,13 @@ export async function aggiungiAMano(r: RichiestaManuale): Promise<EsitoManuale> 
     });
     // Con la città la ricerca parte subito; il settore resta anche nelle ricerche dei giorni dopo.
     if (!citta) return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `"${testo}" è nelle ricerche dei prossimi giorni, e su LinkedIn lo cerca l'agente sul Mac entro mezz'ora. Scrivi anche una città per cercare subito su Google.` };
-    const e = await cercaSettoreAdesso(k.id, testo, citta);
-    if (e.nuove) avviaAnalisiVeloci();
+    // Si risponde subito: la ricerca va avanti per conto suo e l'elenco si aggiorna da solo.
+    void cercaSettoreAdesso(k.id, testo, citta)
+      .then((e) => { if (e.nuove) avviaAnalisiVeloci(); })
+      .catch((err) => console.error("[settore a mano] fallito:", err));
     return {
       leadId: null, personaId: null, chiaveId: k.id,
-      messaggio: (e.nuove ? `Trovate ${e.nuove} aziende nuove su Google: l'analisi veloce è partita, le trovi qui sotto in "Da decidere".` : `Nessuna azienda nuova su Google per "${testo}" a ${citta} (${e.trovati} risultati, già nel CRM o di un altro mestiere).`) + " Su LinkedIn le cerca l'agente sul Mac entro mezz'ora.",
+      messaggio: `Sto cercando "${testo}" a ${citta} su Google Maps e Google: le aziende nuove compaiono qui sotto in 1-2 minuti, con l'analisi veloce già partita. Su LinkedIn le cerca l'agente sul Mac entro mezz'ora.`,
     };
   }
 

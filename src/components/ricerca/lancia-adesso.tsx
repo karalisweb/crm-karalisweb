@@ -6,6 +6,7 @@ import { Loader2, Play } from "lucide-react";
 import { toast } from "sonner";
 
 interface EsitoRicerca {
+  avviata?: boolean;
   nuove?: number;
   nuoveOggiPrima?: number;
   lavoriMeta?: number;
@@ -27,6 +28,7 @@ function racconta(squadra: "ricerca" | "bni", d: EsitoRicerca & EsitoBni): strin
     if (!n && !v) return `Nessuna richiesta nuova: ce ne sono già ${d.settimana?.richiesteAperte ?? 0} aperte (o oggi sono già state preparate).`;
     return `${n} richieste di 121${v ? ` e ${v} visite` : ""} pronte in Cassetta.`;
   }
+  if (d.avviata) return "Sto cercando su Google Maps e Google: le aziende nuove compaiono qui sotto in 1-2 minuti, con l'analisi veloce già partita.";
   if (d.motivo) return d.motivo;
   const n = d.nuove ?? 0;
   const browser = (d.lavoriMeta ?? 0) + (d.lavoriLinkedin ?? 0);
