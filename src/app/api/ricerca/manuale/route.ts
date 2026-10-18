@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/api-auth";
 import { aggiungiAMano } from "@/lib/ricerca/manuale";
 
 const Schema = z.object({
-  tipo: z.enum(["azienda", "settore", "persona"]),
+  tipo: z.enum(["azienda", "settore", "persona", "linkedin"]),
   testo: z.string().min(3).max(200),
   citta: z.string().max(80).nullable().optional(),
   azienda: z.string().max(200).nullable().optional(),

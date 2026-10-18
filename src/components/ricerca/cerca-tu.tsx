@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Plus } from "lucide-react";
 
-type Tipo = "azienda" | "settore" | "persona";
+type Tipo = "azienda" | "settore" | "persona" | "linkedin";
 
 const TIPI: { k: Tipo; label: string; esempio: string }[] = [
   { k: "azienda", label: "Un'azienda", esempio: "Nome dell'azienda" },
   { k: "settore", label: "Un settore", esempio: "Cosa fanno (come lo cercheresti su Google)" },
   { k: "persona", label: "Una persona", esempio: "Nome e cognome" },
+  { k: "linkedin", label: "Aziende su LinkedIn", esempio: "Cosa fanno (es. costruzione piscine)" },
 ];
 
 /** La casella "parti da qui": Alessio scrive un'azienda, un settore o una persona. */
@@ -63,13 +64,13 @@ export function CercaTu({ onFatto }: { onFatto?: () => void }) {
         </div>
         <div className="grid gap-2 sm:grid-cols-[1fr_10rem]">
           <Input value={testo} onChange={(e) => { setTesto(e.target.value); setEsito(null); }} placeholder={es.esempio} aria-label={es.label} />
-          <Input value={citta} onChange={(e) => setCitta(e.target.value)} placeholder="Città" aria-label="Città" />
+          <Input value={citta} onChange={(e) => setCitta(e.target.value)} placeholder={tipo === "linkedin" ? "Zona (es. Sardegna, Olbia)" : "Città"} aria-label="Città o zona" />
         </div>
         {tipo === "persona" && <Input value={azienda} onChange={(e) => setAzienda(e.target.value)} placeholder="La sua azienda (se la sai)" aria-label="Azienda della persona" />}
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}{tipo === "settore" ? "Cerca" : "Aggiungi"}</Button>
+          <Button type="submit" size="sm" disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}{tipo === "settore" || tipo === "linkedin" ? "Cerca" : "Aggiungi"}</Button>
           <span className="text-xs text-muted-foreground">
-            {tipo === "azienda" ? "La cerco su Google Maps e parte subito l'analisi veloce" : tipo === "settore" ? "Cerco subito su Google e Google Maps (con la città) e su LinkedIn (le pagine aziendali, con l'agente sul Mac)" : "Se scrivi la sua azienda, parte l'analisi veloce"}
+            {tipo === "azienda" ? "La cerco su Google Maps e parte subito l'analisi veloce" : tipo === "linkedin" ? "Cerca le pagine aziendali su LinkedIn (le apre l'agente sul tuo Mac, entro mezz'ora)" : tipo === "settore" ? "Cerco subito su Google e Google Maps (con la città) e su LinkedIn (le pagine aziendali, con l'agente sul Mac)" : "Se scrivi la sua azienda, parte l'analisi veloce"}
           </span>
         </div>
         {esito && <div className={`text-sm ${esito.ok ? "text-green-600 dark:text-green-400" : "text-red-600"}`}>{esito.testo}</div>}

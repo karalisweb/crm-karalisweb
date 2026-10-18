@@ -13,7 +13,7 @@ import { stessoNome, terminiDi } from "./regole";
 import { paroleNome } from "./trova-sito";
 import { norm } from "@/lib/agents/bni-regole";
 
-export type TipoManuale = "azienda" | "settore" | "persona";
+export type TipoManuale = "azienda" | "settore" | "persona" | "linkedin";
 
 export interface RichiestaManuale {
   tipo: TipoManuale;
@@ -95,6 +95,16 @@ export async function aggiungiAMano(r: RichiestaManuale): Promise<EsitoManuale> 
   const testo = r.testo.trim();
   if (testo.length < 3) throw new Error("Scrivi almeno 3 lettere");
   const citta = r.citta?.trim() || null;
+
+  if (r.tipo === "linkedin") {
+    // Solo LinkedIn: le pagine aziendali per quei termini, nella zona scritta (altrimenti la Sardegna).
+    const termini = terminiDi(testo, []);
+    const k = await db.chiaveRicerca.create({ data: { tipo: "SETTORE", valore: testo.slice(0, 200), termini, attiva: false } });
+    await db.agentRun.create({
+      data: { agent: "cerca_linkedin", status: "IN_CODA", input: { modo: "aziende", chiaveId: k.id, tipo: "SETTORE", termini, zona: citta ?? "Sardegna", provinceEscluse: [], giaVisti: 0 } },
+    });
+    return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `Ricerca "${testo}" su LinkedIn (${citta ?? "Sardegna"}) in coda: la fa l'agente sul Mac entro mezz'ora, le aziende arrivano qui in "Da decidere".` };
+  }
 
   if (r.tipo === "settore") {
     const termini = terminiDi(testo, []);
