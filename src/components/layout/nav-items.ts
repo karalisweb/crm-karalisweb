@@ -11,7 +11,6 @@ import {
   Bot,
   Users,
   FileText,
-  Contact,
   Building2,
 } from "lucide-react";
 
@@ -51,7 +50,6 @@ export const navSections: NavSection[] = [
       { href: "/bni/membri", label: "Rubrica BNI", icon: Users },
       { href: "/casi-studio", label: "Casi studio", icon: FileText },
       { href: "/aziende-trovate", label: "Aziende trovate", icon: Building2 },
-      { href: "/persone", label: "Persone trovate", icon: Contact },
     ],
   },
   {
