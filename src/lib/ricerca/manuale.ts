@@ -10,6 +10,8 @@ import { chiamaDataForSeo, dataForSeoConfigurato, LOCATION_ITALIA } from "@/lib/
 import { giroVeloce } from "@/lib/agents/arricchimento";
 import { salvaAzienda, salvaPersona } from "./cercatore";
 import { stessoNome, terminiDi } from "./regole";
+import { paroleNome } from "./trova-sito";
+import { norm } from "@/lib/agents/bni-regole";
 
 export type TipoManuale = "azienda" | "settore" | "persona";
 
@@ -54,8 +56,13 @@ async function aggiungiAzienda(nome: string, citta: string | null, chiaveId: str
       keyword: [nome, citta].filter(Boolean).join(" "), location_code: LOCATION_ITALIA, language_code: "it", depth: 5,
     });
     const items = (result?.items ?? []).filter((i) => i.type === "maps_search" && i.title);
-    trovata = items.find((i) => stessoNome(i.title!, nome)) ?? (items.length === 1 ? items[0] : undefined);
+    // Tutte le parole scritte da Alessio devono esserci ("AD Solutions" non è "Secured Solutions").
+    const parole = paroleNome(nome);
+    const compatto = (t: string) => norm(t).replace(/[^a-z0-9]/g, " ").split(/\s+/);
+    trovata = items.find((i) => stessoNome(i.title!, nome)) ?? items.find((i) => parole.length > 0 && parole.every((p) => compatto(i.title!).includes(p)));
   }
+  // Se è l'azienda di un membro BNI, il suo telefono aiuta a riconoscere il sito giusto.
+  const membro = await db.bniMembro.findFirst({ where: { company: { equals: nome, mode: "insensitive" } }, select: { phone: true } });
   const r = await salvaAzienda(
     trovata
       ? {
@@ -63,7 +70,7 @@ async function aggiungiAzienda(nome: string, citta: string | null, chiaveId: str
           categoria: trovata.category, placeId: trovata.place_id, rating: trovata.rating?.value ?? null, recensioni: trovata.rating?.votes_count ?? null,
           mapsUrl: trovata.place_id ? `https://www.google.com/maps/place/?q=place_id:${trovata.place_id}` : null,
         }
-      : { nome, indirizzo: citta },
+      : { nome, indirizzo: citta, telefono: membro?.phone ?? null },
     chiaveId,
     "maps",
     "manuale"

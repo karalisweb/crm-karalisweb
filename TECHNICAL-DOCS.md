@@ -1584,6 +1584,11 @@ Processo deciso con Alessio: `PROGETTO-AGENTI.md` (Fase 2). Due giri, una decisi
 - **Imbuto** (`regista.ts`): `AGENTI_ECONOMICI` = giro veloce; `AGENTI_APPROFONDIMENTO_SERVER` =
   concorrenti, tracciamenti, google_ads; `AGENTI_SINTESI` = ganci; i ganci aspettano solo il server e si
   rifanno quando arriva un referto di browser più recente.
+- **Foto del sito** (`src/lib/agents/fotografo.ts`): Chromium headless sul server (`playwright-core` 1.63.0;
+  browser in `/opt/pw-browsers`, installato con `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright@1.63.0
+  install --with-deps chromium-headless-shell`). Telefono 390×844 con 4G lento simulato (150 ms, 1,6 Mbit/s)
+  e computer 1366×860; chiude il banner cookie scegliendo "solo necessari"; blocca gli indirizzi interni.
+  Le chiavi PageSpeed del `.env` sono scadute/bloccate (2026-10-18): non si usano più.
 - **Turno** `eseguiTurnoArricchimento` (`src/lib/agents/arricchimento.ts`), cron `POST /api/cron/arricchimento`
   dopo ogni turno di ricerca; esclude i concorrenti diretti del cliente (`concorrenteDelCliente`).
   Decisione: voce `FASCICOLO_BASE` (`POST /api/ricerca/aziende/[id]/decisione` approfondisci|scarta|ripensaci;

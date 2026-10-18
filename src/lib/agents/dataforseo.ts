@@ -46,6 +46,10 @@ async function chiamaUnaVolta<T>(percorso: string, task: Record<string, unknown>
   const data = await res.json();
   if (data?.status_code !== 20000) throw new Error(`DataForSEO: ${data?.status_message ?? "errore"} (${data?.status_code})`);
   const t = data.tasks?.[0];
+  // Risultati parziali (alcune pagine di Google non lette): si usa quello che è arrivato.
+  if (t && t.status_code !== 20000 && t.status_code !== 40102 && t.result?.[0] && /partial results/i.test(t.status_message ?? "")) {
+    return { result: t.result[0] as T, costCents: usdInCentesimiEuro(Number(t.cost) || 0) };
+  }
   if (!t || (t.status_code !== 20000 && t.status_code !== 40102)) {
     // 40102 = "nessun risultato": non è un errore, il risultato è vuoto.
     throw new Error(`DataForSEO: ${t?.status_message ?? "task senza risposta"} (${t?.status_code})`);

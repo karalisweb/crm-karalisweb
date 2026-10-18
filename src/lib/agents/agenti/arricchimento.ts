@@ -2,7 +2,7 @@
  * Fase 2 — Arricchimento: gli agenti nuovi del giro veloce e del giro completo.
  *
  *   trova_sito  — il sito per più strade, e se cercando il nome su Google esce
- *   sito_visto  — il sito GUARDATO: foto su telefono e computer, velocità, se sembra vecchio
+ *   sito_visto  — il sito GUARDATO: foto su telefono e computer (Chromium sul server), velocità, se sembra vecchio
  *   contatto    — dal cliente al contatto: telefono cliccabile, WhatsApp, modulo, quanti clic
  *   recensioni  — cosa lodano e di cosa si lamentano i clienti, con le loro parole
  *   concorrenti — chi esce prima su Google Maps per la stessa ricerca, e con che numeri
@@ -16,6 +16,7 @@ import { usdInCentesimiEuro } from "../costi";
 import { scaricaTesto } from "../pagina";
 import type { AgenteEseguibile, Leva, Prova } from "../tipi";
 import { trovaSito } from "@/lib/ricerca/trova-sito";
+import { fotografaSito } from "../fotografo";
 import { norm } from "../bni-regole";
 
 // ─── Trova sito ────────────────────────────────────────────────────────────
@@ -56,33 +57,6 @@ export const agenteTrovaSito: AgenteEseguibile = {
 
 // ─── Sito visto ────────────────────────────────────────────────────────────
 
-interface Misura {
-  punteggio: number | null;
-  lcpSecondi: number | null;
-  foto: string | null;
-}
-
-async function misuraPageSpeed(url: string, strategia: "mobile" | "desktop"): Promise<Misura> {
-  const api = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
-  api.searchParams.set("url", url);
-  api.searchParams.set("strategy", strategia);
-  api.searchParams.set("category", "performance");
-  if (process.env.PAGESPEED_API_KEY) api.searchParams.set("key", process.env.PAGESPEED_API_KEY);
-  const res = await fetch(api, { signal: AbortSignal.timeout(90_000) });
-  if (!res.ok) throw new Error(`PageSpeed risponde ${res.status}`);
-  const d = (await res.json()) as {
-    lighthouseResult?: { categories?: { performance?: { score?: number } }; audits?: Record<string, { numericValue?: number; details?: { data?: string } }> };
-  };
-  const lr = d.lighthouseResult;
-  const lcp = lr?.audits?.["largest-contentful-paint"]?.numericValue;
-  const foto = lr?.audits?.["final-screenshot"]?.details?.data ?? null;
-  return {
-    punteggio: lr?.categories?.performance?.score != null ? Math.round(lr.categories.performance.score * 100) : null,
-    lcpSecondi: lcp != null ? Math.round(lcp / 100) / 10 : null,
-    foto: foto?.startsWith("data:image/") ? foto : null,
-  };
-}
-
 interface RispostaVisto {
   sembra_anno: string;
   impressione: string;
@@ -114,22 +88,23 @@ export const agenteSitoVisto: AgenteEseguibile = {
   aPagamento: true,
   async esegui(ctx) {
     const url = (await ctx.pagina()).url;
-    const [tel, pc] = await Promise.all([misuraPageSpeed(url, "mobile"), misuraPageSpeed(url, "desktop").catch(() => null)]);
+    const { telefono: tel, computer: pc } = await fotografaSito(url);
     const levers: Leva[] = [];
     const evidence: Prova[] = [];
+    const sec = (n: number | null) => (n != null ? String(n).replace(".", ",") : "?");
     if (tel.lcpSecondi != null && tel.lcpSecondi >= 4) {
-      levers.push({ servizio: "sito", testo: `Sul telefono il sito ci mette ${String(tel.lcpSecondi).replace(".", ",")} secondi a mostrarsi: oltre i 3 secondi metà delle persone se ne va`, prova: `Google PageSpeed, telefono: velocità ${tel.punteggio}/100` });
+      levers.push({ servizio: "sito", testo: `Sul telefono il sito ci mette ${sec(tel.lcpSecondi)} secondi a mostrare il contenuto principale: oltre i 3 secondi metà delle persone se ne va`, prova: "Misurato aprendo la homepage come un telefono con 4G normale" });
     }
-    evidence.push({ cosa: `Velocità sul telefono ${tel.punteggio ?? "?"}/100, contenuto principale in ${tel.lcpSecondi ?? "?"} s`, fonte: `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(url)}` });
+    evidence.push({ cosa: `Sul telefono (4G) il contenuto principale si vede dopo ${sec(tel.lcpSecondi)} s`, fonte: url });
 
-    const immagini = [tel.foto, pc?.foto]
+    const immagini = [tel.jpeg, pc?.jpeg]
       .filter((f): f is string => !!f)
-      .map((f) => ({ mime: f.slice(5, f.indexOf(";")), data: f.slice(f.indexOf(",") + 1) }));
+      .map((f) => ({ mime: "image/jpeg", data: f.slice(f.indexOf(",") + 1) }));
     let visto: RispostaVisto | null = null;
     let costCents = 0;
-    if (immagini.length) {
+    {
       const ai = await chiediJSON<RispostaVisto>({
-        sistema: `${REGOLE_COMUNI}\n\nGuardi le foto della homepage di un'azienda: la prima è sul telefono${immagini.length > 1 ? ", la seconda sul computer" : ""}. Giudichi come la vede un potenziale cliente: se sembra vecchio, se si capisce cosa fanno, se si legge sul telefono. Scrivi solo quello che si vede davvero nelle foto.`,
+        sistema: `${REGOLE_COMUNI}\n\nGuardi le foto della homepage di un'azienda: la prima è sul telefono${immagini.length > 1 ? ", la seconda sul computer" : ""}. Giudichi come la vede un potenziale cliente: se sembra vecchio, se si capisce cosa fanno, se si legge sul telefono. Scrivi solo quello che si vede davvero nelle foto (un banner dei cookie in primo piano è normale: non è un problema del sito).`,
         testo: `Azienda: ${ctx.lead.name}${ctx.lead.category ? ` (${ctx.lead.category})` : ""}. Sito: ${url}`,
         immagini,
         schema: SCHEMA_VISTO,
@@ -142,16 +117,16 @@ export const agenteSitoVisto: AgenteEseguibile = {
       for (const p of visto.problemi.slice(0, 2)) levers.push({ servizio: "sito", testo: p.problema, prova: `Si vede nella foto (${p.dove})` });
     }
     return {
-      summary: `${visto ? `Sembra ${visto.sembra_anno}. ` : ""}Telefono: ${tel.punteggio ?? "?"}/100, ${tel.lcpSecondi ?? "?"} s${pc ? `; computer ${pc.punteggio ?? "?"}/100` : ""}`,
+      summary: `Sembra ${visto.sembra_anno}. Sul telefono si vede in ${sec(tel.lcpSecondi)} s`,
       findings: {
-        telefono: { punteggio: tel.punteggio, lcpSecondi: tel.lcpSecondi },
-        computer: pc ? { punteggio: pc.punteggio, lcpSecondi: pc.lcpSecondi } : null,
-        foto: { telefono: tel.foto, computer: pc?.foto ?? null },
+        telefono: { lcpSecondi: tel.lcpSecondi, caricamentoSecondi: tel.caricamentoSecondi },
+        computer: pc ? { lcpSecondi: pc.lcpSecondi, caricamentoSecondi: pc.caricamentoSecondi } : null,
+        foto: { telefono: tel.jpeg, computer: pc?.jpeg ?? null },
         ...(visto ?? {}),
       },
       levers,
       evidence,
-      confidence: visto ? "ALTA" : "MEDIA",
+      confidence: "ALTA",
       costCents,
     };
   },
