@@ -66,3 +66,14 @@ describe("Trova sito: domini parcheggiati", () => {
     expect(punteggioHome("<title>adsolutions.net</title><body>Diese Website steht zum Verkauf!</body>", "adsolutions.net", "AD Solutions")).toBe(0);
   });
 });
+
+describe("Catalogo degli agenti", () => {
+  it("automatici per momento e per posto, secondo il modo scelto", async () => {
+    const { CATALOGO, automatici } = await import("@/lib/agents/catalogo");
+    const modi = Object.fromEntries(CATALOGO.map((v) => [v.chiave, v.modo]));
+    expect(automatici(modi, "trovata")).toEqual(["trova_sito", "posizioni", "sito_visto", "contatto", "lettore", "recensioni"]);
+    expect(automatici(modi, "approfondisci", "mac")).toEqual([]);
+    expect(automatici({ ...modi, decision_maker: "auto" }, "approfondisci", "mac")).toEqual(["decision_maker"]);
+    expect(automatici({ ...modi, google_ads: "mano" }, "approfondisci", "server")).not.toContain("google_ads");
+  });
+});

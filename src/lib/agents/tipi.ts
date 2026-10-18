@@ -69,6 +69,8 @@ export interface AziendaContesto {
   placeId?: string | null;
   /** Come la cercherebbe un cliente, senza città ("costruzione piscine"): dalla chiave che l'ha trovata. */
   ricerca?: string | null;
+  /** Link social salvato sull'azienda (dalla ricerca), se c'è. */
+  socialUrl?: string | null;
 }
 
 /** Un referto già consegnato da un altro agente, letto dagli agenti di sintesi. */

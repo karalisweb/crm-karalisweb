@@ -1563,6 +1563,18 @@ Pagine: `/trattative`, `/trattative/[id]`; `/call-fissate` rimanda a `/trattativ
 
 Orologio: `0 7-20 * * *` vendita (ogni ora).
 
+## Agenti dell'analisi: catalogo e modi (v3.49.0)
+
+- `src/lib/agents/catalogo.ts`: una riga per agente (dove: server|mac, momento: trovata|approfondisci|sintesi,
+  modo predefinito). `settings.agenti_modo` (migrazione `20261018150000_agenti_modo`) tiene le scelte di Alessio.
+  `giroVeloce` e `lavoraSuApprovate` usano `automatici(modi, momento, dove)`.
+- `lanciaAgente(leadId, chiave)` (`POST /api/ricerca/aziende/[id]/lancia`): server → gira subito e rifà i ganci;
+  mac → in coda. Pagina `/agenti` (`GET/PATCH /api/agenti/catalogo`).
+- `social` e `meta_ads` girano sul server (`src/lib/agents/agenti/meta.ts`, `leggiPaginaPubblica` in `fotografo.ts`):
+  pagina Facebook dal sito; inserzioni dalla Libreria Meta con `view_all_page_id`. Instagram richiede l'accesso.
+- Agente sul Mac: solo `linkedin_azienda`, `decision_maker` e i lavori BNI/LinkedIn; usa `~/.karalisweb/crm-agenti.sh`
+  (permesso fisso in `.claude/settings.local.json`); l'attività programmata gira `*/30 8-20 * * *`.
+
 ## Fase 2 Arricchimento (v3.48.0)
 
 Processo deciso con Alessio: `PROGETTO-AGENTI.md` (Fase 2). Due giri, una decisione.

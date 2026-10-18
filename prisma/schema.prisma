@@ -951,6 +951,9 @@ model Settings {
   calendarSyncError String?   @map("calendar_sync_error")
   calendarSyncInfo  String?   @map("calendar_sync_info")
 
+  // Agenti dell'analisi: "auto" o "mano" per chiave (v3.49). Vuoto = il modo predefinito del catalogo.
+  agentiModo Json @default("{}") @map("agenti_modo")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

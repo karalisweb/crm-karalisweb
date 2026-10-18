@@ -30,6 +30,7 @@ import {
   type StatoAgenteSuAzienda,
 } from "./regista";
 import { budgetDisponibile } from "./costi";
+import { automatici, modiAgenti } from "./catalogo";
 import type { AziendaContesto, ContestoAgente, Leva, PaginaScaricata, Prova, RefertoLetto } from "./tipi";
 
 export const KIND_FASCICOLO_BASE = "FASCICOLO_BASE";
@@ -56,6 +57,7 @@ const SELEZIONE = {
   googleRating: true,
   googleReviewsCount: true,
   placeId: true,
+  socialUrl: true,
   search: { select: { location: true } },
   ritrovamenti: { orderBy: { createdAt: "asc" }, take: 1, select: { chiave: { select: { tipo: true, valore: true, termini: true } } } },
 } satisfies Prisma.LeadSelect;
@@ -94,6 +96,7 @@ export function aziendaContesto(l: LeadScelto): AziendaContesto | null {
     googleReviewsCount: l.googleReviewsCount,
     citta: cittaDaIndirizzo(l.address) ?? l.search?.location ?? null,
     placeId: l.placeId,
+    socialUrl: l.socialUrl,
     ricerca: ricercaDaChiave(l.ritrovamenti[0]?.chiave ?? null),
   };
 }
@@ -376,6 +379,12 @@ export async function lavoraSuApprovate(limit: number, oggi: Date, riepilogo: Ri
     select: SELEZIONE,
   });
 
+  // Quali agenti partono da soli lo decide Alessio (pagina Agenti): il catalogo dice dove girano.
+  const modi = await modiAgenti();
+  const server = automatici(modi, "approfondisci", "server");
+  const mac = automatici(modi, "approfondisci", "mac");
+  const sintesi = modi.ganci === "auto" ? [...AGENTI_SINTESI] : [];
+
   for (const l of approvate) {
     const azienda = aziendaContesto(l);
     if (!azienda) continue;
@@ -383,14 +392,14 @@ export async function lavoraSuApprovate(limit: number, oggi: Date, riepilogo: Ri
     let toccata = false;
 
     // Lavori per il browser: si accodano, li prende Claude sul Mac di Alessio.
-    for (const agent of browserDaAccodare(stati, oggi)) {
+    for (const agent of browserDaAccodare(stati, oggi, mac)) {
       await db.agentRun.create({ data: { leadId: azienda.id, agent, status: "IN_CODA" } });
       riepilogo.accodatiBrowser++;
       toccata = true;
     }
 
     // Agenti di server dell'approfondimento.
-    const piano = agentiDaEseguire(stati, oggi, AGENTI_APPROFONDIMENTO_SERVER);
+    const piano = agentiDaEseguire(stati, oggi, server);
     if (piano.length) {
       const e = await eseguiAgenti(azienda, piano, oggi);
       riepilogo.lavoriFatti += e.fatti;
@@ -402,11 +411,11 @@ export async function lavoraSuApprovate(limit: number, oggi: Date, riepilogo: Ri
     // Sintesi: quando tutto l'approfondimento ha chiuso. Si riparte dal primo anello
     // mancante della catena, così un errore a metà non rifà (e non ripaga) i precedenti.
     const statiOra = piano.length || toccata ? await statoAzienda(azienda.id) : stati;
-    if (prontoPerSintesi(statiOra, oggi)) {
-      const mancanti = new Set(agentiDaEseguire(statiOra, oggi, AGENTI_SINTESI));
-      const primo = AGENTI_SINTESI.findIndex((a) => mancanti.has(a));
+    if (sintesi.length && prontoPerSintesi(statiOra, oggi, server)) {
+      const mancanti = new Set(agentiDaEseguire(statiOra, oggi, sintesi));
+      const primo = sintesi.findIndex((a) => mancanti.has(a));
       if (primo >= 0) {
-        const e = await eseguiAgenti(azienda, AGENTI_SINTESI.slice(primo), oggi, { catena: true });
+        const e = await eseguiAgenti(azienda, sintesi.slice(primo), oggi, { catena: true });
         riepilogo.lavoriFatti += e.fatti;
         riepilogo.lavoriFalliti += e.falliti;
         riepilogo.saltatiPerBudget += e.saltatiPerBudget;

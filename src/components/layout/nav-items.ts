@@ -66,7 +66,7 @@ export const navSections: NavSection[] = [
   {
     title: "ALTRO",
     items: [
-      { href: "/squadra", label: "Agenti al lavoro", icon: Bot },
+      { href: "/agenti", label: "Agenti", icon: Bot },
       { href: "/archivio", label: "Archivio", icon: Archive },
     ],
   },

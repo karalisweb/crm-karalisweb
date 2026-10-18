@@ -15,6 +15,7 @@ import { agentePosizioni } from "./agenti/posizioni";
 import { agenteGoogleAds } from "./agenti/google-ads";
 import { agenteAggancio, agenteCoerenza, agenteRegistaVideo, agenteSchedaLeve } from "./agenti/sintesi";
 import type { AgenteEseguibile } from "./tipi";
+import { agenteMetaAdsServer, agenteSocialServer } from "./agenti/meta";
 import { agenteConcorrenti, agenteContatto, agenteGanci, agenteRecensioni, agenteSitoVisto, agenteTrovaSito } from "./agenti/arricchimento";
 
 export type Famiglia = "server" | "browser" | "sintesi";
@@ -52,11 +53,11 @@ export const SQUADRA: SchedaAgente[] = [
   { chiave: "google_ads", numero: "4", nome: "Google Ads", compito: "Annunci su Ads Transparency, incrociati con il tag nel sito", famiglia: "server", squadra: "commerciale", stato: "attivo" },
   { chiave: "tracciamenti", numero: "5", nome: "Tracciamenti", compito: "Analytics, Tag Manager, pixel", famiglia: "server", squadra: "commerciale", stato: "attivo" },
   {
-    chiave: "social", numero: "6", nome: "Social", compito: "Presenza, ultimo post, di cosa parlano, coerenza col sito", famiglia: "browser", squadra: "commerciale", stato: "attivo",
+    chiave: "social", numero: "6", nome: "Social", compito: "Pagina Facebook (follower, ultimo post, temi) e Instagram collegato, letti dal server", famiglia: "server", squadra: "commerciale", stato: "attivo",
     istruzioni: `Trova i profili social dell'azienda: parti dai link indicati nel lavoro; se mancano, cerca su Google "<nome azienda> <città> facebook" e "... instagram". Per Facebook e Instagram (e YouTube/TikTok se ci sono): apri il profilo, leggi la data dell'ultimo post visibile, conta i post degli ultimi 3 mesi (anche "circa"), riassumi in una frase di cosa parlano, e confronta con quello che dice il sito (offerta, tono). Leve tipiche: profilo fermo da mesi; post solo promozionali; social che raccontano un'azienda diversa dal sito; profilo assente. Findings: { profili: [{ piattaforma, url, ultimoPost (AAAA-MM-GG o null), postUltimi3Mesi, temi, follower? }], coerenzaConSito }. ${REGOLE_BROWSER}`,
   },
   {
-    chiave: "meta_ads", numero: "7", nome: "Meta Ad Library", compito: "Inserzioni attive e passate, coerenza con social e sito", famiglia: "browser", squadra: "commerciale", stato: "attivo",
+    chiave: "meta_ads", numero: "7", nome: "Meta Ad Library", compito: "Inserzioni attive e passate della pagina, lette dal server", famiglia: "server", squadra: "commerciale", stato: "attivo",
     istruzioni: `Apri https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=IT e cerca la PAGINA Facebook dell'azienda (non solo il nome: verifica che sia la loro, ad esempio dal link al sito). Annota: inserzioni attive ora (quante, da quando), inserzioni passate (se la libreria le mostra), cosa promettono, dove portano (sito/landing/WhatsApp). Confronta con il sito e i social. Se NON sei sicuro che la pagina sia la loro (nessun link al sito, nome uguale ma altra città), scrivi pagina: null e non dare leve: meglio niente che un dato sbagliato. Scrivi solo fatti verificabili (quante inserzioni, da quando, dove portano), mai supposizioni ("non funziona", "spendono al buio"). Leve tipiche: inserzioni attive che portano alla homepage generica; promesse diverse dal sito; mai fatto inserzioni mentre i concorrenti sì. Findings: { pagina, inserzioniAttive, attiveDal, inserzioniPassate, esempi: [{ testo, destinazione, dal }] }. ${REGOLE_BROWSER}`,
   },
   {
@@ -132,6 +133,8 @@ export const AGENTI_ESEGUIBILI: Record<string, AgenteEseguibile> = {
   recensioni: agenteRecensioni,
   concorrenti: agenteConcorrenti,
   ganci: agenteGanci,
+  social: agenteSocialServer,
+  meta_ads: agenteMetaAdsServer,
 };
 
 /** Gli agenti che esegue Claude sul Mac di Alessio, con il browser. */

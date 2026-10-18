@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { CANALI } from "@/components/ricerca/etichette";
 import { refertiValidi, KIND_FASCICOLO_BASE } from "@/lib/agents/turno";
 import { CHIAVI_BROWSER } from "@/lib/agents/registro";
+import { CATALOGO, modiAgenti } from "@/lib/agents/catalogo";
 
 /**
  * GET /api/ricerca/aziende/[id] — la scheda di un'azienda trovata: perché è qui, chi decide,
@@ -51,6 +52,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     refertiValidi(id),
     db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_FASCICOLO_BASE }, select: { status: true, decidedAt: true, createdAt: true } }),
     db.agentRun.findMany({ where: { leadId: id, status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { agent: true, status: true } }),
+  ]);
+  // Per ogni agente del catalogo: l'ultimo lavoro (per il pulsante e lo stato del blocco).
+  const [ultimi, modi] = await Promise.all([
+    db.agentRun.findMany({ where: { leadId: id, agent: { in: CATALOGO.map((v) => v.chiave) } }, orderBy: { queuedAt: "desc" }, distinct: ["agent"], select: { agent: true, status: true, error: true, finishedAt: true, queuedAt: true } }),
+    modiAgenti(),
   ]);
 
   // Chi te la può presentare: i membri BNI che conoscono il titolare, senza doppioni.
@@ -100,6 +106,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     // Server: lavorano adesso. Browser: aspettano gli agenti sul Mac di Alessio.
     inCorso: inCorso.filter((r) => !CHIAVI_BROWSER.includes(r.agent)),
     sulMac: inCorso.filter((r) => CHIAVI_BROWSER.includes(r.agent)).map((r) => r.agent),
+    agenti: CATALOGO.map((v) => {
+      const u = ultimi.find((x) => x.agent === v.chiave);
+      return { chiave: v.chiave, nome: v.nome, dove: v.dove, momento: v.momento, modo: modi[v.chiave], stato: u?.status ?? null, errore: u?.status === "FALLITO" ? u.error : null, quando: u?.finishedAt ?? u?.queuedAt ?? null };
+    }),
     analisi: Object.fromEntries(referti.map((r) => [r.agent, { summary: r.summary, findings: r.findings, levers: r.levers, data: r.collectedAt }])),
   });
 }

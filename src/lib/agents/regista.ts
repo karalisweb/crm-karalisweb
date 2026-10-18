@@ -93,9 +93,9 @@ export function levePerServizio(leve: Leva[]): Record<string, Leva[]> {
 // Partono solo dopo che Alessio ha detto "Approfondisci" in cassetta.
 
 /** Agenti dell'approfondimento che lavorano sul server (a pagamento: DataForSEO / AI). */
-export const AGENTI_APPROFONDIMENTO_SERVER = ["concorrenti", "tracciamenti", "google_ads"] as const;
+export const AGENTI_APPROFONDIMENTO_SERVER = ["concorrenti", "tracciamenti", "google_ads", "meta_ads", "social"] as const;
 /** Agenti dell'approfondimento che lavorano col browser di Alessio (Claude sul Mac). */
-export const AGENTI_BROWSER_AZIENDA = ["social", "meta_ads", "linkedin_azienda", "decision_maker"] as const;
+export const AGENTI_BROWSER_AZIENDA = ["linkedin_azienda", "decision_maker"] as const;
 /** La catena di sintesi, nell'ordine: ognuno legge quello che hanno scritto i precedenti. */
 export const AGENTI_SINTESI = ["ganci"] as const;
 
@@ -109,9 +109,9 @@ export const LAVORO_BROWSER_BLOCCATO_ORE = 3;
  * se fallisce non si riprova da solo (lo fa il Mac di Alessio, che può essere spento),
  * si rifà solo quando un referto vecchio scade.
  */
-export function browserDaAccodare(stati: StatoAgenteSuAzienda[], oggi: Date): string[] {
+export function browserDaAccodare(stati: StatoAgenteSuAzienda[], oggi: Date, agenti: readonly string[] = AGENTI_BROWSER_AZIENDA): string[] {
   const perAgente = new Map(stati.map((s) => [s.agente, s]));
-  return AGENTI_BROWSER_AZIENDA.filter((a) => {
+  return agenti.filter((a) => {
     const s = perAgente.get(a);
     if (!s) return true;
     if (s.inCorso || s.fallimentiDiFila > 0) return false;
@@ -131,9 +131,9 @@ function chiuso(s: StatoAgenteSuAzienda | undefined, oggi: Date): boolean {
  * (anche fallendo). Quelli di browser girano sul Mac di Alessio e possono arrivare dopo:
  * quando arrivano, i ganci si rifanno (vedi `browserPiuRecenti`).
  */
-export function prontoPerSintesi(stati: StatoAgenteSuAzienda[], oggi: Date): boolean {
+export function prontoPerSintesi(stati: StatoAgenteSuAzienda[], oggi: Date, server: readonly string[] = AGENTI_APPROFONDIMENTO_SERVER): boolean {
   const perAgente = new Map(stati.map((s) => [s.agente, s]));
-  return AGENTI_APPROFONDIMENTO_SERVER.every((a) => chiuso(perAgente.get(a), oggi));
+  return server.every((a) => chiuso(perAgente.get(a), oggi));
 }
 
 /** La catena di sintesi va (ri)fatta se anche un solo anello manca o è scaduto. */

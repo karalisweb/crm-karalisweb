@@ -113,3 +113,33 @@ export async function fotografaSito(url: string): Promise<{ telefono: Foto; comp
     await browser.close();
   }
 }
+
+
+/**
+ * Apre una pagina pubblica nel browser invisibile e ne restituisce il testo visibile e l'HTML
+ * (per Facebook e la libreria delle inserzioni di Meta, che si leggono senza account).
+ */
+export async function leggiPaginaPubblica(url: string, attesaMs = 5000): Promise<{ url: string; testo: string; html: string }> {
+  if (INTERNO.test(new URL(url).hostname)) throw new Error("Indirizzo non pubblico");
+  const { chromium } = await import("playwright-core");
+  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  try {
+    const ctx = await browser.newContext({
+      locale: "it-IT", viewport: { width: 1366, height: 900 },
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36",
+    });
+    const p = await ctx.newPage();
+    await blindaPagina(p);
+    await p.goto(url, { waitUntil: "domcontentloaded", timeout: 40_000 });
+    await p.waitForTimeout(attesaMs);
+    await chiudiCookie(p);
+    // Facebook mostra un riquadro "Accedi" sopra la pagina: si chiude se c'è.
+    await p.getByRole("button", { name: /chiudi|close/i }).first().click({ timeout: 1500 }).catch(() => {});
+    await p.mouse.wheel(0, 2500).catch(() => {});
+    await p.waitForTimeout(1500);
+    const testo = (await p.evaluate(() => document.body.innerText)).replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n");
+    return { url: p.url(), testo, html: await p.content() };
+  } finally {
+    await browser.close();
+  }
+}

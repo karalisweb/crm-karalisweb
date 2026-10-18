@@ -13,7 +13,8 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { scaricaPagina } from "./pagina";
 import { AGENTI_ESEGUIBILI } from "./registro";
-import { AGENTI_BROWSER_AZIENDA, AGENTI_ECONOMICI, AGENTI_SINTESI, agentiDaEseguire } from "./regista";
+import { AGENTI_SINTESI, agentiDaEseguire } from "./regista";
+import { CATALOGO, automatici, modiAgenti, voce } from "./catalogo";
 import {
   KIND_FASCICOLO_BASE, aziendaContesto, cittaDaIndirizzo, eseguiAgenti, lavoraSuApprovate, ricercaDaChiave, sbloccaLavori,
   statoAzienda, type RiepilogoTurno,
@@ -29,7 +30,7 @@ const STADI_ESCLUSI = ["NON_TARGET", "CLIENTE", "PERSO", "ARCHIVIATO"];
 
 const SELEZIONE = {
   id: true, name: true, website: true, category: true, address: true, phone: true, googleRating: true,
-  googleReviewsCount: true, placeId: true, search: { select: { location: true } },
+  googleReviewsCount: true, placeId: true, socialUrl: true, search: { select: { location: true } },
   ritrovamenti: { orderBy: { createdAt: "asc" as const }, take: 1, select: { chiave: { select: { tipo: true, valore: true, termini: true } } } },
 } satisfies Prisma.LeadSelect;
 
@@ -81,13 +82,16 @@ export async function giroVeloce(leadId: string, oggi = new Date()): Promise<{ f
   let fatti = 0;
   let falliti = 0;
 
+  const modi = await modiAgenti();
+  const veloci = automatici(modi, "trovata");
+
   // 1) Trova sito: lavora anche senza sito (è proprio il suo mestiere).
   const stati0 = await statoAzienda(l.id);
-  if (agentiDaEseguire(stati0, oggi, ["trova_sito"]).length) {
+  if (veloci.includes("trova_sito") && agentiDaEseguire(stati0, oggi, ["trova_sito"]).length) {
     const base: AziendaContesto = {
       id: l.id, name: l.name, website: l.website ?? "", category: l.category, address: l.address, phone: l.phone,
       googleRating: l.googleRating != null ? Number(l.googleRating) : null, googleReviewsCount: l.googleReviewsCount,
-      citta: cittaDaIndirizzo(l.address) ?? l.search?.location ?? null, placeId: l.placeId, ricerca: ricercaDaChiave(l.ritrovamenti[0]?.chiave ?? null),
+      citta: cittaDaIndirizzo(l.address) ?? l.search?.location ?? null, placeId: l.placeId, socialUrl: l.socialUrl, ricerca: ricercaDaChiave(l.ritrovamenti[0]?.chiave ?? null),
     };
     const e = await eseguiAgenti(base, ["trova_sito"], oggi);
     fatti += e.fatti;
@@ -103,7 +107,7 @@ export async function giroVeloce(leadId: string, oggi = new Date()): Promise<{ f
   // 2) Il resto del giro veloce, se c'è un sito.
   const azienda = aziendaContesto(l);
   if (azienda) {
-    const piano = agentiDaEseguire(await statoAzienda(l.id), oggi, AGENTI_ECONOMICI.filter((a) => a !== "trova_sito"));
+    const piano = agentiDaEseguire(await statoAzienda(l.id), oggi, veloci.filter((a) => a !== "trova_sito"));
     if (piano.length) {
       const e = await eseguiAgenti(azienda, piano, oggi);
       fatti += e.fatti;
@@ -113,7 +117,7 @@ export async function giroVeloce(leadId: string, oggi = new Date()): Promise<{ f
 
   // 3) Tutti hanno chiuso (o non c'è sito): si propone ad Alessio, una volta sola.
   const stati = new Map((await statoAzienda(l.id)).map((s) => [s.agente, s]));
-  const finito = l.website ? AGENTI_ECONOMICI.every((a) => chiuso(stati.get(a), oggi)) : chiuso(stati.get("trova_sito"), oggi);
+  const finito = l.website ? veloci.every((a) => chiuso(stati.get(a), oggi)) : !veloci.includes("trova_sito") || chiuso(stati.get("trova_sito"), oggi);
   let proposta = false;
   if (finito && !(await db.approvalItem.findFirst({ where: { leadId: l.id, kind: KIND_FASCICOLO_BASE }, select: { id: true } }))) {
     const referti = await refertiValidi(l.id, oggi);
@@ -132,7 +136,7 @@ export async function giroVeloce(leadId: string, oggi = new Date()): Promise<{ f
   return { fatti, falliti, proposta };
 }
 
-/** I ganci si rifanno quando arriva un referto di browser più recente (social, Meta, LinkedIn). */
+/** Le frasi si rifanno quando arriva un dato più recente (un agente rilanciato, la parte dal Mac). */
 async function ganciDaRifare(oggi: Date): Promise<number> {
   const approvate = await db.lead.findMany({
     where: { approvalItems: { some: { kind: KIND_FASCICOLO_BASE, status: "APPROVATO" } }, agentReports: { some: { agent: "ganci" } } },
@@ -143,7 +147,7 @@ async function ganciDaRifare(oggi: Date): Promise<number> {
   for (const { id } of approvate) {
     const [ganci, browser] = await Promise.all([
       db.agentReport.findFirst({ where: { leadId: id, agent: "ganci" }, orderBy: { collectedAt: "desc" }, select: { collectedAt: true } }),
-      db.agentReport.findFirst({ where: { leadId: id, agent: { in: [...AGENTI_BROWSER_AZIENDA] } }, orderBy: { collectedAt: "desc" }, select: { collectedAt: true } }),
+      db.agentReport.findFirst({ where: { leadId: id, agent: { not: "ganci" } }, orderBy: { collectedAt: "desc" }, select: { collectedAt: true } }),
     ]);
     if (!ganci || !browser || browser.collectedAt <= ganci.collectedAt) continue;
     const l = await db.lead.findUnique({ where: { id }, select: SELEZIONE });
@@ -195,3 +199,41 @@ export function contestoPer(azienda: AziendaContesto, oggi = new Date()): Contes
 }
 
 export { AGENTI_ESEGUIBILI };
+
+
+/**
+ * Il pulsante "Lancia" / "Rifai" della scheda: un agente su un'azienda, subito.
+ * Server: gira adesso (e poi si rifanno le frasi). Mac: va in coda per l'agente sul Mac.
+ */
+export async function lanciaAgente(leadId: string, chiave: string, oggi = new Date()): Promise<{ dove: "server" | "mac"; messaggio: string }> {
+  const v = voce(chiave);
+  if (!v) throw new Error("Agente sconosciuto");
+  const l = await db.lead.findUnique({ where: { id: leadId }, select: SELEZIONE });
+  if (!l) throw new Error("Azienda non trovata");
+  const attivo = await db.agentRun.findFirst({ where: { leadId, agent: chiave, status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } });
+  if (attivo) return { dove: v.dove, messaggio: "Già in corso" };
+
+  if (v.dove === "mac") {
+    await db.agentRun.create({ data: { leadId, agent: chiave, status: "IN_CODA" } });
+    return { dove: "mac", messaggio: "In coda per l'agente sul Mac: entro mezz'ora" };
+  }
+  const azienda = chiave === "trova_sito"
+    ? { ...(aziendaContesto({ ...l, website: l.website || "x" }) as AziendaContesto), website: l.website ?? "" }
+    : aziendaContesto(l);
+  if (!azienda) throw new Error("Serve prima il sito: lancia Trova sito");
+  void (async () => {
+    await eseguiAgenti(azienda, [chiave], oggi);
+    if (chiave === "trova_sito") {
+      const r = await db.agentReport.findFirst({ where: { leadId, agent: "trova_sito" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
+      const sito = (r?.findings as { sito?: string | null } | null)?.sito;
+      if (sito && !l.website) await db.lead.update({ where: { id: leadId }, data: { website: sito } });
+    }
+    // Le frasi per il telefono tengono conto del dato nuovo (se ci sono già o se è approvata).
+    if (chiave !== "ganci" && (await db.agentReport.findFirst({ where: { leadId, agent: "ganci" }, select: { id: true } }))) {
+      await eseguiAgenti(azienda, ["ganci"], new Date());
+    }
+  })().catch((e) => console.error("[lancia] fallito:", e));
+  return { dove: "server", messaggio: "Partito: tra un minuto trovi il risultato" };
+}
+
+export { CATALOGO };

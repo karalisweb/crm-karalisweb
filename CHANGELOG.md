@@ -13,6 +13,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.49.0] - 2026-10-18
+
+### Added
+- **Pagina Agenti** nel menu: ogni agente dell'analisi con dove lavora (server o Mac), quando parte, cosa ha fatto nelle ultime 24 ore e l'ultimo errore; per ognuno scegli **automatico** o **a mano**.
+- **Scheda azienda in crescendo** (si fa trovare? → il sito → come la vedono i clienti → concorrenti → pubblicità e social → LinkedIn e chi decide → cosa dirgli al telefono), con su ogni blocco il pulsante **Lancia / Rifai / Riprova** e lo stato.
+- Facebook e inserzioni Meta lette **dal server** (browser invisibile, senza account): il Mac serve solo per LinkedIn.
+- Agente sul Mac ogni mezz'ora dalle 8 alle 20, con un solo comando permesso (`~/.karalisweb/crm-agenti.sh`).
+- Chi decide con la via corta: azienda su LinkedIn → dipendenti → CEO/titolare → contatti in comune; un membro BNI in comune diventa chi lo presenta.
+
 ## [3.48.0] - 2026-10-18
 
 ### Added

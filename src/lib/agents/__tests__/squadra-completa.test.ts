@@ -31,7 +31,7 @@ describe("Regista: approfondimento e sintesi", () => {
   });
 
   it("i ganci aspettano gli agenti di server dell'approfondimento, non quelli di browser", () => {
-    const server = ["concorrenti", "tracciamenti", "google_ads"];
+    const server = ["concorrenti", "tracciamenti", "google_ads", "meta_ads", "social"];
     const chiusi = server.map((a) => stato(a, { validoFino: giorni(5) }));
     expect(prontoPerSintesi(chiusi, oggi)).toBe(true);
     const unoInCorso = chiusi.map((s) => (s.agente === "concorrenti" ? { ...s, validoFino: null, inCorso: true } : s));
