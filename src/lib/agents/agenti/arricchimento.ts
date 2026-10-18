@@ -264,9 +264,18 @@ export const agenteRecensioni: AgenteEseguibile = {
   aPagamento: true,
   async esegui(ctx) {
     const l = ctx.lead;
-    const task: Record<string, unknown> = { language_code: "it", depth: 40, sort_by: "newest", location_code: LOCATION_ITALIA };
-    if (l.placeId) task.place_id = l.placeId;
-    else task.keyword = [l.name, l.citta].filter(Boolean).join(" ");
+    // Senza la scheda Maps precisa (place_id) la ricerca per nome prende facilmente un'altra
+    // attività con lo stesso nome: meglio dire che non si sa che dare recensioni sbagliate.
+    if (!l.placeId) {
+      return {
+        summary: "Scheda Google non collegata con certezza: recensioni non lette",
+        findings: { schedaTrovata: null },
+        levers: [],
+        evidence: [],
+        confidence: "BASSA",
+      };
+    }
+    const task: Record<string, unknown> = { language_code: "it", depth: 40, sort_by: "newest", location_code: LOCATION_ITALIA, place_id: l.placeId };
     let r: Awaited<ReturnType<typeof recensioniGoogle>>;
     try {
       r = await recensioniGoogle(task);
