@@ -69,7 +69,7 @@ export function CercaTu({ onFatto }: { onFatto?: () => void }) {
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}{tipo === "settore" ? "Cerca" : "Aggiungi"}</Button>
           <span className="text-xs text-muted-foreground">
-            {tipo === "azienda" ? "La cerco su Google Maps e parte subito l'analisi veloce" : tipo === "settore" ? "Con la città cerco subito fino a 5 aziende nuove; il settore resta anche nelle ricerche dei giorni dopo" : "Se scrivi la sua azienda, parte l'analisi veloce"}
+            {tipo === "azienda" ? "La cerco su Google Maps e parte subito l'analisi veloce" : tipo === "settore" ? "Cerco subito su Google e Google Maps (con la città) e su LinkedIn (le pagine aziendali, con l'agente sul Mac)" : "Se scrivi la sua azienda, parte l'analisi veloce"}
           </span>
         </div>
         {esito && <div className={`text-sm ${esito.ok ? "text-green-600 dark:text-green-400" : "text-red-600"}`}>{esito.testo}</div>}

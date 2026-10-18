@@ -99,13 +99,17 @@ export async function aggiungiAMano(r: RichiestaManuale): Promise<EsitoManuale> 
   if (r.tipo === "settore") {
     const termini = terminiDi(testo, []);
     const k = await db.chiaveRicerca.create({ data: { tipo: "SETTORE", valore: testo.slice(0, 200), termini, attiva: true } });
+    // Anche su LinkedIn: le pagine aziendali di quel settore (le cerca l'agente sul Mac).
+    await db.agentRun.create({
+      data: { agent: "cerca_linkedin", status: "IN_CODA", input: { modo: "aziende", chiaveId: k.id, tipo: "SETTORE", termini, zona: citta ?? "Sardegna", provinceEscluse: [], giaVisti: 0 } },
+    });
     // Con la città la ricerca parte subito; il settore resta anche nelle ricerche dei giorni dopo.
-    if (!citta) return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `"${testo}" è nelle ricerche dei prossimi giorni. Scrivi anche una città per cercare subito.` };
+    if (!citta) return { leadId: null, personaId: null, chiaveId: k.id, messaggio: `"${testo}" è nelle ricerche dei prossimi giorni, e su LinkedIn lo cerca l'agente sul Mac entro mezz'ora. Scrivi anche una città per cercare subito su Google.` };
     const e = await cercaSettoreAdesso(k.id, testo, citta);
     if (e.nuove) avviaAnalisiVeloci();
     return {
       leadId: null, personaId: null, chiaveId: k.id,
-      messaggio: e.nuove ? `Trovate ${e.nuove} aziende nuove: l'analisi veloce è partita, le trovi qui sotto in "Da decidere"` : `Nessuna azienda nuova per "${testo}" a ${citta} (${e.trovati} risultati, già nel CRM o di un altro mestiere)`,
+      messaggio: (e.nuove ? `Trovate ${e.nuove} aziende nuove su Google: l'analisi veloce è partita, le trovi qui sotto in "Da decidere".` : `Nessuna azienda nuova su Google per "${testo}" a ${citta} (${e.trovati} risultati, già nel CRM o di un altro mestiere).`) + " Su LinkedIn le cerca l'agente sul Mac entro mezz'ora.",
     };
   }
 
