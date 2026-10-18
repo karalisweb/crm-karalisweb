@@ -43,12 +43,28 @@ const MOMENTO: Record<string, string> = { trovata: "nell'analisi veloce", approf
 /** I dati comuni ai blocchi: gli agenti e il pulsante per lanciarli. */
 const Ctx = createContext<{ agenti: Agente[]; analisi: Record<string, Referto>; lancia: (chiave: string) => void; inLancio: string | null }>({ agenti: [], analisi: {}, lancia: () => {}, inLancio: null });
 
-function Sezione({ n, titolo, children }: { n: number; titolo: string; children: React.ReactNode }) {
+/**
+ * Una sezione della scheda è una fisarmonica: chiusa mostra quante ricerche sono fatte e quante
+ * cose hanno trovato; aperta, i blocchi (su due colonne quando c'è spazio).
+ */
+function Sezione({ n, titolo, agenti: chiavi = [], aperta = false, unaColonna = false, children }: { n: number; titolo: string; agenti?: string[]; aperta?: boolean; unaColonna?: boolean; children: React.ReactNode }) {
+  const { agenti, analisi } = useContext(Ctx);
+  const mie = agenti.filter((a) => chiavi.includes(a.chiave));
+  const fatte = mie.filter((a) => analisi[a.chiave]).length;
+  const inCorso = mie.some((a) => a.stato === "IN_CODA" || a.stato === "IN_CORSO");
+  const trovate = mie.reduce((n, a) => n + (analisi[a.chiave]?.levers.length ?? 0), 0);
   return (
-    <section className="mb-6 break-inside-avoid">
-      <div className="text-sm font-semibold mb-2"><span className="text-muted-foreground mr-1">{n}.</span>{titolo}</div>
-      <div className="space-y-2">{children}</div>
-    </section>
+    <details className="group rounded-lg border mt-3" open={aperta}>
+      <summary className="cursor-pointer list-none px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-semibold"><span className="text-muted-foreground mr-1">{n}.</span>{titolo}</span>
+        <span className="text-xs text-muted-foreground flex items-center gap-3">
+          {mie.length > 0 && <span>{fatte}/{mie.length} ricerche fatte{inCorso ? " · in corso" : ""}</span>}
+          {trovate > 0 && <span className="text-amber-700 dark:text-amber-400">{trovate} {trovate === 1 ? "cosa da dire" : "cose da dire"}</span>}
+          <span className="transition group-open:rotate-90">›</span>
+        </span>
+      </summary>
+      <div className={`px-3 pb-3 grid gap-2 ${unaColonna ? "" : "lg:grid-cols-2 [&>*:only-child]:lg:col-span-2"}`}>{children}</div>
+    </details>
   );
 }
 
@@ -70,7 +86,7 @@ function Leve({ leve }: { leve: Leva[] }) {
  * Un blocco = un agente. In alto: nome, automatica/a mano, dove gira, stato e il pulsante
  * (Lancia, Rifai, Riprova). Sotto: cosa ha trovato.
  */
-function Blocco({ agente, children }: { agente: string; children?: React.ReactNode }) {
+function Blocco({ agente, soloDettagli = false, children }: { agente: string; soloDettagli?: boolean; children?: React.ReactNode }) {
   const { agenti, analisi, lancia, inLancio } = useContext(Ctx);
   const a = agenti.find((x) => x.chiave === agente);
   const r = analisi[agente];
@@ -100,9 +116,9 @@ function Blocco({ agente, children }: { agente: string; children?: React.ReactNo
       </div>
       {r && (
         <>
-          <div className="text-sm text-muted-foreground break-words mt-1">{r.summary}</div>
+          {!soloDettagli && <div className="text-sm text-muted-foreground break-words mt-1">{r.summary}</div>}
           {children}
-          <Leve leve={r.levers} />
+          {!soloDettagli && <Leve leve={r.levers} />}
         </>
       )}
     </div>
@@ -255,13 +271,12 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          <div className="mt-6 lg:columns-2 lg:gap-6">
-          <Sezione n={1} titolo="Si fa trovare?">
+          <Sezione n={1} titolo="Si fa trovare?" agenti={["trova_sito", "posizioni"]}>
             <Blocco agente="trova_sito" />
             <Blocco agente="posizioni" />
           </Sezione>
 
-          <Sezione n={2} titolo="Il sito">
+          <Sezione n={2} titolo="Il sito" agenti={["sito_visto", "contatto", "lettore"]}>
             <Blocco agente="sito_visto">
               {(foto.telefono || foto.computer) && (
                 <div className="flex gap-2 mt-2 items-start">
@@ -286,7 +301,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             </Blocco>
           </Sezione>
 
-          <Sezione n={3} titolo="Come la vedono i clienti">
+          <Sezione n={3} titolo="Come la vedono i clienti" agenti={["recensioni"]}>
             <Blocco agente="recensioni">
               {arr<{ cosa: string; citazione: string }>(an.recensioni?.findings.lodano).slice(0, 2).map((x, i) => (
                 <div key={i} className="text-xs mt-1 break-words"><span className="text-green-600">+</span> {x.cosa}: &ldquo;{x.citazione}&rdquo;</div>
@@ -297,7 +312,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             </Blocco>
           </Sezione>
 
-          <Sezione n={4} titolo="I concorrenti">
+          <Sezione n={4} titolo="I concorrenti" agenti={["concorrenti"]}>
             <Blocco agente="concorrenti">
               <div className="mt-1.5 space-y-0.5">
                 {concorrenti.map((c, i) => (
@@ -307,7 +322,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             </Blocco>
           </Sezione>
 
-          <Sezione n={5} titolo="Pubblicità e social">
+          <Sezione n={5} titolo="Pubblicità e social" agenti={["google_ads", "tracciamenti", "meta_ads", "social"]}>
             <Blocco agente="google_ads" />
             <Blocco agente="tracciamenti" />
             <Blocco agente="meta_ads">
@@ -316,7 +331,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             <Blocco agente="social" />
           </Sezione>
 
-          <Sezione n={6} titolo="LinkedIn e chi decide">
+          <Sezione n={6} titolo="LinkedIn e chi decide" agenti={["linkedin_azienda", "decision_maker"]}>
             <Blocco agente="linkedin_azienda" />
             <Blocco agente="decision_maker">
               {titolare && (
@@ -339,10 +354,8 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             </div>
           </Sezione>
 
-          </div>
-
-          <Sezione n={7} titolo="Cosa dirgli al telefono">
-            <Blocco agente="ganci">
+          <Sezione n={7} titolo="Cosa dirgli al telefono" agenti={["ganci"]} aperta unaColonna>
+            <Blocco agente="ganci" soloDettagli>
               {ganci.length > 0 && (
                 <div className="mt-2 rounded-md bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 space-y-2">
                   {ganci.map((g, i) => (
@@ -355,7 +368,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             <div className="rounded-md border px-3 py-2.5 text-sm"><span className="font-medium">Prossimo passo: </span>{s.prossimo}</div>
           </Sezione>
 
-          <section className="mt-6">
+          <section className="mt-5">
             <div className="text-sm font-semibold mb-1">Storia</div>
             <div className="text-sm text-muted-foreground space-y-0.5">
               {s.storia.map((e, i) => <div key={i} className="break-words">{data(e.quando)} · {e.cosa}</div>)}
