@@ -55,7 +55,9 @@ const SELEZIONE = {
   phone: true,
   googleRating: true,
   googleReviewsCount: true,
+  placeId: true,
   search: { select: { location: true } },
+  ritrovamenti: { orderBy: { createdAt: "asc" }, take: 1, select: { chiave: { select: { tipo: true, valore: true, termini: true } } } },
 } satisfies Prisma.LeadSelect;
 
 type LeadScelto = Prisma.LeadGetPayload<{ select: typeof SELEZIONE }>;
@@ -70,6 +72,15 @@ export function cittaDaIndirizzo(indirizzo: string | null): string | null {
   return !/[\d,]/.test(t) && t.length <= 40 ? t : null;
 }
 
+/** La ricerca con cui un cliente la troverebbe: il primo termine della nicchia, o il settore. */
+export function ricercaDaChiave(k: { tipo: string; valore: string; termini: Prisma.JsonValue } | null): string | null {
+  if (!k) return null;
+  const termini = Array.isArray(k.termini) ? k.termini.filter((t): t is string => typeof t === "string" && t.trim().length > 2) : [];
+  if (k.tipo === "AZIENDA") return termini[0] ?? null;
+  if (k.tipo === "SETTORE") return k.valore;
+  return null;
+}
+
 export function aziendaContesto(l: LeadScelto): AziendaContesto | null {
   if (!l.website) return null;
   return {
@@ -82,6 +93,8 @@ export function aziendaContesto(l: LeadScelto): AziendaContesto | null {
     googleRating: l.googleRating != null ? Number(l.googleRating) : null,
     googleReviewsCount: l.googleReviewsCount,
     citta: cittaDaIndirizzo(l.address) ?? l.search?.location ?? null,
+    placeId: l.placeId,
+    ricerca: ricercaDaChiave(l.ritrovamenti[0]?.chiave ?? null),
   };
 }
 
@@ -349,10 +362,11 @@ export async function proponiSchedaContatto(azienda: AziendaContesto, oggi = new
 }
 
 /** Approfondimento e sintesi sulle aziende approvate in cassetta. */
-export async function lavoraSuApprovate(limit: number, oggi: Date, riepilogo: RiepilogoTurno): Promise<void> {
+export async function lavoraSuApprovate(limit: number, oggi: Date, riepilogo: RiepilogoTurno, soloLeadId?: string): Promise<void> {
   const approvate = await db.lead.findMany({
     where: {
       ...BASE_AZIENDE,
+      ...(soloLeadId ? { id: soloLeadId } : {}),
       approvalItems: { some: { kind: KIND_FASCICOLO_BASE, status: "APPROVATO" } },
       // Già arrivate in cassetta con la scheda: il lavoro è finito.
       NOT: [{ approvalItems: { some: { kind: KIND_SCHEDA_CONTATTO } } }, { website: "" }],

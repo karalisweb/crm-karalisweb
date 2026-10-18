@@ -8,8 +8,11 @@
  */
 import type { Leva } from "./tipi";
 
-/** Gli agenti della raccolta economica (passo 1). */
-export const AGENTI_ECONOMICI = ["tecnico", "seo", "blog", "tracciamenti"] as const;
+/**
+ * Il giro veloce (Fase 2, definita con Alessio il 2026-10-18): parte da solo su ogni azienda trovata
+ * e dice se vale la pena approfondire. Trova sito prima di tutto.
+ */
+export const AGENTI_ECONOMICI = ["trova_sito", "posizioni", "sito_visto", "contatto", "lettore", "recensioni"] as const;
 
 /** Leve minime perché il fascicolo arrivi in cassetta. */
 export const SOGLIA_LEVE = 3;
@@ -75,7 +78,8 @@ export function valutaFascicolo(referti: RefertoBreve[], oggi: Date): EsitoFasci
   }
   const completo = AGENTI_ECONOMICI.every((a) => validi.has(a));
   const leve = [...validi.values()].flatMap((r) => r.levers);
-  return { completo, leve, meritaCassetta: completo && leve.length >= SOGLIA_LEVE };
+  // Alessio decide su ogni azienda trovata: il giro veloce finito basta per proporla.
+  return { completo, leve, meritaCassetta: completo };
 }
 
 /** Raggruppa le leve per servizio, nell'ordine in cui vanno presentate. */
@@ -89,11 +93,11 @@ export function levePerServizio(leve: Leva[]): Record<string, Leva[]> {
 // Partono solo dopo che Alessio ha detto "Approfondisci" in cassetta.
 
 /** Agenti dell'approfondimento che lavorano sul server (a pagamento: DataForSEO / AI). */
-export const AGENTI_APPROFONDIMENTO_SERVER = ["lettore", "posizioni", "google_ads"] as const;
+export const AGENTI_APPROFONDIMENTO_SERVER = ["concorrenti", "tracciamenti", "google_ads"] as const;
 /** Agenti dell'approfondimento che lavorano col browser di Alessio (Claude sul Mac). */
 export const AGENTI_BROWSER_AZIENDA = ["social", "meta_ads", "linkedin_azienda", "decision_maker"] as const;
 /** La catena di sintesi, nell'ordine: ognuno legge quello che hanno scritto i precedenti. */
-export const AGENTI_SINTESI = ["coerenza", "regista_video", "scheda_leve", "aggancio"] as const;
+export const AGENTI_SINTESI = ["ganci"] as const;
 
 /** Dopo quanti giorni un lavoro di browser mai preso in carico si considera perso. */
 export const SCADENZA_BROWSER_GIORNI = 3;
@@ -123,12 +127,13 @@ function chiuso(s: StatoAgenteSuAzienda | undefined, oggi: Date): boolean {
 }
 
 /**
- * La sintesi parte quando tutti gli agenti dell'approfondimento hanno chiuso il loro
- * lavoro (anche fallendo: si sintetizza quello che c'è, e lo si dice).
+ * I ganci partono quando gli agenti di server dell'approfondimento hanno chiuso il loro lavoro
+ * (anche fallendo). Quelli di browser girano sul Mac di Alessio e possono arrivare dopo:
+ * quando arrivano, i ganci si rifanno (vedi `browserPiuRecenti`).
  */
 export function prontoPerSintesi(stati: StatoAgenteSuAzienda[], oggi: Date): boolean {
   const perAgente = new Map(stati.map((s) => [s.agente, s]));
-  return [...AGENTI_APPROFONDIMENTO_SERVER, ...AGENTI_BROWSER_AZIENDA].every((a) => chiuso(perAgente.get(a), oggi));
+  return AGENTI_APPROFONDIMENTO_SERVER.every((a) => chiuso(perAgente.get(a), oggi));
 }
 
 /** La catena di sintesi va (ri)fatta se anche un solo anello manca o è scaduto. */

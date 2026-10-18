@@ -377,6 +377,26 @@ export async function sendInternalEmail(subject: string, text: string): Promise<
   }
 }
 
+/** Mail interna con HTML (es. le aziende da decidere della mattina). Stessi destinatari di sendInternalEmail. */
+export async function sendInternalHtmlEmail(subject: string, html: string, text: string): Promise<boolean> {
+  let recipients: string[] = [];
+  try {
+    const settings = await db.settings.findUnique({ where: { id: 'default' }, select: { notificationEmails: true } });
+    recipients = (settings?.notificationEmails ?? '').split(',').map((e) => e.trim()).filter((e) => e.includes('@'));
+  } catch (error) {
+    console.error('[EMAIL] Errore lettura notificationEmails:', error);
+  }
+  if (recipients.length === 0) recipients = [process.env.SMTP_USER || 'alessio@karalisweb.net'];
+  const fromEmail = process.env.SMTP_FROM || 'noreply@karalisweb.net';
+  try {
+    await transporter.sendMail({ from: `"Sales CRM" <${fromEmail}>`, to: recipients.join(', '), subject, html, text });
+    return true;
+  } catch (error) {
+    console.error('[EMAIL] Errore invio mail interna HTML:', error);
+    return false;
+  }
+}
+
 // Notifica email quando un prospect guarda il video
 export async function sendVideoViewNotification(
   leadName: string,

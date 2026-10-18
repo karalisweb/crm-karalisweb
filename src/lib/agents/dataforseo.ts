@@ -17,7 +17,23 @@ export interface EsitoDataForSeo<T> {
   costCents: number;
 }
 
+/** Errori passeggeri di Google lato DataForSEO ("Internal SE Server Error"): si riprova. */
+function passeggero(err: unknown): boolean {
+  return err instanceof Error && /\((40101|50000|50301)\)|Internal SE Server Error|risponde 5\d\d/.test(err.message);
+}
+
 export async function chiamaDataForSeo<T>(percorso: string, task: Record<string, unknown>): Promise<EsitoDataForSeo<T>> {
+  for (let tentativo = 1; ; tentativo++) {
+    try {
+      return await chiamaUnaVolta<T>(percorso, task);
+    } catch (err) {
+      if (tentativo >= 3 || !passeggero(err)) throw err;
+      await new Promise((r) => setTimeout(r, 2000 * tentativo));
+    }
+  }
+}
+
+async function chiamaUnaVolta<T>(percorso: string, task: Record<string, unknown>): Promise<EsitoDataForSeo<T>> {
   if (!dataForSeoConfigurato()) throw new Error("DataForSEO non configurato (DATAFORSEO_LOGIN/PASSWORD)");
   const auth = Buffer.from(`${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`).toString("base64");
   const res = await fetch(`${BASE}${percorso}`, {

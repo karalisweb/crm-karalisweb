@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { CANALI } from "@/components/ricerca/etichette";
+import { refertiValidi, KIND_FASCICOLO_BASE } from "@/lib/agents/turno";
+import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 
 /**
  * GET /api/ricerca/aziende/[id] — la scheda di un'azienda trovata: perché è qui, chi decide,
@@ -22,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
   if (!lead) return NextResponse.json({ error: "Azienda non trovata" }, { status: 404 });
 
-  const [ritrovamenti, persone] = await Promise.all([
+  const [ritrovamenti, persone, referti, decisione, inCorso] = await Promise.all([
     db.ritrovamento.findMany({
       where: { leadId: id },
       orderBy: { createdAt: "asc" },
@@ -46,6 +48,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         presentazioni: { select: { id: true, stato: true, membro: { select: { id: true, name: true, chapter: true } } } },
       },
     }),
+    refertiValidi(id),
+    db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_FASCICOLO_BASE }, select: { status: true, decidedAt: true, createdAt: true } }),
+    db.agentRun.findMany({ where: { leadId: id, status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { agent: true, status: true } }),
   ]);
 
   // Chi te la può presentare: i membri BNI che conoscono il titolare, senza doppioni.
@@ -74,7 +79,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const storia = [
     ...ritrovamenti.map((r) => ({
       quando: r.createdAt,
-      cosa: r.chiave.casoStudio ? `Trovata su ${CANALI[r.canale] ?? r.canale} dal caso ${r.chiave.casoStudio.titolo}` : r.chiave.bniMembro ? `Trovata nella rete di ${r.chiave.bniMembro.name}` : `Trovata su ${CANALI[r.canale] ?? r.canale}`,
+      cosa: r.chiave.tipo === "MANUALE" ? "Aggiunta a mano" : r.chiave.casoStudio ? `Trovata su ${CANALI[r.canale] ?? r.canale} dal caso ${r.chiave.casoStudio.titolo}` : r.chiave.bniMembro ? `Trovata nella rete di ${r.chiave.bniMembro.name}` : `Trovata su ${CANALI[r.canale] ?? r.canale}`,
     })),
     ...persone.map((p) => ({ quando: p.createdAt, cosa: `Trovato ${p.nome}${p.ruolo ? `, ${p.ruolo}` : ""}` })),
     ...lead.activities.map((a) => ({ quando: a.createdAt, cosa: a.notes ? `${a.type.toLowerCase()}: ${a.notes}` : a.type.toLowerCase() })),
@@ -88,7 +93,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     casi,
     persone,
     ponti: [...ponti.values()],
-    prossimo,
+    prossimo: decisione?.status === "IN_ATTESA" ? "Decidi: approfondire o scartare" : decisione?.status === "SCARTATO" ? "Scartata" : prossimo,
     storia,
+    decisione,
+    // Server: lavorano adesso. Browser: aspettano gli agenti sul Mac di Alessio.
+    inCorso: inCorso.filter((r) => !CHIAVI_BROWSER.includes(r.agent)),
+    sulMac: inCorso.filter((r) => CHIAVI_BROWSER.includes(r.agent)).map((r) => r.agent),
+    analisi: Object.fromEntries(referti.map((r) => [r.agent, { summary: r.summary, findings: r.findings, levers: r.levers, data: r.collectedAt }])),
   });
 }

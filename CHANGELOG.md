@@ -13,6 +13,19 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.48.0] - 2026-10-18
+
+### Added
+- **Fase 2 Arricchimento**: giro veloce automatico su ogni azienda trovata (trova sito, posizioni, sito visto con le foto, dal cliente al contatto, lettore, recensioni) e giro completo solo con "Approfondisci" (concorrenti su Maps, Google Ads, tracciamenti, agenti di browser), con **i 3 ganci** da dire al telefono.
+- **Mail delle 7** con le aziende da decidere; in Oggi e in Aziende trovate ("Da decidere", "Da approfondire", "Scartate").
+- **Casella "Parti da qui"**: scrivi un'azienda, un settore o una persona.
+- Casi studio: **nicchia** prima del settore, provincia del cliente esclusa per la nicchia, ricerche larghe del settore.
+
+### Changed
+- Il Lettore del sito legge più pagine e dice a quali domande del cliente il sito risponde; niente consigli generici.
+- Google Ads: con Tag Manager non dice più che mancano le conversioni (da fuori non si vede); passato e tag senza annunci detti come fatti.
+- Meta Ad Library: se la pagina non è sicuramente la loro, nessuna leva.
+
 ## [3.47.1] - 2026-10-17
 
 ### Changed

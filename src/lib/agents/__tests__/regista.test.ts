@@ -14,26 +14,26 @@ describe("agentiDaEseguire", () => {
   it("non rifà chi ha un referto valido, rifà chi l'ha scaduto", () => {
     const piano = agentiDaEseguire(
       [
-        { agente: "tecnico", validoFino: giorni(10), fallimentiDiFila: 0, ultimoFallimento: null, inCorso: false },
-        { agente: "seo", validoFino: giorni(-1), fallimentiDiFila: 0, ultimoFallimento: null, inCorso: false },
+        { agente: "trova_sito", validoFino: giorni(10), fallimentiDiFila: 0, ultimoFallimento: null, inCorso: false },
+        { agente: "posizioni", validoFino: giorni(-1), fallimentiDiFila: 0, ultimoFallimento: null, inCorso: false },
       ],
       oggi
     );
-    expect(piano).toEqual(["seo", "blog", "tracciamenti"]);
+    expect(piano).toEqual(["posizioni", "sito_visto", "contatto", "lettore", "recensioni"]);
   });
 
   it("non tocca un lavoro in corso", () => {
-    const piano = agentiDaEseguire([{ agente: "blog", validoFino: null, fallimentiDiFila: 0, ultimoFallimento: null, inCorso: true }], oggi);
-    expect(piano).not.toContain("blog");
+    const piano = agentiDaEseguire([{ agente: "lettore", validoFino: null, fallimentiDiFila: 0, ultimoFallimento: null, inCorso: true }], oggi);
+    expect(piano).not.toContain("lettore");
   });
 
   it("dopo un fallimento aspetta, dopo 3 fallimenti di fila smette", () => {
-    const appena = { agente: "seo", validoFino: null, fallimentiDiFila: 1, ultimoFallimento: giorni(-0.1), inCorso: false };
+    const appena = { agente: "contatto", validoFino: null, fallimentiDiFila: 1, ultimoFallimento: giorni(-0.1), inCorso: false };
     const ieri = { ...appena, ultimoFallimento: giorni(-1) };
     const troppi = { ...ieri, fallimentiDiFila: 3 };
-    expect(agentiDaEseguire([appena], oggi)).not.toContain("seo");
-    expect(agentiDaEseguire([ieri], oggi)).toContain("seo");
-    expect(agentiDaEseguire([troppi], oggi)).not.toContain("seo");
+    expect(agentiDaEseguire([appena], oggi)).not.toContain("contatto");
+    expect(agentiDaEseguire([ieri], oggi)).toContain("contatto");
+    expect(agentiDaEseguire([troppi], oggi)).not.toContain("contatto");
   });
 });
 
@@ -46,21 +46,13 @@ describe("valutaFascicolo", () => {
     expect(e.meritaCassetta).toBe(false);
   });
 
-  it("completo e con abbastanza leve: va in cassetta", () => {
-    const e = valutaFascicolo(
-      [referto("tecnico", [leva("sito")]), referto("seo", [leva(), leva()]), referto("blog", []), referto("tracciamenti", [leva("meta_ads")])],
-      oggi
-    );
-    expect(e.completo).toBe(true);
-    expect(e.leve).toHaveLength(4);
-    expect(e.meritaCassetta).toBe(true);
-  });
+  const giro = ["trova_sito", "posizioni", "sito_visto", "contatto", "lettore", "recensioni"];
 
-  it("completo ma sotto soglia: si ferma al filtro", () => {
-    const e = valutaFascicolo([referto("tecnico", [leva()]), referto("seo", []), referto("blog", []), referto("tracciamenti", [])], oggi);
+  it("completo: va ad Alessio, anche con poche leve (decide lui)", () => {
+    const e = valutaFascicolo(giro.map((a, i) => referto(a, i === 0 ? [leva()] : [])), oggi);
     expect(e.completo).toBe(true);
     expect(e.leve.length).toBeLessThan(SOGLIA_LEVE);
-    expect(e.meritaCassetta).toBe(false);
+    expect(e.meritaCassetta).toBe(true);
   });
 
   it("ignora i referti scaduti e conta solo il più recente per agente", () => {

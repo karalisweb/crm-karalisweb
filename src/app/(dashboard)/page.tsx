@@ -8,7 +8,7 @@ import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2 } from "lucide-r
 import { dataOra } from "@/components/ricerca/etichette";
 
 interface Oggi {
-  daFare: { richiesteDaMandare: number; visiteDaMandare: number; fogli: number; altreDecisioni: number; casiDaConfermare: number };
+  daFare: { richiesteDaMandare: number; visiteDaMandare: number; fogli: number; aziendeDaDecidere: number; casiDaConfermare: number };
   incontri: { id: string; nome: string; azienda: string | null; capitolo: string | null; quando: string }[];
   call: { id: string; nome: string; quando: string }[];
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
@@ -53,7 +53,7 @@ export default function HomePage() {
   if (f.fogli) cose.push({ href: "/bni", testo: `Leggi ${f.fogli === 1 ? "il foglio" : `i ${f.fogli} fogli`} per gli incontri di domani` });
   if (f.visiteDaMandare) cose.push({ href: "/bni", testo: `Chiedi ${f.visiteDaMandare === 1 ? "la visita" : `${f.visiteDaMandare} visite`} a un capitolo BNI` });
   if (f.casiDaConfermare) cose.push({ href: "/casi-studio", testo: `Conferma ${f.casiDaConfermare === 1 ? "il caso studio caricato" : `${f.casiDaConfermare} casi studio`}` });
-  if (f.altreDecisioni) cose.push({ href: "/cassetta", testo: `${f.altreDecisioni} altre cose da approvare` });
+  if (f.aziendeDaDecidere) cose.push({ href: "/aziende-trovate", testo: `Decidi su ${f.aziendeDaDecidere === 1 ? "1 azienda trovata" : `${f.aziendeDaDecidere} aziende trovate`}: approfondire o scartare` });
   const s = d.settimana;
   const incontriSettimana = s.fatti + s.fissati;
 

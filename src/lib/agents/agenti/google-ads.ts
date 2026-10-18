@@ -28,6 +28,8 @@ export function refertoGoogleAds(items: ItemAds[], sito: string, altri: RefertoL
   const posizioni = altri.find((r) => r.agent === "posizioni")?.findings ?? {};
   const haTag = tracciamenti.hasGoogleAdsTag === true;
   const haConversioni = tracciamenti.hasConversionTracking === true;
+  // Con Tag Manager il tracciamento delle conversioni sta dentro il contenitore: da fuori non si vede.
+  const haGtm = tracciamenti.hasGTM === true;
   const posizione = typeof posizioni.posizione === "number" ? posizioni.posizione : null;
   const parola = typeof posizioni.parolaChiave === "string" ? posizioni.parolaChiave : null;
 
@@ -45,29 +47,29 @@ export function refertoGoogleAds(items: ItemAds[], sito: string, altri: RefertoL
   evidence.push({ cosa: `Tag Google Ads nel sito: ${haTag ? "sì" : "no"}`, fonte: "agente Tracciamenti" });
 
   const quando = `${annunci} annunci su Google Ads Transparency${primo ? ` dal ${primo.slice(0, 10)}` : ""}${ultimo ? `, l'ultimo visto il ${ultimo.slice(0, 10)}` : ""}`;
-  if (attivi > 0 && !haConversioni) {
+  if (attivi > 0 && !haConversioni && !haGtm) {
     levers.push({
       servizio: "google_ads",
-      testo: "Stanno facendo pubblicità su Google adesso, ma il sito non misura le conversioni: non sanno quali annunci portano clienti",
-      prova: `${attivi} annunci attivi negli ultimi ${GIORNI_ANNUNCIO_ATTIVO} giorni; nessun tracciamento conversioni nel sito`,
+      testo: "Stanno facendo pubblicità su Google adesso, ma nel codice del sito non si vede il tracciamento delle conversioni: da chiedere se sanno quali annunci portano clienti",
+      prova: `${attivi} annunci attivi negli ultimi ${GIORNI_ANNUNCIO_ATTIVO} giorni; nel sito nessun codice di conversione e nessun Tag Manager`,
     });
   } else if (attivi > 0) {
     levers.push({
       servizio: "google_ads",
-      testo: "Stanno investendo in Google Ads adesso: c'è budget, da capire se rende",
+      testo: `Stanno investendo in Google Ads adesso (${attivi} annunci attivi): c'è budget, da capire se rende`,
       prova: quando,
     });
   } else if (annunci > 0) {
     levers.push({
       servizio: "google_ads",
-      testo: "Hanno fatto Google Ads in passato e hanno smesso: qualcosa non ha funzionato",
+      testo: `Hanno fatto Google Ads${ultimo ? ` fino al ${ultimo.slice(0, 10)}` : " in passato"} e poi hanno smesso`,
       prova: quando,
     });
   } else if (haTag) {
     levers.push({
       servizio: "google_ads",
-      testo: "Il tag Google Ads è nel sito ma non risultano annunci: campagne ferme o mai partite",
-      prova: "Tag AW- presente; nessun annuncio su Google Ads Transparency",
+      testo: "Il codice di Google Ads è nel sito, ma su Google non risultano annunci collegati al loro sito",
+      prova: "Tag AW- presente; nessun annuncio su Google Ads Transparency per questo dominio",
     });
   } else if (parola && (posizione === null || posizione > 10)) {
     levers.push({

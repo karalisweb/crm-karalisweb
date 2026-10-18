@@ -1500,6 +1500,8 @@ model CasoStudio {
   personaRuolo    String?   @map("persona_ruolo")
   personaLinkedin String?   @map("persona_linkedin")
   termini         Json      @default("[]") // parole di ricerca per le aziende simili
+  terminiSettore  Json      @default("[]") @map("termini_settore") // ricerche più larghe, dopo la nicchia
+  provincia       String? // sigla della provincia del cliente (es. CA): esclusa per la nicchia
   stato           String    @default("DA_CONFERMARE") // DA_CONFERMARE | ATTIVO | SCADUTO
   validoFino      DateTime? @map("valido_fino")
   costCents       Float     @default(0) @map("cost_cents")

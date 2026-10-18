@@ -30,20 +30,21 @@ describe("Regista: approfondimento e sintesi", () => {
     expect(piano).toEqual(["decision_maker"]);
   });
 
-  it("la sintesi aspetta che tutti abbiano chiuso, anche fallendo", () => {
-    const tutti = ["lettore", "posizioni", "google_ads", ...AGENTI_BROWSER_AZIENDA];
-    const chiusi = tutti.map((a) => stato(a, { validoFino: giorni(5) }));
+  it("i ganci aspettano gli agenti di server dell'approfondimento, non quelli di browser", () => {
+    const server = ["concorrenti", "tracciamenti", "google_ads"];
+    const chiusi = server.map((a) => stato(a, { validoFino: giorni(5) }));
     expect(prontoPerSintesi(chiusi, oggi)).toBe(true);
-    const unoInCoda = chiusi.map((s) => (s.agente === "social" ? { ...s, validoFino: null, inCorso: true } : s));
-    expect(prontoPerSintesi(unoInCoda, oggi)).toBe(false);
-    const unoFallito = chiusi.map((s) => (s.agente === "social" ? { ...s, validoFino: null, fallimentiDiFila: 1 } : s));
+    const unoInCorso = chiusi.map((s) => (s.agente === "concorrenti" ? { ...s, validoFino: null, inCorso: true } : s));
+    expect(prontoPerSintesi(unoInCorso, oggi)).toBe(false);
+    const unoFallito = chiusi.map((s) => (s.agente === "concorrenti" ? { ...s, validoFino: null, fallimentiDiFila: 1 } : s));
     expect(prontoPerSintesi(unoFallito, oggi)).toBe(true);
+    // Il browser sul Mac non blocca i ganci.
+    expect(prontoPerSintesi([...chiusi, ...AGENTI_BROWSER_AZIENDA.map((a) => stato(a, { inCorso: true }))], oggi)).toBe(true);
   });
 
-  it("la catena di sintesi si rifà se manca anche un solo anello", () => {
-    const fatta = ["coerenza", "regista_video", "scheda_leve", "aggancio"].map((a) => stato(a, { validoFino: giorni(10) }));
-    expect(sintesiDaFare(fatta, oggi)).toBe(false);
-    expect(sintesiDaFare(fatta.slice(0, 3), oggi)).toBe(true);
+  it("i ganci si rifanno se mancano o sono scaduti", () => {
+    expect(sintesiDaFare([stato("ganci", { validoFino: giorni(10) })], oggi)).toBe(false);
+    expect(sintesiDaFare([], oggi)).toBe(true);
   });
 });
 
@@ -107,8 +108,14 @@ describe("Google Ads", () => {
 
   it("annunci attivi senza conversioni → spendono al buio", () => {
     const r = refertoGoogleAds([{ title: "Ad", last_shown: "2026-10-15 06:03:01 +00:00" }], "https://x.it", [ref("tracciamenti", { hasGoogleAdsTag: true, hasConversionTracking: false })], 0, oggi);
-    expect(r.levers[0].testo).toContain("non misura le conversioni");
+    expect(r.levers[0].testo).toContain("non si vede il tracciamento delle conversioni");
     expect(r.findings.attiviOra).toBe(1);
+  });
+
+  it("con Tag Manager non si dice che non misurano: da fuori non si vede", () => {
+    const r = refertoGoogleAds([{ title: "Ad", last_shown: "2026-10-15 06:03:01 +00:00" }], "https://x.it", [ref("tracciamenti", { hasGoogleAdsTag: true, hasGTM: true, hasConversionTracking: false })], 0, oggi);
+    expect(r.levers[0].testo).not.toContain("conversioni");
+    expect(r.levers[0].testo).toContain("annunci attivi");
   });
 
   it("solo annunci vecchi → hanno smesso", () => {
@@ -117,9 +124,9 @@ describe("Google Ads", () => {
     expect(r.findings.attiviOra).toBe(0);
   });
 
-  it("tag ma nessun annuncio → campagne ferme", () => {
+  it("tag ma nessun annuncio → si dice solo il fatto", () => {
     const r = refertoGoogleAds([], "https://x.it", [ref("tracciamenti", { hasGoogleAdsTag: true })], 0);
-    expect(r.levers[0].testo).toContain("ferme");
+    expect(r.levers[0].testo).toContain("non risultano annunci");
   });
 
   it("niente ads e assenti da Google → leva; niente ads ma primi su Google → nessuna leva", () => {

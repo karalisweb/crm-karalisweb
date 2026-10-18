@@ -15,6 +15,7 @@ import { agentePosizioni } from "./agenti/posizioni";
 import { agenteGoogleAds } from "./agenti/google-ads";
 import { agenteAggancio, agenteCoerenza, agenteRegistaVideo, agenteSchedaLeve } from "./agenti/sintesi";
 import type { AgenteEseguibile } from "./tipi";
+import { agenteConcorrenti, agenteContatto, agenteGanci, agenteRecensioni, agenteSitoVisto, agenteTrovaSito } from "./agenti/arricchimento";
 
 export type Famiglia = "server" | "browser" | "sintesi";
 export type Squadra = "commerciale" | "bni" | "vendita" | "ricerca";
@@ -36,6 +37,12 @@ export interface SchedaAgente {
 const REGOLE_BROWSER = `Regole: solo lettura. Non scrivere a nessuno, non mettere like, non seguire, non accettare cookie oltre il necessario (rifiuta i non essenziali). Se serve un accesso che non c'è o compare un CAPTCHA, chiudi il lavoro come FALLITO spiegando perché. Ogni affermazione nel referto ha la sua prova (link + citazione o data letta sulla pagina).`;
 
 export const SQUADRA: SchedaAgente[] = [
+  { chiave: "trova_sito", numero: "A0", nome: "Trova sito", compito: "Il sito per più strade (Google, email, dominio) e se cercando il nome esce", famiglia: "server", squadra: "commerciale", stato: "attivo" },
+  { chiave: "sito_visto", numero: "A3", nome: "Sito visto", compito: "Foto su telefono e computer, velocità, se sembra vecchio", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
+  { chiave: "contatto", numero: "A4", nome: "Dal cliente al contatto", compito: "Telefono cliccabile, WhatsApp, modulo, quanti clic per un preventivo", famiglia: "server", squadra: "commerciale", stato: "attivo" },
+  { chiave: "recensioni", numero: "A5", nome: "Recensioni", compito: "Cosa lodano e di cosa si lamentano i clienti, con le loro parole", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
+  { chiave: "concorrenti", numero: "A2", nome: "Concorrenti", compito: "Chi esce prima su Google Maps per la stessa ricerca, e con che numeri", famiglia: "server", squadra: "commerciale", stato: "attivo" },
+  { chiave: "ganci", numero: "A9", nome: "I 3 ganci", compito: "I 3 ganci con i numeri per la prima frase della chiamata", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
   { chiave: "esploratore", numero: "1", nome: "Esploratore", compito: "Trova aziende nuove su Google Search (e Google Maps dalle Ricerche)", famiglia: "server", squadra: "commerciale", stato: "attivo", nota: "Google Maps resta nelle Ricerche; LinkedIn si usa per conoscere le aziende, non per trovarle" },
   { chiave: "lettore", numero: "2", nome: "Lettore del sito", compito: "Cosa dice il sito e come lo dice", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
   { chiave: "tecnico", numero: "2.5", nome: "Tecnico", compito: "Con che cosa è fatto il sito, se è aggiornato, da quando è fermo", famiglia: "server", squadra: "commerciale", stato: "attivo" },
@@ -50,7 +57,7 @@ export const SQUADRA: SchedaAgente[] = [
   },
   {
     chiave: "meta_ads", numero: "7", nome: "Meta Ad Library", compito: "Inserzioni attive e passate, coerenza con social e sito", famiglia: "browser", squadra: "commerciale", stato: "attivo",
-    istruzioni: `Apri https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=IT e cerca la PAGINA Facebook dell'azienda (non solo il nome: verifica che sia la loro, ad esempio dal link al sito). Annota: inserzioni attive ora (quante, da quando), inserzioni passate (se la libreria le mostra), cosa promettono, dove portano (sito/landing/WhatsApp). Confronta con il sito e i social. Leve tipiche: pixel installato ma zero inserzioni; inserzioni che portano alla homepage generica; promesse diverse dal sito; mai fatto inserzioni. Findings: { pagina, inserzioniAttive, attiveDal, inserzioniPassate, esempi: [{ testo, destinazione, dal }] }. ${REGOLE_BROWSER}`,
+    istruzioni: `Apri https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=IT e cerca la PAGINA Facebook dell'azienda (non solo il nome: verifica che sia la loro, ad esempio dal link al sito). Annota: inserzioni attive ora (quante, da quando), inserzioni passate (se la libreria le mostra), cosa promettono, dove portano (sito/landing/WhatsApp). Confronta con il sito e i social. Se NON sei sicuro che la pagina sia la loro (nessun link al sito, nome uguale ma altra città), scrivi pagina: null e non dare leve: meglio niente che un dato sbagliato. Scrivi solo fatti verificabili (quante inserzioni, da quando, dove portano), mai supposizioni ("non funziona", "spendono al buio"). Leve tipiche: inserzioni attive che portano alla homepage generica; promesse diverse dal sito; mai fatto inserzioni mentre i concorrenti sì. Findings: { pagina, inserzioniAttive, attiveDal, inserzioniPassate, esempi: [{ testo, destinazione, dal }] }. ${REGOLE_BROWSER}`,
   },
   {
     chiave: "linkedin_azienda", numero: "8", nome: "LinkedIn azienda", compito: "Pagina aziendale e ultimo post", famiglia: "browser", squadra: "commerciale", stato: "attivo",
@@ -113,6 +120,12 @@ export const AGENTI_ESEGUIBILI: Record<string, AgenteEseguibile> = {
   regista_video: agenteRegistaVideo,
   scheda_leve: agenteSchedaLeve,
   aggancio: agenteAggancio,
+  trova_sito: agenteTrovaSito,
+  sito_visto: agenteSitoVisto,
+  contatto: agenteContatto,
+  recensioni: agenteRecensioni,
+  concorrenti: agenteConcorrenti,
+  ganci: agenteGanci,
 };
 
 /** Gli agenti che esegue Claude sul Mac di Alessio, con il browser. */

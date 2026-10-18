@@ -22,7 +22,7 @@ import { scadenzeCasi } from "./casi-studio";
 import { filtraSimili } from "./filtro";
 import {
   AZIENDE_AL_GIORNO, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO, ZONE_SARDEGNA,
-  nellaZona, nomeConfrontabile, normalizzaLinkedin, passoRicerca, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
+  nellaZona, nomeConfrontabile, normalizzaLinkedin, passoRicerca, prioritaChiave, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
 } from "./regole";
 
 type Canale = "google" | "maps" | "facebook" | "instagram" | "linkedin";
@@ -241,7 +241,7 @@ async function salvaFinoAQuota(
   }
 }
 
-async function cercaSuMaps(termine: string, zona: string, chiaveId: string, contesto: string, quota: number): Promise<EsitoPasso> {
+async function cercaSuMaps(termine: string, zona: string, chiaveId: string, contesto: string, quota: number, escluse: string[] = []): Promise<EsitoPasso> {
   const ricerca = `${termine} ${zona}`;
   const { result, costCents } = await chiamaDataForSeo<{ items?: ItemMaps[] }>("/serp/google/maps/live/advanced", {
     keyword: ricerca, location_code: LOCATION_ITALIA, language_code: "it", depth: 20,
@@ -253,7 +253,7 @@ async function cercaSuMaps(termine: string, zona: string, chiaveId: string, cont
     mapsUrl: i.place_id ? `https://www.google.com/maps/place/?q=place_id:${i.place_id}` : null,
   }));
   const filtro = await filtraSimili(contesto, candidati);
-  const simili = candidati.filter((c, i) => filtro.tenere.has(i) && nellaZona(c.indirizzo, zona));
+  const simili = candidati.filter((c, i) => filtro.tenere.has(i) && nellaZona(c.indirizzo, zona, escluse));
   const e: EsitoPasso = { ricerca, canale: "maps", trovati: items.length, diversi: candidati.length - simili.length, nuove: 0, esistenti: 0, scartate: 0, rimandati: 0, costCents: costCents + filtro.costCents };
   await salvaFinoAQuota(simili, quota, chiaveId, "maps", "google_maps", e);
   return e;
@@ -303,7 +303,8 @@ const TIPI_AZIENDE: TipoChiave[] = ["SETTORE", "AZIENDA"];
 const TIPI_PERSONE: TipoChiave[] = ["PERSONA", "RETE_MEMBRO"];
 
 function terminiChiave(k: { tipo: string; valore: string; termini: Prisma.JsonValue }): string[] {
-  // Per AZIENDA il valore è il nome del cliente: si cercano solo i termini dei "simili".
+  // AZIENDA è la nicchia: il valore è il nome del cliente, si cercano solo i termini dei "simili".
+  // SETTORE: il settore e le sue ricerche più larghe.
   return k.tipo === "AZIENDA" ? terminiDi("", k.termini) : terminiDi(k.valore, k.termini);
 }
 
@@ -327,6 +328,16 @@ export async function eseguiTurnoRicerca(oggi = new Date()): Promise<RiepilogoRi
     lavoriMeta: 0, lavoriLinkedin: 0, esploratoreClassico: false,
   };
   const chiavi = await db.chiaveRicerca.findMany({ where: { attiva: true } });
+  // La nicchia non si cerca nella provincia del cliente del caso: sarebbero suoi concorrenti diretti.
+  const province = new Map(
+    (await db.casoStudio.findMany({ where: { provincia: { not: null } }, select: { id: true, provincia: true } })).map((c) => [c.id, c.provincia!])
+  );
+  const escluseDi = (k: (typeof chiavi)[number]): string[] => {
+    const p = k.tipo === "AZIENDA" && k.casoStudioId ? province.get(k.casoStudioId) : undefined;
+    return p ? [p] : [];
+  };
+  const passoDi = (k: (typeof chiavi)[number], indice = k.zonaIndice) => passoRicerca(terminiChiave(k), indice, escluseDi(k));
+  const priorita = (k: (typeof chiavi)[number]) => prioritaChiave(k.tipo, passoDi(k)?.zona ?? null);
 
   // 1) Server: Google Maps, e Google se Maps porta poco.
   if (!dataForSeoConfigurato()) r.motivo = "DataForSEO non configurato";
@@ -335,7 +346,7 @@ export async function eseguiTurnoRicerca(oggi = new Date()): Promise<RiepilogoRi
       r.motivo = "Tetto di spesa del mese raggiunto";
       break;
     }
-    const k = prossimaChiave(chiavi, TIPI_AZIENDE, oggi);
+    const k = prossimaChiave(chiavi, TIPI_AZIENDE, oggi, priorita);
     if (!k) {
       // Nessuna chiave attiva: l'Esploratore di prima (categoria × città).
       const e = await esplora(oggi);
@@ -344,7 +355,7 @@ export async function eseguiTurnoRicerca(oggi = new Date()): Promise<RiepilogoRi
       r.costCents += e.costCents;
       break;
     }
-    const passo = passoRicerca(terminiChiave(k), k.zonaIndice);
+    const passo = passoDi(k);
     k.ultimoUsoAt = oggi;
     if (!passo) {
       await db.chiaveRicerca.update({ where: { id: k.id }, data: { esauritaAt: oggi, ultimoUsoAt: oggi } });
@@ -355,7 +366,7 @@ export async function eseguiTurnoRicerca(oggi = new Date()): Promise<RiepilogoRi
     const run = await db.agentRun.create({ data: { agent: "esploratore", status: "IN_CORSO", attempts: 1, startedAt: new Date(), input: { chiaveId: k.id, ...passo } } });
     try {
       const quota = () => AZIENDE_AL_GIORNO - r.nuoveOggiPrima - r.nuove;
-      const esiti = [await cercaSuMaps(passo.termine, passo.zona, k.id, contesto, quota())];
+      const esiti = [await cercaSuMaps(passo.termine, passo.zona, k.id, contesto, quota(), escluseDi(k))];
       r.nuove += esiti[0].nuove;
       if (esiti[0].nuove < 3 && quota() > 0) {
         esiti.push(await cercaSuGoogle(passo.termine, passo.zona, k.id, contesto, quota()));
@@ -393,12 +404,12 @@ export async function eseguiTurnoRicerca(oggi = new Date()): Promise<RiepilogoRi
   // 2) Browser: Facebook e Instagram, un lavoro al giorno.
   const daOggi = mezzanotteRoma(oggi);
   const metaOggi = await db.agentRun.count({ where: { agent: "cerca_meta", queuedAt: { gte: daOggi } } });
-  const kMeta = metaOggi ? null : prossimaChiave(chiavi.filter((c) => !c.esauritaAt), TIPI_AZIENDE, oggi);
+  const kMeta = metaOggi ? null : prossimaChiave(chiavi.filter((c) => !c.esauritaAt), TIPI_AZIENDE, oggi, priorita);
   if (kMeta) {
     const termini = terminiChiave(kMeta);
-    const passo = passoRicerca(termini, Math.max(0, kMeta.zonaIndice - 1));
+    const passo = passoDi(kMeta, Math.max(0, kMeta.zonaIndice - 1));
     if (passo) {
-      await db.agentRun.create({ data: { agent: "cerca_meta", status: "IN_CODA", input: { chiaveId: kMeta.id, termine: passo.termine, zona: passo.zona, altriTermini: termini } } });
+      await db.agentRun.create({ data: { agent: "cerca_meta", status: "IN_CODA", input: { chiaveId: kMeta.id, termine: passo.termine, zona: passo.zona, altriTermini: termini, provinceEscluse: escluseDi(kMeta) } } });
       r.lavoriMeta++;
     }
   }

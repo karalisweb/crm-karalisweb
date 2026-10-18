@@ -1563,6 +1563,35 @@ Pagine: `/trattative`, `/trattative/[id]`; `/call-fissate` rimanda a `/trattativ
 
 Orologio: `0 7-20 * * *` vendita (ogni ora).
 
+## Fase 2 Arricchimento (v3.48.0)
+
+Processo deciso con Alessio: `PROGETTO-AGENTI.md` (Fase 2). Due giri, una decisione.
+
+- **Migrazione `20261018100000_nicchia_provincia`** (additiva, via psql): `casi_studio.provincia` (sigla
+  del cliente), `casi_studio.termini_settore` (ricerche larghe). La chiave `AZIENDA` è la **nicchia**
+  (cercata per prima, mai nella provincia del cliente: `passoRicerca(..., escluse)`, `nellaZona(..., escluse)`);
+  `SETTORE` = settore + `termini_settore`. Ordine: `prioritaChiave` (nicchia in Sardegna → settore in
+  Sardegna → nicchia fuori → settore fuori). Chiave `MANUALE` (non attiva) per quello che Alessio aggiunge a mano.
+- **Agenti nuovi** (`src/lib/agents/agenti/arricchimento.ts`): `trova_sito` (Google sul nome, email nei
+  risultati, domini indovinati; verifica con punteggio: telefono 3, nome nel dominio 2, nome nel titolo 2,
+  città 1; serve ≥2 — `src/lib/ricerca/trova-sito.ts`), `sito_visto` (PageSpeed mobile+desktop, screenshot
+  → AI con immagini: `RichiestaAI.immagini`), `contatto` (deterministico), `recensioni` (DataForSEO
+  `business_data/google/reviews` task_post/task_get, AI con citazioni verificate), `concorrenti` (Maps),
+  `ganci` (l'AI sceglie per numero fra le leve trovate: la prova resta quella dell'agente).
+- **Rafforzati**: `lettore` (fino a 3 pagine in più: lavori, prezzi, FAQ…; "domande del cliente" sì/no),
+  `posizioni` (usa il termine della nicchia, `AziendaContesto.ricerca`), `google_ads` (con Tag Manager non
+  afferma che mancano le conversioni), `chiamaDataForSeo` riprova sugli errori passeggeri.
+- **Imbuto** (`regista.ts`): `AGENTI_ECONOMICI` = giro veloce; `AGENTI_APPROFONDIMENTO_SERVER` =
+  concorrenti, tracciamenti, google_ads; `AGENTI_SINTESI` = ganci; i ganci aspettano solo il server e si
+  rifanno quando arriva un referto di browser più recente.
+- **Turno** `eseguiTurnoArricchimento` (`src/lib/agents/arricchimento.ts`), cron `POST /api/cron/arricchimento`
+  dopo ogni turno di ricerca; esclude i concorrenti diretti del cliente (`concorrenteDelCliente`).
+  Decisione: voce `FASCICOLO_BASE` (`POST /api/ricerca/aziende/[id]/decisione` approfondisci|scarta|ripensaci;
+  approfondisci avvia subito `approfondisci(leadId)`). Mail: `POST /api/cron/mail-decisioni` alle 07:00
+  (`src/lib/agents/mail-decisioni.ts`). Casella manuale: `POST /api/ricerca/manuale` (`src/lib/ricerca/manuale.ts`).
+- **Scheda azienda** (`/aziende-trovate/[id]`): decisione, i 3 ganci, chi decide, chi la presenta, ti trovano?,
+  il sito (foto), recensioni, pubblicità e social, prossimo passo, storia.
+
 ## Fase 1 Ricerca (v3.47.0)
 
 Specifica: `FASE-1-RICERCA.md`; processo deciso con Alessio: `PROGETTO-AGENTI.md` (v3, Fase 1).

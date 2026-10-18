@@ -25,6 +25,8 @@ export interface RichiestaAI {
   maxTokens?: number;
   /** Un PDF da leggere insieme al testo (es. un caso studio), in base64. */
   pdf?: string;
+  /** Immagini da guardare insieme al testo (es. la foto del sito sul telefono), in base64. */
+  immagini?: { mime: string; data: string }[];
 }
 
 export interface RispostaAI<T> {
@@ -74,8 +76,12 @@ async function chiediClaude<T>(r: RichiestaAI): Promise<RispostaAI<T>> {
     output_config: { effort: "medium", format: { type: "json_schema", schema: schemaPerClaude(r.schema) } },
     messages: [{
       role: "user",
-      content: r.pdf
-        ? [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: r.pdf } }, { type: "text", text: r.testo }]
+      content: r.pdf || r.immagini?.length
+        ? [
+            ...(r.pdf ? [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: r.pdf } }] : []),
+            ...(r.immagini ?? []).map((i) => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.data } })),
+            { type: "text", text: r.testo },
+          ]
         : r.testo,
     }],
   };
@@ -108,8 +114,12 @@ async function chiediGemini<T>(r: RichiestaAI): Promise<RispostaAI<T>> {
       maxOutputTokens: r.maxTokens ?? 8192,
     },
   });
-  const contenuto = r.pdf ? [{ inlineData: { mimeType: "application/pdf", data: r.pdf } }, { text: r.testo }] : r.testo;
-  const res = await model.generateContent(contenuto, { timeout: r.pdf ? 120_000 : 60_000 });
+  const allegati = [
+    ...(r.pdf ? [{ inlineData: { mimeType: "application/pdf", data: r.pdf } }] : []),
+    ...(r.immagini ?? []).map((i) => ({ inlineData: { mimeType: i.mime, data: i.data } })),
+  ];
+  const contenuto = allegati.length ? [...allegati, { text: r.testo }] : r.testo;
+  const res = await model.generateContent(contenuto, { timeout: allegati.length ? 120_000 : 60_000 });
   const tokenIn = res.response.usageMetadata?.promptTokenCount ?? 0;
   const tokenOut = res.response.usageMetadata?.candidatesTokenCount ?? 0;
   return {

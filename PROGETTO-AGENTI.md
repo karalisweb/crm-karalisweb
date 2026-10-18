@@ -115,10 +115,60 @@ incontrare secondo l'ordine) · avviso **visita** a un terzo.
 
 ---
 
-## Fase 2 — Analisi *(da definire con Alessio)*
+## Fase 2 — Arricchimento (definita con Alessio il 2026-10-18)
 
-Punto di partenza detto da Alessio: trovata un'azienda, si analizza **la sua presenza e quella del suo titolare**,
-"con alcune specificità".
+Trovata un'azienda, gli agenti ne analizzano **la presenza e quella del titolare**. L'analisi deve essere **forte**:
+cose specifiche, con numeri e confronti, non consigli generici "da consulente". Alla fine: **3 ganci con i numeri**
+da usare nella prima frase della chiamata.
+
+### Le priorità della ricerca (cosa cercare prima)
+
+1. **Nicchia prima del settore.** Nicchia = stesso mestiere, stessi clienti, stesso problema del cliente del caso
+   (IEM Piscine → chi costruisce piscine per privati). Settore = tutto il mondo intorno (manutenzione, negozi,
+   impianti per hotel). Finita la nicchia in una zona, si allarga al settore.
+2. **Provincia del cliente esclusa per la nicchia**: non si propone il caso a un concorrente diretto del cliente.
+   Per il settore la provincia del cliente va bene.
+3. Prima la Sardegna, poi il resto d'Italia.
+4. **Numeri economici** (fatturato, dipendenti) come filtro: da fare più avanti. Fonte preferita Creditsafe se il
+   prezzo dell'API sta nel tetto, altrimenti un servizio a consumo (es. Openapi). La fonte deve essere sostituibile.
+5. Oltre ai casi studio, Alessio può scrivere **a mano un settore, una persona o un'azienda** da cui partire.
+
+### Trovare il sito (prima di tutto)
+
+Il sito si cerca per più strade prima di dire "non c'è": nome, dominio indovinato, email nei post social, scheda
+Google Maps, pagina Facebook. Se cercando il nome il sito non esce su Google, quello è già un gancio
+(Officina 3MT: il sito c'è, ma cercando il nome escono Facebook e Pagine Gialle).
+
+### Gli 8 punti dell'analisi
+
+| # | Domanda | Agente |
+|---|---|---|
+| 1 | Ti trovano? (nome e "servizio + città") | Posizioni su Google |
+| 2 | I 3 concorrenti che escono prima: cosa fanno meglio | Concorrenti *(da costruire)* |
+| 3 | Il sito **visto**: telefono e computer, sembra vecchio?, velocità | Tecnico + Lettore *(da rifare: deve guardare)* |
+| 4 | Dal cliente al contatto: quanti clic per un preventivo, WhatsApp, telefono, modulo | Lettore *(da rafforzare)* |
+| 5 | Le recensioni: cosa lodano e di cosa si lamentano | Recensioni *(da costruire)* |
+| 6 | La pubblicità: la fanno davvero? dove porta? | Google Ads, Meta Ad Library, Tracciamenti |
+| 7 | I social: vivi o fermi? | Social, LinkedIn azienda |
+| 8 | Il titolare: chi è, LinkedIn, contatti in comune | Decision maker *(+ la persona)* |
+| → | I 3 ganci | Coerenza, Scheda leve, Aggancio |
+
+Fuori dall'analisi: SEO della pagina (meta tag), Blog (solo per chi vende contenuti), Regista del video.
+
+### Due giri, una sola decisione
+
+1. **Giro veloce, da solo**, su ogni azienda trovata: sito, punti 1, 3, 4, 5. Costa centesimi.
+2. **Mail alle 7**: per ogni azienda chi è, perché è lì, cosa ha trovato il giro veloce; pulsanti
+   **Approfondisci** / **Scarta**. Quelle senza decisione restano nella home in "Da decidere".
+3. **Giro completo** solo con "Approfondisci": punti 2, 6, 7, 8 e i 3 ganci nella scheda azienda.
+
+La prova del 2026-10-18 (Lettore e Google Ads su Karalisweb, AD Solutions, Accadueo) è stata giudicata
+**troppo debole**: testi di 3 pagine e consigli generici.
+
+**Costruita il 2026-10-18 (v3.48.0)**: casella manuale, agenti nuovi (trova sito, sito visto, contatto,
+recensioni, concorrenti, i 3 ganci), Lettore/Posizioni/Google Ads rafforzati, giro veloce automatico dopo
+ogni ricerca, mail delle 7, decisione dalla scheda. Le aziende di nicchia già trovate nella provincia del
+cliente restano nel CRM ma non si analizzano.
 
 ---
 

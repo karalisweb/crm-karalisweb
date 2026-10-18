@@ -37,6 +37,8 @@ const Schema = z.object({
       personaRuolo: z.string().max(120).nullable().optional(),
       personaLinkedin: z.string().max(300).nullable().optional(),
       termini: z.array(z.string().max(100)).max(10).optional(),
+      terminiSettore: z.array(z.string().max(100)).max(10).optional(),
+      provincia: z.string().max(40).nullable().optional(),
     })
     .optional(),
 });

@@ -8,8 +8,8 @@ export const TIPI_CHIAVE = ["SETTORE", "AZIENDA", "PERSONA", "RETE_MEMBRO"] as c
 export type TipoChiave = (typeof TIPI_CHIAVE)[number];
 
 export const ETICHETTE_CHIAVE: Record<TipoChiave, string> = {
-  SETTORE: "Settore",
-  AZIENDA: "Aziende simili",
+  SETTORE: "Settore (dopo la nicchia)",
+  AZIENDA: "Nicchia (stesso mestiere)",
   PERSONA: "Persone simili",
   RETE_MEMBRO: "Rete di un membro BNI",
 };
@@ -44,15 +44,37 @@ const SIGLA_CITTA: Record<string, string> = {
   Bolzano: "BZ", Udine: "UD", Trieste: "TS",
 };
 
+const SIGLA_SARDA: Record<string, string> = {
+  Cagliari: "CA", "Quartu Sant'Elena": "CA", Selargius: "CA", Assemini: "CA", Capoterra: "CA",
+  Iglesias: "SU", Carbonia: "SU", Sanluri: "SU", Villacidro: "SU",
+  Sassari: "SS", Olbia: "SS", Alghero: "SS", "Porto Torres": "SS", "Tempio Pausania": "SS", Arzachena: "SS",
+  Oristano: "OR", Nuoro: "NU", "Tortolì": "NU",
+};
+
+/** La sigla della provincia di una zona (CA, SS, MI…). */
+export function siglaZona(zona: string): string | null {
+  return SIGLA_SARDA[zona] ?? SIGLA_CITTA[zona] ?? null;
+}
+
+/** La sigla della provincia scritta in un indirizzo ("09122 Cagliari CA" → CA). */
+export function siglaIndirizzo(indirizzo: string | null | undefined): string | null {
+  return (indirizzo ?? "").match(/\b\d{5}\s+.+?\s([A-Z]{2})\b/)?.[1] ?? null;
+}
+
+/** Le zone in ordine, senza quelle delle province escluse (la provincia del cliente, per la nicchia). */
+export function zoneDisponibili(escluse: readonly string[] = []): string[] {
+  return ZONE.filter((z) => !escluse.includes(siglaZona(z) ?? ""));
+}
+
 /**
  * Il risultato è nella zona cercata? Google Maps a volte porta aziende lontane (una ditta di Roma
  * cercando a Cagliari). Si guarda la sigla della provincia nell'indirizzo: per le zone sarde basta
  * una provincia sarda; senza sigla leggibile si tiene.
  */
-export function nellaZona(indirizzo: string | null | undefined, zona: string): boolean {
-  const sigle = (indirizzo ?? "").match(/\b\d{5}\s+.+?\s([A-Z]{2})\b/);
-  if (!sigle) return true;
-  const sigla = sigle[1];
+export function nellaZona(indirizzo: string | null | undefined, zona: string, escluse: readonly string[] = []): boolean {
+  const sigla = siglaIndirizzo(indirizzo);
+  if (!sigla) return true;
+  if (escluse.includes(sigla)) return false;
   const i = ZONE.indexOf(zona);
   if (i >= 0 && i < ZONE_SARDEGNA) return SIGLE_SARDEGNA.includes(sigla);
   const attesa = SIGLA_CITTA[zona];
@@ -77,13 +99,16 @@ export function chiaveUsabile(c: ChiavePerScelta, oggi: Date): boolean {
   return c.attiva && !c.esauritaAt && (!c.scadeAt || c.scadeAt.getTime() > oggi.getTime());
 }
 
-/** La prossima chiave da usare fra quelle dei tipi richiesti: quella usata meno di recente. */
-export function prossimaChiave<T extends ChiavePerScelta>(chiavi: T[], tipi: TipoChiave[], oggi: Date): T | null {
+/**
+ * La prossima chiave da usare fra quelle dei tipi richiesti: prima quelle con la priorità più alta
+ * (numero più basso), poi quella usata meno di recente.
+ */
+export function prossimaChiave<T extends ChiavePerScelta>(chiavi: T[], tipi: TipoChiave[], oggi: Date, priorita: (c: T) => number = () => 0): T | null {
   const ok = chiavi.filter((c) => (tipi as string[]).includes(c.tipo) && chiaveUsabile(c, oggi));
   ok.sort((a, b) => {
     const ua = a.ultimoUsoAt?.getTime() ?? 0;
     const ub = b.ultimoUsoAt?.getTime() ?? 0;
-    return ua - ub || a.createdAt.getTime() - b.createdAt.getTime();
+    return priorita(a) - priorita(b) || ua - ub || a.createdAt.getTime() - b.createdAt.getTime();
   });
   return ok[0] ?? null;
 }
@@ -107,11 +132,22 @@ export function terminiDi(valore: string, termini: unknown): string[] {
  * Dove continuare: si alterna termine e zona. Con 3 termini e 46 zone: termine 0 a Cagliari,
  * termine 1 a Cagliari, termine 2 a Cagliari, termine 0 a Quartu…
  */
-export function passoRicerca(termini: string[], indice: number): { termine: string; zona: string } | null {
+export function passoRicerca(termini: string[], indice: number, escluse: readonly string[] = []): { termine: string; zona: string } | null {
   if (!termini.length) return null;
-  const zona = zonaDi(Math.floor(indice / termini.length));
+  const zona = zoneDisponibili(escluse)[Math.floor(indice / termini.length)];
   if (!zona) return null;
   return { termine: termini[indice % termini.length], zona };
+}
+
+/**
+ * Prima la nicchia, poi il settore; ma la Sardegna viene prima di tutto: una nicchia che ha finito
+ * la Sardegna passa dopo un settore che è ancora in Sardegna.
+ *   0 = nicchia in Sardegna · 1 = settore in Sardegna · 2 = nicchia fuori · 3 = settore fuori
+ */
+export function prioritaChiave(tipo: string, zona: string | null): number {
+  const inSardegna = !!zona && ZONE.indexOf(zona) < ZONE_SARDEGNA;
+  const nicchia = tipo === "AZIENDA";
+  return (inSardegna ? 0 : 2) + (nicchia ? 0 : 1);
 }
 
 // ─── Doppioni ───────────────────────────────────────────────────────────────

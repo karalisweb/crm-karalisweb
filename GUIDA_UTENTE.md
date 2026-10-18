@@ -41,17 +41,26 @@ Il CRM sta diventando una **squadra di agenti che lavorano al posto tuo**. Ogni 
 mestiere solo e consegna un **referto**: che cosa ha trovato, su cosa si può fare leva in una
 chiamata e **la prova** di ogni cosa che dice.
 
-**L'imbuto, dall'azienda sconosciuta alla call**
-1. **L'Esploratore** trova aziende nuove su Google (oltre a quelle delle Ricerche su Maps).
-2. **Di notte**, su tutte le aziende: Tecnico, SEO, Blog, Tracciamenti (gratis).
-3. **Cassetta → "Da approfondire?"**: le aziende con almeno 3 leve. Tu scegli **Approfondisci** o **Scarta**.
-4. **Approfondimento** (solo su quelle che approvi): Lettore del sito, Posizioni su Google, Google Ads
-   (sul server, pochi centesimi) e Social, Meta Ad Library, LinkedIn, Decision maker (con il tuo browser,
-   vedi sotto).
-5. **Sintesi**: Coerenza → Regista del video → Scheda leve → Aggancio.
-6. **Cassetta → "Pronta per il contatto"**: temperatura, servizio da proporre, come aprire la
-   chiamata, domande, obiezione probabile, chi decide, il **messaggio** (pulsante Copia) e la
-   **scaletta del video**. Il messaggio lo mandi tu.
+**L'arricchimento (dalla v3.48): due giri, una sola decisione tua**
+1. **La ricerca** trova 5 aziende al giorno dai casi studio: **prima la nicchia** (chi fa esattamente
+   il mestiere del cliente del caso, mai nella sua provincia: sarebbero suoi concorrenti), poi il settore.
+   Puoi anche scrivere tu **un'azienda, un settore o una persona** nella casella "Parti da qui" di
+   **Aziende trovate**.
+2. **Giro veloce, da solo**, su ogni azienda: **Trova sito** (lo cerca per più strade e guarda se
+   cercando il nome esce), **Posizioni** (cercando il servizio + città), **Sito visto** (foto su
+   telefono e computer, velocità), **Dal cliente al contatto** (telefono cliccabile, WhatsApp, modulo),
+   **Lettore** (cosa dice e a quali domande del cliente risponde), **Recensioni** (cosa lodano, di cosa
+   si lamentano, se rispondono). Costa pochi centesimi.
+3. **Alle 7 ti arriva una mail** con le aziende pronte: per ognuna chi è, perché è lì e le cose più
+   forti trovate. Le trovi anche in **Oggi** e in **Aziende trovate → Da decidere**. Apri la scheda e
+   premi **Approfondisci** o **Scarta**.
+4. **Giro completo** (solo con Approfondisci, parte subito): **Concorrenti** su Google Maps, **Google Ads**,
+   **Tracciamenti**, e con il tuo browser Social, Meta, LinkedIn, Decision maker.
+5. **I 3 ganci**: in cima alla scheda, le 3 frasi da dire al titolare, ognuna con il suo numero e la
+   prova, più la frase per aprire la chiamata. Si aggiornano quando arrivano i risultati dal Mac.
+
+Gli agenti dicono solo quello che possono provare: per esempio non dicono "non misurate le conversioni"
+se il sito usa Tag Manager, perché da fuori non si vede.
 
 **La ricerca (dalla v3.47): BNI per primo, poi i clienti dai casi studio**
 

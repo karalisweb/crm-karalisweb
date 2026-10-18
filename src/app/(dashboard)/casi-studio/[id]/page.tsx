@@ -11,13 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Check, ExternalLink, Loader2, Pause, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { ETICHETTE_CHIAVE, ZONE, type TipoChiave } from "@/lib/ricerca/regole";
+import { ETICHETTE_CHIAVE, zoneDisponibili, type TipoChiave } from "@/lib/ricerca/regole";
 import { CANALI, STATI_CASO, data } from "@/components/ricerca/etichette";
 
 interface Chiave { id: string; tipo: TipoChiave; valore: string; termini: string[]; attiva: boolean; zonaIndice: number; usi: number; trovati: number; esauritaAt: string | null }
 interface Caso {
   id: string; titolo: string; storia: string | null; settore: string | null; aziendaNome: string | null; aziendaSito: string | null;
-  personaNome: string | null; personaRuolo: string | null; personaLinkedin: string | null; termini: string[]; stato: string; validoFino: string | null;
+  personaNome: string | null; personaRuolo: string | null; personaLinkedin: string | null; termini: string[]; terminiSettore: string[]; provincia: string | null; stato: string; validoFino: string | null;
   chiavi: Chiave[];
 }
 interface Trovato {
@@ -26,11 +26,13 @@ interface Trovato {
   persona: { id: string; nome: string; ruolo: string | null; aziendaNome: string | null; linkedinUrl: string | null; bniMembroId: string | null } | null;
 }
 
+const righe = (t: string) => t.split("\n").map((x) => x.trim()).filter(Boolean);
+
 /** Dove è arrivata la chiave: termine per zona, prima tutta la Sardegna. */
-function zonaChiave(k: Chiave): string {
+function zonaChiave(k: Chiave, provincia: string | null): string {
   if (k.esauritaAt) return "tutte le zone fatte";
   const termini = k.tipo === "AZIENDA" ? k.termini.length : k.termini.length + 1;
-  const z = ZONE[Math.floor(k.zonaIndice / Math.max(1, termini))];
+  const z = zoneDisponibili(k.tipo === "AZIENDA" && provincia ? [provincia] : [])[Math.floor(k.zonaIndice / Math.max(1, termini))];
   return z ? `ora a ${z}` : "tutte le zone fatte";
 }
 
@@ -38,7 +40,7 @@ export default function CasoStudioPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const [caso, setCaso] = useState<Caso | null>(null);
   const [trovati, setTrovati] = useState<Trovato[]>([]);
-  const [form, setForm] = useState({ titolo: "", storia: "", settore: "", aziendaNome: "", aziendaSito: "", personaNome: "", personaRuolo: "", personaLinkedin: "", termini: "" });
+  const [form, setForm] = useState({ titolo: "", storia: "", settore: "", aziendaNome: "", aziendaSito: "", personaNome: "", personaRuolo: "", personaLinkedin: "", termini: "", terminiSettore: "", provincia: "" });
   const [occupato, setOccupato] = useState<string | null>(null);
 
   const carica = useCallback(async () => {
@@ -50,7 +52,7 @@ export default function CasoStudioPage({ params }: { params: Promise<{ id: strin
     setTrovati(d.trovati ?? []);
     setForm({
       titolo: c.titolo, storia: c.storia ?? "", settore: c.settore ?? "", aziendaNome: c.aziendaNome ?? "", aziendaSito: c.aziendaSito ?? "",
-      personaNome: c.personaNome ?? "", personaRuolo: c.personaRuolo ?? "", personaLinkedin: c.personaLinkedin ?? "", termini: (c.termini ?? []).join("\n"),
+      personaNome: c.personaNome ?? "", personaRuolo: c.personaRuolo ?? "", personaLinkedin: c.personaLinkedin ?? "", termini: (c.termini ?? []).join("\n"), terminiSettore: (c.terminiSettore ?? []).join("\n"), provincia: c.provincia ?? "",
     });
   }, [id]);
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function CasoStudioPage({ params }: { params: Promise<{ id: strin
     setOccupato(a);
     try {
       const body = a === "conferma"
-        ? { azione: a, dati: { ...form, termini: form.termini.split("\n").map((t) => t.trim()).filter(Boolean) } }
+        ? { azione: a, dati: { ...form, termini: righe(form.termini), terminiSettore: righe(form.terminiSettore) } }
         : { azione: a };
       const r = await fetch(`/api/ricerca/casi-studio/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const d = await r.json();
@@ -101,14 +103,16 @@ export default function CasoStudioPage({ params }: { params: Promise<{ id: strin
         <CardHeader className="pb-2"><CardTitle className="text-sm">{caso.stato === "DA_CONFERMARE" ? "Controlla e conferma" : "Il caso"}</CardTitle></CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
           {campo("titolo", "Titolo", false)}
-          {campo("settore", "Settore (come lo cercheresti su Google)")}
+          {campo("settore", "Settore (largo, es. piscine)")}
+          {campo("provincia", "Provincia del cliente (sigla, es. CA): la nicchia non si cerca lì")}
           {campo("storia", "La storia da 30 secondi", true)}
           {campo("aziendaNome", "Azienda del cliente")}
           {campo("aziendaSito", "Sito del cliente")}
           {campo("personaNome", "Titolare / referente")}
           {campo("personaRuolo", "Ruolo")}
           {campo("personaLinkedin", "Profilo LinkedIn del titolare")}
-          {campo("termini", "Ricerche per le aziende simili (una per riga, senza città)", true)}
+          {campo("termini", "Nicchia: chi fa esattamente il suo mestiere (una ricerca per riga, senza città) — si cerca per prima", true)}
+          {campo("terminiSettore", "Settore: ricerche più larghe (una per riga) — dopo la nicchia", true)}
           <div className="sm:col-span-2 flex flex-wrap gap-2">
             <Button onClick={() => azione("conferma")} disabled={!!occupato}>{occupato === "conferma" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} {caso.stato === "ATTIVO" ? "Salva" : "Conferma"}</Button>
             <Button variant="outline" onClick={() => azione("rileggi")} disabled={!!occupato}>{occupato === "rileggi" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1" />} Fai rileggere il PDF</Button>
@@ -124,8 +128,8 @@ export default function CasoStudioPage({ params }: { params: Promise<{ id: strin
             {caso.chiavi.map((k) => (
               <div key={k.id} className="flex flex-wrap items-center justify-between gap-2 border-b last:border-0 pb-2">
                 <div className="min-w-0">
-                  <div className="font-medium">{ETICHETTE_CHIAVE[k.tipo] ?? k.tipo}: <span className="font-normal">{k.tipo === "AZIENDA" ? k.termini.join(", ") : k.valore}</span></div>
-                  <div className="text-xs text-muted-foreground">{k.attiva ? `${k.usi} ricerche · ${k.trovati} nuovi${k.tipo === "PERSONA" ? "" : ` · ${zonaChiave(k)}`}` : "spenta"}</div>
+                  <div className="font-medium">{ETICHETTE_CHIAVE[k.tipo] ?? k.tipo}: <span className="font-normal">{k.tipo === "AZIENDA" ? k.termini.join(", ") : [k.valore, ...k.termini].join(", ")}</span></div>
+                  <div className="text-xs text-muted-foreground">{k.attiva ? `${k.usi} ricerche · ${k.trovati} nuovi${k.tipo === "PERSONA" ? "" : ` · ${zonaChiave(k, caso.provincia)}`}` : "spenta"}</div>
                 </div>
               </div>
             ))}

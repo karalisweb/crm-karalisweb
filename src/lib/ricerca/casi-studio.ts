@@ -22,6 +22,8 @@ interface RispostaCaso {
   persona_ruolo: string;
   persona_linkedin: string;
   termini: string[];
+  termini_settore: string[];
+  provincia: string;
 }
 
 const SCHEMA: Schema = {
@@ -31,7 +33,8 @@ const SCHEMA: Schema = {
     com_era: { type: "string", description: "Una o due frasi: com'era la situazione del cliente prima" },
     cosa_abbiamo_fatto: { type: "string", description: "Una o due frasi: cosa ha fatto Karalisweb" },
     cosa_e_cambiato: { type: "string", description: "Una o due frasi: il risultato, con i numeri se il PDF li dà" },
-    settore: { type: "string", description: "Il mestiere del cliente in 2-4 parole, come lo si cercherebbe su Google Maps per trovare i suoi concorrenti (es. 'costruzione piscine', non solo 'piscine')" },
+    settore: { type: "string", description: "Il settore largo del cliente in 1-3 parole (es. 'piscine')" },
+    provincia: { type: "string", description: "Sigla della provincia della sede del cliente (es. 'CA', 'SS', 'MI'), se si capisce; altrimenti vuoto" },
     azienda_nome: { type: "string" },
     azienda_sito: { type: "string", description: "Il sito del cliente se compare, altrimenti vuoto" },
     persona_nome: { type: "string", description: "Il titolare o referente del cliente, se compare" },
@@ -40,10 +43,15 @@ const SCHEMA: Schema = {
     termini: {
       type: "array",
       items: { type: "string" },
-      description: "3-5 ricerche Google, senza città, per trovare aziende SIMILI al cliente (stesso mestiere), es. 'costruzione piscine', 'piscine interrate'",
+      description: "La NICCHIA: 3-5 ricerche Google, senza città, per trovare aziende che fanno ESATTAMENTE il mestiere del cliente, con gli stessi clienti, es. 'costruzione piscine', 'piscine interrate'",
+    },
+    termini_settore: {
+      type: "array",
+      items: { type: "string" },
+      description: "Il SETTORE, più largo della nicchia: 3-5 ricerche Google, senza città, per le aziende del mondo intorno (servizi vicini, altri clienti), es. 'manutenzione piscine', 'centri benessere', 'prodotti per piscine'",
     },
   },
-  required: ["titolo", "com_era", "cosa_abbiamo_fatto", "cosa_e_cambiato", "settore", "azienda_nome", "azienda_sito", "persona_nome", "persona_ruolo", "persona_linkedin", "termini"],
+  required: ["titolo", "com_era", "cosa_abbiamo_fatto", "cosa_e_cambiato", "settore", "azienda_nome", "azienda_sito", "persona_nome", "persona_ruolo", "persona_linkedin", "termini", "termini_settore", "provincia"],
 };
 
 const pieno = (s: string | null | undefined) => (s && s.trim() ? s.trim() : null);
@@ -90,6 +98,8 @@ export async function leggiCasoStudio(id: string, oggi = new Date()): Promise<vo
           personaRuolo: pieno(d.persona_ruolo)?.slice(0, 120) ?? null,
           personaLinkedin: normalizzaLinkedin(d.persona_linkedin),
           termini: terminiDi("", d.termini).slice(0, 6),
+          terminiSettore: terminiDi("", d.termini_settore).slice(0, 6),
+          provincia: siglaProvincia(d.provincia),
           costCents: { increment: ai.costCents },
         },
       }),
@@ -104,6 +114,12 @@ export async function leggiCasoStudio(id: string, oggi = new Date()): Promise<vo
   }
 }
 
+/** "ca", "Cagliari (CA)" → "CA"; altrimenti null. */
+export function siglaProvincia(s: string | null | undefined): string | null {
+  const m = (s ?? "").toUpperCase().match(/\b([A-Z]{2})\b/);
+  return m ? m[1] : null;
+}
+
 export interface DatiCaso {
   titolo?: string;
   storia?: string | null;
@@ -114,12 +130,15 @@ export interface DatiCaso {
   personaRuolo?: string | null;
   personaLinkedin?: string | null;
   termini?: string[];
+  terminiSettore?: string[];
+  provincia?: string | null;
 }
 
 /**
  * Alessio conferma (anche dopo aver corretto). Nascono, o si aggiornano, le tre chiavi:
- *   SETTORE — il settore ("piscine");
- *   AZIENDA — i termini per le aziende simili ("costruzione piscine"…);
+ *   AZIENDA — la nicchia: chi fa esattamente il mestiere del cliente ("costruzione piscine"…),
+ *             cercata prima e mai nella provincia del cliente;
+ *   SETTORE — il settore e le ricerche più larghe ("piscine", "manutenzione piscine"…), dopo la nicchia;
  *   PERSONA — il titolare del caso, per cercare persone simili su LinkedIn.
  */
 export async function confermaCasoStudio(id: string, dati: DatiCaso, oggi = new Date()) {
@@ -135,6 +154,8 @@ export async function confermaCasoStudio(id: string, dati: DatiCaso, oggi = new 
     personaRuolo: dati.personaRuolo !== undefined ? pieno(dati.personaRuolo) : caso.personaRuolo,
     personaLinkedin: dati.personaLinkedin !== undefined ? normalizzaLinkedin(dati.personaLinkedin) : caso.personaLinkedin,
     termini: dati.termini ? terminiDi("", dati.termini).slice(0, 8) : terminiDi("", caso.termini),
+    terminiSettore: dati.terminiSettore ? terminiDi("", dati.terminiSettore).slice(0, 8) : terminiDi("", caso.terminiSettore),
+    provincia: dati.provincia !== undefined ? siglaProvincia(dati.provincia) : caso.provincia,
   };
   if (!unito.settore) throw new Error("Serve almeno il settore");
   const validoFino = caso.validoFino && caso.stato === "ATTIVO" ? caso.validoFino : new Date(oggi.getTime() + MESI_VALIDITA_CASO * 30 * 86400_000);
@@ -145,7 +166,7 @@ export async function confermaCasoStudio(id: string, dati: DatiCaso, oggi = new 
   });
 
   const chiavi: { tipo: string; valore: string; termini: string[] }[] = [
-    { tipo: "SETTORE", valore: unito.settore, termini: [] },
+    { tipo: "SETTORE", valore: unito.settore, termini: unito.terminiSettore },
     ...(unito.termini.length ? [{ tipo: "AZIENDA", valore: unito.aziendaNome ?? unito.settore, termini: unito.termini }] : []),
     ...(unito.personaNome
       ? [{ tipo: "PERSONA", valore: unito.personaNome, termini: [unito.personaRuolo, unito.settore].filter((x): x is string => !!x) }]

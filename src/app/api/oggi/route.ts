@@ -17,13 +17,13 @@ export async function GET() {
   const oggi = mezzanotteRoma(ora);
   const fraDueGiorni = mezzanotteRoma(ora, 2);
 
-  const [tutti, richiesteDaMandare, visiteDaMandare, fogli, altreDecisioni, incontri, call, aziendeOggi, personeOggi, casiAttivi, casiDaConfermare, browserInCoda, ultimoBrowser] =
+  const [tutti, richiesteDaMandare, visiteDaMandare, fogli, aziendeDaDecidere, incontri, call, aziendeOggi, personeOggi, casiAttivi, casiDaConfermare, browserInCoda, ultimoBrowser] =
     await Promise.all([
       caricaCapitoli(ora),
       db.approvalItem.count({ where: { kind: "MESSAGGIO_BNI", status: "IN_ATTESA" } }),
       db.approvalItem.count({ where: { kind: "VISITA_CAPITOLO", status: "IN_ATTESA" } }),
       db.approvalItem.count({ where: { kind: "PREPARAZIONE_121", status: "IN_ATTESA" } }),
-      db.approvalItem.count({ where: { status: "IN_ATTESA", kind: { notIn: ["MESSAGGIO_BNI", "VISITA_CAPITOLO", "PREPARAZIONE_121"] } } }),
+      db.approvalItem.count({ where: { status: "IN_ATTESA", kind: "FASCICOLO_BASE" } }),
       db.bniMembro.findMany({
         where: { next121At: { gte: oggi, lt: fraDueGiorni } },
         orderBy: { next121At: "asc" },
@@ -54,7 +54,7 @@ export async function GET() {
       richiesteDaMandare,
       visiteDaMandare,
       fogli,
-      altreDecisioni,
+      aziendeDaDecidere,
       casiDaConfermare,
     },
     incontri: incontri.map((m) => ({ id: m.id, nome: m.name, azienda: m.company, capitolo: m.chapter, quando: m.next121At })),

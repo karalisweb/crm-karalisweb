@@ -71,7 +71,8 @@ export const agentePosizioni: AgenteEseguibile = {
   validitaGiorni: 60,
   aPagamento: true,
   async esegui(ctx) {
-    const parola = parolaChiave(ctx.lead.category, ctx.lead.citta);
+    // Come la cercherebbe un cliente: il termine della nicchia ("costruzione piscine"), non la categoria di Maps.
+    const parola = parolaChiave(ctx.lead.ricerca ?? ctx.lead.category, ctx.lead.citta);
     if (!parola) throw new Error("Manca la categoria o la città: non so quale ricerca fare su Google");
     const { result, costCents } = await chiamaDataForSeo<{ items?: ItemSerp[] }>("/serp/google/organic/live/advanced", {
       keyword: parola,

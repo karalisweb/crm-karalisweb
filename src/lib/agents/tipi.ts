@@ -65,6 +65,10 @@ export interface AziendaContesto {
   googleReviewsCount: number | null;
   /** Città della ricerca che l'ha trovata (Google Maps o Search), se nota. */
   citta: string | null;
+  /** Google Place ID (dalla scheda Maps): serve alle recensioni e ai concorrenti. */
+  placeId?: string | null;
+  /** Come la cercherebbe un cliente, senza città ("costruzione piscine"): dalla chiave che l'ha trovata. */
+  ricerca?: string | null;
 }
 
 /** Un referto già consegnato da un altro agente, letto dagli agenti di sintesi. */
