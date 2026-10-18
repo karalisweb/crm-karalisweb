@@ -61,8 +61,11 @@ async function aggiungiAzienda(nome: string, citta: string | null, chiaveId: str
     const compatto = (t: string) => norm(t).replace(/[^a-z0-9]/g, " ").split(/\s+/);
     trovata = items.find((i) => stessoNome(i.title!, nome)) ?? items.find((i) => parole.length > 0 && parole.every((p) => compatto(i.title!).includes(p)));
   }
-  // Se è l'azienda di un membro BNI, il suo telefono aiuta a riconoscere il sito giusto.
-  const membro = await db.bniMembro.findFirst({ where: { company: { equals: nome, mode: "insensitive" } }, select: { phone: true } });
+  // Se è l'azienda di un membro BNI, il suo telefono aiuta a riconoscere il sito giusto; e se la
+  // scheda Maps ha un altro telefono, è un'altra azienda con lo stesso nome.
+  const membro = await db.bniMembro.findFirst({ where: { company: { equals: nome, mode: "insensitive" } }, select: { phone: true, profession: true } });
+  const cifre = (t?: string | null) => (t ?? "").replace(/\D/g, "").slice(-9);
+  if (trovata && membro?.phone && trovata.phone && cifre(membro.phone) !== cifre(trovata.phone)) trovata = undefined;
   const r = await salvaAzienda(
     trovata
       ? {
@@ -70,7 +73,7 @@ async function aggiungiAzienda(nome: string, citta: string | null, chiaveId: str
           categoria: trovata.category, placeId: trovata.place_id, rating: trovata.rating?.value ?? null, recensioni: trovata.rating?.votes_count ?? null,
           mapsUrl: trovata.place_id ? `https://www.google.com/maps/place/?q=place_id:${trovata.place_id}` : null,
         }
-      : { nome, indirizzo: citta, telefono: membro?.phone ?? null },
+      : { nome, indirizzo: citta, telefono: membro?.phone ?? null, categoria: membro?.profession ?? null },
     chiaveId,
     "maps",
     "manuale"

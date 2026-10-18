@@ -19,6 +19,24 @@ export function parolaChiave(categoria: string | null, citta: string | null): st
   return `${categoria} ${citta}`.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Il servizio scritto nel titolo della homepage, senza il nome dell'azienda e la città:
+ * "Acquisto macchine movimento terra - Officina 3MT Cagliari" → "acquisto macchine movimento terra".
+ */
+export function servizioDalTitolo(html: string, nome: string, citta: string | null): string | null {
+  const t = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/&amp;/g, "&").replace(/&#0?39;|&rsquo;/g, "'").trim();
+  if (!t) return null;
+  const nomeParole = nome.toLowerCase().split(/[^a-z0-9àèéìòù]+/).filter((w) => w.length >= 3);
+  const pezzi = t.split(/\s[|–—-]\s|\s·\s/).map((x) => x.trim()).filter(Boolean);
+  const pezzo = pezzi.find((p) => !nomeParole.some((w) => p.toLowerCase().includes(w))) ?? null;
+  if (!pezzo) return null;
+  let s = pezzo.toLowerCase();
+  if (citta) s = s.replace(new RegExp(`\\b(a |in )?${citta.toLowerCase()}\\b`, "g"), " ");
+  s = s.replace(/\b(home|homepage|benvenuti|sito ufficiale)\b/g, " ").replace(/\s+/g, " ").trim();
+  const parole = s.split(" ");
+  return parole.length >= 2 && parole.length <= 6 && s.length <= 60 ? s : null;
+}
+
 export function refertoPosizioni(parola: string, items: ItemSerp[], sito: string, costCents: number): Referto {
   const mio = dominio(sito);
   const organici = items.filter((i) => i.type === "organic" && i.domain);
@@ -71,8 +89,10 @@ export const agentePosizioni: AgenteEseguibile = {
   validitaGiorni: 60,
   aPagamento: true,
   async esegui(ctx) {
-    // Come la cercherebbe un cliente: il termine della nicchia ("costruzione piscine"), non la categoria di Maps.
-    const parola = parolaChiave(ctx.lead.ricerca ?? ctx.lead.category, ctx.lead.citta);
+    // Come la cercherebbe un cliente: il termine della nicchia ("costruzione piscine"); per le aziende
+    // aggiunte a mano, quello che dice il titolo del loro sito; solo in fondo la categoria di Maps.
+    const titolo = ctx.lead.ricerca ? null : await ctx.pagina().then((p) => servizioDalTitolo(p.html, ctx.lead.name, ctx.lead.citta)).catch(() => null);
+    const parola = parolaChiave(ctx.lead.ricerca ?? titolo ?? ctx.lead.category, ctx.lead.citta);
     if (!parola) throw new Error("Manca la categoria o la città: non so quale ricerca fare su Google");
     const { result, costCents } = await chiamaDataForSeo<{ items?: ItemSerp[] }>("/serp/google/organic/live/advanced", {
       keyword: parola,

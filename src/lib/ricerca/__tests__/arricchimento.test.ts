@@ -51,3 +51,11 @@ describe("Dal cliente al contatto", () => {
     expect(a.paginaContatti).toBe("https://esempio.it/contatti");
   });
 });
+
+describe("Posizioni: il servizio dal titolo del sito", () => {
+  it("toglie nome e città", async () => {
+    const { servizioDalTitolo } = await import("@/lib/agents/agenti/posizioni");
+    expect(servizioDalTitolo("<title>Acquisto macchine movimento terra - Officina 3MT Cagliari</title>", "Officina 3MT", "Sinnai")).toBe("acquisto macchine movimento terra");
+    expect(servizioDalTitolo("<title>Home - Officina 3MT</title>", "Officina 3MT", null)).toBeNull();
+  });
+});
