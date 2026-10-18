@@ -429,7 +429,8 @@ export const agenteGanci: AgenteEseguibile = {
   validitaGiorni: 30,
   aPagamento: true,
   async esegui(ctx) {
-    const referti = await ctx.referti();
+    // Non i ganci di prima: si riscelgono dalle leve fresche degli agenti.
+    const referti = (await ctx.referti()).filter((r) => r.agent !== "ganci");
     const leve = referti.flatMap((r) => r.levers.map((l) => ({ ...l, agente: r.agent })));
     if (leve.length < 2) throw new Error("Troppo poche leve per scegliere i ganci");
     const lista = leve.map((l, i) => `${i + 1}. [${l.agente}] ${l.testo} — prova: ${l.prova}`).join("\n");
