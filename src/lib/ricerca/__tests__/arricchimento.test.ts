@@ -77,3 +77,19 @@ describe("Catalogo degli agenti", () => {
     expect(automatici({ ...modi, google_ads: "mano" }, "approfondisci", "server")).not.toContain("google_ads");
   });
 });
+
+describe("Segnali dell'elenco", () => {
+  it("ricava pubblicità, sito vecchio, sito che non comunica, non si fa trovare e chi decide", async () => {
+    const { segnaliDa } = await import("@/lib/agents/segnali");
+    const s = segnaliDa({
+      google_ads: { attiviOra: 3 },
+      sito_visto: { sembra_anno: "circa 2014" },
+      lettore: { domande_cliente: [{ risposta: "no" }, { risposta: "no" }, { risposta: "sì" }], come_lo_dice: { chiarezza: 4 } },
+      posizioni: { posizione: 19 },
+      decision_maker: { persone: [] },
+    }, false);
+    expect(s).toEqual({ chiDecide: "da_trovare", pubblicita: true, sitoVecchio: true, sitoNonComunica: true, nonSiTrova: true });
+    const t = segnaliDa({ meta_ads: { inserzioniAttive: 0 }, sito_visto: { sembra_anno: "recente" }, posizioni: { posizione: 2 } }, true);
+    expect(t).toEqual({ chiDecide: "noto", pubblicita: false, sitoVecchio: false, sitoNonComunica: false, nonSiTrova: false });
+  });
+});

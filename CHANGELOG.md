@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.51.0] - 2026-10-18
+
+### Changed
+- **Aziende trovate**: in alto solo **Da decidere** e **Approfondite**; scartate ed eliminate "messe da parte" in un link; tolta "Tutte". Su ogni azienda le etichette che contano (chi decide noto / da trovare, fa pubblicità, sito vecchio, sito che non comunica, non si fa trovare) e gli stessi segnali come filtri.
+
 ## [3.50.1] - 2026-10-18
 
 ### Changed
