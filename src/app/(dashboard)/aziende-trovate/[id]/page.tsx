@@ -157,14 +157,14 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             <div className="text-sm flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Gli agenti stanno lavorando ({s.inCorso.length})…</div>
           ) : stato === "APPROVATO" ? (
             <div className="text-sm">
-              <Check className="h-4 w-4 inline mr-1 text-green-600" />Da approfondire{an.ganci ? ": i 3 ganci sono pronti" : ": il giro completo è in corso"}
-              {s.sulMac.length > 0 && <div className="text-xs text-muted-foreground mt-1">Aspettano gli agenti sul Mac (social, Meta, LinkedIn, titolare): {s.sulMac.length}. Quando arrivano, i ganci si aggiornano.</div>}
+              <Check className="h-4 w-4 inline mr-1 text-green-600" /><b>Analisi completa</b>{an.ganci ? " fatta" : ": in corso"}
+              {s.sulMac.length > 0 && <div className="text-xs text-muted-foreground mt-1">Manca ancora la parte che fa l&apos;agente sul tuo Mac (social, Meta, LinkedIn, chi è il titolare). Quando arriva, le frasi si aggiornano da sole.</div>}
             </div>
           ) : stato === "SCARTATO" ? (
             <div className="text-sm flex flex-wrap items-center gap-2">Scartata <Button variant="ghost" size="sm" onClick={() => decidi("ripensaci")} disabled={occupato}>Ripensaci</Button></div>
           ) : (
             <div className="space-y-2">
-              <div className="text-sm">{s.decisione ? "Il giro veloce è fatto. Vale la pena?" : "Il giro veloce non è ancora finito, ma puoi già decidere."}</div>
+              <div className="text-sm"><b>Analisi veloce</b> {s.decisione ? "fatta. Vuoi quella completa?" : "in corso, ma puoi già decidere."}</div>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => decidi("approfondisci")} disabled={occupato}><Search className="h-4 w-4 mr-1.5" />Approfondisci</Button>
                 <Button size="sm" variant="outline" onClick={() => decidi("scarta")} disabled={occupato}><X className="h-4 w-4 mr-1.5" />Scarta</Button>
@@ -175,7 +175,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
 
         {ganci.length > 0 && (
           <>
-            <Titolo>I 3 ganci per la chiamata</Titolo>
+            <Titolo>Cosa dirgli al telefono</Titolo>
             <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 space-y-2">
               {ganci.map((g, i) => (
                 <div key={i} className="text-sm"><span className="font-medium">{i + 1}.</span> {g.frase}<div className="text-xs text-muted-foreground ml-4 break-words">{g.prova}</div></div>
@@ -216,7 +216,12 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
           {s.casi.length > 0 && <div className="text-muted-foreground">Caso da raccontare: {s.casi.map((c, i) => <span key={c.id}>{i > 0 && ", "}<Link href={`/casi-studio/${c.id}`} className="hover:underline">{c.titolo}</Link></span>)}</div>}
         </div>
 
-        <Titolo n={3}>Ti trovano?</Titolo>
+        <Titolo n={3}>Prossimo passo</Titolo>
+        <div className="rounded-md border px-3 py-2.5 text-sm">{s.prossimo}</div>
+
+        <details className="mt-5 rounded-md border px-3 py-2" open={!ganci.length}>
+          <summary className="text-sm font-medium cursor-pointer">{ganci.length ? "Da dove vengono le frasi (le prove)" : "Cosa hanno trovato gli agenti"}</summary>
+        <Titolo>Ti trovano?</Titolo>
         <div className="space-y-2">
           <Blocco titolo="Cercando il nome" r={an.trova_sito} />
           {an.posizioni && <Blocco titolo="Cercando il servizio su Google" r={an.posizioni} />}
@@ -231,7 +236,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
           )}
         </div>
 
-        <Titolo n={4}>Il sito</Titolo>
+        <Titolo>Il sito</Titolo>
         <div className="space-y-2">
           <Blocco titolo="Visto su telefono e computer" r={an.sito_visto}>
             {(foto.telefono || foto.computer) && (
@@ -257,7 +262,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
           <Blocco titolo="Dal cliente al contatto" r={an.contatto} />
         </div>
 
-        <Titolo n={5}>Le recensioni</Titolo>
+        <Titolo>Le recensioni</Titolo>
         <Blocco titolo="Cosa dicono i clienti" r={an.recensioni}>
           {arr<{ cosa: string; citazione: string }>(an.recensioni?.findings.lodano).slice(0, 2).map((x, i) => (
             <div key={i} className="text-xs mt-1 break-words"><span className="text-green-600">+</span> {x.cosa}: &ldquo;{x.citazione}&rdquo;</div>
@@ -267,7 +272,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
           ))}
         </Blocco>
 
-        <Titolo n={6}>Pubblicità e social <span className="text-xs">(giro completo)</span></Titolo>
+        <Titolo>Pubblicità e social</Titolo>
         <div className="space-y-2">
           <Blocco titolo="Google Ads" r={an.google_ads} />
           {an.meta_ads && <Blocco titolo="Inserzioni Facebook e Instagram" r={an.meta_ads} />}
@@ -275,10 +280,9 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
           {an.linkedin_azienda && <Blocco titolo="LinkedIn" r={an.linkedin_azienda} />}
         </div>
 
-        <Titolo n={7}>Prossimo passo</Titolo>
-        <div className="rounded-md border px-3 py-2.5 text-sm">{s.prossimo}</div>
+        </details>
 
-        <Titolo n={8}>Storia</Titolo>
+        <Titolo>Storia</Titolo>
         <div className="text-sm text-muted-foreground space-y-0.5">
           {s.storia.map((e, i) => <div key={i} className="break-words">{data(e.quando)} · {e.cosa}</div>)}
         </div>
