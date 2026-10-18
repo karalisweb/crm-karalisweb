@@ -111,6 +111,19 @@ export async function trovaSito(a: { nome: string; citta?: string | null; telefo
     esito.costCents += r.costCents;
     organici = (r.result?.items ?? []).filter((i) => i.type === "organic" && i.domain);
   }
+  // Il telefono è quasi una firma: i siti che lo riportano sono i candidati più forti.
+  let perTelefono: ItemSerp[] = [];
+  const cifre = (a.telefono ?? "").replace(/\D/g, "").replace(/^39(?=\d{9,10}$)/, "");
+  if (dataForSeoConfigurato() && cifre.length >= 9) {
+    const formato = cifre.startsWith("3") ? `${cifre.slice(0, 3)} ${cifre.slice(3)}` : `${cifre.slice(0, 3)} ${cifre.slice(3)}`;
+    const r = await chiamaDataForSeo<{ items?: ItemSerp[] }>("/serp/google/organic/live/advanced", {
+      keyword: `"${formato}" OR "${cifre}"`, location_code: LOCATION_ITALIA, language_code: "it", depth: 10,
+    }).catch(() => null);
+    if (r) {
+      esito.costCents += r.costCents;
+      perTelefono = (r.result?.items ?? []).filter((i) => i.type === "organic" && i.domain);
+    }
+  }
 
   // Candidati, nell'ordine: il sito già noto, i risultati di Google, le email, i domini indovinati.
   const candidati: { dom: string; come: string }[] = [];
@@ -119,6 +132,7 @@ export async function trovaSito(a: { nome: string; citta?: string | null; telefo
     if (d && !eNonAzienda(d) && !candidati.some((c) => c.dom === d)) candidati.push({ dom: d, come });
   };
   if (a.sitoNoto) aggiungi(a.sitoNoto, "noto");
+  for (const i of perTelefono.slice(0, 5)) aggiungi(i.domain!, "telefono");
   for (const i of organici.slice(0, 8)) aggiungi(i.domain!, "google");
   for (const d of dominiDaEmail(organici.map((i) => `${i.title ?? ""} ${i.description ?? ""}`))) aggiungi(d, "email");
   for (const d of dominiDaNome(a.nome)) aggiungi(d, "dominio");
