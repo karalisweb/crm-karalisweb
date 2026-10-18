@@ -365,7 +365,8 @@ export const agenteConcorrenti: AgenteEseguibile = {
     const lui = items.find(eLui);
     const posizione = lui ? items.indexOf(lui) + 1 : null;
     const altri = items.filter((i) => !eLui(i)).slice(0, 3);
-    const mie = l.googleReviewsCount ?? lui?.rating?.votes_count ?? 0;
+    // Il confronto delle recensioni solo se si sa quante ne hanno loro (scheda Maps collegata).
+    const mie = l.googleReviewsCount ?? lui?.rating?.votes_count ?? null;
     const levers: Leva[] = [];
     const evidence: Prova[] = altri.map((i, n) => ({
       cosa: `${n + 1}. ${i.title}: ${i.rating?.value ?? "?"}★, ${i.rating?.votes_count ?? 0} recensioni${i.domain ? `, sito ${i.domain}` : ", senza sito"}`,
@@ -374,7 +375,7 @@ export const agenteConcorrenti: AgenteEseguibile = {
     if (posizione === null) levers.push({ servizio: "seo", testo: `Chi cerca "${ricerca}" su Google Maps non li trova nei primi 20: escono ${altri.map((a) => a.title).join(", ")}`, prova: `Google Maps, ricerca "${ricerca}"` });
     else if (posizione > 3) levers.push({ servizio: "seo", testo: `Su Google Maps per "${ricerca}" sono ${posizione}°: i primi tre (${altri.map((a) => a.title).join(", ")}) prendono quasi tutte le chiamate`, prova: `Google Maps, ricerca "${ricerca}"` });
     const piuForte = [...altri].sort((a, b) => (b.rating?.votes_count ?? 0) - (a.rating?.votes_count ?? 0))[0];
-    if (piuForte && (piuForte.rating?.votes_count ?? 0) >= Math.max(20, mie * 2)) {
+    if (piuForte && mie != null && (piuForte.rating?.votes_count ?? 0) >= Math.max(20, mie * 2)) {
       levers.push({ servizio: "seo", testo: `${piuForte.title} ha ${piuForte.rating?.votes_count} recensioni, loro ${mie}: chi confronta su Maps sceglie l'altro`, prova: `Google Maps, ricerca "${ricerca}"` });
     }
     return {
