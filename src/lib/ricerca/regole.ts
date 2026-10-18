@@ -10,7 +10,7 @@ export type TipoChiave = (typeof TIPI_CHIAVE)[number];
 export const ETICHETTE_CHIAVE: Record<TipoChiave, string> = {
   SETTORE: "Settore (dopo la nicchia)",
   AZIENDA: "Nicchia (stesso mestiere)",
-  PERSONA: "Persone simili",
+  PERSONA: "Titolare del caso (solo riferimento, non si cerca)",
   RETE_MEMBRO: "Rete di un membro BNI",
 };
 

@@ -132,6 +132,11 @@ da usare nella prima frase della chiamata.
 4. **Numeri economici** (fatturato, dipendenti) come filtro: da fare più avanti. Fonte preferita Creditsafe se il
    prezzo dell'API sta nel tetto, altrimenti un servizio a consumo (es. Openapi). La fonte deve essere sostituibile.
 5. Oltre ai casi studio, Alessio può scrivere **a mano un settore, una persona o un'azienda** da cui partire.
+6. **LinkedIn: prima l'azienda, poi la persona** (deciso il 2026-10-18). L'agente cerca le **pagine aziendali** del
+   settore (nicchia, poi settore; prima la Sardegna) e prende nome, sito, città e dipendenti dalla pagina; chi decide
+   si trova dalla pagina dell'azienda. Niente più "persone simili al titolare" (davano aziende indovinate dal profilo:
+   le 14 trovate così sono state messe in Eliminate). Le persone arrivano solo dai contatti in comune e dalle reti
+   dei membri BNI.
 
 ### Trovare il sito (prima di tutto)
 

@@ -13,6 +13,18 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.50.0] - 2026-10-18
+
+### Changed
+- **LinkedIn: prima l'azienda.** Il Cercatore LinkedIn cerca le pagine aziendali del settore dei casi studio (nicchia, poi settore, prima la Sardegna) e ne prende nome, sito, città e dipendenti; la pagina resta nella scheda e Chi decide parte da lì. Non si cercano più persone "simili al titolare".
+- Ricerca lanciata a mano (Cerca adesso, Un settore + città) che parte subito, oltre la quota del giorno, e avvia l'analisi veloce.
+- Scheda azienda larga, a fisarmonica, con "Cambia sito" ed **Elimina / Ripristina**; elenco con la scheda "Eliminate".
+- Tolta dal menu "Persone trovate": le persone si vedono nella scheda dell'azienda e del membro BNI.
+
+### Fixed
+- Siti che chiudono la connessione agli header "da browser": si riprova con una richiesta semplice.
+- Il sito della scheda Google non viene sostituito da un indirizzo indovinato.
+
 ## [3.49.0] - 2026-10-18
 
 ### Added

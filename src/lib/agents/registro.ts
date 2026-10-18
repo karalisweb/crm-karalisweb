@@ -69,7 +69,7 @@ export const SQUADRA: SchedaAgente[] = [
     chiave: "decision_maker", numero: "9", nome: "Decision maker", compito: "Chi decide in azienda", famiglia: "browser", squadra: "commerciale", stato: "attivo",
     nota: "La via corta di Alessio: azienda su LinkedIn → persone → CEO/titolare → contatti in comune",
     istruzioni: `Trova chi decide con la via corta di Alessio, con il suo Chrome (è già entrato in LinkedIn):
-1. Su LinkedIn cerca l'azienda per nome e apri la sua pagina (verifica sito e città).
+1. Se il lavoro ha azienda.paginaLinkedin apri direttamente quella. Altrimenti su LinkedIn cerca l'azienda per nome e apri la sua pagina (verifica sito e città).
 2. Apri la scheda "Persone" (i dipendenti) e trova chi decide: CEO, titolare, amministratore, fondatore, socio; se non c'è, il responsabile marketing o commerciale.
 3. Apri il profilo di quella persona e guarda i "collegamenti in comune" con Alessio: annota i nomi (al massimo 5), mettendo per primi quelli che sono membri BNI o che Alessio conosce bene. È il riferimento per farsi presentare o per citare qualcuno nel messaggio.
 4. Se su LinkedIn non c'è nessuno: la pagina "chi siamo" del sito.
@@ -108,9 +108,16 @@ Findings: { persone: [{ nome, ruolo, profilo, fonte: "linkedin"|"sito", contatti
     istruzioni: `Cerca aziende su Facebook e Instagram per il termine e la zona del lavoro (es. "piscine Cagliari"). Facebook: ricerca con il filtro Pagine, termine + città. Instagram: ricerca account con termine e città (anche l'hashtag del termine). Prendi solo pagine di aziende vere della zona (non gruppi, non persone private, non portali o directory), fino a 15. Per ognuna: nome, piattaforma (facebook o instagram), link alla pagina, sito se indicato nella pagina, città, telefono se pubblico, categoria. Findings: { aziende: [{ nome, piattaforma, pagina, sito, citta, telefono, categoria }] }. ${REGOLE_BROWSER}`,
   },
   {
-    chiave: "cerca_linkedin", numero: "R3", nome: "Cercatore LinkedIn", compito: "Persone simili al titolare del caso studio, la sua rete, la rete dei membri BNI", famiglia: "browser", squadra: "ricerca", stato: "attivo",
-    nota: "Con il browser di Alessio; massimo 2 lavori LinkedIn al giorno (circa 20 profili)",
-    istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Il lavoro ha una chiave. Se c'è una PERSONA (il titolare di un cliente del caso studio): cerca persone con un profilo simile — stesso ruolo (titolare, socio, amministratore) nello stesso settore, nella zona indicata (prima la Sardegna); se c'è il link del suo profilo guarda anche i suoi collegamenti (filtro "Collegamenti di <nome>") e gli amici in comune con Alessio. Se c'è un MEMBRO BNI: cerca fra i suoi collegamenti (filtro "Collegamenti di <nome>") titolari e responsabili di aziende. "giaVisti" dice quante volte la chiave è già stata usata: vai avanti nelle pagine dei risultati per non ripetere le stesse persone. Fino a 10 persone, niente concorrenti di Alessio (web, marketing, grafica, comunicazione). Per ognuna: nome, ruolo, azienda, sito dell'azienda se è nel profilo, link al profilo, località, contatto in comune se LinkedIn lo mostra, perché è simile (una riga). Non mandare richieste di collegamento né messaggi. Findings: { persone: [{ nome, ruolo, azienda, sitoAzienda, profilo, localita, contattoInComune, perche }] }. ${REGOLE_BROWSER}`,
+    chiave: "cerca_linkedin", numero: "R3", nome: "Cercatore LinkedIn", compito: "Pagine aziendali del settore dei casi studio (prima la nicchia, prima la Sardegna); oppure persone nella rete di un membro BNI", famiglia: "browser", squadra: "ricerca", stato: "attivo",
+    nota: "Con il browser di Alessio; massimo 2 lavori LinkedIn al giorno",
+    istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Due tipi di lavoro, lo dice input.modo:
+
+A) modo "aziende" (il caso normale): prima l'AZIENDA, mai le persone. Cerca su LinkedIn le PAGINE AZIENDALI (filtro "Aziende") per i termini dell'input (es. "costruzione piscine", "piscine"), con la località della zona (input.zona: prima "Sardegna", poi "Italia"). Salta le province in input.provinceEscluse (lì ci sono i concorrenti del cliente del caso studio). Apri al massimo 15 pagine, una alla volta, con calma. Per ognuna riporta solo quello che è scritto nella pagina: nome, link della pagina LinkedIn, sito web, sede (città e provincia), settore dichiarato, numero di dipendenti dichiarato. Tieni solo aziende che fanno il mestiere dei termini (non fornitori, non negozi se cerchi costruttori, non associazioni). input.giaVisti dice quante volte la chiave è già stata usata: vai oltre i primi risultati già visti.
+Findings: { aziende: [{ nome, linkedin, sito, citta, provincia, settore, dipendenti }] }.
+
+B) modo "rete": la rete LinkedIn di un membro BNI (input.membro). Apri i suoi collegamenti e trova 3-10 persone che sono titolari o decidono in aziende dei settori dei casi studio (input.settoriCasiStudio). Findings: { persone: [{ nome, ruolo, azienda, sitoAzienda, profilo, localita, perche }] }.
+
+In entrambi i casi: solo lettura, mai richieste di collegamento né messaggi. ${REGOLE_BROWSER}`,
   },
 ];
 

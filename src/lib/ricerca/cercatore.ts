@@ -21,7 +21,7 @@ import { mezzanotteRoma, norm } from "@/lib/agents/bni-regole";
 import { scadenzeCasi } from "./casi-studio";
 import { filtraSimili } from "./filtro";
 import {
-  AZIENDE_AL_GIORNO, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO, ZONE_SARDEGNA,
+  AZIENDE_AL_GIORNO, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO, ZONE, ZONE_SARDEGNA,
   nellaZona, nomeConfrontabile, normalizzaLinkedin, passoRicerca, prioritaChiave, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
 } from "./regole";
 
@@ -416,27 +416,43 @@ export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?:
   }
 
   // 3) Browser: LinkedIn, al massimo 2 lavori al giorno (contano anche le reti dei membri BNI).
-  const linkedinOggi = await db.agentRun.count({ where: { agent: { in: ["cerca_linkedin", "rete_membro"] }, queuedAt: { gte: daOggi } } });
-  if (linkedinOggi < LAVORI_LINKEDIN_AL_GIORNO) {
-    const k = prossimaChiave(chiavi, TIPI_PERSONE, oggi);
+  //    Prima l'AZIENDA: le pagine aziendali del settore (nicchia, poi settore; prima la Sardegna).
+  //    Le persone solo dalla rete di un membro BNI. Mai più "persone simili al titolare" (2026-10-18).
+  let linkedinOggi = await db.agentRun.count({ where: { agent: { in: ["cerca_linkedin", "rete_membro"] }, queuedAt: { gte: daOggi } } });
+  const aziendeOggi = await db.agentRun.count({ where: { agent: "cerca_linkedin", queuedAt: { gte: daOggi }, input: { path: ["modo"], equals: "aziende" } } });
+  if (linkedinOggi < LAVORI_LINKEDIN_AL_GIORNO && !aziendeOggi) {
+    const k = prossimaChiave(chiavi, TIPI_AZIENDE, oggi, priorita);
     if (k) {
-      const [caso, membro] = await Promise.all([
-        k.casoStudioId ? db.casoStudio.findUnique({ where: { id: k.casoStudioId }, select: { settore: true, personaNome: true, personaRuolo: true, personaLinkedin: true, aziendaNome: true } }) : null,
-        k.bniMembroId ? db.bniMembro.findUnique({ where: { id: k.bniMembroId }, select: { name: true, linkedinUrl: true, company: true } }) : null,
-      ]);
-      const settori = (await db.casoStudio.findMany({ where: { stato: "ATTIVO" }, select: { settore: true } })).map((c) => c.settore).filter(Boolean);
+      const passo = passoDi(k);
       await db.agentRun.create({
         data: {
           agent: "cerca_linkedin",
           status: "IN_CODA",
           input: {
+            modo: "aziende",
             chiaveId: k.id,
             tipo: k.tipo,
-            zona: k.usi < ZONE_SARDEGNA / 3 ? "Sardegna" : "Italia",
-            ...(caso ? { persona: { nome: caso.personaNome, ruolo: caso.personaRuolo, linkedin: caso.personaLinkedin, azienda: caso.aziendaNome }, settore: caso.settore } : {}),
-            ...(membro ? { membro: { nome: membro.name, linkedin: membro.linkedinUrl, azienda: membro.company }, settoriCasiStudio: settori } : {}),
+            termini: terminiChiave(k),
+            zona: !passo || ZONE.indexOf(passo.zona) < ZONE_SARDEGNA ? "Sardegna" : "Italia",
+            provinceEscluse: escluseDi(k),
             giaVisti: k.usi,
           },
+        },
+      });
+      linkedinOggi++;
+      r.lavoriLinkedin++;
+    }
+  }
+  if (linkedinOggi < LAVORI_LINKEDIN_AL_GIORNO) {
+    const k = prossimaChiave(chiavi, ["RETE_MEMBRO"], oggi);
+    const membro = k?.bniMembroId ? await db.bniMembro.findUnique({ where: { id: k.bniMembroId }, select: { name: true, linkedinUrl: true, company: true } }) : null;
+    if (k && membro) {
+      const settori = (await db.casoStudio.findMany({ where: { stato: "ATTIVO" }, select: { settore: true } })).map((c) => c.settore).filter(Boolean);
+      await db.agentRun.create({
+        data: {
+          agent: "cerca_linkedin",
+          status: "IN_CODA",
+          input: { modo: "rete", chiaveId: k.id, tipo: k.tipo, membro: { nome: membro.name, linkedin: membro.linkedinUrl, azienda: membro.company }, settoriCasiStudio: settori, giaVisti: k.usi },
         },
       });
       await db.chiaveRicerca.update({ where: { id: k.id }, data: { usi: { increment: 1 }, ultimoUsoAt: oggi } });
@@ -619,4 +635,75 @@ export async function cercaSettoreAdesso(chiaveId: string, termine: string, citt
   }
   await db.chiaveRicerca.update({ where: { id: chiaveId }, data: { usi: { increment: 1 }, trovati: { increment: nuove }, ultimoUsoAt: new Date() } });
   return { nuove, trovati };
+}
+
+// ─── Pagine aziendali trovate su LinkedIn (cerca_linkedin, modo "aziende") ─────
+
+/**
+ * Le aziende trovate su LinkedIn partendo dalla PAGINA AZIENDALE (non dalle persone): nome, sito e
+ * città scritti nella pagina. Un filtro AI tiene solo chi fa il mestiere del caso studio; la nicchia
+ * salta la provincia del cliente. La pagina LinkedIn resta nella scheda (blocco "LinkedIn dell'azienda")
+ * e da lì l'agente Chi decide trova il titolare.
+ */
+export async function importaAziendeLinkedin(input: unknown, findings: Record<string, unknown>, oggi = new Date()): Promise<EsitoImport> {
+  const inp = (input ?? {}) as { chiaveId?: unknown; provinceEscluse?: unknown };
+  const chiaveId = str(inp.chiaveId, 60);
+  const escluse = Array.isArray(inp.provinceEscluse) ? inp.provinceEscluse.filter((x): x is string => typeof x === "string") : [];
+  const e: EsitoImport = { nuove: 0, esistenti: 0, scartate: 0 };
+  const grezze = (Array.isArray(findings.aziende) ? findings.aziende : []) as Record<string, unknown>[];
+  const candidate = grezze
+    .map((a) => ({
+      nome: str(a.nome, 200) ?? "",
+      linkedin: str(a.linkedin, 300),
+      sito: str(a.sito, 300),
+      citta: str(a.citta, 80),
+      provincia: str(a.provincia, 40),
+      settore: str(a.settore, 100),
+      dipendenti: str(String(a.dipendenti ?? ""), 40),
+    }))
+    .filter((a) => a.nome && /linkedin\.com\/company\//i.test(a.linkedin ?? ""))
+    .slice(0, 20);
+  if (!candidate.length) return e;
+
+  // Solo chi fa il mestiere del caso (lo stesso filtro di Maps e Google).
+  const chiave = chiaveId ? await db.chiaveRicerca.findUnique({ where: { id: chiaveId }, select: { valore: true, casoStudioId: true } }) : null;
+  const contesto = chiave ? await contestoChiave(chiave) : "";
+  const filtro = contesto ? await filtraSimili(contesto, candidate.map((a) => ({ nome: a.nome, sito: a.sito, indirizzo: a.citta, categoria: a.settore ?? undefined }))) : null;
+
+  for (const [i, a] of candidate.entries()) {
+    const sigla = a.provincia?.toUpperCase().match(/\b[A-Z]{2}\b/)?.[0] ?? null;
+    if ((filtro && !filtro.tenere.has(i)) || (sigla && escluse.includes(sigla))) {
+      e.scartate++;
+      continue;
+    }
+    const r = await salvaAzienda(
+      { nome: a.nome, sito: a.sito, indirizzo: [a.citta, sigla].filter(Boolean).join(" ") || null, categoria: a.settore },
+      chiaveId,
+      "linkedin",
+      "linkedin"
+    );
+    if (!r.leadId || r.esito === "scartata") {
+      e.scartate++;
+      continue;
+    }
+    e[r.esito === "nuova" ? "nuove" : "esistenti"]++;
+    // La pagina LinkedIn è già il risultato (parziale) del blocco "LinkedIn dell'azienda".
+    const gia = await db.agentReport.findFirst({ where: { leadId: r.leadId, agent: "linkedin_azienda" }, select: { id: true } });
+    if (!gia) {
+      await db.agentReport.create({
+        data: {
+          leadId: r.leadId,
+          agent: "linkedin_azienda",
+          summary: `Pagina LinkedIn trovata dalla ricerca${a.dipendenti ? `: ${a.dipendenti} dipendenti dichiarati` : ""}${a.settore ? ` · ${a.settore}` : ""}`,
+          findings: { url: a.linkedin, esiste: true, dipendentiDichiarati: a.dipendenti, settore: a.settore, fonte: "ricerca" },
+          levers: [],
+          evidence: [{ cosa: "Pagina aziendale LinkedIn", fonte: a.linkedin }],
+          confidence: "ALTA",
+          collectedAt: oggi,
+          validUntil: new Date(oggi.getTime() + 60 * 86400_000),
+        },
+      });
+    }
+  }
+  return e;
 }

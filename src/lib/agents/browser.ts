@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { CHIAVI_BROWSER, schedaDi } from "./registro";
 import { SERVIZI } from "./tipi";
 import { importaMappaBni, importaProfiliMembri, type EsitoMappa } from "./bni";
-import { importaAziendeMeta, importaDecisionMaker, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
+import { importaAziendeLinkedin, importaAziendeMeta, importaDecisionMaker, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
 /** Quanto vale un referto di browser prima di essere rifatto. */
 export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
@@ -43,6 +43,7 @@ export interface LavoroBrowser {
     indirizzo: string | null;
     telefono: string | null;
     linkNoti: Record<string, string>;
+    paginaLinkedin?: string | null;
   };
   input?: unknown;
   consegnaEntroOre: number;
@@ -54,6 +55,13 @@ function linkSocialNoti(auditData: unknown, socialUrl: string | null): Record<st
   for (const [k, v] of Object.entries(social ?? {})) if (v?.url) out[k] = v.url;
   if (socialUrl && !Object.values(out).includes(socialUrl)) out.altro = socialUrl;
   return out;
+}
+
+/** La pagina LinkedIn dell'azienda, se la ricerca o un lavoro precedente l'ha già trovata. */
+async function paginaLinkedinNota(leadId: string): Promise<string | null> {
+  const r = await db.agentReport.findFirst({ where: { leadId, agent: "linkedin_azienda" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
+  const url = (r?.findings as { url?: unknown } | null)?.url;
+  return typeof url === "string" ? url : null;
 }
 
 /** Prende in carico fino a `limit` lavori, i più vecchi per primi. */
@@ -98,6 +106,7 @@ export async function prendiLavori(limit: number): Promise<LavoroBrowser[]> {
             indirizzo: run.lead.address,
             telefono: run.lead.phone,
             linkNoti: linkSocialNoti(run.lead.auditData, run.lead.socialUrl),
+            paginaLinkedin: run.leadId ? await paginaLinkedinNota(run.leadId) : null,
           }
         : undefined,
       input: run.input ?? undefined,
@@ -153,7 +162,11 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
   let importazione: EsitoImport | undefined;
   if (run.agent === "cartografo_bni") mappa = await importaMappaBni(c.referto.findings, oggi);
   if (run.agent === "cerca_meta") importazione = await importaAziendeMeta(run.input, c.referto.findings);
-  if (run.agent === "cerca_linkedin") importazione = await importaPersoneLinkedin(run.input, c.referto.findings);
+  if (run.agent === "cerca_linkedin") {
+    importazione = Array.isArray(c.referto.findings.aziende)
+      ? await importaAziendeLinkedin(run.input, c.referto.findings, oggi)
+      : await importaPersoneLinkedin(run.input, c.referto.findings);
+  }
   if (run.agent === "rete_membro") importazione = await importaReteMembro(run.bniMembroId, c.referto.findings, oggi);
   if (run.agent === "linkedin_membri") importazione = await importaProfiliMembri(c.referto.findings, oggi);
   if (run.agent === "decision_maker") importazione = await importaDecisionMaker(run.leadId, c.referto.findings);
