@@ -8,15 +8,16 @@ BNI (B1), Rete del membro (B5), Cercatore Meta (R2), Cercatore LinkedIn (R3). L'
 
 ## 0. Prima di tutto
 
-1. Leggi indirizzo e chiave da `~/.karalisweb/agenti-browser.env` (righe `AGENTI_URL=` e
-   `AGENTI_BROWSER_KEY=`). Non stampare mai la chiave, non scriverla in nessun file o messaggio.
+1. Per parlare con il CRM usa **solo** il comando `~/.karalisweb/crm-agenti.sh`, scritto da solo
+   (niente variabili, pipe o redirezioni): è l'unico che gira senza chiedere permesso. La chiave la
+   legge lui da `~/.karalisweb/agenti-browser.env`: tu non leggere quel file e non stampare la chiave.
 2. Controlla che Chrome di Alessio sia raggiungibile (strumenti `mcp__claude-in-chrome__*`). Se non
    lo è, **non prendere lavori** e fermati: i lavori presi e non fatti vanno persi.
 
 ## 1. Prendi i lavori
 
 ```bash
-curl -s -H "Authorization: Bearer $AGENTI_BROWSER_KEY" "$AGENTI_URL/api/agenti/browser/lavori?limit=5"
+~/.karalisweb/crm-agenti.sh lavori 5
 ```
 
 Ogni lavoro ha `runId`, `agente`, `istruzioni` (cosa fare, passo per passo, e la forma dei
@@ -44,9 +45,10 @@ LinkedIn: la persona del caso studio o il membro BNI, la zona). Un lavoro preso 
 
 ## 3. Consegna il referto
 
+Scrivi il JSON con lo strumento Write in `/Users/alessioloi/.karalisweb/referti/<runId>.json`, poi:
+
 ```bash
-curl -s -X POST -H "Authorization: Bearer $AGENTI_BROWSER_KEY" -H "Content-Type: application/json" \
-  --data @referto.json "$AGENTI_URL/api/agenti/browser/referto"
+~/.karalisweb/crm-agenti.sh referto /Users/alessioloi/.karalisweb/referti/<runId>.json
 ```
 
 Lavoro fatto:
