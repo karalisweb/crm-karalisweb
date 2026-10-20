@@ -1,6 +1,6 @@
 # KW Sales CRM - Documentazione Tecnica
 
-Versione: **3.43.0** | Ultimo aggiornamento: 2026-08-11
+Versione: **3.43.0** | Ultimo aggiornamento: 2026-10-20
 
 ---
 
@@ -1562,6 +1562,59 @@ rimanda di 7), `NURTURING_PROPOSTO`, `MESSAGGIO_NURTURING` (approvare → +45 gi
 Pagine: `/trattative`, `/trattative/[id]`; `/call-fissate` rimanda a `/trattative`. Badge `trattative` = in ritardo.
 
 Orologio: `0 7-20 * * *` vendita (ogni ora).
+
+## Motore 121 (v3.52.0)
+
+Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema
+`docs/motore-121.html` (passi, punti di controllo, cruscotto). Sconti e commissioni restano fuori dall'app.
+
+### Database (migrazione `20261020120000_motore_121`, additiva e idempotente, via psql)
+
+- `bni_chapters.permesso` (`CONCESSO|NEGATO|null`), `permesso_at`.
+- `bni_membri.newsletter_at` (invitato a newsletter LinkedIn e Substack), `studiato_at` (azienda studiata;
+  il lead è `bni_membri.lead_id`).
+- `bni_presentazioni`: `lead_id` (azienda della persona, senza FK), `punti_contatto` (JSON di codici),
+  `forza`, `confermata` ("lo conosco bene" al 121), `chiesta_at`, `presentato_at`, `incontro_at`,
+  `proposta_at`, `cliente_at`, `esito_note`.
+- Tabella `bni_segnalazioni` (`BniSegnalazione`): contatti da segnalare a un membro (`DA_DARE|DATA|NON_SERVE`).
+- Nessuna colonna nuova su `leads`. I lead dei membri nascono con `bni_origin_type = 'MEMBRO'` e
+  `pipeline_stage = NON_TARGET`; quelli dei presentati con `PRESENTAZIONE` e `BNI_DA_LAVORARE`.
+
+### Codice
+
+| File | Contenuto |
+|---|---|
+| `src/lib/agents/motore-121.ts` | **Puro** (test `__tests__/motore-121.test.ts`): `richiesteDaPreparare` (20/settimana sui feriali rimasti, 0 col tetto di 12 pieno questa settimana o la prossima), `invitiDisponibili` (12/giorno, 100/settimana, feriali), `lettureDi` (costo LinkedIn per agente), `bloccoLinkedin`, `puntiDa`/`forzaPonte`/`etichettePunti`, `collegamentoDa` (diretto o ≥1 in comune), `messaggioPresentazione` |
+| `src/lib/agents/motore.ts` | DB: `statoLinkedinOggi`/`linkedinPermette` (25 letture/giorno, non BNI max 15, stop 48 h), `leadDelMembro`/`studiaMembri` (passo 4, 4 giorni prima del 121, max 3 per turno, `trova_sito` se manca il sito), `proponiSegnalazioni` (AI, 1 volta ogni 30 giorni), `aziendeDaCercareNellaRete` (8 aziende del serbatoio per l'incrocio), `collegamentoAzienda`/`verificaCollegamento`/`dopoCollegamento`/`collegamentiDaVerificare` (filtro collegamento e ricontrollo dopo i 121), `serbatoioPieno` (40), `promemoriaDopo121`, `richiestePresentazione`, `presentazioneChiesta`, `presentato` |
+| `src/lib/agents/cruscotto.ts` | `valuta` (pura, test `__tests__/cruscotto.test.ts`): 11 misure con soglie; `grezziSettimana`, `cruscottoSettimana` |
+| `src/lib/agents/bni.ts` | `eseguiTurnoBni(oggi, fase)`: `mattina` (copertura, riscritture, rete del membro 3 giorni prima con `aziendeDaCercare`, segnalazioni e foglio 36 h prima, profili LinkedIn nel budget, Cartografo), `richieste` (quota del giorno), `tutto` (pulsante). Capitoli con permesso `NEGATO` fuori da `scegliProssimi`; `colleghiSenzaRisposta` per la nota al presidente |
+| `src/lib/agents/arricchimento.ts` | il giro veloce finisce con `verificaCollegamento` (la voce `FASCICOLO_BASE` la crea `dopoCollegamento` solo se collegata); il turno chiama `studiaMembri` e `collegamentiDaVerificare` |
+| `src/lib/ricerca/cercatore.ts` | `importaReteMembro` legge `ponti` (incrocio) e `puntiContatto`; `importaDecisionMaker` calcola `collegamento` (va nel referto come `importazione.collegamento`); la ricerca si ferma col serbatoio pieno |
+| `src/lib/ricerca/dopo-121.ts` | l'AI riceve anche le persone da chiedere e i contatti da segnalare; restituisce `ponti_confermati` e `contatti_dati`; poi `richiestePresentazione` e `chiudiPromemoria` |
+| `src/lib/opt-in-mailer.ts` | il filtro comune esclude i lead con un ritrovamento e quelli con `bni_origin_type` |
+
+### Endpoint e pagine
+
+- `GET /api/ricerca/cruscotto?settimane=N`; `POST /api/cron/cruscotto` (mail del venerdì, CRON_SECRET).
+- `POST /api/cron/squadra-bni?fase=mattina|richieste`.
+- `GET /api/ricerca/bni/membri/[id]/foglio` (pagina del 121); `PATCH /api/ricerca/bni/segnalazioni/[id]`;
+  `PATCH /api/ricerca/bni/presentazioni/[id]` (stato, `confermata`, `incontro|proposta|cliente`);
+  `PATCH /api/ricerca/bni/capitoli/[id]` (`permesso`); `PATCH /api/ricerca/bni/membri/[id]` (`newsletter`).
+- Cassetta: voci `PRESENTAZIONE_BNI` (approvata = chiesta) e `DOPO_121` (promemoria del vocale).
+- Pagine: `/cruscotto`, `/bni/121/[id]`; aggiornate Incontri BNI, scheda membro e capitolo, Aziende trovate.
+
+### Crontab VPS (orari IT)
+
+- `0 7 * * *` squadra-bni `?fase=mattina`; `0 14 * * 1-5` squadra-bni `?fase=richieste`;
+  `0 17 * * 5` cruscotto.
+
+### Limiti noti
+
+- Il limite di ricerche di LinkedIn per gli account gratuiti è mensile e non pubblicato: il budget di 25 letture
+  al giorno è una stima prudente (l'avviso è comparso dopo ~10 ricerche il 2026-10-19).
+- Il collegamento su Meta (amici che seguono la pagina) non è automatico: solo LinkedIn.
+- Le newsletter le scrive Orchestra: il CRM segna solo chi è stato invitato.
+- "Inviti LinkedIn accettati" nel cruscotto è cumulativo (non per settimana).
 
 ## Agenti dell'analisi: catalogo e modi (v3.49.0)
 

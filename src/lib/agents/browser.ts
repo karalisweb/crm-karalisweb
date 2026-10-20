@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { CHIAVI_BROWSER, schedaDi } from "./registro";
 import { SERVIZI } from "./tipi";
 import { importaMappaBni, importaProfiliMembri, type EsitoMappa } from "./bni";
+import { dopoCollegamento } from "./motore";
 import { importaAziendeLinkedin, importaAziendeMeta, importaDecisionMaker, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
 /** Quanto vale un referto di browser prima di essere rifatto. */
@@ -153,6 +154,8 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
 
   if (c.esito === "FALLITO") {
     await db.agentRun.update({ where: { id: run.id }, data: { status: "FALLITO", finishedAt: new Date(), error: c.errore } });
+    // Chi decide non trovato due volte: l'azienda resta senza collegamento (Motore 121).
+    if (run.agent === "decision_maker" && run.leadId) await dopoCollegamento(run.leadId);
     return { ok: true };
   }
 
@@ -167,7 +170,7 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
       ? await importaAziendeLinkedin(run.input, c.referto.findings, oggi)
       : await importaPersoneLinkedin(run.input, c.referto.findings);
   }
-  if (run.agent === "rete_membro") importazione = await importaReteMembro(run.bniMembroId, c.referto.findings, oggi);
+  if (run.agent === "rete_membro") importazione = await importaReteMembro(run.bniMembroId, c.referto.findings, oggi, run.input);
   if (run.agent === "linkedin_membri") importazione = await importaProfiliMembri(c.referto.findings, oggi);
   if (run.agent === "decision_maker") importazione = await importaDecisionMaker(run.leadId, c.referto.findings);
 
@@ -190,5 +193,7 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
     }),
     db.agentRun.update({ where: { id: run.id }, data: { status: "FATTO", finishedAt: new Date() } }),
   ]);
+  // Motore 121: con il referto di "chi decide" l'azienda va in Da decidere (collegata) o resta fuori.
+  if (run.agent === "decision_maker" && run.leadId) await dopoCollegamento(run.leadId);
   return { ok: true, mappa, importazione };
 }

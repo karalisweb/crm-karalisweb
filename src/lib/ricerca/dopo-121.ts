@@ -11,6 +11,7 @@ import { chiediJSON, REGOLE_COMUNI, type Schema } from "@/lib/agents/ai";
 import { budgetDisponibile } from "@/lib/agents/costi";
 import { accodaReteMembro, chiudiRichiesteSuperate } from "@/lib/agents/bni";
 import { norm } from "@/lib/agents/bni-regole";
+import { chiudiPromemoria, richiestePresentazione } from "@/lib/agents/motore";
 
 /** Sotto questa lunghezza il testo è solo una nota: si salva, ma non si chiede all'AI. */
 export const TESTO_MINIMO_AI = 150;
@@ -32,6 +33,8 @@ interface RispostaDopo121 {
   promesse: string[];
   persone_da_presentare: { nome: string; chi_e: string; perche: string }[];
   membri_indicati: string[];
+  ponti_confermati: { nome: string; lo_conosce_bene: boolean }[];
+  contatti_dati: string[];
   prossimo_passo: string;
   prossimo_passo_tra_giorni: number;
 }
@@ -64,12 +67,26 @@ const SCHEMA: Schema = {
       items: { type: "string" },
       description: "Solo se il membro ha indicato altri membri del suo capitolo come i più attivi o interessanti da conoscere: i loro nomi",
     },
+    ponti_confermati: {
+      type: "array",
+      description: "Per le PERSONE DA CHIEDERE elencate sotto il testo: se nel 121 se ne è parlato, il membro le conosce bene (true) o no (false). Solo quelle di cui si è parlato",
+      items: {
+        type: "object",
+        properties: { nome: { type: "string" }, lo_conosce_bene: { type: "boolean" } },
+        required: ["nome", "lo_conosce_bene"],
+      },
+    },
+    contatti_dati: {
+      type: "array",
+      items: { type: "string" },
+      description: "Fra i CONTATTI DA SEGNALARE elencati sotto il testo, quelli che Alessio ha effettivamente segnalato al membro nel 121 (il nome dell'azienda)",
+    },
     prossimo_passo: { type: "string", description: "La prossima cosa concreta da fare con questo membro" },
     prossimo_passo_tra_giorni: { type: "integer", description: "Fra quanti giorni farla (1-60)" },
   },
   required: [
     "riassunto", "cosa_fa", "cosa_non_fa", "zone", "referenze_cerca", "referenze_puo_dare", "promesse",
-    "persone_da_presentare", "membri_indicati", "prossimo_passo", "prossimo_passo_tra_giorni",
+    "persone_da_presentare", "membri_indicati", "ponti_confermati", "contatti_dati", "prossimo_passo", "prossimo_passo_tra_giorni",
   ],
 };
 
@@ -124,6 +141,7 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
   const esito: EsitoDopo121 = { oneToOneId: uno.id, aiUsata: false, presentazioni: 0, indicati: 0, costCents: 0 };
 
   await chiudiRichiesteSuperate(membroId, "Superata: il 121 è stato fatto", oggi);
+  await chiudiPromemoria(membroId);
 
   // Dopo il 121 si guarda la sua rete LinkedIn (se non l'abbiamo già fatto).
   if (!membro.reteLettaAt) await accodaReteMembro(membroId, oggi);
@@ -131,6 +149,10 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
   if (!testo || testo.length < TESTO_MINIMO_AI) return { ...esito, motivo: testo ? "Testo breve: salvato come nota" : "Nessun testo: 121 registrato" };
   if (!(await budgetDisponibile(oggi)).ok) return { ...esito, motivo: "Tetto di spesa del mese raggiunto: testo salvato, scheda non compilata" };
 
+  const [daChiedere, daSegnalare] = await Promise.all([
+    db.bniPresentazione.findMany({ where: { membroId, stato: "DA_CHIEDERE" }, select: { id: true, nome: true, ruolo: true } }),
+    db.bniSegnalazione.findMany({ where: { membroId, stato: "DA_DARE" }, select: { id: true, nome: true } }),
+  ]);
   const run = await db.agentRun.create({ data: { bniMembroId: membroId, agent: "dopo_121", status: "IN_CORSO", attempts: 1, startedAt: new Date() } });
   try {
     const ai = await chiediJSON<RispostaDopo121>({
@@ -142,6 +164,9 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
         "",
         "TESTO DEL 121:",
         testo.slice(0, 60_000),
+        "",
+        `PERSONE DA CHIEDERE (preparate prima del 121): ${daChiedere.map((p) => `${p.nome}${p.ruolo ? ` (${p.ruolo})` : ""}`).join("; ") || "nessuna"}`,
+        `CONTATTI DA SEGNALARE (preparati prima del 121): ${daSegnalare.map((s) => s.nome).join("; ") || "nessuno"}`,
       ].join("\n"),
       schema: SCHEMA,
     });
@@ -196,6 +221,17 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
       }),
       db.agentRun.update({ where: { id: run.id }, data: { status: "FATTO", finishedAt: new Date(), costCents: ai.costCents } }),
     ]);
+    // Motore 121: i ponti confermati ("lo conosco bene") e i contatti segnalati.
+    for (const c of d.ponti_confermati ?? []) {
+      const p = trovaPerNome(c.nome, daChiedere.map((x) => ({ id: x.id, name: x.nome })));
+      if (p) await db.bniPresentazione.update({ where: { id: p.id }, data: { confermata: c.lo_conosce_bene, ...(c.lo_conosce_bene ? {} : { stato: "NO" }) } });
+    }
+    for (const nome of d.contatti_dati ?? []) {
+      const s = daSegnalare.find((x) => norm(x.nome).includes(norm(nome)) || norm(nome).includes(norm(x.nome)));
+      if (s) await db.bniSegnalazione.update({ where: { id: s.id }, data: { stato: "DATA", dataAt: n.data } });
+    }
+    // Le presentazioni da chiedere vanno in Cassetta con il messaggio per il membro.
+    await richiestePresentazione(membroId);
     esito.presentazioni = nuove.length;
     esito.indicati = indicati.length;
     return esito;

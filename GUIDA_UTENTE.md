@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.46.0** | Ultimo aggiornamento: 2026-10-16
+Versione: **3.52.0** | Ultimo aggiornamento: 2026-10-20
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -10,7 +10,8 @@ Versione: **3.46.0** | Ultimo aggiornamento: 2026-10-16
 
 ## Indice
 
-0. [La Squadra di agenti e la Cassetta (novità)](#0-la-squadra-di-agenti-e-la-cassetta)
+00. [Il motore 121 (come si lavora da ottobre 2026)](#00-il-motore-121)
+0. [La Squadra di agenti e la Cassetta](#0-la-squadra-di-agenti-e-la-cassetta)
 
 1. [Mini-glossario (leggi questo per primo)](#1-mini-glossario-leggi-questo-per-primo)
 2. [Accesso al CRM](#2-accesso-al-crm)
@@ -32,6 +33,37 @@ Versione: **3.46.0** | Ultimo aggiornamento: 2026-10-16
 18. [FAQ - Domande frequenti](#18-faq---domande-frequenti)
 19. [Automazione email opt-in e report mattutino](#19-automazione-email-opt-in-e-report-mattutino)
 20. [Rete BNI (121, partner, reciprocità e capitoli)](#20-rete-bni-121-e-referenze)
+
+---
+
+## 00. Il motore 121
+
+Dal 20 ottobre 2026 il CRM lavora attorno al **121**. I membri BNI sono **partner, non clienti**: al primo
+121 non si vende, si dà (contatti da segnalare) e si chiede (presentazioni). Si vende solo ai contatti che
+i membri ti presentano. **Niente contatto a freddo.** Lo schema completo, con i punti di controllo, è in
+`docs/motore-121.html`.
+
+1. **Si apre un capitolo.** Prima il collega che fa il tuo mestiere: il messaggio lo informa e gli propone
+   di fare i partner. Se non risponde in 7 giorni si passa alla dirigenza (la richiesta al presidente lo
+   ricorda). Se dice di no: scheda del capitolo → "Ha detto no", i 121 lì si fermano.
+2. **LinkedIn.** In Incontri BNI trovi chi collegare: 12 inviti al giorno nei feriali, 100 a settimana.
+   Quando siete collegati, invitali alle newsletter LinkedIn e Substack e premi "Invitato".
+3. **Le richieste di 121.** 20 a settimana: arrivano in Cassetta alle 14, le mandi su WhatsApp fra le 15 e
+   le 18. Con 12 incontri in una settimana le richieste nuove si fermano.
+4. **Prima del 121** gli agenti studiano l'azienda del membro, leggono la sua rete LinkedIn cercando chi
+   decide nelle aziende del serbatoio e scelgono 1-3 contatti da segnalargli. Dalla scheda del membro apri
+   la **Pagina del 121**: 5 minuti di lettura.
+5. **Dopo il 121** detta un vocale di 2 minuti (o incolla Meet) entro 24 ore. Se non lo fai arriva un
+   promemoria. Le persone che il membro conosce bene vanno in Cassetta con il messaggio "me lo presenti?".
+6. **Il seguito.** Quando te lo presenta segna "Presentato" (parte l'analisi completa della sua azienda),
+   poi Incontro, Proposta, Cliente. Le condizioni economiche le decidi tu.
+7. **Il cruscotto** (menu Motore 121 → Cruscotto): 11 numeri ogni settimana, con cosa fare quando sono
+   fuori. Il venerdì alle 17 arriva anche per mail.
+
+**Aziende trovate.** Dopo l'analisi veloce si controlla se chi decide è collegato a te su LinkedIn
+(contatto diretto o contatti in comune). In "Da decidere" arrivano solo quelle con un ponte; le altre vanno
+in "senza collegamento" e si ricontrollano da sole dopo i nuovi 121. LinkedIn si usa al massimo 25 volte al
+giorno; se chiede una verifica o mostra un CAPTCHA, tutto si ferma per 48 ore.
 
 ---
 
@@ -723,7 +755,7 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 
 ---
 
-*Documento aggiornato il 2026-07-28 | KW Sales CRM v3.38.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-10-20 | KW Sales CRM v3.52.0. La versione di riferimento è la Guida interattiva dentro l'app.*
 
 ---
 

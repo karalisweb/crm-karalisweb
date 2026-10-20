@@ -18,7 +18,8 @@ function indirizzoCrm(): string {
 
 export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: boolean; aziende: number }> {
   const voci = await db.approvalItem.findMany({
-    where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", leadId: { not: null } },
+    // Motore 121: in mail solo le aziende con il collegamento verificato (chi decide è collegato).
+    where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", leadId: { not: null }, lead: { agentReports: { some: { agent: "decision_maker" } } } },
     orderBy: { createdAt: "desc" },
     take: MAX_IN_MAIL,
     select: {
@@ -33,7 +34,7 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
     },
   });
   if (!voci.length) return { inviata: false, aziende: 0 };
-  const totale = await db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA" } });
+  const totale = await db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", lead: { agentReports: { some: { agent: "decision_maker" } } } } });
   const base = indirizzoCrm();
   const ieri = oggi.getTime() - 26 * 3600_000;
 
@@ -42,11 +43,13 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
     const k = l.ritrovamenti[0]?.chiave;
     const perche = k?.tipo === "MANUALE" ? "l'hai aggiunta tu" : k?.casoStudio ? `simile a ${k.casoStudio.titolo}` : "trovata dalla ricerca";
     const leve = ((v.payload as { leve?: Leva[] })?.leve ?? []).slice(0, 3);
+    const ponte = (v.payload as { collegamento?: string })?.collegamento ?? null;
     const nuova = v.createdAt.getTime() >= ieri;
     return {
       html: `<div style="border:1px solid #ddd;border-radius:10px;padding:14px 16px;margin:0 0 14px">
   <div style="font-size:16px;font-weight:600">${esc(l.name)}${nuova ? ' <span style="font-size:11px;color:#0b6e4f">nuova</span>' : ""}</div>
   <div style="font-size:13px;color:#666">${esc([l.category, l.address].filter(Boolean).join(" · "))} — ${esc(perche)}</div>
+  ${ponte ? `<div style="font-size:13px;color:#0b6e4f;margin-top:4px">Ponte: ${esc(ponte)}</div>` : ""}
   ${leve.length ? `<ul style="font-size:14px;padding-left:18px;margin:8px 0">${leve.map((x) => `<li>${esc(x.testo)}</li>`).join("")}</ul>` : '<div style="font-size:14px;margin:8px 0">L’analisi veloce non ha trovato niente di forte.</div>'}
   <a href="${base}/aziende-trovate/${l.id}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:14px">Apri e decidi</a>
 </div>`,
@@ -56,7 +59,7 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
 
   const titolo = `${totale} ${totale === 1 ? "azienda da decidere" : "aziende da decidere"}`;
   const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#111">
-<p style="font-size:15px">Buongiorno Alessio. L'analisi veloce è fatta su queste aziende: apri la scheda e scegli <b>Approfondisci</b> (parte l'analisi completa) o <b>Scarta</b>.</p>
+<p style="font-size:15px">Buongiorno Alessio. Queste aziende hanno un ponte verso di te (chi decide è collegato a te su LinkedIn): apri la scheda e scegli <b>Approfondisci</b> (parte l'analisi completa) o <b>Scarta</b>.</p>
 ${blocchi.map((b) => b.html).join("\n")}
 ${totale > voci.length ? `<p style="font-size:13px;color:#666">E altre ${totale - voci.length} in <a href="${base}/aziende-trovate">Aziende trovate</a>.</p>` : ""}
 </div>`;

@@ -3,8 +3,9 @@
  *
  *   Cartografo (B1)       → lavoro di browser su BNI Connect; qui si importa quello che porta.
  *                           La Sardegna si rilegge ogni 30 giorni: i ruoli cambiano.
- *   Pianificatore 121     → tiene 12 richieste di 121 aperte, 2 capitoli alla volta, con l'ordine
- *                           di Alessio dentro ogni capitolo. Obiettivo: 8 121 a settimana.
+ *   Pianificatore 121     → 20 richieste di 121 a settimana, preparate alle 14 dei giorni feriali,
+ *                           2 capitoli alla volta, con l'ordine di Alessio dentro ogni capitolo.
+ *                           Tetto: 12 121 fissati a settimana (Motore 121, v3.52).
  *   Preparatore 121 (B3)  → il messaggio di richiesta (in cassetta: lo manda Alessio) e il foglio
  *                           del giorno prima.
  *   Copertura (B4)        → conosciuti su totale per capitolo; la visita a un terzo.
@@ -15,6 +16,8 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
+import { PROFILI_MEMBRI_GIORNO, richiesteDaPreparare } from "./motore-121";
+import { aziendeDaCercareNellaRete, linkedinPermette, promemoriaDopo121, proponiSegnalazioni, statoLinkedinOggi } from "./motore";
 import {
   capitoliInCorso,
   coperturaCapitolo,
@@ -29,7 +32,6 @@ import {
   norm,
   prossimiDelCapitolo,
   REGIONI_ITALIA,
-  RICHIESTE_APERTE,
   GIORNI_SENZA_RISPOSTA,
   settimanaDi,
   visitaDaProporre,
@@ -47,8 +49,6 @@ const KIND_AZIONE_BNI = "AZIONE_BNI";
 
 /** Una richiesta scartata ("non ora") non si ripropone per 30 giorni. */
 const GIORNI_RINVIO = 30;
-/** Richieste nuove al giorno al massimo, per non sommergere la cassetta. */
-const RICHIESTE_AL_GIORNO = 8;
 /** Il foglio del giorno prima: per i 121 delle prossime 36 ore. */
 const ORE_PREPARAZIONE = 36;
 
@@ -236,18 +236,24 @@ export interface StatoSettimana {
   fatti: number;
   fissati: number;
   richiesteAperte: number;
+  /** Richieste preparate dal Pianificatore da lunedì (obiettivo 20). */
+  richiesteSettimana: number;
+  /** 121 già fissati la settimana prossima (tetto 12). */
+  fissatiProssima: number;
   inizio: Date;
   fine: Date;
 }
 
 export async function statoSettimana(oggi = new Date(), caricati?: CapitoloCaricato[]): Promise<StatoSettimana> {
   const { inizio, fine } = settimanaDi(oggi);
-  const [fatti, fissati, tutti] = await Promise.all([
+  const [fatti, fissati, tutti, richiesteSettimana, fissatiProssima] = await Promise.all([
     db.oneToOne.count({ where: { date: { gte: inizio, lt: fine } } }),
     db.bniMembro.count({ where: { next121At: { gte: oggi, lt: fine } } }),
     caricati ? Promise.resolve(caricati) : caricaCapitoli(oggi),
+    db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, agent: { not: "alessio" }, createdAt: { gte: inizio } } }),
+    db.bniMembro.count({ where: { next121At: { gte: fine, lt: new Date(fine.getTime() + 7 * 86400_000) } } }),
   ]);
-  return { obiettivo: OBIETTIVO_121_SETTIMANA, fatti, fissati, richiesteAperte: contaAperte(tutti, oggi), inizio, fine };
+  return { obiettivo: OBIETTIVO_121_SETTIMANA, fatti, fissati, richiesteAperte: contaAperte(tutti, oggi), richiesteSettimana, fissatiProssima, inizio, fine };
 }
 
 /** Richieste mandate (o in cassetta) da meno di 14 giorni, a chi non è ancora stato incontrato. */
@@ -258,7 +264,8 @@ function contaAperte(tutti: CapitoloCaricato[], oggi: Date): number {
 
 /** Le prossime persone a cui chiedere, dai capitoli in corso; se non bastano, dagli altri. */
 export function scegliProssimi(tutti: CapitoloCaricato[], quanti: number, oggi: Date): (ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] })[] {
-  const candidati = tutti.map((t) => ({ t, prossimi: prossimiDelCapitolo(t.membri, oggi, dirigenzaNota(t.capitolo, t.membri)) }));
+  // Il collega di mestiere ha detto no: il capitolo non si lavora con i 121 (Motore 121).
+  const candidati = tutti.filter((t) => t.capitolo.permesso !== "NEGATO").map((t) => ({ t, prossimi: prossimiDelCapitolo(t.membri, oggi, dirigenzaNota(t.capitolo, t.membri)) }));
   const perScelta = candidati.map(({ t, prossimi }) => {
     const cop = coperturaCapitolo(t.membri);
     return { id: t.capitolo.id, nome: t.capitolo.name, sardo: eSardo(t.capitolo), mio: t.capitolo.isMine, conosciuti: cop.conosciuti, totale: cop.totale, daChiedere: prossimi.length };
@@ -300,10 +307,19 @@ export interface RiepilogoBni {
   vecchieChiuse: number;
   riscritte: number;
   profiliLinkedin: number;
+  promemoria: number;
+  linkedinFermo: boolean;
   coperturaSardegna: { capitoli: number; membri: number; conosciuti: number; percentuale: number } | null;
 }
 
-export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
+/**
+ * Il turno BNI. "mattina" (alle 7): copertura, foglio del giorno prima, rete dei membri, profili
+ * LinkedIn, promemoria del vocale, mappa. "richieste" (alle 14 dei feriali): le richieste di 121
+ * da mandare al pomeriggio. "tutto": il pulsante "Prepara le richieste adesso".
+ */
+export type FaseBni = "mattina" | "richieste" | "tutto";
+
+export async function eseguiTurnoBni(oggi = new Date(), fase: FaseBni = "tutto"): Promise<RiepilogoBni> {
   // Le azioni per capitolo della v3.45 non esistono più: si chiudono quelle rimaste aperte.
   const vecchie = await db.approvalItem.updateMany({
     where: { kind: KIND_AZIONE_BNI, status: "IN_ATTESA" },
@@ -314,14 +330,16 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
   const r: RiepilogoBni = {
     settimana: await statoSettimana(oggi, tutti),
     richiesteNuove: 0, visiteProposte: 0, preparazioni: 0, retiAccodate: 0, mappeAccodate: 0, saltatiPerBudget: 0,
-    vecchieChiuse: vecchie.count, riscritte: 0, profiliLinkedin: 0, coperturaSardegna: null,
+    vecchieChiuse: vecchie.count, riscritte: 0, profiliLinkedin: 0, promemoria: 0, linkedinFermo: false, coperturaSardegna: null,
   };
+  const mattina = fase !== "richieste";
+  const richieste = fase !== "mattina";
 
   // B4 — Copertura (ogni giorno: è un conteggio, non costa nulla) e visita a un terzo.
   let membriSardi = 0;
   let conosciutiSardi = 0;
   let capitoliSardi = 0;
-  for (const { capitolo, membri } of tutti) {
+  for (const { capitolo, membri } of mattina ? tutti : []) {
     if (!membri.length) continue;
     const cop = coperturaCapitolo(membri);
     if (eSardo(capitolo)) {
@@ -349,26 +367,36 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
   }
 
   // Le richieste in attesa scritte col modello vecchio si riscrivono con quello di Alessio.
-  r.riscritte = await riscriviRichiesteVecchie(tutti, oggi);
+  if (mattina) r.riscritte = await riscriviRichiesteVecchie(tutti, oggi);
 
-  // Pianificatore — 12 richieste aperte, al massimo 8 nuove al giorno.
+  // Pianificatore — 20 richieste a settimana divise sui giorni feriali, tetto di 12 121 fissati.
   // Gli inviti fatti da Alessio di sua iniziativa non tolgono posto a quelli del Pianificatore.
-  const nuoveOggi = await db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, agent: { not: "alessio" }, createdAt: { gte: new Date(oggi.getTime() - 20 * 3600_000) } } });
-  const quante = Math.max(0, Math.min(RICHIESTE_APERTE - r.settimana.richiesteAperte, RICHIESTE_AL_GIORNO - nuoveOggi));
-  for (const p of scegliProssimi(tutti, quante, oggi)) {
-    const fatto = await preparaRichiesta(p, oggi);
-    if (fatto === "budget") {
-      r.saltatiPerBudget++;
-      break;
+  if (richieste) {
+    const stato = { preparateSettimana: r.settimana.richiesteSettimana, questaSettimana: r.settimana.fatti + r.settimana.fissati, prossimaSettimana: r.settimana.fissatiProssima };
+    let quante = richiesteDaPreparare(stato, oggi);
+    // Il pulsante "adesso" funziona anche nel fine settimana, sempre dentro le 20 e il tetto.
+    if (fase === "tutto" && !quante && Math.max(stato.questaSettimana, stato.prossimaSettimana) < 12) quante = Math.min(4, Math.max(0, 20 - stato.preparateSettimana));
+    const silenti = colleghiSenzaRisposta(tutti, oggi);
+    for (const p of scegliProssimi(tutti, quante, oggi)) {
+      const fatto = await preparaRichiesta(p, oggi, silenti.get(p.capitolo.id) ?? []);
+      if (fatto === "budget") {
+        r.saltatiPerBudget++;
+        break;
+      }
+      if (fatto) r.richiesteNuove++;
     }
-    if (fatto) r.richiesteNuove++;
-  }
-  if (r.richiesteNuove) {
-    tutti = await caricaCapitoli(oggi);
-    r.settimana = await statoSettimana(oggi, tutti);
+    if (r.richiesteNuove) {
+      tutti = await caricaCapitoli(oggi);
+      r.settimana = await statoSettimana(oggi, tutti);
+    }
   }
 
-  // Prima del 121: la rete LinkedIn del membro e il foglio del giorno prima.
+  // Dopo il 121: se non è registrato, un promemoria per il vocale.
+  r.promemoria = await promemoriaDopo121(oggi);
+  if (!mattina) return r;
+
+  // Prima del 121: la rete LinkedIn del membro (con le aziende da cercare fra i suoi collegamenti),
+  // i contatti da segnalargli e il foglio del giorno prima.
   const imminenti = await db.bniMembro.findMany({
     where: { next121At: { gte: new Date(oggi.getTime() - 3600_000), lte: new Date(oggi.getTime() + GIORNI_PRIMA_RETE * 86400_000) } },
     orderBy: { next121At: "asc" },
@@ -376,15 +404,35 @@ export async function eseguiTurnoBni(oggi = new Date()): Promise<RiepilogoBni> {
   });
   for (const m of imminenti) {
     if (!m.reteLettaAt && (await accodaReteMembro(m.id, oggi))) r.retiAccodate++;
-    if (m.next121At!.getTime() <= oggi.getTime() + ORE_PREPARAZIONE * 3600_000 && (await preparaFoglio121(m.id, m.next121At!))) r.preparazioni++;
+    if (m.next121At!.getTime() <= oggi.getTime() + ORE_PREPARAZIONE * 3600_000) {
+      await proponiSegnalazioni(m.id, oggi);
+      if (await preparaFoglio121(m.id, m.next121At!)) r.preparazioni++;
+    }
   }
 
-  // Collegarsi su LinkedIn con tutti i membri: 20 profili al giorno da cercare (LinkedIn accetta circa 100 inviti a settimana).
+  // Collegarsi su LinkedIn con tutti i membri: i profili da cercare, dentro il budget LinkedIn comune.
   r.profiliLinkedin = await accodaProfiliLinkedin(oggi);
+  r.linkedinFermo = (await statoLinkedinOggi(oggi)).blocco;
 
   // B1 — Cartografo: una regione per volta; la Sardegna ogni 30 giorni.
   r.mappeAccodate = await accodaMappa(tutti, oggi);
   return r;
+}
+
+/**
+ * Per ogni capitolo, i colleghi di mestiere a cui è stata mandata la richiesta da più di 7 giorni
+ * senza risposta: si passa alla dirigenza e lo si dice al presidente.
+ */
+function colleghiSenzaRisposta(tutti: CapitoloCaricato[], oggi: Date): Map<string, string[]> {
+  const limite = oggi.getTime() - GIORNI_SENZA_RISPOSTA * 86400_000;
+  const out = new Map<string, string[]>();
+  for (const t of tutti) {
+    if (t.capitolo.permesso === "CONCESSO") continue;
+    const gruppo = gruppiCapitolo(t.membri, dirigenzaNota(t.capitolo, t.membri)).find((g) => g.motivo === "STESSO_RUOLO");
+    const silenti = (gruppo?.membri ?? []).filter((m) => !m.conosciuto && !m.fissato121At && m.richiestaAt && m.richiestaAt.getTime() <= limite).map((m) => m.name);
+    if (silenti.length) out.set(t.capitolo.id, silenti);
+  }
+  return out;
 }
 
 // ─── Cartografo: quale regione rileggere ───────────────────────────────────
@@ -420,8 +468,8 @@ export async function chiudiRichiesteSuperate(membroId: string, motivo: string, 
 
 // ─── Collegarsi su LinkedIn con tutti i membri ─────────────────────────────
 
-/** Profili da cercare ogni giorno: LinkedIn non va stressato. */
-export const PROFILI_LINKEDIN_AL_GIORNO = 20;
+/** Profili da cercare ogni giorno: LinkedIn non va stressato (budget comune, Motore 121). */
+export const PROFILI_LINKEDIN_AL_GIORNO = PROFILI_MEMBRI_GIORNO;
 export const STATI_LINKEDIN = ["NON_TROVATO", "DA_COLLEGARE", "RICHIESTA_INVIATA", "COLLEGATI"] as const;
 
 /**
@@ -443,7 +491,9 @@ export async function accodaProfiliLinkedin(oggi = new Date()): Promise<number> 
   });
   if (!membri.length) return 0;
   membri.sort((a, b) => Number(!!b.conosciutoAt || b.oneToOneCount > 0) - Number(!!a.conosciutoAt || a.oneToOneCount > 0) || (a.chapter ?? "").localeCompare(b.chapter ?? "") || a.name.localeCompare(b.name));
-  const lotto = membri.slice(0, PROFILI_LINKEDIN_AL_GIORNO);
+  const disponibili = (await statoLinkedinOggi(oggi)).disponibili;
+  const lotto = membri.slice(0, Math.min(PROFILI_LINKEDIN_AL_GIORNO, disponibili));
+  if (!lotto.length) return 0;
   await db.agentRun.create({
     data: {
       agent: "linkedin_membri",
@@ -478,15 +528,11 @@ export async function importaProfiliMembri(findings: Record<string, unknown>, og
 
 // ─── Rete del membro (lavoro di browser su LinkedIn) ───────────────────────
 
-/** Reti LinkedIn dei membri lette al giorno, e quanti giorni prima del 121. */
-const RETI_AL_GIORNO = 2;
-const GIORNI_PRIMA_RETE = 2;
+/** Quanti giorni prima del 121 si legge la rete del membro (dentro il budget LinkedIn comune). */
+const GIORNI_PRIMA_RETE = 3;
 
 /** Accoda la lettura della rete LinkedIn di un membro, se non è già in corso o fatta da poco. */
 export async function accodaReteMembro(membroId: string, oggi = new Date()): Promise<boolean> {
-  // LinkedIn non va stressato: al massimo 2 reti al giorno, le altre aspettano il loro turno.
-  const oggiGia = await db.agentRun.count({ where: { agent: "rete_membro", queuedAt: { gte: mezzanotteRoma(oggi) } } });
-  if (oggiGia >= RETI_AL_GIORNO) return false;
   const gia = await db.agentRun.findFirst({
     where: { agent: "rete_membro", bniMembroId: membroId, OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { queuedAt: { gt: new Date(oggi.getTime() - 30 * 86400_000) } }] },
   });
@@ -494,17 +540,15 @@ export async function accodaReteMembro(membroId: string, oggi = new Date()): Pro
   const membro = await db.bniMembro.findUnique({ where: { id: membroId }, select: { name: true, company: true, profession: true, chapter: true, linkedinUrl: true } });
   if (!membro) return false;
   const settori = await db.casoStudio.findMany({ where: { stato: "ATTIVO" }, select: { settore: true } });
-  await db.agentRun.create({
-    data: {
-      agent: "rete_membro",
-      bniMembroId: membroId,
-      status: "IN_CODA",
-      input: {
-        membro: { nome: membro.name, azienda: membro.company, categoria: membro.profession, capitolo: membro.chapter, linkedin: membro.linkedinUrl },
-        settoriCasiStudio: settori.map((s) => s.settore).filter(Boolean),
-      },
-    },
-  });
+  const input = {
+    membro: { nome: membro.name, azienda: membro.company, categoria: membro.profession, capitolo: membro.chapter, linkedin: membro.linkedinUrl },
+    settoriCasiStudio: settori.map((s) => s.settore).filter(Boolean),
+    // Passo 5, l'incrocio: le aziende del serbatoio da cercare fra i suoi collegamenti.
+    aziendeDaCercare: await aziendeDaCercareNellaRete(membroId),
+  };
+  // LinkedIn non va stressato: il lavoro parte solo se il budget del giorno lo permette.
+  if (!(await linkedinPermette("rete_membro", input, oggi))) return false;
+  await db.agentRun.create({ data: { agent: "rete_membro", bniMembroId: membroId, status: "IN_CODA", input } });
   return true;
 }
 
@@ -526,7 +570,7 @@ const SCHEMA_MESSAGGIO: Schema = {
 
 const SCOPI: Record<Motivo, string> = {
   STESSO_RUOLO:
-    "presentarsi a un collega che nel suo capitolo fa il suo stesso mestiere (web, marketing, comunicazione). Alessio lo contatta per primo per rispetto: occupa quella posizione nel capitolo. Proponi di conoscersi e di capire come collaborare, senza nessuna concorrenza",
+    "presentarsi a un collega che nel suo capitolo fa il suo stesso mestiere (web, marketing, comunicazione). Alessio lo contatta per primo, per rispetto: occupa quella posizione nel capitolo. Più che chiedere un permesso, lo informa: prima di conoscere gli altri membri del capitolo vuole conoscere lui. Proponi di conoscersi e di capire come collaborare da partner (ognuno fa la sua parte, ci si passano i lavori), senza nessuna concorrenza",
   DIRIGENZA: "chiedere un 121 a chi guida il capitolo (presidenza, formazione o eventi) per presentarsi e conoscersi",
   PRESIDENTE:
     "chiedere un 121 al presidente del capitolo per presentarsi. Nel 121 Alessio gli chiederà chi sono i membri più attivi: nel messaggio basta proporre di conoscersi",
@@ -536,7 +580,7 @@ const SCOPI: Record<Motivo, string> = {
 
 
 const NOTE_MOTIVO: Record<Motivo, string> = {
-  STESSO_RUOLO: "Fa il tuo mestiere: va per primo, per rispetto e per collaborare.",
+  STESSO_RUOLO: "Fa il tuo mestiere: va per primo. Più che chiedere il permesso, informalo e proponi di fare i partner.",
   DIRIGENZA: "Guida il capitolo.",
   PRESIDENTE: "Nel capitolo nessuno fa il tuo mestiere: si parte dal presidente. Chiedigli chi sono i più attivi.",
   INDICATO: "Indicato come uno dei più attivi.",
@@ -567,7 +611,7 @@ async function scriviRichiesta(membro: { name: string; company: string | null; p
   });
 }
 
-async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] }, oggi: Date): Promise<boolean | "budget"> {
+async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] }, oggi: Date, colleghiSilenti: string[] = []): Promise<boolean | "budget"> {
   if (!(await budgetDisponibile(oggi)).ok) return "budget";
   const membro = await db.bniMembro.findUnique({ where: { id: p.membro.id } });
   if (!membro) return false;
@@ -599,7 +643,10 @@ async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato
           payload: {
             ...ai.dati,
             tipo: p.motivo,
-            perche: NOTE_MOTIVO[p.motivo],
+            perche:
+              colleghiSilenti.length && (p.motivo === "PRESIDENTE" || (p.motivo === "DIRIGENZA" && membro.leadershipRole === "PRESIDENTE"))
+                ? `${NOTE_MOTIVO[p.motivo]} Il collega di mestiere (${colleghiSilenti.join(", ")}) non ha risposto in 7 giorni: diglielo al 121.`
+                : NOTE_MOTIVO[p.motivo],
             formato,
             telefono: membro.phone,
             capitolo: p.capitolo.name,
@@ -744,11 +791,12 @@ async function preparaFoglio121(membroId: string, quando: Date): Promise<boolean
   if (gia) return false;
   const [m, presentazioni, caso, capitolo] = await Promise.all([
     db.bniMembro.findUnique({ where: { id: membroId } }),
-    db.bniPresentazione.findMany({ where: { membroId, stato: "DA_CHIEDERE" }, orderBy: { createdAt: "asc" }, take: 5 }),
+    db.bniPresentazione.findMany({ where: { membroId, stato: "DA_CHIEDERE" }, orderBy: [{ forza: "desc" }, { createdAt: "asc" }], take: 3 }),
     db.casoStudio.findFirst({ where: { stato: "ATTIVO", storia: { not: null } }, orderBy: { confermatoAt: "desc" } }),
     db.bniMembro.findUnique({ where: { id: membroId }, select: { chapter: true } }).then((x) => (x?.chapter ? db.bniChapter.findFirst({ where: { name: { equals: x.chapter, mode: "insensitive" } } }) : null)),
   ]);
   if (!m) return false;
+  const segnalazioni = await db.bniSegnalazione.findMany({ where: { membroId, stato: "DA_DARE" }, orderBy: { createdAt: "desc" }, take: 2 });
   const altri = capitolo
     ? await db.bniMembro.count({ where: { chapter: { equals: capitolo.name, mode: "insensitive" }, status: "ATTIVO" } })
     : 0;
@@ -768,12 +816,15 @@ async function preparaFoglio121(membroId: string, quando: Date): Promise<boolean
         referenzeCerca: m.seeking,
         referenzePuoDare: m.referenzePuoDare,
         linkedin: m.linkedinUrl,
-        presentazioni: presentazioni.map((p) => ({ nome: p.nome, ruolo: p.ruolo, perche: p.perche, linkedin: p.linkedinUrl })),
+        presentazioni: presentazioni.map((p) => ({ nome: p.nome, ruolo: p.ruolo, perche: p.perche, linkedin: p.linkedinUrl, punti: p.puntiContatto, forza: p.forza })),
+        segnalazioni: segnalazioni.map((s) => ({ nome: s.nome, motivo: s.motivo })),
+        pagina: `/bni/121/${m.id}`,
+        ricorda: "Al primo 121 non si vende: dai i contatti, chiedi le presentazioni.",
         casoStudio: caso ? { titolo: caso.titolo, storia: caso.storia } : null,
         domande: [
           "Chi è il tuo cliente ideale? Fammi un esempio concreto dell'ultima persona giusta per te.",
           "Chi conosci tra i tuoi clienti e nel tuo giro? Che tipo di aziende vedi ogni settimana?",
-          ...(presentazioni.length ? ["Ho visto che conosci alcune persone su LinkedIn: me le presenteresti?"] : []),
+          ...(presentazioni.length ? ["Ho visto che conosci alcune persone su LinkedIn: le conosci bene? Me le presenteresti?"] : []),
           ...(m.leadershipRole === "PRESIDENTE" ? [`Chi sono i membri più attivi o più interessanti del capitolo${altri ? ` (${altri} membri)` : ""}?`] : []),
         ],
       } as Prisma.InputJsonValue,

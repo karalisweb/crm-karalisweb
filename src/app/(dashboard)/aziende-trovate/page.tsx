@@ -28,15 +28,33 @@ interface Azienda {
   decisione: "IN_ATTESA" | "APPROVATO" | "SCARTATO" | null;
   sintesi: string | null;
   segnali: { chiDecide: "noto" | "da_trovare" | null; pubblicita: boolean; sitoVecchio: boolean; sitoNonComunica: boolean; nonSiTrova: boolean };
+  senzaCollegamento: boolean;
+  collegamento: "COLLEGATA" | "SENZA" | "IN_VERIFICA" | "DA_VERIFICARE";
+  inComune: number;
+  diretto: boolean;
+  ponteBni: string | null;
 }
 
-/** Le due liste di lavoro; scartate ed eliminate stanno da parte (link in fondo). */
+function ponte(a: Azienda): string | null {
+  if (a.ponteBni) return `ponte BNI: ${a.ponteBni}`;
+  if (a.diretto) return "chi decide è un tuo contatto";
+  if (a.collegamento === "COLLEGATA") return `${a.inComune} ${a.inComune === 1 ? "contatto" : "contatti"} in comune`;
+  return null;
+}
+
+/**
+ * Le liste di lavoro (Motore 121): in "Da decidere" arrivano solo le aziende in cui chi decide è
+ * collegato a te; le altre aspettano il controllo o stanno da parte ("senza collegamento", si
+ * ricontrollano da sole dopo i nuovi 121).
+ */
 const LISTE: { k: string; label: string; ok: (a: Azienda) => boolean }[] = [
-  { k: "decidere", label: "Da decidere", ok: (a) => !a.eliminata && !a.provinciaCliente && (a.decisione === "IN_ATTESA" || a.decisione === null) },
+  { k: "decidere", label: "Da decidere", ok: (a) => !a.eliminata && !a.provinciaCliente && a.decisione === "IN_ATTESA" && a.collegamento === "COLLEGATA" },
+  { k: "verifica", label: "In verifica", ok: (a) => !a.eliminata && !a.provinciaCliente && (a.decisione === null || a.decisione === "IN_ATTESA") && a.collegamento !== "COLLEGATA" },
   { k: "approfondite", label: "Approfondite", ok: (a) => !a.eliminata && a.decisione === "APPROVATO" },
 ];
 const DA_PARTE: { k: string; label: string; ok: (a: Azienda) => boolean }[] = [
-  { k: "scartate", label: "scartate", ok: (a) => !a.eliminata && a.decisione === "SCARTATO" },
+  { k: "senza", label: "senza collegamento", ok: (a) => !a.eliminata && a.senzaCollegamento },
+  { k: "scartate", label: "scartate", ok: (a) => !a.eliminata && a.decisione === "SCARTATO" && !a.senzaCollegamento },
   { k: "eliminate", label: "eliminate", ok: (a) => a.eliminata },
 ];
 
@@ -57,6 +75,15 @@ const TONO = {
 
 // Lo stato dice cosa è già successo, non cosa resta da fare.
 const STATO: Record<string, string> = { IN_ATTESA: "analisi veloce fatta: decidi", APPROVATO: "analisi completa", SCARTATO: "scartata" };
+const COLLEGAMENTO: Record<string, string> = { IN_VERIFICA: "controllo del collegamento in corso", DA_VERIFICARE: "in attesa del controllo del collegamento" };
+
+function statoDi(a: Azienda): string {
+  if (a.senzaCollegamento) return "senza collegamento: si ricontrolla dopo i nuovi 121";
+  if (a.decisione === "IN_ATTESA" && a.collegamento !== "COLLEGATA") return COLLEGAMENTO[a.collegamento] ?? "analisi veloce fatta";
+  if (a.decisione) return STATO[a.decisione];
+  if (a.provinciaCliente) return "esclusa: concorrente del cliente";
+  return a.collegamento === "IN_VERIFICA" ? COLLEGAMENTO.IN_VERIFICA : "analisi veloce in corso";
+}
 
 export default function AziendeTrovatePage() {
   const [aziende, setAziende] = useState<Azienda[] | null>(null);
@@ -92,7 +119,7 @@ export default function AziendeTrovatePage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="h-6 w-6 text-primary" /> Aziende trovate</h1>
-          <p className="text-sm text-muted-foreground">Le aziende trovate dagli agenti (simili ai clienti dei casi studio, su Google, Maps e LinkedIn) e quelle che aggiungi tu. Su ognuna parte da sola l&apos;analisi veloce; tu decidi se fare quella completa.</p>
+          <p className="text-sm text-muted-foreground">Le aziende trovate dagli agenti (simili ai clienti dei casi studio, su Google, Maps e LinkedIn) e quelle che aggiungi tu. Su ognuna parte da sola l&apos;analisi veloce, poi si controlla se chi decide è collegato a te: in &quot;Da decidere&quot; arrivano solo quelle con un ponte.</p>
         </div>
         <LanciaAdesso squadra="ricerca" etichetta="Cerca adesso" onFatto={dopoLancio} />
       </div>
@@ -142,7 +169,8 @@ export default function AziendeTrovatePage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href={`/aziende-trovate/${a.id}`} className="font-medium hover:underline break-words">{a.name}</Link>
                   <Badge variant="secondary" className="text-[10px]">{a.manuale ? "aggiunta a mano" : `trovata su ${CANALI[a.canale] ?? a.canale}`}</Badge>
-                  <Badge variant="outline" className="text-[10px]">{a.decisione ? STATO[a.decisione] : a.provinciaCliente ? "esclusa: concorrente del cliente" : "analisi veloce in corso"}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{statoDi(a)}</Badge>
+                  {ponte(a) && <Badge className="text-[10px] bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-100 hover:bg-green-100">{ponte(a)}</Badge>}
                 </div>
                 <div className="text-xs text-muted-foreground break-words">{[a.category, a.address].filter(Boolean).join(" · ")}</div>
                 {a.decisione && (

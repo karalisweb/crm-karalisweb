@@ -12,6 +12,7 @@ import {
   Users,
   FileText,
   Building2,
+  Gauge,
 } from "lucide-react";
 
 // Badge types per colore
@@ -43,10 +44,11 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    // Fase 1 del processo (PROGETTO-AGENTI.md): BNI per primo, poi i clienti dai casi studio.
-    title: "1 · RICERCA",
+    // Il Motore 121 (PROGETTO-AGENTI.md): BNI per primo, poi i clienti dai casi studio.
+    title: "MOTORE 121",
     items: [
       { href: "/bni", label: "Incontri BNI", icon: Handshake },
+      { href: "/cruscotto", label: "Cruscotto", icon: Gauge },
       { href: "/bni/membri", label: "Rubrica BNI", icon: Users },
       { href: "/casi-studio", label: "Casi studio", icon: FileText },
       { href: "/aziende-trovate", label: "Aziende trovate", icon: Building2 },

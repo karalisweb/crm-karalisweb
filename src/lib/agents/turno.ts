@@ -32,6 +32,7 @@ import {
 import { budgetDisponibile } from "./costi";
 import { automatici, modiAgenti } from "./catalogo";
 import type { AziendaContesto, ContestoAgente, Leva, PaginaScaricata, Prova, RefertoLetto } from "./tipi";
+import { linkedinPermette } from "./motore";
 
 export const KIND_FASCICOLO_BASE = "FASCICOLO_BASE";
 export const KIND_SCHEDA_CONTATTO = "SCHEDA_CONTATTO";
@@ -393,6 +394,8 @@ export async function lavoraSuApprovate(limit: number, oggi: Date, riepilogo: Ri
 
     // Lavori per il browser: si accodano, li prende Claude sul Mac di Alessio.
     for (const agent of browserDaAccodare(stati, oggi, mac)) {
+      // LinkedIn: dentro il budget del giorno, comune a tutti gli agenti (Motore 121).
+      if (!(await linkedinPermette(agent, null, oggi))) continue;
       await db.agentRun.create({ data: { leadId: azienda.id, agent, status: "IN_CODA" } });
       riepilogo.accodatiBrowser++;
       toccata = true;

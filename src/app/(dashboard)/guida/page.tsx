@@ -90,7 +90,29 @@ export default function GuidaPage() {
 
       <div className="space-y-3">
         {/* SEZIONE 0: Squadra di agenti (v3.44) */}
-        <Section title="La Squadra di agenti e la Cassetta" icon={Bot} defaultOpen={true}>
+        <Section title="Il motore 121 (come si lavora da ottobre 2026)" icon={Handshake} defaultOpen={true}>
+          <p>
+            Il 121 è il centro di tutto. I membri BNI sono <strong>partner, non clienti</strong>: al primo 121 non si
+            vende, si dà (contatti da segnalare) e si chiede (presentazioni). Si vende solo ai contatti che i membri ti
+            presentano. <strong>Niente contatto a freddo</strong>: un&apos;azienda va avanti solo se qualcuno della tua
+            rete fa da ponte.
+          </p>
+          <Step n={1}><strong>Si apre un capitolo.</strong> Prima il collega che fa il tuo mestiere (lo informi e gli proponi di fare i partner); se non risponde in 7 giorni si passa alla dirigenza. Se dice di no, nella scheda del capitolo premi &quot;Ha detto no&quot;: i 121 lì si fermano.</Step>
+          <Step n={2}><strong>Collegati su LinkedIn con tutti i membri</strong> (Incontri BNI): 12 inviti al giorno nei feriali, 100 a settimana. Poi invitali alle newsletter LinkedIn e Substack e segna &quot;Invitato&quot;.</Step>
+          <Step n={3}><strong>20 richieste di 121 a settimana</strong>: arrivano in Cassetta alle 14, le mandi su WhatsApp fra le 15 e le 18. Oltre 12 incontri in una settimana le richieste nuove si fermano.</Step>
+          <Step n={4}><strong>Prima del 121</strong> gli agenti studiano l&apos;azienda del membro, leggono la sua rete LinkedIn cercando chi decide nelle aziende che hai nel serbatoio, e scelgono 1-3 contatti da segnalargli. Il giorno prima trovi la <strong>Pagina del 121</strong> (dalla scheda del membro).</Step>
+          <Step n={5}><strong>Dopo il 121</strong> detta un vocale di 2 minuti (o incolla Meet) entro 24 ore. Le persone che il membro conosce bene vanno in Cassetta con il messaggio &quot;me lo presenti?&quot; già scritto.</Step>
+          <Step n={6}><strong>Il seguito</strong>: quando te lo presenta segna &quot;Presentato&quot; (parte l&apos;analisi completa della sua azienda), poi Incontro, Proposta, Cliente. Le condizioni economiche le decidi tu.</Step>
+          <Step n={7}><strong>Il cruscotto</strong> (menu Motore 121): 11 numeri ogni settimana con cosa fare quando sono fuori. Il venerdì alle 17 arriva anche per mail.</Step>
+          <Tip>
+            Le aziende trovate dalla ricerca passano dal giro veloce e poi dal <strong>controllo del collegamento</strong>:
+            in &quot;Da decidere&quot; arrivano solo quelle in cui chi decide è un tuo contatto o ha contatti in comune con te.
+            Le altre stanno in &quot;senza collegamento&quot; e si ricontrollano da sole dopo i nuovi 121. LinkedIn si usa al
+            massimo 25 letture al giorno; se chiede una verifica o blocca, tutto si ferma per 48 ore.
+          </Tip>
+        </Section>
+
+        <Section title="La Squadra di agenti e la Cassetta" icon={Bot}>
           <p>
             Il CRM sta diventando una <strong>squadra di agenti</strong> che lavorano al posto tuo. Ogni agente
             fa un mestiere solo e consegna un <strong>referto</strong>: cosa ha trovato, su cosa fare leva in una

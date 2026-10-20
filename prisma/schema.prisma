@@ -529,6 +529,9 @@ model BniMembro {
   // Collegamento LinkedIn con Alessio: DA_CERCARE (null) | NON_TROVATO | DA_COLLEGARE | RICHIESTA_INVIATA | COLLEGATI
   linkedinStato    String?   @map("linkedin_stato")
   linkedinStatoAt  DateTime? @map("linkedin_stato_at")
+  // Motore 121 (v3.52): invito alle newsletter e studio dell'azienda del membro.
+  newsletterAt     DateTime? @map("newsletter_at")
+  studiatoAt       DateTime? @map("studiato_at")
 
   // Denormalizzati per dashboard veloce (aggiornati a ogni 121)
   oneToOneCount  Int       @default(0) @map("one_to_one_count")
@@ -547,6 +550,7 @@ model BniMembro {
   approvalItems  ApprovalItem[]
   persone        Persona[]
   presentazioni  BniPresentazione[]
+  segnalazioni   BniSegnalazione[]
   chiaviRicerca  ChiaveRicerca[]
 
   @@index([chapter], name: "idx_bni_membro_chapter")
@@ -612,6 +616,10 @@ model BniChapter {
   provincia       String?
   bniConnectUrl   String?   @map("bni_connect_url")
   mappedAt        DateTime? @map("mapped_at")
+
+  // Motore 121 (v3.52): il permesso del collega di mestiere. null | CONCESSO | NEGATO
+  permesso   String?
+  permessoAt DateTime? @map("permesso_at")
 
   agentRuns     AgentRun[]
   agentReports  AgentReport[]
@@ -1590,19 +1598,48 @@ model Ritrovamento {
 
 // Le persone da farsi presentare da un membro BNI (dalla sua rete LinkedIn o nominate al 121).
 model BniPresentazione {
-  id          String    @id @default(uuid())
-  membroId    String    @map("membro_id")
-  membro      BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
-  personaId   String?   @map("persona_id")
-  persona     Persona?  @relation(fields: [personaId], references: [id], onDelete: SetNull)
-  nome        String
-  ruolo       String?
-  linkedinUrl String?   @map("linkedin_url")
-  perche      String?
-  stato       String    @default("DA_CHIEDERE") // DA_CHIEDERE | CHIESTA | PRESENTATO | NO
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id            String    @id @default(uuid())
+  membroId      String    @map("membro_id")
+  membro        BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  personaId     String?   @map("persona_id")
+  persona       Persona?  @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  nome          String
+  ruolo         String?
+  linkedinUrl   String?   @map("linkedin_url")
+  perche        String?
+  stato         String    @default("DA_CHIEDERE") // DA_CHIEDERE | CHIESTA | PRESENTATO | NO
+  // Motore 121 (v3.52): l'azienda della persona, i punti di contatto e l'imbuto.
+  leadId        String?   @map("lead_id")
+  puntiContatto Json      @default("[]") @map("punti_contatto")
+  forza         Int       @default(0)
+  confermata    Boolean? // al 121: "lo conosco bene" (true) o no (false)
+  chiestaAt     DateTime? @map("chiesta_at")
+  presentatoAt  DateTime? @map("presentato_at")
+  incontroAt    DateTime? @map("incontro_at")
+  propostaAt    DateTime? @map("proposta_at")
+  clienteAt     DateTime? @map("cliente_at")
+  esitoNote     String?   @map("esito_note")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@index([membroId])
+  @@index([leadId])
   @@map("bni_presentazioni")
+}
+
+/// Contatti da segnalare a un membro BNI (Motore 121, v3.52): aziende del CRM utili al suo mestiere.
+model BniSegnalazione {
+  id        String    @id @default(uuid())
+  membroId  String    @map("membro_id")
+  membro    BniMembro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  leadId    String?   @map("lead_id")
+  nome      String
+  motivo    String?
+  stato     String    @default("DA_DARE") // DA_DARE | DATA | NON_SERVE
+  dataAt    DateTime? @map("data_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([membroId])
+  @@map("bni_segnalazioni")
 }

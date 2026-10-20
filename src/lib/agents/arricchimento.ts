@@ -22,6 +22,7 @@ import {
 import type { AziendaContesto, ContestoAgente, PaginaScaricata } from "./tipi";
 import { siglaIndirizzo } from "@/lib/ricerca/regole";
 import { refertiValidi } from "./turno";
+import { collegamentiDaVerificare, linkedinPermette, statoLinkedinOggi, studiaMembri, verificaCollegamento } from "./motore";
 
 /** Aziende al massimo in un giro veloce (le 5 al giorno della ricerca, più quelle aggiunte a mano). */
 export const GIRO_VELOCE_PER_TURNO = 8;
@@ -116,23 +117,14 @@ export async function giroVeloce(leadId: string, oggi = new Date()): Promise<{ f
     }
   }
 
-  // 3) Tutti hanno chiuso (o non c'è sito): si propone ad Alessio, una volta sola.
+  // 3) Tutti hanno chiuso (o non c'è sito): si controlla se chi decide è collegato ad Alessio
+  //    (Motore 121). Solo un'azienda collegata va in "Da decidere": la proposta la crea il controllo.
   const stati = new Map((await statoAzienda(l.id)).map((s) => [s.agente, s]));
   const finito = l.website ? veloci.every((a) => chiuso(stati.get(a), oggi)) : !veloci.includes("trova_sito") || chiuso(stati.get("trova_sito"), oggi);
   let proposta = false;
   if (finito && !(await db.approvalItem.findFirst({ where: { leadId: l.id, kind: KIND_FASCICOLO_BASE }, select: { id: true } }))) {
-    const referti = await refertiValidi(l.id, oggi);
-    const leve = referti.flatMap((r) => r.levers);
-    await db.approvalItem.create({
-      data: {
-        leadId: l.id,
-        kind: KIND_FASCICOLO_BASE,
-        agent: "giro_veloce",
-        title: `${l.name}: ${leve.length} cose trovate`,
-        payload: { sito: l.website, riepiloghi: Object.fromEntries(referti.map((r) => [r.agent, r.summary])), leve } as unknown as Prisma.InputJsonValue,
-      },
-    });
-    proposta = true;
+    await verificaCollegamento(l.id, oggi);
+    proposta = !!(await db.approvalItem.findFirst({ where: { leadId: l.id, kind: KIND_FASCICOLO_BASE }, select: { id: true } }));
   }
   return { fatti, falliti, proposta };
 }
@@ -164,6 +156,9 @@ export interface RiepilogoArricchimento extends RiepilogoTurno {
   giroVeloce: number;
   proposte: number;
   ganciRifatti: number;
+  membriStudiati: number;
+  collegamentiAccodati: number;
+  ricontrolli: number;
 }
 
 /** Il turno: sblocca, approfondisce le approvate, fa il giro veloce sulle nuove. */
@@ -171,8 +166,10 @@ export async function eseguiTurnoArricchimento(oggi = new Date()): Promise<Riepi
   const inizio = Date.now();
   const r: RiepilogoArricchimento = {
     aziende: 0, lavoriFatti: 0, lavoriFalliti: 0, nuoviInCassetta: 0, accodatiBrowser: 0, sbloccati: 0, saltatiPerBudget: 0, durataMs: 0,
-    giroVeloce: 0, proposte: 0, ganciRifatti: 0,
+    giroVeloce: 0, proposte: 0, ganciRifatti: 0, membriStudiati: 0, collegamentiAccodati: 0, ricontrolli: 0,
   };
+  // Motore 121, passo 4: prima del 121 si studia l'azienda del membro (agenti di server).
+  r.membriStudiati = (await studiaMembri(oggi)).studiati;
   r.sbloccati = await sbloccaLavori(oggi);
   await lavoraSuApprovate(5, oggi, r);
   r.ganciRifatti = await ganciDaRifare(oggi);
@@ -183,6 +180,10 @@ export async function eseguiTurnoArricchimento(oggi = new Date()): Promise<Riepi
     r.lavoriFalliti += e.falliti;
     if (e.proposta) r.proposte++;
   }
+  // Le aziende in attesa senza controllo del collegamento, e i ricontrolli dopo i nuovi 121.
+  const c = await collegamentiDaVerificare(oggi);
+  r.collegamentiAccodati = c.accodati;
+  r.ricontrolli = c.ricontrolli;
   r.durataMs = Date.now() - inizio;
   return r;
 }
@@ -215,8 +216,12 @@ export async function lanciaAgente(leadId: string, chiave: string, oggi = new Da
   if (attivo) return { dove: v.dove, messaggio: "Già in corso" };
 
   if (v.dove === "mac") {
+    // Lanciato a mano: passa anche oltre il budget del giorno, ma non dopo un blocco di LinkedIn.
+    const li = await statoLinkedinOggi(oggi);
+    if (li.blocco) throw new Error(`LinkedIn è fermo fino al ${li.bloccoFinoAl?.toLocaleString("it-IT", { timeZone: "Europe/Rome" }) ?? "termine dello stop"}: ha chiesto una verifica o ha bloccato una ricerca`);
     await db.agentRun.create({ data: { leadId, agent: chiave, status: "IN_CODA" } });
-    return { dove: "mac", messaggio: "In coda per l'agente sul Mac: entro mezz'ora" };
+    const nelBudget = await linkedinPermette(chiave, null, oggi);
+    return { dove: "mac", messaggio: nelBudget ? "In coda per l'agente sul Mac: entro mezz'ora" : "In coda per l'agente sul Mac (oltre il budget LinkedIn di oggi)" };
   }
   const azienda = chiave === "trova_sito"
     ? { ...(aziendaContesto({ ...l, website: l.website || "x" }) as AziendaContesto), website: l.website ?? "" }

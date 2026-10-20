@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { caricaCapitoli, statoSettimana, scegliProssimi } from "@/lib/agents/bni";
-import { coperturaCapitolo, dirigenzaNota, eSardo, formatoDa, prossimiDelCapitolo, visitaDaProporre, CAPITOLI_IN_CORSO, GIORNI_SENZA_RISPOSTA } from "@/lib/agents/bni-regole";
+import { coperturaCapitolo, dirigenzaNota, eSardo, formatoDa, mezzanotteRoma, prossimiDelCapitolo, settimanaDi, visitaDaProporre, CAPITOLI_IN_CORSO, GIORNI_SENZA_RISPOSTA } from "@/lib/agents/bni-regole";
+import { invitiDisponibili, RICHIESTE_SETTIMANA, TETTO_121_SETTIMANA } from "@/lib/agents/motore-121";
+import { statoLinkedinOggi } from "@/lib/agents/motore";
 
 /**
  * GET /api/ricerca/bni — la pagina "121 BNI": la settimana (obiettivo 8), i 121 in calendario,
@@ -90,6 +92,7 @@ export async function GET() {
       ora: c.meetingTime,
       sede: c.sede,
       mio: c.isMine,
+      permesso: c.permesso,
       visitStatus: c.visitStatus,
       visitaDaFare: visitaDaProporre({ ...cop, visitStatus: c.visitStatus, mio: c.isMine }),
       ...cop,
@@ -112,23 +115,59 @@ export async function GET() {
   ]);
   const fissatiSettimana = calendario.filter((c) => c.next121At && c.next121At >= oggi && c.next121At < settimana.fine).map((c) => c.name);
 
-  // Collegarsi su LinkedIn con tutti i membri: a che punto siamo e i prossimi da collegare.
-  const [statiLinkedin, daCollegare] = await Promise.all([
+  // Collegarsi su LinkedIn con tutti i membri: a che punto siamo, quanti inviti restano oggi
+  // (12 al giorno, 100 a settimana, solo feriali) e i prossimi da collegare. Poi le newsletter.
+  const { inizio: lunedi } = settimanaDi(oggi);
+  const [statiLinkedin, invitiOggi, invitiSettimana, statoLi] = await Promise.all([
     db.bniMembro.groupBy({ by: ["linkedinStato"], where: { status: "ATTIVO" }, _count: { _all: true } }),
+    db.bniMembro.count({ where: { linkedinStato: "RICHIESTA_INVIATA", linkedinStatoAt: { gte: mezzanotteRoma(oggi) } } }),
+    db.bniMembro.count({ where: { linkedinStato: "RICHIESTA_INVIATA", linkedinStatoAt: { gte: lunedi } } }),
+    statoLinkedinOggi(oggi),
+  ]);
+  const restanti = invitiDisponibili(invitiOggi, invitiSettimana, oggi, statoLi.blocco);
+  const [daCollegare, daNewsletter] = await Promise.all([
+    restanti
+      ? db.bniMembro.findMany({
+          where: { status: "ATTIVO", linkedinStato: "DA_COLLEGARE", linkedinUrl: { not: null } },
+          orderBy: [{ conosciutoAt: { sort: "desc", nulls: "last" } }, { name: "asc" }],
+          select: { id: true, name: true, company: true, profession: true, chapter: true, linkedinUrl: true, conosciutoAt: true },
+          take: restanti,
+        })
+      : Promise.resolve([]),
     db.bniMembro.findMany({
-      where: { status: "ATTIVO", linkedinStato: "DA_COLLEGARE", linkedinUrl: { not: null } },
-      orderBy: [{ conosciutoAt: { sort: "desc", nulls: "last" } }, { name: "asc" }],
-      select: { id: true, name: true, company: true, profession: true, chapter: true, linkedinUrl: true, conosciutoAt: true },
-      take: 15,
+      where: { status: "ATTIVO", linkedinStato: "COLLEGATI", newsletterAt: null },
+      orderBy: { linkedinStatoAt: "desc" },
+      select: { id: true, name: true, chapter: true, linkedinUrl: true },
+      take: 10,
     }),
   ]);
+  const daNewsletterTotale = await db.bniMembro.count({ where: { status: "ATTIVO", linkedinStato: "COLLEGATI", newsletterAt: null } });
   const linkedin = {
     conteggi: Object.fromEntries(statiLinkedin.map((x) => [x.linkedinStato ?? "DA_CERCARE", x._count._all])),
     daCollegare,
+    inviti: { oggi: invitiOggi, settimana: invitiSettimana, restantiOggi: restanti },
+    blocco: statoLi.blocco,
+    bloccoFinoAl: statoLi.bloccoFinoAl,
+    letture: { usate: statoLi.usate, disponibili: statoLi.disponibili },
+    daNewsletter,
+    daNewsletterTotale,
   };
+
+  // Il seguito: le presentazioni chieste o avvenute, con l'imbuto (incontro, proposta, cliente).
+  const seguito = await db.bniPresentazione.findMany({
+    where: { OR: [{ stato: "CHIESTA", chiestaAt: { not: null } }, { stato: "PRESENTATO" }], clienteAt: null },
+    orderBy: [{ presentatoAt: { sort: "desc", nulls: "last" } }, { chiestaAt: "desc" }],
+    take: 30,
+    select: {
+      id: true, nome: true, ruolo: true, stato: true, chiestaAt: true, presentatoAt: true, incontroAt: true, propostaAt: true, clienteAt: true, leadId: true,
+      membro: { select: { id: true, name: true } },
+    },
+  });
 
   return NextResponse.json({
     linkedin,
+    seguito,
+    motore: { richiesteSettimana: settimana.richiesteSettimana, obiettivoRichieste: RICHIESTE_SETTIMANA, tetto: TETTO_121_SETTIMANA, fissatiProssima: settimana.fissatiProssima },
     settimana: {
       ...settimana,
       nomiFatti: fattiSettimana.map((f) => f.membro.name),

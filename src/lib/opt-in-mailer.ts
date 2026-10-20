@@ -130,8 +130,13 @@ export async function runOptInMailer(): Promise<OptInResult> {
   const configuredCap = settings?.emailDailyCap ?? 20;
   // Settori in pausa ("non contattare ora"): esclusi da TUTTI i tocchi finché restano in pausa.
   const pausedKeys = parsePausedSegments(settings?.pausedSegments);
-  const segmentFilter: Prisma.LeadWhereInput =
-    pausedKeys.length > 0 ? { segment: { notIn: pausedKeys } } : {};
+  // Motore 121 (v3.52): niente contatto a freddo. Le aziende trovate dalla ricerca dei casi studio
+  // (hanno un ritrovamento) e quelle legate a BNI (membri, presentati, referenze) non entrano mai nel drip.
+  const segmentFilter: Prisma.LeadWhereInput = {
+    ...(pausedKeys.length > 0 ? { segment: { notIn: pausedKeys } } : {}),
+    ritrovamenti: { none: {} },
+    bniOriginType: null,
+  };
   const firma = settings?.signatureAlessio || "Alessio Loi\nKaralisweb";
   const questionnaireUrl = (settings?.questionnaireUrl || "").trim();
   // MASTER PAUSE: se attivo, il drip non manda NULLA (né prime mail né follow-up).

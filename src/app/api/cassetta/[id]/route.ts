@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { applicaDecisioneVendita } from "@/lib/vendita/trattative";
+import { KIND_PRESENTAZIONE_BNI, presentazioneChiesta } from "@/lib/agents/motore";
 
 /**
  * POST /api/cassetta/[id] — la decisione di Alessio su una voce in cassetta.
@@ -12,7 +13,9 @@ import { applicaDecisioneVendita } from "@/lib/vendita/trattative";
  *   SCHEDA_CONTATTO → "contatto": Alessio usa scheda e messaggio (l'invio lo fa lui);
  *   MESSAGGIO_BNI   → "mandato": la richiesta di 121 è partita (Alessio fissa poi la data);
  *   VISITA_CAPITOLO → "mandato": la visita al capitolo è chiesta (capitolo in "visita pianificata");
- *   PREPARAZIONE_121→ "letto".
+ *   PREPARAZIONE_121→ "letto";
+ *   PRESENTAZIONE_BNI → "mandato": la richiesta di presentazione al membro è partita;
+ *   DOPO_121        → "fatto" (il promemoria del vocale).
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireSession();
@@ -49,6 +52,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (voce?.kind === "VISITA_CAPITOLO" && voce.bniChapterId) {
       await db.bniChapter.updateMany({ where: { id: voce.bniChapterId, visitStatus: { notIn: ["VISITATO"] } }, data: { visitStatus: "VISITA_PIANIFICATA" } });
     }
+    if (voce?.kind === KIND_PRESENTAZIONE_BNI) await presentazioneChiesta(id);
     if (voce?.kind === "MESSAGGIO_BNI" && voce.bniMembroId) {
       await db.bniMembro.updateMany({
         where: { id: voce.bniMembroId, bniStage: "DA_AVVICINARE" },

@@ -11,11 +11,11 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 |---|---|
 | 1. Ricerca | ✅ definita e costruita (v3.47.0, 2026-10-17) — specifica in `FASE-1-RICERCA.md` |
 | 2. Arricchimento | ✅ definita e costruita (v3.48–v3.51, 2026-10-18) |
-| Flusso riprogettato | ⏳ scritto il 2026-10-20 (sezione sotto), **da confermare** prima di costruire |
+| Motore 121 | ✅ confermato da Alessio ("il diagramma è corretto") e costruito il 2026-10-20 (v3.52.0) — schema in `docs/motore-121.html` |
 
 ---
 
-## Il flusso, riprogettato (2026-10-20 — in definizione con Alessio)
+## Il flusso, riprogettato: il Motore 121 (confermato e costruito il 2026-10-20, v3.52.0)
 
 Detto da Alessio il 2026-10-19: **"Il BNI deve diventare un punto di contatto forte, un terreno di gioco
 condiviso."** Niente contatto a freddo: un'azienda si contatta solo se qualcuno della rete di Alessio fa da ponte.
@@ -113,7 +113,7 @@ diretto; Denotti 35 in comune; Sorgente Solare 19; Centro Piscine 12; Accadueo 5
 - 2 siti erano sbagliati (Piscine in Sardegna = sito di un'azienda lombarda; Ibluepiscine = sito del marchio
   nazionale): l'agente "trova sito" va corretto.
 
-### Cosa cambia nel codice (solo dopo la conferma)
+### Costruito nel codice (v3.52.0, dettagli in TECHNICAL-DOCS.md "Motore 121")
 
 - Richieste di 121: da 12 aperte a **20 a settimana**, in Cassetta al pomeriggio; tetto di **12 121 fissati**.
 - Collegamento LinkedIn ai membri: 10-15 inviti al giorno nei giorni feriali.

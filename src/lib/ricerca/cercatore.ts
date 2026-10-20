@@ -18,6 +18,8 @@ import { budgetDisponibile } from "@/lib/agents/costi";
 import { chiamaDataForSeo, dataForSeoConfigurato, dominio, LOCATION_ITALIA } from "@/lib/agents/dataforseo";
 import { eNonAzienda, esplora, nomeDaTitolo } from "@/lib/agents/esploratore";
 import { mezzanotteRoma, norm } from "@/lib/agents/bni-regole";
+import { collegamentoDa, forzaPonte, puntiDa, type PuntoContatto } from "@/lib/agents/motore-121";
+import { linkedinPermette, serbatoioPieno } from "@/lib/agents/motore";
 import { scadenzeCasi } from "./casi-studio";
 import { filtraSimili } from "./filtro";
 import {
@@ -115,6 +117,7 @@ export interface PersonaTrovata {
   localita?: string | null;
   contattoInComune?: string | null;
   perche?: string | null;
+  punti?: PuntoContatto[];
 }
 
 /** Un membro BNI con lo stesso profilo LinkedIn, o con lo stesso nome (e azienda, se si sa). */
@@ -339,8 +342,11 @@ export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?:
   const passoDi = (k: (typeof chiavi)[number], indice = k.zonaIndice) => passoRicerca(terminiChiave(k), indice, escluseDi(k));
   const priorita = (k: (typeof chiavi)[number]) => prioritaChiave(k.tipo, passoDi(k)?.zona ?? null);
 
-  // 1) Server: Google Maps, e Google se Maps porta poco.
+  // 1) Server: Google Maps, e Google se Maps porta poco. Il serbatoio resta piccolo (Motore 121): se
+  //    troppe aziende aspettano il giro veloce o il controllo del collegamento, la ricerca si ferma.
   if (!dataForSeoConfigurato()) r.motivo = "DataForSEO non configurato";
+  const serbatoio = await serbatoioPieno();
+  if (!r.motivo && serbatoio.pieno && !opzioni.manuale) r.motivo = `Serbatoio pieno: ${serbatoio.inAttesa} aziende aspettano il controllo`;
   for (let i = 0; i < RICERCHE_PER_TURNO && !r.motivo && r.nuoveOggiPrima + r.nuove < AZIENDE_AL_GIORNO; i++) {
     if (!(await budgetDisponibile(oggi)).ok) {
       r.motivo = "Tetto di spesa del mese raggiunto";
@@ -401,10 +407,10 @@ export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?:
     }
   }
 
-  // 2) Browser: Facebook e Instagram, un lavoro al giorno.
+  // 2) Browser: Facebook e Instagram, un lavoro al giorno (non se il serbatoio è pieno).
   const daOggi = mezzanotteRoma(oggi);
   const metaOggi = await db.agentRun.count({ where: { agent: "cerca_meta", queuedAt: { gte: daOggi } } });
-  const kMeta = metaOggi ? null : prossimaChiave(chiavi.filter((c) => !c.esauritaAt), TIPI_AZIENDE, oggi, priorita);
+  const kMeta = metaOggi || (serbatoio.pieno && !opzioni.manuale) ? null : prossimaChiave(chiavi.filter((c) => !c.esauritaAt), TIPI_AZIENDE, oggi, priorita);
   if (kMeta) {
     const termini = terminiChiave(kMeta);
     const passo = passoDi(kMeta, Math.max(0, kMeta.zonaIndice - 1));
@@ -419,7 +425,7 @@ export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?:
   //    Maps, Google e Meta). LinkedIn serve dopo, azienda per azienda, per trovare chi decide. Qui resta
   //    solo la rete dei membri BNI.
   const linkedinOggi = await db.agentRun.count({ where: { agent: { in: ["cerca_linkedin", "rete_membro"] }, queuedAt: { gte: daOggi } } });
-  if (linkedinOggi < LAVORI_LINKEDIN_AL_GIORNO) {
+  if (linkedinOggi < LAVORI_LINKEDIN_AL_GIORNO && (await linkedinPermette("cerca_linkedin", null, oggi))) {
     const k = prossimaChiave(chiavi, ["RETE_MEMBRO"], oggi);
     const membro = k?.bniMembroId ? await db.bniMembro.findUnique({ where: { id: k.bniMembroId }, select: { name: true, linkedinUrl: true, company: true } }) : null;
     if (k && membro) {
@@ -448,6 +454,9 @@ export interface EsitoImport {
   scartate: number;
   bni?: number;
   presentazioni?: number;
+  ponti?: number;
+  /** Chi decide: l'azienda è collegata ad Alessio? (Motore 121) */
+  collegamento?: { collegata: boolean; inComune: number; diretto: boolean };
 }
 
 export async function importaAziendeMeta(input: unknown, findings: Record<string, unknown>): Promise<EsitoImport> {
@@ -480,6 +489,7 @@ function persone(findings: Record<string, unknown>): PersonaTrovata[] {
       localita: str(p.localita, 120),
       contattoInComune: str(p.contattoInComune, 200),
       perche: str(p.perche, 300),
+      punti: puntiDa(p.puntiContatto),
     }))
     .filter((p) => p.nome);
 }
@@ -503,7 +513,7 @@ export async function importaPersoneLinkedin(input: unknown, findings: Record<st
  * La rete LinkedIn di un membro BNI: il suo profilo, 3-5 persone da farsi presentare e una chiave
  * RETE_MEMBRO per continuare a cercare nella sua rete.
  */
-export async function importaReteMembro(membroId: string | null, findings: Record<string, unknown>, oggi = new Date()): Promise<EsitoImport> {
+export async function importaReteMembro(membroId: string | null, findings: Record<string, unknown>, oggi = new Date(), input: unknown = null): Promise<EsitoImport> {
   const e: EsitoImport = { nuove: 0, esistenti: 0, scartate: 0, bni: 0, presentazioni: 0 };
   if (!membroId) return e;
   const membro = await db.bniMembro.findUnique({ where: { id: membroId }, select: { id: true, name: true, linkedinUrl: true } });
@@ -532,12 +542,45 @@ export async function importaReteMembro(membroId: string | null, findings: Recor
       continue; // un altro membro BNI non si "fa presentare": lo si incontra con un 121
     }
     if (presentazioni < 5 && !gia.has(norm(p.nome))) {
+      const punti: PuntoContatto[] = [...new Set<PuntoContatto>(["MEMBRO_BNI", ...(p.punti ?? [])])];
       await db.bniPresentazione.create({
-        data: { membroId, personaId: r.personaId, nome: p.nome, ruolo: [p.ruolo, p.azienda].filter(Boolean).join(" · ") || null, linkedinUrl: normalizzaLinkedin(p.profilo), perche: p.perche, stato: "DA_CHIEDERE" },
+        data: { membroId, personaId: r.personaId, nome: p.nome, ruolo: [p.ruolo, p.azienda].filter(Boolean).join(" · ") || null, linkedinUrl: normalizzaLinkedin(p.profilo), perche: p.perche, stato: "DA_CHIEDERE", puntiContatto: punti, forza: forzaPonte(punti) },
       });
+      gia.add(norm(p.nome));
       presentazioni++;
     }
   }
+
+  // L'incrocio: chi decide in un'azienda del serbatoio è fra i collegamenti del membro.
+  const ponti = Array.isArray(findings.ponti) ? (findings.ponti as Record<string, unknown>[]).slice(0, 10) : [];
+  const leadValidi = new Set(
+    ((input as { aziendeDaCercare?: { leadId?: string }[] } | null)?.aziendeDaCercare ?? []).map((a) => a.leadId).filter(Boolean) as string[]
+  );
+  let nPonti = 0;
+  for (const x of ponti) {
+    const nome = str(x.nome, 120);
+    const leadId = str(x.leadId, 60);
+    if (!nome || !leadId || !leadValidi.has(leadId)) continue;
+    const lead = await db.lead.findUnique({ where: { id: leadId }, select: { id: true, name: true } });
+    if (!lead) continue;
+    const url = normalizzaLinkedin(str(x.profilo, 300));
+    const dati = { nome, ruolo: str(x.ruolo, 120), aziendaNome: lead.name, leadId, contattoInComune: membro.name, fonte: "rete_membro" };
+    const esistente = url ? await db.persona.findUnique({ where: { linkedinUrl: url }, select: { id: true } }) : await db.persona.findFirst({ where: { leadId, nome }, select: { id: true } });
+    const persona = esistente
+      ? await db.persona.update({ where: { id: esistente.id }, data: dati, select: { id: true } })
+      : await db.persona.create({ data: { ...dati, linkedinUrl: url }, select: { id: true } });
+    const punti: PuntoContatto[] = [...new Set<PuntoContatto>(["MEMBRO_BNI", ...puntiDa(x.puntiContatto)])];
+    const gia2 = await db.bniPresentazione.findFirst({ where: { membroId, OR: [{ personaId: persona.id }, { leadId, nome }] }, select: { id: true } });
+    if (gia2) {
+      await db.bniPresentazione.update({ where: { id: gia2.id }, data: { leadId, puntiContatto: punti, forza: forzaPonte(punti) } });
+    } else {
+      await db.bniPresentazione.create({
+        data: { membroId, personaId: persona.id, leadId, nome, ruolo: [dati.ruolo, lead.name].filter(Boolean).join(" · "), linkedinUrl: url, perche: `Decide in ${lead.name}, azienda del tuo serbatoio`, stato: "DA_CHIEDERE", puntiContatto: punti, forza: forzaPonte(punti) },
+      });
+    }
+    nPonti++;
+  }
+  e.ponti = nPonti;
   await db.chiaveRicerca.update({ where: { id: chiave.id }, data: { usi: { increment: 1 }, trovati: { increment: e.nuove }, ultimoUsoAt: oggi } });
   e.presentazioni = presentazioni;
   return e;
@@ -556,6 +599,12 @@ export async function importaDecisionMaker(leadId: string | null, findings: Reco
   if (!leadId) return e;
   const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
   const persone = Array.isArray(findings.persone) ? (findings.persone as Record<string, unknown>[]) : [];
+  const decisori = persone.slice(0, 2).map((p) => ({
+    grado: typeof p.grado === "number" ? p.grado : typeof p.grado === "string" ? parseInt(p.grado, 10) || null : null,
+    contattiInComune: (Array.isArray(p.contattiInComune) ? p.contattiInComune : []).map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome, 120))).filter((x): x is string => !!x),
+    numeroInComune: typeof p.numeroInComune === "number" ? p.numeroInComune : null,
+  }));
+  e.collegamento = collegamentoDa(decisori);
   for (const p of persone.slice(0, 2)) {
     const nome = str(p.nome, 120);
     if (!nome) {
@@ -568,7 +617,8 @@ export async function importaDecisionMaker(leadId: string | null, findings: Reco
       .slice(0, 5);
     const url = normalizzaLinkedin(str(p.profilo, 300));
     const gia = url ? await db.persona.findUnique({ where: { linkedinUrl: url }, select: { id: true } }) : await db.persona.findFirst({ where: { leadId, nome }, select: { id: true } });
-    const dati = { nome, ruolo: str(p.ruolo, 120), aziendaNome: lead?.name ?? null, leadId, contattoInComune: comuni.join(", ") || null, fonte: "linkedin", note: str(p.fonte, 200) };
+    const grado = typeof p.grado === "number" ? p.grado : null;
+    const dati = { nome, ruolo: str(p.ruolo, 120), aziendaNome: lead?.name ?? null, leadId, contattoInComune: comuni.join(", ") || null, fonte: "linkedin", note: [str(p.fonte, 200), grado ? `grado ${grado}` : null, typeof p.numeroInComune === "number" ? `${p.numeroInComune} in comune` : null].filter(Boolean).join(" · ") || null };
     const persona = gia
       ? await db.persona.update({ where: { id: gia.id }, data: dati, select: { id: true } })
       : await db.persona.create({ data: { ...dati, linkedinUrl: url }, select: { id: true } });
@@ -584,8 +634,9 @@ export async function importaDecisionMaker(leadId: string | null, findings: Reco
       if (!m) continue;
       e.bni = (e.bni ?? 0) + 1;
       const esiste = await db.bniPresentazione.findFirst({ where: { membroId: m.id, personaId: persona.id }, select: { id: true } });
+      const punti: PuntoContatto[] = [...new Set<PuntoContatto>(["MEMBRO_BNI", ...puntiDa(p.puntiContatto)])];
       if (!esiste) {
-        await db.bniPresentazione.create({ data: { membroId: m.id, personaId: persona.id, nome, ruolo: dati.ruolo, linkedinUrl: url, perche: `Decide in ${lead?.name ?? "un'azienda trovata"}: chiedi a ${m.name} di presentartelo` } });
+        await db.bniPresentazione.create({ data: { membroId: m.id, personaId: persona.id, leadId, nome, ruolo: dati.ruolo, linkedinUrl: url, perche: `Decide in ${lead?.name ?? "un'azienda trovata"}: chiedi a ${m.name} di presentartelo`, puntiContatto: punti, forza: forzaPonte(punti) } });
         e.presentazioni = (e.presentazioni ?? 0) + 1;
       }
     }

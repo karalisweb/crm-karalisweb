@@ -30,6 +30,8 @@ export const AZIONI: Record<string, { si: string; no: string; etichetta: string 
   MESSAGGIO_BNI: { si: "Mandato", no: "Non ora", etichetta: "BNI · richiesta di 121" },
   VISITA_CAPITOLO: { si: "Mandato", no: "Non ora", etichetta: "BNI · visita al capitolo" },
   PREPARAZIONE_121: { si: "Letto", no: "Non serve", etichetta: "BNI · prepara il 121" },
+  DOPO_121: { si: "Fatto", no: "Non serve", etichetta: "BNI · registra il 121" },
+  PRESENTAZIONE_BNI: { si: "Mandato", no: "Non ora", etichetta: "BNI · chiedi la presentazione" },
   PREPARAZIONE_CALL: { si: "Letta", no: "Non serve", etichetta: "Vendita · prepara la call" },
   DOPO_CALL: { si: "Mandata", no: "Scarta", etichetta: "Vendita · dopo la call" },
   RECALL: { si: "Fatto", no: "Rimanda", etichetta: "Vendita · recall" },
@@ -262,11 +264,23 @@ export function CorpoVisitaCapitolo({ p, telefono }: { p: Record<string, unknown
 
 export function CorpoPreparazione121({ p }: { p: Record<string, unknown> }) {
   const quando = s(p.quando) ? new Date(s(p.quando)).toLocaleString("it-IT", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "";
-  const pres = arr<{ nome: string; ruolo?: string | null; perche?: string | null; linkedin?: string | null }>(p.presentazioni);
+  const pres = arr<{ nome: string; ruolo?: string | null; perche?: string | null; linkedin?: string | null; forza?: number }>(p.presentazioni);
+  const segn = arr<{ nome: string; motivo?: string | null }>(p.segnalazioni);
   const caso = (p.casoStudio ?? null) as { titolo?: string; storia?: string } | null;
   return (
     <div className="space-y-3">
+      {s(p.pagina) && (
+        <Link href={s(p.pagina)} className="inline-flex"><Button size="sm" variant="outline">Apri la pagina del 121 (sempre aggiornata)</Button></Link>
+      )}
+      {s(p.ricorda) && <p className="text-sm font-medium">{s(p.ricorda)}</p>}
       <Blocco titolo="Chi è">{s(p.chi)}{quando && <div className="text-xs text-muted-foreground mt-0.5">{quando}</div>}</Blocco>
+      {segn.length > 0 && (
+        <Blocco titolo="Contatti da segnalargli">
+          {segn.map((x, i) => (
+            <div key={i}>{x.nome}{x.motivo && <div className="text-xs text-muted-foreground">{x.motivo}</div>}</div>
+          ))}
+        </Blocco>
+      )}
       {s(p.cosaFa) && <Blocco titolo="Cosa fa">{s(p.cosaFa)}</Blocco>}
       {pres.length > 0 && (
         <Blocco titolo="Chiedigli di presentarti">
@@ -294,6 +308,28 @@ function TestoLungo({ testo }: { testo: string }) {
     <p className="text-sm whitespace-pre-wrap break-words">
       {pezzi.map((p, i) => (/^\[[A-ZÀ-Ù _]+\]$/.test(p) ? <mark key={i} className="bg-amber-300/60 text-foreground rounded px-0.5">{p}</mark> : p))}
     </p>
+  );
+}
+
+/** Motore 121: il messaggio al membro per chiedere la presentazione promessa al 121. */
+export function CorpoPresentazioneBni({ p, telefono }: { p: Record<string, unknown>; telefono: string | null }) {
+  return (
+    <div className="space-y-2">
+      {s(p.perche) && <p className="text-sm">{s(p.perche)}</p>}
+      <Messaggio testo={s(p.messaggio)} telefono={telefono ?? s(p.telefono)} />
+      <p className="text-xs text-muted-foreground">Quando te lo presenta, segna &quot;presentato&quot; nella scheda del membro: parte l&apos;analisi completa della sua azienda.</p>
+    </div>
+  );
+}
+
+/** Motore 121: il 121 è passato e non è registrato. */
+export function CorpoDopo121({ p }: { p: Record<string, unknown> }) {
+  const quando = s(p.quando) ? new Date(s(p.quando)).toLocaleString("it-IT", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "";
+  return (
+    <div className="space-y-2 text-sm">
+      <p>Detta un vocale di 2 minuti o incolla la trascrizione di Meet{quando ? ` (121 di ${quando})` : ""}: la scheda si compila da sola e le presentazioni vanno in Cassetta.</p>
+      {s(p.link) && <Link href={s(p.link)}><Button size="sm" variant="outline">Apri la scheda e registra il 121</Button></Link>}
+    </div>
   );
 }
 
@@ -389,6 +425,8 @@ export function CorpoVoce({ v }: { v: VoceCassetta }) {
       {v.kind === "MESSAGGIO_BNI" && <CorpoMessaggioBni p={v.payload} telefono={v.bniMembro?.phone ?? null} />}
       {v.kind === "VISITA_CAPITOLO" && <CorpoVisitaCapitolo p={v.payload} telefono={v.bniMembro?.phone ?? null} />}
       {v.kind === "PREPARAZIONE_121" && <CorpoPreparazione121 p={v.payload} />}
+      {v.kind === "PRESENTAZIONE_BNI" && <CorpoPresentazioneBni p={v.payload} telefono={v.bniMembro?.phone ?? null} />}
+      {v.kind === "DOPO_121" && <CorpoDopo121 p={v.payload} />}
       {v.kind === "PREPARAZIONE_CALL" && <CorpoPreparazione p={v.payload} />}
       {v.kind === "DOPO_CALL" && <CorpoDopoCall p={v.payload} telefono={v.trattativa?.telefono} />}
       {(v.kind === "RECALL" || v.kind === "NURTURING_PROPOSTO") && <CorpoRecall p={v.payload} telefono={v.trattativa?.telefono} />}

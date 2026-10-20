@@ -10,11 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CalendarClock, Linkedin, Loader2, Mail, MessageCircle, MessageSquarePlus, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, CalendarClock, FileText, Linkedin, Loader2, Mail, MessageCircle, MessageSquarePlus, Pencil, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { localeAIso } from "@/components/vendita/call-fissata-dialog";
-import { FORMATI, STATI_PRESENTAZIONE, data, dataOra } from "@/components/ricerca/etichette";
-import { CorpoPreparazione121, CorpoVisitaCapitolo } from "@/components/agents/voci-cassetta";
+import { FORMATI, data, dataOra } from "@/components/ricerca/etichette";
+import { ImbutoPresentazione, PuntiContatto, Segnalazioni, type PresentazioneImbuto, type Segnalazione } from "@/components/ricerca/motore-121";
+import { etichettePunti } from "@/lib/agents/motore-121";
+import { CorpoPreparazione121, CorpoPresentazioneBni, CorpoVisitaCapitolo } from "@/components/agents/voci-cassetta";
 import { DaMandare } from "@/components/ricerca/tracker-incontri";
 
 interface Scheda {
@@ -24,11 +26,13 @@ interface Scheda {
     prossimoPasso: string | null; prossimoPassoAt: string | null; next121At: string | null; indicatoDa: string | null; reteLettaAt: string | null;
     reteInCorso: boolean; personeInRete: number; note: string | null; stato: "DA_INCONTRARE" | "FISSATO" | "CONOSCIUTO";
     azienda_collegata: { id: string; name: string; website: string | null } | null;
+    linkedinStato: string | null; newsletterAt: string | null; studiatoAt: string | null;
   };
   capitolo: { id: string; name: string; mode: string | null; meetingDay: string | null; meetingTime: string | null; sede: string | null } | null;
   capitoli: string[];
   storia: { id: string; date: string; formato: string | null; location: string | null; notes: string | null; riassunto: string | null; promesse: string | null; haTrascrizione: boolean }[];
-  presentazioni: { id: string; nome: string; ruolo: string | null; linkedinUrl: string | null; perche: string | null; stato: string }[];
+  presentazioni: (PresentazioneImbuto & { linkedinUrl: string | null; perche: string | null; puntiContatto: unknown; forza: number })[];
+  segnalazioni: Segnalazione[];
   inCassetta: { id: string; kind: string; title: string; payload: Record<string, unknown> }[];
 }
 
@@ -173,11 +177,6 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
     toast.success("Fatto");
     carica();
   }
-  async function statoPresentazione(pid: string, stato: string) {
-    const r = await fetch(`/api/ricerca/bni/presentazioni/${pid}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stato }) });
-    if (!r.ok) return toast.error("Non sono riuscito a salvare");
-    carica();
-  }
 
   if (!d) return <div className="space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}</div>;
   const m = d.membro;
@@ -200,6 +199,9 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
               {invitando ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-1" />} Invitalo a un 121
             </Button>
           )}
+          {m.stato === "FISSATO" && (
+            <Link href={`/bni/121/${m.id}`}><Button size="sm" variant="outline"><FileText className="h-4 w-4 mr-1" /> Pagina del 121</Button></Link>
+          )}
           <Registra121 id={m.id} formatoCapitolo={d.capitolo?.mode ?? null} onFatto={carica} />
         </div>
       </div>
@@ -217,10 +219,11 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
       {d.inCassetta.map((v) => (
         <Card key={v.id} className="border-amber-400"><CardContent className="p-3 space-y-2">
           <div className="text-sm font-semibold">
-            {v.kind === "PREPARAZIONE_121" ? "Il foglio per l'incontro" : v.kind === "VISITA_CAPITOLO" ? "Chiedi la visita al capitolo" : "Messaggio da mandare"}
+            {v.kind === "PREPARAZIONE_121" ? "Il foglio per l'incontro" : v.kind === "VISITA_CAPITOLO" ? "Chiedi la visita al capitolo" : v.kind === "DOPO_121" ? "Com'è andato il 121?" : v.kind === "PRESENTAZIONE_BNI" ? v.title : "Messaggio da mandare"}
           </div>
           {v.kind === "PREPARAZIONE_121" && <CorpoPreparazione121 p={v.payload} />}
           {v.kind === "VISITA_CAPITOLO" && <CorpoVisitaCapitolo p={v.payload} telefono={m.telefono} />}
+          {v.kind === "PRESENTAZIONE_BNI" && <CorpoPresentazioneBni p={v.payload} telefono={m.telefono} />}
           {v.kind === "MESSAGGIO_BNI" && (
             <DaMandare
               r={{ voceId: v.id, membroId: m.id, nome: m.nome, capitolo: m.capitolo ?? "", telefono: m.telefono, perche: (v.payload.perche as string) ?? null, messaggio: (v.payload.messaggio as string) ?? "", formato: (v.payload.formato as string) ?? null, mandataIl: null }}
@@ -228,7 +231,7 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
             />
           )}
           {v.kind !== "MESSAGGIO_BNI" && <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => decidi(v.id, "APPROVATO")}>{v.kind === "PREPARAZIONE_121" ? "Letto" : "Mandato"}</Button>
+            <Button size="sm" variant="outline" onClick={() => decidi(v.id, "APPROVATO")}>{v.kind === "PREPARAZIONE_121" ? "Letto" : v.kind === "DOPO_121" ? "Fatto" : "Mandato"}</Button>
             <Button size="sm" variant="ghost" onClick={() => decidi(v.id, "SCARTATO")}>{v.kind === "PREPARAZIONE_121" ? "Non serve" : "Non ora"}</Button>
           </div>}
         </CardContent></Card>
@@ -248,8 +251,21 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
             {m.telefono && <a href={`tel:${m.telefono}`} className="flex items-center gap-1 hover:underline"><Phone className="h-3.5 w-3.5" />{m.telefono}</a>}
             {m.email && <a href={`mailto:${m.email}`} className="flex items-center gap-1 hover:underline"><Mail className="h-3.5 w-3.5" />{m.email}</a>}
             {m.linkedin && <a href={m.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline"><Linkedin className="h-3.5 w-3.5" />LinkedIn</a>}
-            {m.azienda_collegata && <Link href={`/leads/${m.azienda_collegata.id}`} className="hover:underline">Scheda azienda</Link>}
+            {m.azienda_collegata && <Link href={`/aziende-trovate/${m.azienda_collegata.id}`} className="hover:underline">Scheda azienda{m.studiatoAt ? ` (studiata il ${data(m.studiatoAt)})` : ""}</Link>}
           </div>
+          {(m.linkedinStato === "COLLEGATI" || m.linkedinStato === "RICHIESTA_INVIATA") && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+              <span className="text-muted-foreground">Newsletter LinkedIn e Substack:</span>
+              {m.newsletterAt ? (
+                <>
+                  <span>invitato il {data(m.newsletterAt)}</span>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => patch({ newsletter: false }, "Tolto")}>Annulla</Button>
+                </>
+              ) : (
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => patch({ newsletter: true }, "Segnato: invitato alle newsletter")}>L&apos;ho invitato</Button>
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <select
               value={m.capitolo ?? ""}
@@ -287,25 +303,28 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
 
       <Sezione n={5} titolo="Persone da farsi presentare">
         {d.presentazioni.length === 0 ? (
-          <p className="text-muted-foreground">Ancora nessuna: arrivano dalla sua rete LinkedIn e da quello che vi dite al 121.</p>
+          <p className="text-muted-foreground">Ancora nessuna: arrivano dalla sua rete LinkedIn (le aziende del serbatoio che conosce) e da quello che vi dite al 121.</p>
         ) : (
           <div className="space-y-2">
             {d.presentazioni.map((p) => (
-              <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 border-b last:border-0 pb-2">
+              <div key={p.id} className="border-b last:border-0 pb-2 space-y-1">
                 <div className="min-w-0">
                   <div>{p.nome} {p.ruolo && <span className="text-muted-foreground">— {p.ruolo}</span>} {p.linkedinUrl && <a href={p.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline">profilo</a>}</div>
                   {p.perche && <div className="text-xs text-muted-foreground">{p.perche}</div>}
+                  <PuntiContatto punti={etichettePunti(p.puntiContatto)} forza={p.forza} />
                 </div>
-                <select value={p.stato} onChange={(e) => statoPresentazione(p.id, e.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs">
-                  {Object.entries(STATI_PRESENTAZIONE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
+                <ImbutoPresentazione p={p} onCambio={carica} />
               </div>
             ))}
           </div>
         )}
       </Sezione>
 
-      <Sezione n={6} titolo="La vostra storia">
+      <Sezione n={6} titolo="Contatti da segnalargli">
+        <Segnalazioni lista={d.segnalazioni} onCambio={carica} />
+      </Sezione>
+
+      <Sezione n={7} titolo="La vostra storia">
         {d.storia.length === 0 ? (
           <p className="text-muted-foreground">Nessun 121 registrato.</p>
         ) : (
@@ -322,7 +341,7 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
         )}
       </Sezione>
 
-      <Sezione n={7} titolo="Prossimo passo">
+      <Sezione n={8} titolo="Prossimo passo">
         <TestoModificabile id={m.id} campo="prossimoPasso" valore={m.prossimoPasso} vuoto="Nessuno." onSalvato={carica} />
         {m.prossimoPassoAt && <div className="text-xs text-muted-foreground mt-1">entro il {data(m.prossimoPassoAt)}</div>}
       </Sezione>

@@ -14,7 +14,8 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
     where: { id },
     include: {
       oneToOnes: { orderBy: { date: "desc" }, select: { id: true, date: true, formato: true, location: true, notes: true, riassunto: true, promesse: true, trascrizione: true } },
-      presentazioni: { orderBy: { createdAt: "asc" } },
+      presentazioni: { orderBy: [{ forza: "desc" }, { createdAt: "asc" }] },
+      segnalazioni: { orderBy: { createdAt: "desc" }, take: 10 },
       lead: { select: { id: true, name: true, website: true } },
       _count: { select: { persone: true } },
     },
@@ -35,11 +36,13 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
       prossimoPasso: m.prossimoPasso, prossimoPassoAt: m.prossimoPassoAt, next121At: m.next121At, indicatoDa: m.indicatoDa,
       reteLettaAt: m.reteLettaAt, reteInCorso: !!reteInCorso, personeInRete: m._count.persone, note: m.notes, stato, conosciutoAt: m.conosciutoAt,
       azienda_collegata: m.lead,
+      linkedinStato: m.linkedinStato, newsletterAt: m.newsletterAt, studiatoAt: m.studiatoAt,
     },
     capitolo,
     capitoli: capitoli.map((c) => c.name),
     storia: m.oneToOnes.map((o) => ({ ...o, trascrizione: undefined, haTrascrizione: !!o.trascrizione })),
     presentazioni: m.presentazioni,
+    segnalazioni: m.segnalazioni,
     inCassetta,
   });
 }
@@ -63,6 +66,8 @@ const Schema = z.object({
   capitolo: z.string().min(1).max(120).optional(),
   stato: z.enum(["ATTIVO", "EX_MEMBRO"]).optional(),
   linkedinStato: z.enum(["NON_TROVATO", "DA_COLLEGARE", "RICHIESTA_INVIATA", "COLLEGATI"]).optional(),
+  // Motore 121, passo 3: invitato alle newsletter (LinkedIn e Substack).
+  newsletter: z.boolean().optional(),
 });
 
 /** PATCH /api/ricerca/bni/membri/[id] — Alessio corregge la scheda o fissa la data del 121. */
@@ -99,6 +104,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       ...(d.linkedinStato === "NON_TROVATO" ? { linkedinUrl: null } : {}),
       ...(d.linkedin ? { linkedinStato: "DA_COLLEGARE", linkedinStatoAt: new Date() } : {}),
       status: d.stato,
+      ...(d.newsletter === true ? { newsletterAt: new Date() } : d.newsletter === false ? { newsletterAt: null } : {}),
       // "Già conosciuto" (un 121 fatto in passato, senza registrarlo): non si toglie se ci sono 121 registrati.
       ...(d.conosciuto === true && !esistente.conosciutoAt ? { conosciutoAt: new Date() } : {}),
       ...(d.conosciuto === false && esistente.oneToOneCount === 0 ? { conosciutoAt: null } : {}),

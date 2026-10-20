@@ -29,6 +29,7 @@ interface Dati {
   capitolo: {
     id: string; nome: string; citta: string | null; region: string | null; regioneItaliana: string | null; formato: string;
     giorno: string | null; ora: string | null; sede: string | null; mio: boolean; visitStatus: string; mappatoIl: string | null;
+    permesso: "CONCESSO" | "NEGATO" | null; permessoAt: string | null;
   };
   copertura: { totale: number; conosciuti: number; percentuale: number };
   visitaDaFare: boolean;
@@ -141,6 +142,24 @@ export default function CapitoloPage({ params }: { params: Promise<{ id: string 
           {c.visitStatus === "VISITATO" && <Badge variant="outline">Capitolo visitato</Badge>}
         </div>
       </CardContent></Card>
+
+      {!c.mio && d.gruppi.some((g) => g.motivo === "STESSO_RUOLO") && (
+        <Card className={c.permesso === "NEGATO" ? "border-red-500" : undefined}><CardContent className="p-4 space-y-2 text-sm">
+          <div className="font-semibold">Il collega di mestiere</div>
+          {c.permesso === "NEGATO" ? (
+            <p>Ha detto di no: in questo capitolo i 121 sono sospesi. I membri a cui sei già collegato restano ponti per le presentazioni.</p>
+          ) : c.permesso === "CONCESSO" ? (
+            <p className="text-green-700 dark:text-green-400">Via libera: si va avanti con la dirigenza e poi con tutti gli altri.</p>
+          ) : (
+            <p className="text-muted-foreground">Prima di tutti si incontra chi fa il tuo mestiere: più che chiedere il permesso lo informi e gli proponi di fare i partner. Se non risponde in 7 giorni si passa alla dirigenza e lo dici al presidente.</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {c.permesso !== "CONCESSO" && <Button size="sm" variant="outline" onClick={() => salvaCapitolo({ permesso: "CONCESSO" })}><Check className="h-3.5 w-3.5 mr-1" /> Ha detto sì</Button>}
+            {c.permesso !== "NEGATO" && <Button size="sm" variant="ghost" className="text-red-600" onClick={() => { if (confirm("Il collega ha detto no? I 121 in questo capitolo si fermano e le richieste ancora da mandare si tolgono.")) salvaCapitolo({ permesso: "NEGATO" }); }}>Ha detto no</Button>}
+            {c.permesso && <Button size="sm" variant="ghost" onClick={() => salvaCapitolo({ permesso: null })}>Annulla</Button>}
+          </div>
+        </CardContent></Card>
+      )}
 
       {d.gruppi.length === 0 && <p className="text-sm text-muted-foreground">Nessun membro: il Cartografo li legge da BNI Connect.</p>}
       {d.gruppi.map((g) => (

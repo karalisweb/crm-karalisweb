@@ -16,7 +16,7 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
   const c = t.capitolo;
   const cop = coperturaCapitolo(t.membri);
   const nota = dirigenzaNota(c, t.membri);
-  const prossimi = new Set(prossimiDelCapitolo(t.membri, oggi, nota).map((p) => p.membro.id));
+  const prossimi = new Set(c.permesso === "NEGATO" ? [] : prossimiDelCapitolo(t.membri, oggi, nota).map((p) => p.membro.id));
   const extra = await db.bniMembro.findMany({
     where: { id: { in: t.membri.map((m) => m.id) } },
     select: { id: true, company: true, profession: true, lastOneToOneAt: true, next121At: true, conosciutoAt: true },
@@ -26,7 +26,7 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
     capitolo: {
       id: c.id, nome: c.name, citta: c.city, region: c.region, regioneItaliana: c.regioneItaliana, formato: formatoDa(c.mode),
       giorno: c.meetingDay, ora: c.meetingTime, sede: c.sede, mio: c.isMine, visitStatus: c.visitStatus, visitedAt: c.visitedAt,
-      mappatoIl: c.mappedAt, bniConnectUrl: c.bniConnectUrl,
+      mappatoIl: c.mappedAt, bniConnectUrl: c.bniConnectUrl, permesso: c.permesso, permessoAt: c.permessoAt,
     },
     copertura: cop,
     visitaDaFare: visitaDaProporre({ ...cop, visitStatus: c.visitStatus, mio: c.isMine }),
@@ -50,6 +50,8 @@ const Schema = z.object({
   ora: z.string().max(10).nullable().optional(),
   zona: z.enum(["sardegna_sud", "sardegna_nord", "sardegna_centro", "altro"]).nullable().optional(),
   visitStatus: z.enum(["DA_ANALIZZARE", "VISITA_PIANIFICATA", "VISITATO"]).optional(),
+  // Motore 121: il collega di mestiere ha detto sì o no (null = si torna a "da chiedere").
+  permesso: z.enum(["CONCESSO", "NEGATO"]).nullable().optional(),
 });
 
 /** PATCH /api/ricerca/bni/capitoli/[id] — i dati del capitolo che Alessio corregge a mano. */
@@ -70,8 +72,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         region: d.zona === undefined ? undefined : d.zona,
         visitStatus: d.visitStatus,
         ...(d.visitStatus === "VISITATO" ? { visitedAt: new Date() } : {}),
+        ...(d.permesso !== undefined ? { permesso: d.permesso, permessoAt: d.permesso ? new Date() : null } : {}),
       },
     });
+    // Permesso negato: le richieste di 121 ancora da mandare in quel capitolo non partono più.
+    if (d.permesso === "NEGATO") {
+      await db.approvalItem.updateMany({
+        where: { bniChapterId: id, kind: "MESSAGGIO_BNI", status: "IN_ATTESA" },
+        data: { status: "SCARTATO", note: "Il collega di mestiere ha detto no: capitolo sospeso", decidedAt: new Date() },
+      });
+    }
     return NextResponse.json({ success: true, capitolo: { id: c.id } });
   } catch (e) {
     if (e instanceof ZodError) return NextResponse.json({ error: "Dati non validi", dettagli: e.issues }, { status: 400 });

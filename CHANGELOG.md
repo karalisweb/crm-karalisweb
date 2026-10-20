@@ -13,6 +13,30 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.52.0] - 2026-10-20
+
+### Added
+- **Motore 121** (il flusso BNI-first deciso con Alessio il 2026-10-20; schema in `docs/motore-121.html`). Il 121 è il centro: i membri sono partner, al primo 121 non si vende, si vende solo ai contatti che i membri presentano. Niente contatto a freddo.
+- **20 richieste di 121 a settimana**, preparate alle 14 dei giorni feriali (da mandare su WhatsApp fra le 15 e le 18), con un **tetto di 12 incontri** a settimana: oltre il tetto le richieste nuove si fermano.
+- **Il permesso del collega di mestiere** nella scheda del capitolo ("Ha detto sì / no"): con un no i 121 in quel capitolo si fermano. Il messaggio al collega informa e propone di fare i partner; se non risponde in 7 giorni si passa alla dirigenza e la richiesta al presidente lo ricorda.
+- **Collegamenti LinkedIn**: 12 inviti al giorno nei feriali, 100 a settimana, con i contatori; poi l'invito alle **newsletter** LinkedIn e Substack (pulsante "Invitato").
+- **Studio del membro prima del 121**: l'azienda del membro passa dall'analisi (agenti di server, anche la ricerca del sito); nasce come azienda "fuori target", mai contattata a freddo.
+- **L'incrocio**: leggendo la rete LinkedIn del membro l'agente cerca chi decide nelle aziende del serbatoio e ne pesa i **punti di contatto** (stessa azienda, città, gruppo, scuola, commenti, membro BNI); nasce la presentazione da chiedere.
+- **Contatti da segnalare**: il giorno prima del 121 l'agente sceglie 1-3 aziende del CRM utili al mestiere del membro (non "referenze" finché il bisogno non è verificato).
+- **Pagina del 121** (`/bni/121/[id]`), sempre aggiornata: chi è, la sua azienda vista da fuori, cosa dargli, cosa chiedergli con i punti di contatto, la storia da raccontare, le domande.
+- **Dopo il 121**: promemoria in Cassetta se il vocale non è registrato; dal vocale le presentazioni confermate ("lo conosco bene") vanno in Cassetta con il messaggio "me lo presenti?" già scritto; i contatti segnalati si segnano da soli.
+- **Il seguito** (pagina Incontri BNI e scheda del membro): presentazione chiesta → presentato (l'azienda entra nel CRM come opportunità BNI e parte l'analisi completa) → incontro → proposta → cliente.
+- **Cruscotto** (`/cruscotto`, nel menu): gli 11 numeri della settimana con obiettivo, allarme e cosa fare; il venerdì alle 17 per mail.
+
+### Changed
+- **Aziende trovate**: dopo il giro veloce si controlla se chi decide è collegato ad Alessio (contatto diretto o almeno un contatto in comune). In "Da decidere" e nella mail delle 7 arrivano solo le aziende collegate; le altre vanno in "senza collegamento" e si ricontrollano da sole dopo i nuovi 121 (al più una volta al mese). Nuova lista "In verifica".
+- **LinkedIn**: un budget comune di 25 letture al giorno fra tutti gli agenti di browser (i lavori BNI hanno la precedenza); dopo un CAPTCHA o una verifica di sicurezza tutto si ferma 48 ore.
+- La ricerca su Google Maps si ferma quando 40 aziende aspettano il controllo (il serbatoio resta piccolo).
+- Agente "Chi decide": legge il grado del collegamento e quanti contatti in comune; un dipendente collegato non basta.
+
+### Fixed
+- Le aziende trovate dalla ricerca e quelle legate a BNI non possono più entrare nel drip email a freddo (opt-in), nemmeno se la pausa generale viene tolta.
+
 ## [3.51.0] - 2026-10-18
 
 ### Changed
