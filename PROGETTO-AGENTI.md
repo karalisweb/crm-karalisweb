@@ -20,6 +20,8 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 Detto da Alessio il 2026-10-19: **"Il BNI deve diventare un punto di contatto forte, un terreno di gioco
 condiviso."** Niente contatto a freddo: un'azienda si contatta solo se qualcuno della rete di Alessio fa da ponte.
 
+La giornata tipo (due 121 alle 10:30 e alle 17:00, navigazione, analisi, chiacchiere, pause): `docs/giornata-tipo.html`.
+
 ### L'idea di fondo
 
 **Il 121 è il motore.** È l'unica cosa che oggi porta soldi ed è dove sta il tempo di Alessio: tutto il resto lo

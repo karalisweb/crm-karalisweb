@@ -1,0 +1,310 @@
+<title>La giornata tipo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: un'agenda verticale con l'ora a sinistra; ogni attività ha il colore del suo tipo, e "adesso" si accende da solo. */
+:root{
+  --bg:#f3f6f5; --panel:#ffffff; --ink:#15211f; --muted:#5a6966; --line:#cfdbd8;
+  --t121:#3b4bb0; --t121-soft:#e2e5f7;
+  --nav:#0f6b63; --nav-soft:#dcefec;
+  --ana:#7a4bb0; --ana-soft:#efe6f8;
+  --chat:#b86a00; --chat-soft:#fbeed8;
+  --crm:#3e5b73; --crm-soft:#e3ebf1;
+  --pausa:#8a9794; --pausa-soft:#eef1f0;
+  --now:#b3261e;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1716; --panel:#162220; --ink:#e4eeec; --muted:#93a7a3; --line:#2a3b38;
+  --t121:#9aa8ff; --t121-soft:#1f2547; --nav:#5cc4b8; --nav-soft:#173532; --ana:#c7a2f0; --ana-soft:#2b2040;
+  --chat:#f0a73a; --chat-soft:#3a2a10; --crm:#9db8cf; --crm-soft:#1d2a35; --pausa:#7d8b88; --pausa-soft:#1c2624; --now:#ff8a80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1716; --panel:#162220; --ink:#e4eeec; --muted:#93a7a3; --line:#2a3b38;
+  --t121:#9aa8ff; --t121-soft:#1f2547; --nav:#5cc4b8; --nav-soft:#173532; --ana:#c7a2f0; --ana-soft:#2b2040;
+  --chat:#f0a73a; --chat-soft:#3a2a10; --crm:#9db8cf; --crm-soft:#1d2a35; --pausa:#7d8b88; --pausa-soft:#1c2624; --now:#ff8a80; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2rem,5vw,3rem);font-weight:700}
+h2{font-size:1.45rem;font-weight:700}
+h3{font-size:1rem;font-weight:700}
+p{margin:0}
+.lead{color:var(--muted);max-width:62ch;font-size:1.08rem}
+.eyebrow{font:500 .72rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:12px}
+.section{display:flex;flex-direction:column;gap:14px}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--c);font-weight:600}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+
+.k121{--c:var(--t121);--soft:var(--t121-soft)}
+.knav{--c:var(--nav);--soft:var(--nav-soft)}
+.kana{--c:var(--ana);--soft:var(--ana-soft)}
+.kchat{--c:var(--chat);--soft:var(--chat-soft)}
+.kcrm{--c:var(--crm);--soft:var(--crm-soft)}
+.kpausa{--c:var(--pausa);--soft:var(--pausa-soft)}
+
+/* l'agenda */
+.agenda{display:flex;flex-direction:column;gap:6px}
+.slot{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:stretch}
+.ora{font:500 .85rem/1.3 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;padding-top:12px;text-align:right}
+.ora b{display:block;color:var(--ink);font-weight:500}
+.box{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.box.grande{background:var(--soft);border-color:var(--c)}
+.box.pausa{background:transparent;border-style:dashed;border-left-style:solid}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.durata{font:500 .75rem/1 var(--mono);color:var(--muted);margin-left:auto}
+.tipo{font:600 .68rem/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.cosa{font-size:.94rem}
+.dove{font-size:.85rem;color:var(--muted)}
+.perche{font-size:.85rem;color:var(--muted);font-style:italic}
+.slot.adesso .box{box-shadow:0 0 0 2px var(--now)}
+.slot.adesso .ora b{color:var(--now)}
+.badge-adesso{display:none;font:600 .68rem/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--now)}
+.slot.adesso .badge-adesso{display:inline}
+
+/* i totali */
+.totali{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tot{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.tot .n{font:700 1.5rem/1 var(--display);color:var(--c);font-variant-numeric:tabular-nums}
+.tot .l{font-size:.85rem;color:var(--muted)}
+.barra{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.barra span{background:var(--c)}
+
+.varianti{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.var{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;font-size:.93rem}
+.var h3{font-size:.98rem}
+.note{font-size:.9rem;color:var(--muted)}
+
+@media (max-width:560px){
+  .slot{grid-template-columns:64px 1fr;gap:10px}
+  .ora{font-size:.78rem}
+}
+@media (prefers-reduced-motion:no-preference){.slot.adesso .box{transition:box-shadow .3s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Motore 121 · giorno feriale · ora italiana</span>
+    <h1>La giornata tipo</h1>
+    <p class="lead">Due 121 al giorno, alle 10:30 e alle 17:00: dieci a settimana, dentro il tetto di 12. Intorno, le finestre per navigare (Google, LinkedIn, Facebook e Instagram), per analizzare le aziende e per le chiacchiere su LinkedIn e WhatsApp. Tutto il resto lo preparano gli agenti.</p>
+    <div class="legend">
+      <span class="chip k121"><i></i>121</span>
+      <span class="chip knav"><i></i>Navigazione</span>
+      <span class="chip kana"><i></i>Analisi aziende</span>
+      <span class="chip kchat"><i></i>Chiacchiere</span>
+      <span class="chip kcrm"><i></i>CRM e Cassetta</span>
+      <span class="chip kpausa"><i></i>Pause e clienti</span>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2>L'agenda</h2>
+    <div class="agenda" id="agenda">
+
+      <div class="slot kcrm" data-da="08:30" data-a="08:45">
+        <div class="ora"><b>08:30</b>08:45</div>
+        <div class="box"><div class="top"><span class="tipo">CRM</span><span class="badge-adesso">adesso</span><span class="durata">15 min</span></div>
+          <h3>Cassetta e mail delle 7</h3>
+          <p class="cosa">Approfondisci o Scarta le aziende con un ponte. Leggi i promemoria: un vocale non registrato, una presentazione da chiedere.</p>
+          <p class="dove">Da approvare · Aziende trovate → Da decidere</p></div>
+      </div>
+
+      <div class="slot kana" data-da="08:45" data-a="09:30">
+        <div class="ora"><b>08:45</b>09:30</div>
+        <div class="box"><div class="top"><span class="tipo">Analisi aziende</span><span class="badge-adesso">adesso</span><span class="durata">45 min</span></div>
+          <h3>Le aziende approfondite</h3>
+          <p class="cosa">Leggi i 3 ganci e chi decide. Per ognuna: chi te la può presentare, e a quale membro può servire come contatto da segnalare.</p>
+          <p class="dove">Aziende trovate → Approfondite → scheda</p>
+          <p class="perche">Così ai 121 arrivi con qualcosa da dare.</p></div>
+      </div>
+
+      <div class="slot knav" data-da="09:30" data-a="10:00">
+        <div class="ora"><b>09:30</b>10:00</div>
+        <div class="box"><div class="top"><span class="tipo">Navigazione · LinkedIn</span><span class="badge-adesso">adesso</span><span class="durata">30 min</span></div>
+          <h3>Inviti e commenti</h3>
+          <p class="cosa">I 12 inviti del giorno ai membri, gli inviti alle newsletter per chi è già collegato, e 3-5 commenti veri ai post di membri e presentati.</p>
+          <p class="dove">Incontri BNI → Collegati su LinkedIn</p>
+          <p class="perche">I commenti reciproci sono un punto di contatto: rendono più forte il ponte.</p></div>
+      </div>
+
+      <div class="slot kcrm" data-da="10:00" data-a="10:30">
+        <div class="ora"><b>10:00</b>10:30</div>
+        <div class="box"><div class="top"><span class="tipo">CRM</span><span class="badge-adesso">adesso</span><span class="durata">5 min + spostamento</span></div>
+          <h3>La pagina del 121</h3>
+          <p class="cosa">Chi è, la sua azienda vista da fuori, cosa dargli, cosa chiedergli. Se il 121 è online, il tempo dello spostamento va all'analisi.</p>
+          <p class="dove">Scheda del membro → Pagina del 121</p></div>
+      </div>
+
+      <div class="slot k121" data-da="10:30" data-a="11:30">
+        <div class="ora"><b>10:30</b>11:30</div>
+        <div class="box grande"><div class="top"><span class="tipo">121</span><span class="badge-adesso">adesso</span><span class="durata">60 min</span></div>
+          <h3>Il 121 del mattino</h3>
+          <p class="cosa">Dai i contatti da segnalare. Chiedi le presentazioni: "lo conosci bene?". Non vendi.</p></div>
+      </div>
+
+      <div class="slot kcrm" data-da="11:30" data-a="11:40">
+        <div class="ora"><b>11:30</b>11:40</div>
+        <div class="box"><div class="top"><span class="tipo">CRM</span><span class="badge-adesso">adesso</span><span class="durata">10 min</span></div>
+          <h3>Il vocale, subito</h3>
+          <p class="cosa">Due minuti: cosa fa, chi cerca, chi conosce, cosa vi siete promessi. Le presentazioni confermate vanno da sole in Cassetta.</p>
+          <p class="dove">Scheda del membro → Registra il 121</p></div>
+      </div>
+
+      <div class="slot kpausa" data-da="11:40" data-a="12:00">
+        <div class="ora"><b>11:40</b>12:00</div>
+        <div class="box pausa"><div class="top"><span class="tipo">Pausa</span><span class="badge-adesso">adesso</span><span class="durata">20 min</span></div>
+          <h3>Pausa</h3></div>
+      </div>
+
+      <div class="slot knav" data-da="12:00" data-a="12:30">
+        <div class="ora"><b>12:00</b>12:30</div>
+        <div class="box"><div class="top"><span class="tipo">Navigazione · Google</span><span class="badge-adesso">adesso</span><span class="durata">30 min</span></div>
+          <h3>Google, con gli occhi del cliente</h3>
+          <p class="cosa">Cerca i presentati e le aziende da contattare come le cerca un loro cliente: il nome, "servizio + città", la scheda Google con le recensioni. Controlli i ganci prima di usarli.</p>
+          <p class="perche">Un gancio sbagliato al telefono brucia il contatto.</p></div>
+      </div>
+
+      <div class="slot kchat" data-da="12:30" data-a="13:00">
+        <div class="ora"><b>12:30</b>13:00</div>
+        <div class="box"><div class="top"><span class="tipo">Chiacchiere · WhatsApp</span><span class="badge-adesso">adesso</span><span class="durata">30 min</span></div>
+          <h3>Risposte e grazie</h3>
+          <p class="cosa">Rispondi a chi ha scritto, ringrazia il membro del mattino, fissa le date dei 121 accettati.</p>
+          <p class="dove">Quando fissi una data: scheda del membro → Segna come fissato</p></div>
+      </div>
+
+      <div class="slot kpausa" data-da="13:00" data-a="14:00">
+        <div class="ora"><b>13:00</b>14:00</div>
+        <div class="box pausa"><div class="top"><span class="tipo">Pausa</span><span class="badge-adesso">adesso</span><span class="durata">60 min</span></div>
+          <h3>Pranzo</h3></div>
+      </div>
+
+      <div class="slot kcrm" data-da="14:00" data-a="14:15">
+        <div class="ora"><b>14:00</b>14:15</div>
+        <div class="box"><div class="top"><span class="tipo">CRM</span><span class="badge-adesso">adesso</span><span class="durata">15 min</span></div>
+          <h3>Le richieste del giorno</h3>
+          <p class="cosa">Alle 14 arrivano in Cassetta le richieste di 121 (circa 4 al giorno, 20 a settimana) e le presentazioni da chiedere. Le controlli.</p>
+          <p class="dove">Da approvare</p></div>
+      </div>
+
+      <div class="slot kpausa" data-da="14:15" data-a="15:00">
+        <div class="ora"><b>14:15</b>15:00</div>
+        <div class="box pausa"><div class="top"><span class="tipo">Clienti</span><span class="badge-adesso">adesso</span><span class="durata">45 min</span></div>
+          <h3>Lavoro per i clienti</h3>
+          <p class="cosa">Spazio libero per il lavoro di agenzia.</p></div>
+      </div>
+
+      <div class="slot kchat" data-da="15:00" data-a="15:30">
+        <div class="ora"><b>15:00</b>15:30</div>
+        <div class="box"><div class="top"><span class="tipo">Chiacchiere · WhatsApp</span><span class="badge-adesso">adesso</span><span class="durata">30 min</span></div>
+          <h3>Mandi i messaggi</h3>
+          <p class="cosa">Le richieste di 121 e i "me lo presenti?" già scritti, con il pulsante WhatsApp. Poi "Mandato" in Cassetta. Finestra giusta: fra le 15 e le 18.</p>
+          <p class="dove">Da approvare · Incontri BNI</p></div>
+      </div>
+
+      <div class="slot knav" data-da="15:30" data-a="16:00">
+        <div class="ora"><b>15:30</b>16:00</div>
+        <div class="box"><div class="top"><span class="tipo">Navigazione · Facebook e Instagram</span><span class="badge-adesso">adesso</span><span class="durata">30 min</span></div>
+          <h3>Social Meta</h3>
+          <p class="cosa">Le pagine dei membri e dei presentati: segui, commenta, guarda cosa pubblicano e se fanno pubblicità. È lì che vedi chi è vivo e di cosa parla adesso.</p></div>
+      </div>
+
+      <div class="slot kpausa" data-da="16:00" data-a="16:15">
+        <div class="ora"><b>16:00</b>16:15</div>
+        <div class="box pausa"><div class="top"><span class="tipo">Pausa</span><span class="badge-adesso">adesso</span><span class="durata">15 min</span></div>
+          <h3>Pausa</h3></div>
+      </div>
+
+      <div class="slot kana" data-da="16:15" data-a="16:40">
+        <div class="ora"><b>16:15</b>16:40</div>
+        <div class="box"><div class="top"><span class="tipo">Analisi aziende</span><span class="badge-adesso">adesso</span><span class="durata">25 min</span></div>
+          <h3>I contatti presentati</h3>
+          <p class="cosa">Per chi ti è stato presentato: la scheda completa e i 3 ganci, per la prima chiamata calda. Poi segni Incontro, Proposta, Cliente.</p>
+          <p class="dove">Incontri BNI → Il seguito</p></div>
+      </div>
+
+      <div class="slot kcrm" data-da="16:40" data-a="17:00">
+        <div class="ora"><b>16:40</b>17:00</div>
+        <div class="box"><div class="top"><span class="tipo">CRM</span><span class="badge-adesso">adesso</span><span class="durata">5 min + spostamento</span></div>
+          <h3>La pagina del 121 della sera</h3>
+          <p class="dove">Scheda del membro → Pagina del 121</p></div>
+      </div>
+
+      <div class="slot k121" data-da="17:00" data-a="18:00">
+        <div class="ora"><b>17:00</b>18:00</div>
+        <div class="box grande"><div class="top"><span class="tipo">121</span><span class="badge-adesso">adesso</span><span class="durata">60 min</span></div>
+          <h3>Il 121 della sera</h3>
+          <p class="cosa">Stesse regole del mattino: dai, chiedi, non vendi.</p></div>
+      </div>
+
+      <div class="slot kcrm" data-da="18:00" data-a="18:10">
+        <div class="ora"><b>18:00</b>18:10</div>
+        <div class="box"><div class="top"><span class="tipo">CRM</span><span class="badge-adesso">adesso</span><span class="durata">10 min</span></div>
+          <h3>Il vocale, subito</h3></div>
+      </div>
+
+      <div class="slot kchat" data-da="18:10" data-a="18:40">
+        <div class="ora"><b>18:10</b>18:40</div>
+        <div class="box"><div class="top"><span class="tipo">Chiacchiere · LinkedIn</span><span class="badge-adesso">adesso</span><span class="durata">30 min</span></div>
+          <h3>Messaggi su LinkedIn e chiusura</h3>
+          <p class="cosa">Rispondi ai messaggi, ringrazia chi ha accettato il collegamento, saluta il membro della sera. Poi guarda chi hai domani.</p>
+          <p class="perche">Le chiacchiere tengono vivi i ponti: chi ti conosce bene ti presenta volentieri.</p></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Dove va il tempo</h2>
+    <div class="barra" aria-label="Divisione della giornata">
+      <span class="k121" style="flex:120"></span><span class="kcrm" style="flex:100"></span><span class="kana" style="flex:70"></span><span class="knav" style="flex:90"></span><span class="kchat" style="flex:90"></span><span class="kpausa" style="flex:140"></span>
+    </div>
+    <div class="totali">
+      <div class="tot k121"><span class="n">2 h</span><span class="l">due 121</span></div>
+      <div class="tot knav"><span class="n">1 h 30</span><span class="l">navigazione: Google, LinkedIn, Facebook e Instagram, 30 minuti ciascuno</span></div>
+      <div class="tot kana"><span class="n">1 h 10</span><span class="l">analisi delle aziende</span></div>
+      <div class="tot kchat"><span class="n">1 h 30</span><span class="l">chiacchiere e messaggi su WhatsApp e LinkedIn</span></div>
+      <div class="tot kcrm"><span class="n">1 h 40</span><span class="l">CRM, Cassetta, pagine del 121, vocali e spostamenti</span></div>
+      <div class="tot kpausa"><span class="n">2 h 20</span><span class="l">pause, pranzo e 45 minuti per i clienti</span></div>
+    </div>
+    <p class="note">Dalle 8:30 alle 18:40. Due 121 al giorno fanno 10 a settimana: sopra l'obiettivo di 8, sotto il tetto di 12.</p>
+  </section>
+
+  <section class="section">
+    <h2>I giorni diversi</h2>
+    <div class="varianti">
+      <div class="var"><h3>Lunedì</h3><p>Alle 8:30, prima della Cassetta, 10 minuti sul Cruscotto della settimana prima: guardi solo gli allarmi e cosa fare.</p></div>
+      <div class="var"><h3>Venerdì</h3><p>Alle 17 arriva la mail del cruscotto, mentre sei al 121. La leggi alle 18:10, al posto di metà delle chiacchiere su LinkedIn.</p></div>
+      <div class="var"><h3>Il giorno della riunione del capitolo</h3><p>La riunione prende il posto della prima analisi delle aziende. I membri incontrati lì vanno salutati su LinkedIn nella finestra delle 9:30.</p></div>
+      <div class="var"><h3>Un 121 salta</h3><p>L'ora libera va a un 121 online già chiesto, oppure alle aziende approfondite. Non si riempie con telefonate a freddo.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  // Accende l'attività in corso, in ora italiana. Senza orologio la pagina resta com'è.
+  function adesso() {
+    try {
+      var p = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", hour: "2-digit", minute: "2-digit", hour12: false, weekday: "short" }).formatToParts(new Date());
+      var h = 0, m = 0, g = "";
+      p.forEach(function (x) { if (x.type === "hour") h = +x.value; if (x.type === "minute") m = +x.value; if (x.type === "weekday") g = x.value; });
+      var ora = h * 60 + m;
+      var feriale = !/sab|dom/i.test(g);
+      document.querySelectorAll(".slot").forEach(function (s) {
+        var a = s.dataset.da.split(":"), b = s.dataset.a.split(":");
+        var da = +a[0] * 60 + +a[1], fino = +b[0] * 60 + +b[1];
+        s.classList.toggle("adesso", feriale && ora >= da && ora < fino);
+      });
+    } catch (e) { /* niente */ }
+  }
+  adesso();
+  setInterval(adesso, 60000);
+})();
+</script>
