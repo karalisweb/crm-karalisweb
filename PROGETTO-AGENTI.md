@@ -11,9 +11,51 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 |---|---|
 | 1. Ricerca | ✅ definita e costruita (v3.47.0, 2026-10-17) — specifica in `FASE-1-RICERCA.md` |
 | 2. Arricchimento | ✅ definita e costruita (v3.48–v3.51, 2026-10-18) |
+| La rete al centro | ✅ confermata il 2026-10-20 (v3.53.0, sezione sotto) |
 | Motore 121 | ✅ confermato da Alessio ("il diagramma è corretto") e costruito il 2026-10-20 (v3.52.0) — schema in `docs/motore-121.html` |
 
 ---
+
+## La rete al centro: casi studio + relazione (confermata da Alessio il 2026-10-20, v3.53.0)
+
+Correzione al Motore 121, detta da Alessio: **"quello che convince sono i casi studio e la relazione: la
+combinazione delle due cose diventa una bomba"**. La **rete di Alessio vince sempre**; BNI è un **potenziatore**
+(allarga la rete e rende un ponte più forte), non il centro. Non si lavora solo dentro BNI.
+
+- **Il caso studio** dice chi cercare (le aziende simili) ed è il motivo nel messaggio. Il cliente non si cita per
+  iscritto: "abbiamo aiutato un'azienda che costruisce piscine in Sardegna a…"; il nome lo fa Alessio a voce.
+- **La cerchia stretta** = chi ha fatto un 121 con Alessio (automatico) + i contatti che lui segna una volta
+  "lo conosco". Un ponte vale solo se è nella cerchia.
+- **Le strade verso un'azienda**, in ordine: un membro BNI della cerchia → un altro contatto della cerchia →
+  chi decide è già nella cerchia (contatto diretto) → **contatto scaldato** (2-3 settimane di commenti ai suoi
+  post e lui ha risposto o messo un like). Senza nessuna strada l'azienda resta nel serbatoio e aspetta.
+- **Aziende in lavorazione: 15 il primo mese, 30 dal secondo** (quando il cruscotto dice quanto convertono). Non
+  c'è una lista da fare: l'unico gesto di Alessio resta "Approfondisci"; quando un'azienda esce (incontro fatto o
+  3 ponti a vuoto) entra la prossima con il ponte più forte. Stima da verificare dopo 2 mesi: 15 aziende → ~8
+  presentazioni → ~4 incontri → 1-2 clienti al mese.
+- **Fasi**: mappata → ponte scelto → scaldata → presentazione chiesta → incontro → proposta → cliente
+  (oppure in pausa 3 mesi).
+- **Prima dai, poi chiedi**: al ponte si porta un contatto utile al suo mestiere (dal CRM o da BNI) o
+  un'osservazione utile sulla sua attività online (dall'analisi della sua azienda), quando si hanno i dati.
+- **Il seguito**: chiesta la presentazione, promemoria gentile dopo 5 giorni, dopo 10 si passa al ponte
+  successivo (senza dirlo al primo), dopo il terzo l'azienda va in pausa 3 mesi.
+- **Scaldare chi decide**: ogni giorno l'agente legge i suoi ultimi post e prepara 1-2 commenti in Cassetta;
+  Alessio li incolla (niente parte a suo nome da solo; LinkedIn banna i commenti automatici).
+- **Agenda**: 8 121 BNI a settimana + **2 posti per gli incontri con i presentati** (con 30 aziende: 6-7 + 3-4).
+  Il tetto si guarda **in avanti**: con l'agenda piena per due settimane, chi accetta oggi si incontra fra due.
+- **Casi studio**: Alessio ne prepara altri 5, di settori diversi, con i numeri veri, dove ci sono molte PMI in
+  Sardegna e dove conosce già qualcuno.
+
+### La procedura
+
+| Quando | Chi | Cosa |
+|---|---|---|
+| Sempre | CRM | Trova le aziende dai casi studio, cerca chi decide e il ponte nella cerchia, tiene le aziende in lavorazione, prepara messaggi, commenti e promemoria |
+| Ogni mattina, 10 min | Alessio | Cassetta: Approfondisci/Scarta, "lo conosco" sui nomi nuovi, incolla 1-2 commenti |
+| Pomeriggio, 15-18 | Alessio | Manda i messaggi già scritti: richieste di 121, "me lo presenti?", promemoria ai ponti |
+| Dopo ogni incontro | Alessio | Vocale di 2 minuti |
+| Lunedì, 10 min | Alessio | Cruscotto: le aziende in lavorazione, a che fase sono, dove si fermano |
+| Ogni settimana | agenda | 8 121 BNI + 2 incontri con i presentati |
 
 ## Il flusso, riprogettato: il Motore 121 (confermato e costruito il 2026-10-20, v3.52.0)
 
