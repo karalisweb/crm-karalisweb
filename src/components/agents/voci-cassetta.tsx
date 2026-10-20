@@ -32,6 +32,10 @@ export const AZIONI: Record<string, { si: string; no: string; etichetta: string 
   PREPARAZIONE_121: { si: "Letto", no: "Non serve", etichetta: "BNI · prepara il 121" },
   DOPO_121: { si: "Fatto", no: "Non serve", etichetta: "BNI · registra il 121" },
   PRESENTAZIONE_BNI: { si: "Mandato", no: "Non ora", etichetta: "BNI · chiedi la presentazione" },
+  RETE_PONTE: { si: "Mandato", no: "Non ora: prova un altro", etichetta: "Rete · me lo presenti?" },
+  RETE_DIRETTO: { si: "Mandato", no: "Non ora", etichetta: "Rete · scrivi a chi decide" },
+  RETE_PROMEMORIA: { si: "Mandato", no: "Non serve", etichetta: "Rete · promemoria al ponte" },
+  COMMENTO_LINKEDIN: { si: "Commentato", no: "Salta", etichetta: "Rete · scalda chi decide" },
   PREPARAZIONE_CALL: { si: "Letta", no: "Non serve", etichetta: "Vendita · prepara la call" },
   DOPO_CALL: { si: "Mandata", no: "Scarta", etichetta: "Vendita · dopo la call" },
   RECALL: { si: "Fatto", no: "Rimanda", etichetta: "Vendita · recall" },
@@ -121,7 +125,7 @@ function Blocco({ titolo, children }: { titolo: string; children: React.ReactNod
   );
 }
 
-function Messaggio({ testo, oggetto, telefono }: { testo: string; oggetto?: string; telefono?: string | null }) {
+function Messaggio({ testo, oggetto, telefono, linkedin }: { testo: string; oggetto?: string; telefono?: string | null; linkedin?: string | null }) {
   const completo = oggetto ? `${oggetto}\n\n${testo}` : testo;
   const wa = linkWhatsApp(telefono, testo);
   return (
@@ -135,7 +139,34 @@ function Messaggio({ testo, oggetto, telefono }: { testo: string; oggetto?: stri
             <Button size="sm" variant="outline"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Apri WhatsApp</Button>
           </a>
         )}
+        {linkedin && (
+          <a href={linkedin} target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline"><Globe className="h-3.5 w-3.5 mr-1" /> Apri LinkedIn</Button>
+          </a>
+        )}
       </div>
+    </div>
+  );
+}
+
+/** La rete al centro: il messaggio al ponte, a chi decide o il promemoria (lo manda Alessio). */
+export function CorpoRete({ p }: { p: Record<string, unknown> }) {
+  return (
+    <div className="space-y-2">
+      {s(p.dare) && <p className="text-sm font-medium">{s(p.dare)}</p>}
+      <Messaggio testo={s(p.messaggio)} telefono={s(p.telefono) || null} linkedin={s(p.linkedin) || null} />
+      {!s(p.telefono) && !s(p.linkedin) && <p className="text-xs text-muted-foreground">Mandalo su LinkedIn o WhatsApp a {s(p.ponte)}: copialo e incollalo.</p>}
+      {p.motivoDalCaso === false && <p className="text-xs text-muted-foreground">Aggiungi tu, a voce o per iscritto, la storia del caso studio (senza il nome del cliente).</p>}
+    </div>
+  );
+}
+
+/** Il commento proposto per scaldare chi decide: lo incolli tu sotto il suo post. */
+export function CorpoCommento({ p }: { p: Record<string, unknown> }) {
+  return (
+    <div className="space-y-2">
+      {s(p.estratto) && <p className="text-xs text-muted-foreground">Dal post: &quot;{s(p.estratto)}&quot;</p>}
+      <Messaggio testo={s(p.commento)} linkedin={s(p.post) || null} />
     </div>
   );
 }
@@ -427,6 +458,8 @@ export function CorpoVoce({ v }: { v: VoceCassetta }) {
       {v.kind === "PREPARAZIONE_121" && <CorpoPreparazione121 p={v.payload} />}
       {v.kind === "PRESENTAZIONE_BNI" && <CorpoPresentazioneBni p={v.payload} telefono={v.bniMembro?.phone ?? null} />}
       {v.kind === "DOPO_121" && <CorpoDopo121 p={v.payload} />}
+      {(v.kind === "RETE_PONTE" || v.kind === "RETE_DIRETTO" || v.kind === "RETE_PROMEMORIA") && <CorpoRete p={v.payload} />}
+      {v.kind === "COMMENTO_LINKEDIN" && <CorpoCommento p={v.payload} />}
       {v.kind === "PREPARAZIONE_CALL" && <CorpoPreparazione p={v.payload} />}
       {v.kind === "DOPO_CALL" && <CorpoDopoCall p={v.payload} telefono={v.trattativa?.telefono} />}
       {(v.kind === "RECALL" || v.kind === "NURTURING_PROPOSTO") && <CorpoRecall p={v.payload} telefono={v.trattativa?.telefono} />}

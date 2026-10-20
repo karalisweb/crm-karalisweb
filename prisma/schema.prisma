@@ -288,6 +288,7 @@ model Lead {
   persone       Persona[]
   ritrovamenti  Ritrovamento[]
   membriBni     BniMembro[]    @relation("MembroAzienda")
+  lavorazione   Lavorazione?
 
   // Relazioni BNI
   referredByMembroId String?    @map("referred_by_membro_id")
@@ -1642,4 +1643,46 @@ model BniSegnalazione {
 
   @@index([membroId])
   @@map("bni_segnalazioni")
+}
+
+/// La cerchia stretta (v3.53): chi Alessio conosce davvero, segnato "lo conosco". I membri BNI con
+/// cui ha fatto un 121 ne fanno parte da soli (si leggono da bni_membri).
+model CerchiaContatto {
+  id          String   @id @default(uuid())
+  nome        String
+  linkedinUrl String?  @map("linkedin_url")
+  nota        String?
+  rimossoAt   DateTime? @map("rimosso_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([nome])
+  @@map("cerchia")
+}
+
+/// Un'azienda in lavorazione (v3.53): la fase, la strada e il ponte. 15 il primo mese, 30 dal secondo.
+model Lavorazione {
+  id            String    @id @default(uuid())
+  leadId        String    @unique @map("lead_id")
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  fase          String    @default("MAPPATA") // MAPPATA | PONTE_SCELTO | CHIESTA | INCONTRO | PROPOSTA | CLIENTE | PAUSA
+  strada        String? // BNI | CERCHIA | DIRETTO | SCALDATO | DA_CONFERMARE | SCALDARE
+  decisore      String?
+  ponteNome     String?   @map("ponte_nome")
+  ponteMembroId String?   @map("ponte_membro_id")
+  pontiProvati  Json      @default("[]") @map("ponti_provati")
+  tentativi     Int       @default(0)
+  chiestaAt     DateTime? @map("chiesta_at")
+  promemoriaAt  DateTime? @map("promemoria_at")
+  scaldataAt    DateTime? @map("scaldata_at")
+  presentatoAt  DateTime? @map("presentato_at")
+  incontroAt    DateTime? @map("incontro_at")
+  propostaAt    DateTime? @map("proposta_at")
+  clienteAt     DateTime? @map("cliente_at")
+  pausaFino     DateTime? @map("pausa_fino")
+  note          String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([fase])
+  @@map("lavorazioni")
 }

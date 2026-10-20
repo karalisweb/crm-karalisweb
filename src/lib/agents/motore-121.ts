@@ -10,11 +10,13 @@
  *     contatto in comune). I punti di contatto pesano un ponte.
  */
 import { mezzanotteRoma } from "./bni-regole";
+import { TETTO_121_BNI, settimanaConPosto } from "./rete-regole";
 
 // ─── Le richieste di 121 ────────────────────────────────────────────────────
 
 export const RICHIESTE_SETTIMANA = 20;
-export const TETTO_121_SETTIMANA = 12;
+/** 121 BNI a settimana (v3.53: 8, più 2 posti per gli incontri con i presentati; prima erano 12). */
+export const TETTO_121_SETTIMANA = TETTO_121_BNI;
 /** Le richieste arrivano in Cassetta a quest'ora (Roma) e si mandano fra le 15 e le 18. */
 export const ORA_RICHIESTE = 14;
 
@@ -46,17 +48,19 @@ export interface StatoRichieste {
   questaSettimana: number;
   /** 121 già fissati la settimana prossima. */
   prossimaSettimana: number;
+  /** 121 già fissati fra due settimane (l'agenda può essere piena per due settimane). */
+  fraDueSettimane?: number;
 }
 
 /**
  * Quante richieste preparare oggi: le 20 della settimana divise sui giorni feriali che restano.
- * Zero nel fine settimana e quando il tetto di 12 è pieno (questa settimana o la prossima: chi
- * accetta adesso di solito si incontra la settimana dopo).
+ * Zero nel fine settimana e quando il tetto (8 121 BNI) è pieno in tutte e tre le settimane davanti:
+ * il tetto si guarda in avanti, perché chi accetta oggi si incontra fra una o due settimane.
  */
 export function richiesteDaPreparare(s: StatoRichieste, oggi: Date): number {
   const giorni = ferialiRimasti(oggi);
   if (!giorni) return 0;
-  if (Math.max(s.questaSettimana, s.prossimaSettimana) >= TETTO_121_SETTIMANA) return 0;
+  if (settimanaConPosto([s.questaSettimana, s.prossimaSettimana, s.fraDueSettimane ?? 0], TETTO_121_SETTIMANA) === null) return 0;
   const restanti = Math.max(0, RICHIESTE_SETTIMANA - s.preparateSettimana);
   return Math.ceil(restanti / giorni);
 }
@@ -86,12 +90,16 @@ export function lettureDi(agente: string, input?: unknown): number {
       return 2;
     case "cerca_linkedin":
       return 6;
+    case "scalda": {
+      const d = (input as { decisori?: unknown[] } | null)?.decisori;
+      return Array.isArray(d) ? d.length : 5;
+    }
     default:
       return 0;
   }
 }
 
-export const AGENTI_LINKEDIN = ["linkedin_membri", "rete_membro", "decision_maker", "linkedin_azienda", "cerca_linkedin"];
+export const AGENTI_LINKEDIN = ["linkedin_membri", "rete_membro", "decision_maker", "linkedin_azienda", "cerca_linkedin", "scalda"];
 
 /** Un errore di un lavoro LinkedIn che vuol dire "LinkedIn ci ha notato": si ferma tutto per 48 ore. */
 export function bloccoLinkedin(errore: string | null | undefined): boolean {

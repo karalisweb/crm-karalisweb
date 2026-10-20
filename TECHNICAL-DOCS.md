@@ -1563,6 +1563,33 @@ Pagine: `/trattative`, `/trattative/[id]`; `/call-fissate` rimanda a `/trattativ
 
 Orologio: `0 7-20 * * *` vendita (ogni ora).
 
+## La rete al centro (v3.53.0)
+
+Decisione di Alessio: `PROGETTO-AGENTI.md` "La rete al centro". Casi studio + relazione; BNI potenziatore.
+
+- **Migrazione `20261020180000_rete_al_centro`** (additiva, idempotente): tabella `cerchia` (`CerchiaContatto`:
+  nome, linkedin_url, nota, `rimosso_at` = tolta senza cancellare) e tabella `lavorazioni` (`Lavorazione`, una per
+  lead: fase, strada, decisore, ponte, `ponti_provati`, `tentativi`, date chiesta/promemoria/scaldata/presentato/
+  incontro/proposta/cliente, `pausa_fino`). Nessuna colonna su `leads`.
+- `src/lib/agents/rete-regole.ts` (**puro**, test `__tests__/rete-regole.test.ts`): `capienzaLavorazione` (15 fino al
+  2026-11-19, poi 30), `stessaPersona`/`nellaCerchia`, `strade` (BNI → CERCHIA → DIRETTO → SCALDATO, senza i provati e
+  senza i ponti occupati), `nomiDaConfermare`, `forzaAzienda`, `prossimaAzione` (promemoria 5 gg, cambio 10 gg, pausa
+  dopo 3, rientro), `settimanaConPosto` (tetto in avanti su 3 settimane), `TETTO_121_BNI = 8`, `POSTI_PRESENTATI = 2`,
+  testi di riserva dei messaggi (`chiDecideTesto`).
+- `src/lib/agents/rete.ts` (DB): `cerchiaNomi`, `datiAzienda` (dal referto `decision_maker` + `bni_presentazioni`),
+  `turnoRete` (seguito, rientri, entrate fino alla capienza, `avanzaMappata`, `accodaScalda`), `creaMessaggio` (motivo
+  dal caso studio via AI con controllo che il cliente non sia nominato; `cosaDare` per i ponti BNI), `decisioneRete`
+  (hook in `POST /api/cassetta/[id]`), `importaScalda`, `azioneLavorazione`, `loConosco`.
+- Cassetta: `RETE_PONTE`, `RETE_DIRETTO`, `RETE_PROMEMORIA`, `COMMENTO_LINKEDIN`. Agente di browser `scalda` (R4) nel
+  budget LinkedIn comune (`lettureDi("scalda")` = numero di decisori, max 5 al giorno).
+- Turni: `turnoRete` gira nel turno di arricchimento (6:45, 14:45, 18:15) e nella fase `richieste` di squadra-bni (14:00).
+- API: `GET /api/rete`, `PATCH /api/rete/lavorazioni/[id]` (`presentato|scaldata|incontro|proposta|cliente|pausa|riprendi`),
+  `POST /api/rete/cerchia` (`{nome, conosco, lavorazioneId?}`), `DELETE /api/rete/cerchia/[id]` (segna `rimosso_at`),
+  `POST /api/rete/turno`. Pagina `/lavorazione`.
+- Limiti: i segnali del contatto scaldato li legge l'agente dalle notifiche di LinkedIn (non sempre visibili; c'è anche
+  il pulsante "Ha risposto ai miei commenti"); il "cosa dare" c'è solo per i ponti BNI (per gli altri non si conosce il
+  mestiere); il motivo dal caso studio richiede l'AI (in locale manca la chiave: si usa il testo di riserva).
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

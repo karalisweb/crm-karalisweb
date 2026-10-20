@@ -13,6 +13,7 @@ import {
   FileText,
   Building2,
   Gauge,
+  Route,
 } from "lucide-react";
 
 // Badge types per colore
@@ -52,6 +53,7 @@ export const navSections: NavSection[] = [
       { href: "/bni/membri", label: "Rubrica BNI", icon: Users },
       { href: "/casi-studio", label: "Casi studio", icon: FileText },
       { href: "/aziende-trovate", label: "Aziende trovate", icon: Building2 },
+      { href: "/lavorazione", label: "In lavorazione", icon: Route },
     ],
   },
   {

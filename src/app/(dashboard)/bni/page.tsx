@@ -27,7 +27,7 @@ export default function Bni121Page() {
   const [dati, setDati] = useState<{
     settimana: Settimana; calendario: Fissato[]; tracker: Tracker; visite: Visita[]; linkedin: StatoLinkedin;
     seguito: (PresentazioneImbuto & { membro: { id: string; name: string } })[];
-    motore: { richiesteSettimana: number; obiettivoRichieste: number; tetto: number; fissatiProssima: number };
+    motore: { richiesteSettimana: number; obiettivoRichieste: number; tetto: number; fissatiProssima: number; fissatiFraDue: number; postiPresentati: number };
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export default function Bni121Page() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Handshake className="h-6 w-6 text-primary" /> Incontri BNI</h1>
-          <p className="text-sm text-muted-foreground">Il motore 121: 20 richieste a settimana (in Cassetta alle 14, da mandare su WhatsApp fra le 15 e le 18), fino a 12 incontri a settimana. Al primo 121 non si vende: si dà e si chiede.</p>
+          <p className="text-sm text-muted-foreground">Il motore 121: 20 richieste a settimana (in Cassetta alle 14, da mandare su WhatsApp fra le 15 e le 18), fino a 8 121 a settimana, più 2 posti per gli incontri con chi ti presentano. Al primo 121 non si vende: si dà e si chiede.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/cruscotto"><Button variant="outline" size="sm"><Gauge className="h-4 w-4 mr-1" /> Cruscotto</Button></Link>
@@ -92,8 +92,8 @@ export default function Bni121Page() {
             </div>
             {dati.motore && (
               <div className="text-xs text-muted-foreground">
-                Richieste preparate questa settimana: {dati.motore.richiesteSettimana}/{dati.motore.obiettivoRichieste} · tetto {dati.motore.tetto} incontri a settimana
-                {Math.max(s.fatti + s.fissati, dati.motore.fissatiProssima) >= dati.motore.tetto && <span className="text-amber-600"> · tetto pieno: le richieste nuove sono ferme</span>}
+                Richieste preparate questa settimana: {dati.motore.richiesteSettimana}/{dati.motore.obiettivoRichieste} · tetto {dati.motore.tetto} 121 BNI a settimana (+{dati.motore.postiPresentati} posti per i presentati) · fra due settimane: {dati.motore.fissatiFraDue} fissati
+                {Math.min(s.fatti + s.fissati, dati.motore.fissatiProssima, dati.motore.fissatiFraDue) >= dati.motore.tetto && <span className="text-amber-600"> · agenda piena per tre settimane: le richieste nuove sono ferme</span>}
               </div>
             )}
             {s.nomiFatti.length > 0 && <div className="text-xs text-muted-foreground">Fatti: {s.nomiFatti.join(", ")}</div>}

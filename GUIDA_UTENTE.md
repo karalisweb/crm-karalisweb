@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.52.0** | Ultimo aggiornamento: 2026-10-20
+Versione: **3.53.0** | Ultimo aggiornamento: 2026-10-20
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -64,6 +64,19 @@ i membri ti presentano. **Niente contatto a freddo.** Lo schema completo, con i 
 (contatto diretto o contatti in comune). In "Da decidere" arrivano solo quelle con un ponte; le altre vanno
 in "senza collegamento" e si ricontrollano da sole dopo i nuovi 121. LinkedIn si usa al massimo 25 volte al
 giorno; se chiede una verifica o mostra un CAPTCHA, tutto si ferma per 48 ore.
+
+---
+
+### La rete al centro (dal 20 ottobre 2026, v3.53)
+
+Il caso studio dice chi cercare, **la tua rete dice come arrivarci**; BNI è un potenziatore. Menu → **In lavorazione**:
+- ci sono 15 aziende alla volta (30 dal secondo mese), entrate da sole fra quelle che approfondisci;
+- accanto ai contatti in comune premi **"Lo conosco"** (una volta sola: da lì sono nella tua cerchia) o "No";
+- il messaggio "me lo presenti?" arriva in Cassetta già scritto; lo mandi tu e premi "Mandato";
+- dopo 5 giorni senza presentazione arriva il promemoria, dopo 10 si passa al ponte successivo, dopo 3 tentativi
+  l'azienda va in pausa per 3 mesi;
+- quando ti presentano qualcuno premi "Mi ha presentato", poi "Incontro fissato": entra la prossima azienda.
+L'agenda: 8 121 BNI a settimana e 2 posti per gli incontri con chi ti presentano.
 
 ---
 
@@ -755,7 +768,7 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 
 ---
 
-*Documento aggiornato il 2026-10-20 | KW Sales CRM v3.52.0. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-10-20 | KW Sales CRM v3.53.0. La versione di riferimento è la Guida interattiva dentro l'app.*
 
 ---
 

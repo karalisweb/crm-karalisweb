@@ -101,6 +101,16 @@ Apri al massimo una quindicina di pagine in tutto, con calma. Non mandare richie
     nota: "Solo lettura: le richieste di collegamento le manda Alessio",
     istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Il lavoro ha una lista di membri BNI della Sardegna (id, nome, azienda, categoria, capitolo). Per ognuno: cerca nome e cognome tra le Persone, verifica che sia lui o lei (azienda, mestiere o località in Sardegna). Guarda il pulsante sul profilo: "Messaggio" vuol dire già collegati con Alessio, "In sospeso" vuol dire richiesta già inviata, "Collegati" vuol dire da collegare. NON premere nessun pulsante: solo lettura. Se non lo trovi con certezza, segnalo come non trovato (meglio nessun profilo che quello sbagliato). Con calma, una ricerca alla volta. Findings: { profili: [{ id, profilo, stato: "DA_COLLEGARE" | "COLLEGATI" | "RICHIESTA_INVIATA" | "NON_TROVATO" }] }. ${REGOLE_BROWSER}`,
   },
+  {
+    chiave: "scalda", numero: "R4", nome: "Scaldare chi decide", compito: "Legge gli ultimi post di chi decide nelle aziende in lavorazione e propone 1-2 commenti (li pubblica Alessio)", famiglia: "browser", squadra: "ricerca", stato: "attivo",
+    nota: "Solo lettura: i commenti li incolla Alessio dalla Cassetta",
+    istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Il lavoro ha una lista di decisori (leadId, decisore, azienda, città, profilo se noto).
+1. Per ognuno apri il profilo (il link, oppure cerca "<decisore> <azienda>" fra le Persone e verifica azienda e città), poi "Attività" → post. Prendi l'ultimo post pubblicato da lui (non una condivisione senza testo), se è di meno di 30 giorni.
+2. Scrivi un commento proposto: 1-2 frasi in italiano, con la voce di Alessio (titolare di un'agenzia web e marketing a Cagliari), specifico su quello che dice il post, utile o sincero. Niente vendita, niente link, niente "complimenti per il post" generici, niente emoji in fila.
+3. Segnali: apri le notifiche di Alessio e guarda se negli ultimi 30 giorni uno di questi decisori ha messo un like, commentato un suo post o visitato il suo profilo (se visibile): riportalo.
+NON pubblicare nulla, NON mettere like, NON seguire: solo lettura. Al massimo 3 pagine per persona.
+Findings: { commenti: [{ leadId, decisore, post (link al post), estratto (una frase del post), commento }], segnali: [{ leadId, decisore, tipo: "like" | "commento" | "visita" }] }. ${REGOLE_BROWSER}`,
+  },
   { chiave: "dopo_121", numero: "B6", nome: "Dopo-121", compito: "Dalla trascrizione di Meet o dal vocale compila la scheda del membro", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
   { chiave: "preparazione_call", numero: "V1", nome: "Preparatore call", compito: "La pagina da avere davanti durante la call di vendita", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
   { chiave: "dopo_call", numero: "V2", nome: "Dopo-call", compito: "Dalla trascrizione di Meet: lettera strategica o follow-up e prossimo passo", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },

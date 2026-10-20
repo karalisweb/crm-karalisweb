@@ -17,7 +17,9 @@ import { db } from "@/lib/db";
 import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import { PROFILI_MEMBRI_GIORNO, richiesteDaPreparare } from "./motore-121";
+import { settimanaConPosto } from "./rete-regole";
 import { aziendeDaCercareNellaRete, linkedinPermette, promemoriaDopo121, proponiSegnalazioni, statoLinkedinOggi } from "./motore";
+import { turnoRete } from "./rete";
 import {
   capitoliInCorso,
   coperturaCapitolo,
@@ -238,22 +240,25 @@ export interface StatoSettimana {
   richiesteAperte: number;
   /** Richieste preparate dal Pianificatore da lunedì (obiettivo 20). */
   richiesteSettimana: number;
-  /** 121 già fissati la settimana prossima (tetto 12). */
+  /** 121 già fissati la settimana prossima (tetto 8). */
   fissatiProssima: number;
+  /** 121 già fissati fra due settimane. */
+  fissatiFraDue: number;
   inizio: Date;
   fine: Date;
 }
 
 export async function statoSettimana(oggi = new Date(), caricati?: CapitoloCaricato[]): Promise<StatoSettimana> {
   const { inizio, fine } = settimanaDi(oggi);
-  const [fatti, fissati, tutti, richiesteSettimana, fissatiProssima] = await Promise.all([
+  const [fatti, fissati, tutti, richiesteSettimana, fissatiProssima, fissatiFraDue] = await Promise.all([
     db.oneToOne.count({ where: { date: { gte: inizio, lt: fine } } }),
     db.bniMembro.count({ where: { next121At: { gte: oggi, lt: fine } } }),
     caricati ? Promise.resolve(caricati) : caricaCapitoli(oggi),
     db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, agent: { not: "alessio" }, createdAt: { gte: inizio } } }),
     db.bniMembro.count({ where: { next121At: { gte: fine, lt: new Date(fine.getTime() + 7 * 86400_000) } } }),
+    db.bniMembro.count({ where: { next121At: { gte: new Date(fine.getTime() + 7 * 86400_000), lt: new Date(fine.getTime() + 14 * 86400_000) } } }),
   ]);
-  return { obiettivo: OBIETTIVO_121_SETTIMANA, fatti, fissati, richiesteAperte: contaAperte(tutti, oggi), richiesteSettimana, fissatiProssima, inizio, fine };
+  return { obiettivo: OBIETTIVO_121_SETTIMANA, fatti, fissati, richiesteAperte: contaAperte(tutti, oggi), richiesteSettimana, fissatiProssima, fissatiFraDue, inizio, fine };
 }
 
 /** Richieste mandate (o in cassetta) da meno di 14 giorni, a chi non è ancora stato incontrato. */
@@ -372,10 +377,10 @@ export async function eseguiTurnoBni(oggi = new Date(), fase: FaseBni = "tutto")
   // Pianificatore — 20 richieste a settimana divise sui giorni feriali, tetto di 12 121 fissati.
   // Gli inviti fatti da Alessio di sua iniziativa non tolgono posto a quelli del Pianificatore.
   if (richieste) {
-    const stato = { preparateSettimana: r.settimana.richiesteSettimana, questaSettimana: r.settimana.fatti + r.settimana.fissati, prossimaSettimana: r.settimana.fissatiProssima };
+    const stato = { preparateSettimana: r.settimana.richiesteSettimana, questaSettimana: r.settimana.fatti + r.settimana.fissati, prossimaSettimana: r.settimana.fissatiProssima, fraDueSettimane: r.settimana.fissatiFraDue };
     let quante = richiesteDaPreparare(stato, oggi);
     // Il pulsante "adesso" funziona anche nel fine settimana, sempre dentro le 20 e il tetto.
-    if (fase === "tutto" && !quante && Math.max(stato.questaSettimana, stato.prossimaSettimana) < 12) quante = Math.min(4, Math.max(0, 20 - stato.preparateSettimana));
+    if (fase === "tutto" && !quante && settimanaConPosto([stato.questaSettimana, stato.prossimaSettimana, stato.fraDueSettimane]) !== null) quante = Math.min(4, Math.max(0, 20 - stato.preparateSettimana));
     const silenti = colleghiSenzaRisposta(tutti, oggi);
     for (const p of scegliProssimi(tutti, quante, oggi)) {
       const fatto = await preparaRichiesta(p, oggi, silenti.get(p.capitolo.id) ?? []);
@@ -393,6 +398,8 @@ export async function eseguiTurnoBni(oggi = new Date(), fase: FaseBni = "tutto")
 
   // Dopo il 121: se non è registrato, un promemoria per il vocale.
   r.promemoria = await promemoriaDopo121(oggi);
+  // Alle 14 anche i messaggi della rete (ponti, promemoria): si mandano nella stessa finestra delle 15-18.
+  if (fase === "richieste") await turnoRete(oggi).catch((e) => console.error("[squadra-bni] rete:", e));
   if (!mattina) return r;
 
   // Prima del 121: la rete LinkedIn del membro (con le aziende da cercare fra i suoi collegamenti),

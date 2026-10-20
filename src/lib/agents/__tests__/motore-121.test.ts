@@ -21,10 +21,10 @@ describe("richieste di 121", () => {
     expect(richiesteDaPreparare({ preparateSettimana: 0, questaSettimana: 0, prossimaSettimana: 0 }, sab)).toBe(0);
     expect(richiesteDaPreparare({ preparateSettimana: 20, questaSettimana: 0, prossimaSettimana: 0 }, mer)).toBe(0);
   });
-  it("si ferma quando il tetto di 12 121 è pieno, questa settimana o la prossima", () => {
-    expect(richiesteDaPreparare({ preparateSettimana: 4, questaSettimana: 12, prossimaSettimana: 0 }, mer)).toBe(0);
-    expect(richiesteDaPreparare({ preparateSettimana: 4, questaSettimana: 5, prossimaSettimana: 12 }, mer)).toBe(0);
-    expect(richiesteDaPreparare({ preparateSettimana: 4, questaSettimana: 11, prossimaSettimana: 11 }, mer)).toBeGreaterThan(0);
+  it("guarda il tetto di 8 in avanti: si ferma solo se le tre settimane davanti sono piene", () => {
+    expect(richiesteDaPreparare({ preparateSettimana: 4, questaSettimana: 8, prossimaSettimana: 8, fraDueSettimane: 8 }, mer)).toBe(0);
+    expect(richiesteDaPreparare({ preparateSettimana: 4, questaSettimana: 8, prossimaSettimana: 8, fraDueSettimane: 3 }, mer)).toBeGreaterThan(0);
+    expect(richiesteDaPreparare({ preparateSettimana: 4, questaSettimana: 5, prossimaSettimana: 12 }, mer)).toBeGreaterThan(0);
   });
 });
 

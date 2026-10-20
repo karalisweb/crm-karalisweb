@@ -7,13 +7,14 @@ const base: Grezzi = {
   richiesteMandate: 20, richiesteValutate: 20, richiesteAccettate: 10, fatti121: 9, vocaliInTempo: 9, pontiConfermati: 9,
   presentazioniOttenute: 4, presentazioniDueSettimane: 6, segnalazioniDate: 9, incontri: 2, proposte: 1, clienti: 0,
   invitiInviati: 40, invitiAccettati: 25, bloccoLinkedin: false, aziendeVerificate: 14, aziendeConPonte: 7,
+  inLavorazione: 15, capienza: 15, pontiChiesti: 6, presentatiDallaRete: 2,
 };
 const stato = (g: Grezzi, k: string) => valuta(g).find((m) => m.chiave === k)!.stato;
 
 describe("cruscotto", () => {
-  it("ha 11 misure, tutte ok in una settimana buona", () => {
+  it("ha 13 misure, tutte ok in una settimana buona", () => {
     const m = valuta(base);
-    expect(m).toHaveLength(11);
+    expect(m).toHaveLength(13);
     expect(m.filter((x) => x.stato === "allarme")).toHaveLength(0);
   });
   it("accende gli allarmi alle soglie del diagramma", () => {

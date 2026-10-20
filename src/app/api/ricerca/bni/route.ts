@@ -167,7 +167,7 @@ export async function GET() {
   return NextResponse.json({
     linkedin,
     seguito,
-    motore: { richiesteSettimana: settimana.richiesteSettimana, obiettivoRichieste: RICHIESTE_SETTIMANA, tetto: TETTO_121_SETTIMANA, fissatiProssima: settimana.fissatiProssima },
+    motore: { richiesteSettimana: settimana.richiesteSettimana, obiettivoRichieste: RICHIESTE_SETTIMANA, tetto: TETTO_121_SETTIMANA, fissatiProssima: settimana.fissatiProssima, fissatiFraDue: settimana.fissatiFraDue, postiPresentati: 2 },
     settimana: {
       ...settimana,
       nomiFatti: fattiSettimana.map((f) => f.membro.name),

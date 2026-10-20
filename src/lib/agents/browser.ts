@@ -13,6 +13,7 @@ import { CHIAVI_BROWSER, schedaDi } from "./registro";
 import { SERVIZI } from "./tipi";
 import { importaMappaBni, importaProfiliMembri, type EsitoMappa } from "./bni";
 import { dopoCollegamento } from "./motore";
+import { importaScalda } from "./rete";
 import { importaAziendeLinkedin, importaAziendeMeta, importaDecisionMaker, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
 /** Quanto vale un referto di browser prima di essere rifatto. */
@@ -23,6 +24,7 @@ export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
   decision_maker: 180,
   cartografo_bni: 30,
   rete_membro: 180,
+  scalda: 1,
   linkedin_membri: 90,
   cerca_meta: 60,
   cerca_linkedin: 60,
@@ -173,6 +175,8 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
   if (run.agent === "rete_membro") importazione = await importaReteMembro(run.bniMembroId, c.referto.findings, oggi, run.input);
   if (run.agent === "linkedin_membri") importazione = await importaProfiliMembri(c.referto.findings, oggi);
   if (run.agent === "decision_maker") importazione = await importaDecisionMaker(run.leadId, c.referto.findings);
+  let scalda: { commenti: number; scaldate: number } | undefined;
+  if (run.agent === "scalda") scalda = await importaScalda(c.referto.findings);
 
   await db.$transaction([
     db.agentReport.create({
@@ -183,7 +187,7 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
         agent: run.agent,
         runId: run.id,
         summary: c.referto.summary,
-        findings: { ...c.referto.findings, ...(mappa ? { importazione: mappa } : {}), ...(importazione ? { importazione } : {}) } as Prisma.InputJsonValue,
+        findings: { ...c.referto.findings, ...(mappa ? { importazione: mappa } : {}), ...(importazione ? { importazione } : {}), ...(scalda ? { importazione: scalda } : {}) } as Prisma.InputJsonValue,
         levers: c.referto.levers as Prisma.InputJsonValue,
         evidence: c.referto.evidence as Prisma.InputJsonValue,
         confidence: c.referto.confidence,

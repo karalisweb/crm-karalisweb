@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { applicaDecisioneVendita } from "@/lib/vendita/trattative";
 import { KIND_PRESENTAZIONE_BNI, presentazioneChiesta } from "@/lib/agents/motore";
+import { decisioneRete } from "@/lib/agents/rete";
 
 /**
  * POST /api/cassetta/[id] — la decisione di Alessio su una voce in cassetta.
@@ -15,7 +16,9 @@ import { KIND_PRESENTAZIONE_BNI, presentazioneChiesta } from "@/lib/agents/motor
  *   VISITA_CAPITOLO → "mandato": la visita al capitolo è chiesta (capitolo in "visita pianificata");
  *   PREPARAZIONE_121→ "letto";
  *   PRESENTAZIONE_BNI → "mandato": la richiesta di presentazione al membro è partita;
- *   DOPO_121        → "fatto" (il promemoria del vocale).
+ *   DOPO_121        → "fatto" (il promemoria del vocale);
+ *   RETE_PONTE / RETE_DIRETTO → "mandato" (presentazione chiesta / contatto scritto); "non ora" = ponte successivo;
+ *   RETE_PROMEMORIA → "mandato"; COMMENTO_LINKEDIN → "fatto".
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireSession();
@@ -44,6 +47,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Pipeline di vendita: la decisione fa avanzare la trattativa (lettera inviata, recall fatto…).
   const decisa = await db.approvalItem.findUnique({ where: { id }, select: { kind: true, trattativaId: true, payload: true } });
   if (decisa?.trattativaId) await applicaDecisioneVendita(decisa, decisione, gate.userId);
+  // La rete al centro: "Mandato" fa avanzare l'azienda in lavorazione, "Non ora" passa al ponte successivo.
+  await decisioneRete(id, decisione);
 
   // Effetto collaterale piccolo e reversibile: un messaggio BNI mandato sposta il membro
   // da "da avvicinare" a "richiesta 121" (solo se era ancora all'inizio).

@@ -13,6 +13,21 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.53.0] - 2026-10-20
+
+### Added
+- **La rete al centro** (confermata da Alessio il 2026-10-20): "quello che convince sono i casi studio e la relazione". La tua rete vince sempre, BNI è un potenziatore. Nuova pagina **In lavorazione** (`/lavorazione`, nel menu).
+- **Aziende in lavorazione**: 15 il primo mese, 30 dal secondo. Entrano da sole fra quelle che approfondisci, prima quelle con il ponte più forte; quando una arriva all'incontro (o va in pausa) entra la prossima. Fasi: mappata → ponte scelto → presentazione chiesta → incontro → proposta → cliente, oppure in pausa.
+- **La cerchia stretta**: i membri BNI con cui hai fatto un 121 ne fanno parte da soli; gli altri li aggiungi con un tocco su "Lo conosco" accanto ai contatti in comune (o a mano). Un ponte vale solo se è nella cerchia.
+- **Le strade verso un'azienda**, in ordine: un membro BNI della cerchia, un altro contatto della cerchia, chi decide è già nella cerchia, chi decide ha risposto ai tuoi commenti ("contatto scaldato"). Senza strade non si contatta: l'azienda aspetta.
+- **I messaggi in Cassetta** (li mandi tu, su WhatsApp o LinkedIn): "me lo presenti?" al ponte, il messaggio diretto a chi decide, con il motivo preso dal caso studio senza nominare il cliente. Per i ponti BNI, accanto c'è cosa portargli prima di chiedere.
+- **Il seguito da solo**: promemoria gentile al ponte dopo 5 giorni, il ponte successivo dopo 10 (senza dirlo al primo), pausa di 3 mesi dopo 3 tentativi. "Non ora" in Cassetta passa subito al ponte successivo. Un favore alla volta: un ponte che sta già presentando un'azienda non viene usato per un'altra.
+- **Scaldare chi decide**: ogni giorno feriale l'agente sul Mac legge gli ultimi post di chi decide e mette in Cassetta 1-2 commenti da incollare; se chi decide ha già messo un like o commentato, l'azienda diventa "scaldata".
+- **Cruscotto**: due numeri in più, "Aziende in lavorazione" e "Ponti chiesti" (con le presentazioni ottenute dalla rete).
+
+### Changed
+- **Agenda**: 8 121 BNI a settimana più **2 posti per gli incontri con i presentati** (prima il tetto era 12). Il tetto si guarda **in avanti**: con l'agenda piena per due settimane le richieste continuano e i 121 si fissano fra due settimane; si fermano solo se le tre settimane davanti sono piene.
+
 ## [3.52.0] - 2026-10-20
 
 ### Added

@@ -41,7 +41,7 @@ function valore(m: Misura): string {
 }
 
 /**
- * Il cruscotto del Motore 121: gli 11 numeri della settimana con obiettivo, allarme e cosa fare.
+ * Il cruscotto del Motore 121: i 13 numeri della settimana con obiettivo, allarme e cosa fare.
  * Il venerdì alle 17 arriva anche per mail.
  */
 export default function CruscottoPage() {

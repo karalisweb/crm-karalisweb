@@ -23,6 +23,7 @@ import type { AziendaContesto, ContestoAgente, PaginaScaricata } from "./tipi";
 import { siglaIndirizzo } from "@/lib/ricerca/regole";
 import { refertiValidi } from "./turno";
 import { collegamentiDaVerificare, linkedinPermette, statoLinkedinOggi, studiaMembri, verificaCollegamento } from "./motore";
+import { turnoRete, type RiepilogoRete } from "./rete";
 
 /** Aziende al massimo in un giro veloce (le 5 al giorno della ricerca, più quelle aggiunte a mano). */
 export const GIRO_VELOCE_PER_TURNO = 8;
@@ -159,6 +160,7 @@ export interface RiepilogoArricchimento extends RiepilogoTurno {
   membriStudiati: number;
   collegamentiAccodati: number;
   ricontrolli: number;
+  rete?: RiepilogoRete;
 }
 
 /** Il turno: sblocca, approfondisce le approvate, fa il giro veloce sulle nuove. */
@@ -184,6 +186,8 @@ export async function eseguiTurnoArricchimento(oggi = new Date()): Promise<Riepi
   const c = await collegamentiDaVerificare(oggi);
   r.collegamentiAccodati = c.accodati;
   r.ricontrolli = c.ricontrolli;
+  // La rete al centro: le aziende in lavorazione (entrate, ponti, seguito, commenti).
+  r.rete = await turnoRete(oggi);
   r.durataMs = Date.now() - inizio;
   return r;
 }

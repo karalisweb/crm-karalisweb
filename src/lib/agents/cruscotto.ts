@@ -8,6 +8,7 @@ import { settimanaDi } from "./bni-regole";
 import { KIND_MESSAGGIO_BNI } from "./bni";
 import { AGENTI_LINKEDIN, bloccoLinkedin } from "./motore-121";
 import { collegamentoDaFindings } from "./motore";
+import { capienzaLavorazione } from "./rete-regole";
 
 export type Stato = "ok" | "attenzione" | "allarme" | "nd";
 
@@ -42,6 +43,11 @@ export interface Grezzi {
   bloccoLinkedin: boolean;
   aziendeVerificate: number;
   aziendeConPonte: number;
+  /** La rete al centro (v3.53). */
+  inLavorazione?: number;
+  capienza?: number;
+  pontiChiesti?: number;
+  presentatiDallaRete?: number;
 }
 
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : null);
@@ -68,7 +74,7 @@ export function valuta(g: Grezzi): Misura[] {
       dettaglio: g.richiesteValutate ? `${g.richiesteAccettate} su ${g.richiesteValutate} mandate nelle 3 settimane prima` : "Ancora nessuna richiesta di almeno 7 giorni fa",
     },
     {
-      chiave: "fatti", nome: "121 fatti", valore: g.fatti121, unita: "n", obiettivo: "8-12", allarme: "meno di 6",
+      chiave: "fatti", nome: "121 fatti", valore: g.fatti121, unita: "n", obiettivo: "8", allarme: "meno di 6",
       azione: "Si guarda dove si ferma: risposte, agenda o rinvii.",
       stato: g.fatti121 >= 8 ? "ok" : g.fatti121 >= 6 ? "attenzione" : "allarme",
     },
@@ -110,6 +116,17 @@ export function valuta(g: Grezzi): Misura[] {
       dettaglio: g.bloccoLinkedin ? "LinkedIn ha bloccato o chiesto una verifica: lavori fermi 48 ore" : `${g.invitiAccettati} su ${g.invitiInviati} inviti`,
     },
     {
+      chiave: "lavorazione", nome: "Aziende in lavorazione", valore: g.inLavorazione ?? 0, unita: "n", obiettivo: `${g.capienza ?? 15}`, allarme: `meno di ${Math.round((g.capienza ?? 15) * 2 / 3)}`,
+      azione: "Approfondisci più aziende con un ponte, o carica un caso studio nuovo.",
+      stato: (g.inLavorazione ?? 0) >= (g.capienza ?? 15) ? "ok" : (g.inLavorazione ?? 0) >= (g.capienza ?? 15) * 2 / 3 ? "attenzione" : "allarme",
+    },
+    {
+      chiave: "pontiChiesti", nome: "Ponti chiesti (\"me lo presenti?\" e contatti diretti)", valore: g.pontiChiesti ?? 0, unita: "n", obiettivo: "almeno 5", allarme: "nessuno",
+      azione: "Guarda In lavorazione: probabilmente mancano i tuoi \"lo conosco\".",
+      stato: (g.pontiChiesti ?? 0) >= 5 ? "ok" : (g.pontiChiesti ?? 0) > 0 ? "attenzione" : "allarme",
+      dettaglio: `${g.presentatiDallaRete ?? 0} presentazioni ottenute dalla rete`,
+    },
+    {
       chiave: "serbatoio", nome: "Aziende nel serbatoio con un ponte", valore: serbatoio, unita: "%", obiettivo: "circa 50%", allarme: "sotto il 25%",
       azione: "Si stringe la ricerca su Maps alla nicchia.",
       stato: serbatoio === null ? "nd" : serbatoio >= 40 ? "ok" : serbatoio >= 25 ? "attenzione" : "allarme",
@@ -124,7 +141,7 @@ export async function grezziSettimana(oggi = new Date()): Promise<Grezzi & { ini
   const fino = fine < oggi ? fine : oggi;
   const nella = { gte: inizio, lt: fine };
 
-  const [mandate, valutabili, fatti, presentazioni, prima, segnalazioni, inviti, blocchi, dm] = await Promise.all([
+  const [mandate, valutabili, fatti, presentazioni, prima, segnalazioni, inviti, blocchi, dm, inLavorazione, pontiChiesti, presentatiDallaRete] = await Promise.all([
     db.approvalItem.count({ where: { kind: KIND_MESSAGGIO_BNI, status: "APPROVATO", decidedAt: nella } }),
     // Accettate: le richieste mandate fra 28 e 7 giorni fa, con un 121 fissato o fatto dopo.
     db.approvalItem.findMany({
@@ -141,6 +158,9 @@ export async function grezziSettimana(oggi = new Date()): Promise<Grezzi & { ini
     db.bniMembro.groupBy({ by: ["linkedinStato"], where: { status: "ATTIVO", linkedinStato: { in: ["RICHIESTA_INVIATA", "COLLEGATI"] } }, _count: { _all: true } }),
     db.agentRun.findMany({ where: { agent: { in: AGENTI_LINKEDIN }, status: "FALLITO", finishedAt: nella }, select: { error: true } }),
     db.agentReport.findMany({ where: { agent: "decision_maker", collectedAt: { gte: new Date(fino.getTime() - 30 * 86400_000) } }, select: { leadId: true, findings: true }, orderBy: { collectedAt: "desc" } }),
+    db.lavorazione.count({ where: { fase: { in: ["MAPPATA", "PONTE_SCELTO", "CHIESTA"] } } }),
+    db.lavorazione.count({ where: { chiestaAt: nella } }),
+    db.lavorazione.count({ where: { presentatoAt: nella } }),
   ]);
 
   const accettate = valutabili.filter((v) => {
@@ -171,6 +191,10 @@ export async function grezziSettimana(oggi = new Date()): Promise<Grezzi & { ini
     bloccoLinkedin: blocchi.some((b) => bloccoLinkedin(b.error)),
     aziendeVerificate: ultimiDm.length,
     aziendeConPonte: ultimiDm.filter((r) => collegamentoDaFindings(r.findings).collegata).length,
+    inLavorazione,
+    capienza: capienzaLavorazione(fino),
+    pontiChiesti,
+    presentatiDallaRete,
   };
 }
 
