@@ -1,0 +1,268 @@
+<title>Il motore 121</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: una spina verticale (il percorso) con le tappe agganciate; i controlli sono rombi ambra sulla spina. */
+:root{
+  --bg:#f3f6f5; --panel:#ffffff; --ink:#15211f; --muted:#5a6966; --line:#cfdbd8;
+  --agent:#0f6b63; --agent-soft:#dcefec;
+  --me:#3b4bb0; --me-soft:#e2e5f7;
+  --ctrl:#b86a00; --ctrl-soft:#fbeed8;
+  --stop:#b3261e;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1716; --panel:#162220; --ink:#e4eeec; --muted:#93a7a3; --line:#2a3b38;
+  --agent:#5cc4b8; --agent-soft:#173532; --me:#9aa8ff; --me-soft:#1f2547;
+  --ctrl:#f0a73a; --ctrl-soft:#3a2a10; --stop:#ff8a80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1716; --panel:#162220; --ink:#e4eeec; --muted:#93a7a3; --line:#2a3b38;
+  --agent:#5cc4b8; --agent-soft:#173532; --me:#9aa8ff; --me-soft:#1f2547;
+  --ctrl:#f0a73a; --ctrl-soft:#3a2a10; --stop:#ff8a80; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2rem,5vw,3rem);font-weight:700}
+h2{font-size:1.5rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+.lead{color:var(--muted);max-width:62ch;font-size:1.08rem}
+.eyebrow{font:500 .72rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:12px}
+
+/* legenda */
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:.92rem}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+.dot.a{background:var(--agent)} .dot.m{background:var(--me)}
+.dia{width:11px;height:11px;background:var(--ctrl);transform:rotate(45deg);display:inline-block}
+
+/* fonti */
+.sources{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.src{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.src b{font-family:var(--display)}
+.src small{color:var(--muted)}
+.funnel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.95rem;color:var(--muted)}
+.tank{border:2px dashed var(--agent);color:var(--agent);border-radius:10px;padding:6px 12px;font-weight:700}
+
+/* il percorso */
+.phase{display:grid;grid-template-columns:150px 1fr;gap:20px}
+.phase-head{display:flex;flex-direction:column;gap:6px;padding-top:4px}
+.phase-head .tag{font:500 .75rem/1 var(--mono);color:var(--muted)}
+.phase-head .when{font-size:.88rem;color:var(--muted)}
+.spine{position:relative;display:flex;flex-direction:column;gap:12px;padding-left:28px;min-width:0}
+.spine::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.step{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.step::before{content:"";position:absolute;left:-25px;top:18px;width:14px;height:14px;border-radius:50%;background:var(--panel);border:3px solid var(--who)}
+.step.a{--who:var(--agent)} .step.m{--who:var(--me)} .step.am{--who:var(--agent)}
+.step-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.n{font:500 .8rem/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.who{font:600 .72rem/1 var(--body);letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:999px;margin-left:auto}
+.who.a{background:var(--agent-soft);color:var(--agent)}
+.who.m{background:var(--me-soft);color:var(--me)}
+.out{font-size:.92rem;color:var(--muted)}
+.out b{color:var(--ink);font-weight:600}
+ul.do{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px}
+
+/* controlli */
+.ctrl{position:relative;background:var(--ctrl-soft);border:1px solid color-mix(in srgb,var(--ctrl) 40%,transparent);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:4px;font-size:.93rem;min-width:0}
+.ctrl::before{content:"";position:absolute;left:-23px;top:15px;width:11px;height:11px;background:var(--ctrl);transform:rotate(45deg)}
+.ctrl .k{font:600 .72rem/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--ctrl)}
+.ctrl .if{color:var(--muted)}
+.ctrl .if b{color:var(--stop);font-weight:600}
+
+.loop{border:2px dashed var(--agent);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.loop b{color:var(--agent)}
+
+/* settimana */
+.week{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.day{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;font-size:.9rem;min-width:0}
+.day h3{font-size:.95rem}
+.day .t{font:500 .78rem/1.3 var(--mono);color:var(--muted)}
+
+/* cruscotto */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.92rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .74rem/1.2 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td .stop{color:var(--stop);font-weight:600}
+.section{display:flex;flex-direction:column;gap:16px}
+.note{font-size:.9rem;color:var(--muted)}
+
+@media (max-width:720px){
+  .phase{grid-template-columns:1fr;gap:10px}
+  .week{grid-template-columns:1fr 1fr}
+}
+@media (max-width:420px){.week{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Karalisweb · processo commerciale · bozza 20 ottobre 2026</span>
+    <h1>Il motore 121</h1>
+    <p class="lead">Il 121 è il centro di tutto: ogni passo lo prepara o lo sfrutta. I membri BNI sono partner. Si vende solo ai contatti che segnalano, mai al primo 121. Nessun contatto a freddo: un'azienda entra in gioco solo se qualcuno della tua rete fa da ponte.</p>
+    <div class="legend">
+      <span><i class="dot a"></i>Lo fa l'agente</span>
+      <span><i class="dot m"></i>Lo fai tu</span>
+      <span><i class="dia"></i>Punto di controllo</span>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2>Da dove arrivano le aziende</h2>
+    <div class="sources">
+      <div class="src"><b>Google Maps + Google</b><span>Trova le aziende partendo dai casi studio: prima la nicchia, poi il settore.</span><small>In sottofondo, poche al giorno</small></div>
+      <div class="src"><b>LinkedIn</b><span>Trova il ponte: chi decide, e quale membro o tuo contatto lo conosce.</span><small>Passi 3 e 5</small></div>
+      <div class="src"><b>Meta</b><span>Serve a studiare: pagine, post vivi o fermi, pubblicità attive.</span><small>Passo 4 e analisi</small></div>
+      <div class="src"><b>I membri</b><span>"Chi sono i tuoi clienti tipo?" È la fonte più calda.</span><small>Nel 121</small></div>
+    </div>
+    <div class="funnel"><span>Maps, Google e i membri</span><span>→</span><span class="tank">serbatoio di aziende in target</span><span>→</span><span>incrocio con la rete dei membri (passo 5)</span></div>
+  </section>
+
+  <section class="section">
+    <h2>Il percorso</h2>
+
+    <div class="phase">
+      <div class="phase-head"><span class="tag">A</span><h3>Si apre un capitolo</h3><span class="when">una volta per capitolo</span></div>
+      <div class="spine">
+        <div class="step m">
+          <div class="step-top"><span class="n">01</span><h3>121 con il collega di mestiere</h3><span class="who m">Tu</span></div>
+          <ul class="do"><li>Informi più che chiedere: "prima di conoscere gli altri volevo conoscere te".</li><li>Proponi di diventare partner e dividervi il lavoro.</li></ul>
+          <p class="out">Esce: <b>il via libera sul capitolo</b></p>
+        </div>
+        <div class="ctrl"><span class="k">Controllo · permesso</span><span>Il collega ha risposto entro 7 giorni?</span><span class="if">Se non risponde: <b>si passa alla dirigenza</b> e lo si dice al presidente. Se dice no: si saltano i 121 in quel capitolo, e chi è già collegato resta un ponte.</span></div>
+        <div class="step m">
+          <div class="step-top"><span class="n">02</span><h3>121 con la dirigenza</h3><span class="who m">Tu</span></div>
+          <p>Presidente, poi responsabile formazione ed eventi. I ruoli si leggono al momento dal portale BNI.</p>
+          <p class="out">Esce: <b>chi sono i membri più attivi</b> e la porta aperta sul capitolo</p>
+        </div>
+        <div class="step am">
+          <div class="step-top"><span class="n">03</span><h3>Collegamento LinkedIn con tutti i membri</h3><span class="who a">Agente prepara · tu mandi</span></div>
+          <p>Insieme all'invito alle newsletter LinkedIn e Substack. È il passo che sblocca tutto il resto: da collegato vedi la rete di ogni membro.</p>
+          <p class="out">Esce: <b>la rete del capitolo visibile</b></p>
+        </div>
+        <div class="ctrl"><span class="k">Controllo · LinkedIn</span><span>10-15 inviti al giorno nei giorni feriali, senza superare 100 a settimana.</span><span class="if">Se LinkedIn chiede verifiche o blocca: <b>stop di 48 ore</b>, poi si riparte a metà ritmo.</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="tag">B</span><h3>Gli agenti lavorano da soli</h3><span class="when">sempre, in sottofondo</span></div>
+      <div class="spine">
+        <div class="step a">
+          <div class="step-top"><span class="n">04</span><h3>Studio del membro e della sua azienda</h3><span class="who a">Agente</span></div>
+          <p>Sito, LinkedIn, Meta, Google (SEO e SEM), pubblicità.</p>
+          <p class="out">Esce: <b>la scheda del membro</b> con cosa fa e dove potrebbe crescere</p>
+        </div>
+        <div class="step a">
+          <div class="step-top"><span class="n">05</span><h3>Incrocio: la rete del membro contro il serbatoio</h3><span class="who a">Agente</span></div>
+          <ul class="do"><li><b>Chi può presentarti</b>: i decisori delle aziende in target che conosce.</li><li><b>Contatti da segnalargli</b>: aziende del CRM che possono servire al suo mestiere.</li><li>Per ogni ponte, i <b>punti di contatto</b>: stessa azienda, stessa città, stesso capitolo o associazione, commenti reciproci, stessa scuola.</li></ul>
+          <p class="out">Esce: <b>due liste per ogni membro</b>, ordinate per forza del ponte</p>
+        </div>
+        <div class="ctrl"><span class="k">Controllo · serbatoio e letture</span><span>Massimo 20 letture LinkedIn al giorno. Il serbatoio resta piccolo e mirato: si ferma Maps quando le aziende in attesa sono troppe.</span><span class="if">CAPTCHA o blocco: <b>il lavoro si ferma</b> e risulta fallito. Le aziende senza ponte restano in attesa e si ricontrollano dopo ogni nuovo 121.</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="tag">C</span><h3>La settimana</h3><span class="when">ogni settimana</span></div>
+      <div class="spine">
+        <div class="step am">
+          <div class="step-top"><span class="n">06</span><h3>20 richieste di 121</h3><span class="who a">Agente prepara · tu mandi</span></div>
+          <p>L'agente sceglie secondo l'ordine. Le richieste arrivano in Cassetta alle 14 e le mandi su WhatsApp tra le 15 e le 18.</p>
+          <p class="out">Esce: <b>i 121 fissati</b></p>
+        </div>
+        <div class="ctrl"><span class="k">Controllo · agenda</span><span>Tetto di 12 121 fissati a settimana. Una richiesta senza risposta da 7 giorni non blocca chi viene dopo.</span><span class="if">Se il tetto è pieno: <b>chi accetta va alla settimana dopo</b> e le richieste nuove si fermano.</span></div>
+        <div class="step a">
+          <div class="step-top"><span class="n">07</span><h3>La pagina del giorno prima</h3><span class="who a">Agente</span></div>
+          <p>Chi è, cosa si è visto della sua azienda, 1-2 contatti da segnalargli, 3 persone da chiedergli con i punti di contatto.</p>
+          <p class="out">Esce: <b>arrivi al 121 preparato</b> in 5 minuti di lettura</p>
+        </div>
+        <div class="step m">
+          <div class="step-top"><span class="n">08</span><h3>Il 121</h3><span class="who m">Tu</span></div>
+          <ul class="do"><li>Dai: i contatti da segnalare.</li><li>Chiedi: "lo conosci bene? me lo presenti?"</li><li>Non vendi.</li></ul>
+        </div>
+        <div class="step am">
+          <div class="step-top"><span class="n">09</span><h3>Dopo il 121</h3><span class="who m">Tu: vocale di 2 minuti</span></div>
+          <p>Un vocale o la registrazione di Meet. L'agente aggiorna la scheda e mette in Cassetta le richieste di presentazione.</p>
+          <p class="out">Esce: <b>presentazioni da chiedere</b> e scheda aggiornata</p>
+        </div>
+        <div class="ctrl"><span class="k">Controllo · dopo il 121</span><span>Vocale entro 24 ore. Quante persone previste ha confermato di conoscere davvero?</span><span class="if">Se manca il vocale: <b>il giorno dopo un promemoria</b>. Se i ponti confermati sono pochi, i punti di contatto vanno pesati diversamente.</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="tag">D</span><h3>Il seguito</h3><span class="when">quando arriva una presentazione</span></div>
+      <div class="spine">
+        <div class="step am">
+          <div class="step-top"><span class="n">10</span><h3>Il contatto presentato</h3><span class="who a">Agente prepara · tu chiami</span></div>
+          <p>Diventa primo contatto caldo, con l'analisi completa e i 3 ganci con i numeri.</p>
+          <p class="out">Esce: <b>un incontro</b></p>
+        </div>
+        <div class="step m">
+          <div class="step-top"><span class="n">11</span><h3>La proposta al contatto segnalato</h3><span class="who m">Tu</span></div>
+          <p>Mai al membro. Le condizioni le decidi tu, caso per caso.</p>
+          <p class="out">Esce: <b>cliente</b>, oppure "non ora" con una data</p>
+        </div>
+        <div class="step a">
+          <div class="step-top"><span class="n">12</span><h3>Newsletter</h3><span class="who a">Agente con Orchestra</span></div>
+          <p>LinkedIn, Substack e quella classica tengono caldi membri e contatti che non sono ancora pronti.</p>
+        </div>
+        <div class="ctrl"><span class="k">Controllo · imbuto</span><span>Contatti segnalati → presentazioni → incontri → proposte → clienti. A ogni passaggio si vede chi si ferma e dove.</span></div>
+      </div>
+    </div>
+
+    <div class="loop">
+      <b>Il giro si chiude</b>
+      <p>Ogni 121 allarga la tua rete, e una rete più grande collega più aziende del serbatoio. Ogni cliente diventa un caso studio, e il caso studio dà a Maps nuove aziende da cercare.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>La settimana tipo</h2>
+    <div class="week">
+      <div class="day"><h3>Lunedì</h3><span class="t">mattina</span><span>Guardi il cruscotto della settimana prima.</span><span class="t">14:00 / 15-18</span><span>Richieste di 121 in Cassetta e invio.</span></div>
+      <div class="day"><h3>Martedì</h3><span class="t">giorno</span><span>121, 2-3 al giorno.</span><span class="t">14:00 / 15-18</span><span>Richieste e presentazioni.</span></div>
+      <div class="day"><h3>Mercoledì</h3><span class="t">giorno</span><span>121.</span><span class="t">14:00 / 15-18</span><span>Richieste e presentazioni.</span></div>
+      <div class="day"><h3>Giovedì</h3><span class="t">giorno</span><span>121 e riunione del capitolo.</span><span class="t">14:00 / 15-18</span><span>Richieste e presentazioni.</span></div>
+      <div class="day"><h3>Venerdì</h3><span class="t">giorno</span><span>121, telefonate ai contatti presentati.</span><span class="t">pomeriggio</span><span>Esce il cruscotto della settimana.</span></div>
+    </div>
+    <p class="note">Il tuo tempo fisso: i 121 (fino a 12), 10 minuti di Cassetta al giorno, un vocale dopo ogni 121.</p>
+  </section>
+
+  <section class="section">
+    <h2>Il cruscotto: cosa si guarda ogni settimana</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Misura</th><th>Obiettivo</th><th>Allarme</th><th>Cosa si fa</th></tr></thead>
+        <tbody>
+          <tr><td>Richieste di 121 mandate</td><td class="num">20</td><td class="num">&lt; 15</td><td>Si controlla se mancano membri da contattare o se la Cassetta resta indietro.</td></tr>
+          <tr><td>Richieste accettate</td><td class="num">~50%</td><td class="num">&lt; 30%</td><td>Si cambia il messaggio di richiesta.</td></tr>
+          <tr><td>121 fatti</td><td class="num">8-12</td><td class="num">&lt; 6</td><td>Si guarda dove si ferma: risposte, agenda o rinvii.</td></tr>
+          <tr><td>Vocale entro 24 ore</td><td class="num">100%</td><td class="num">&lt; 80%</td><td>Promemoria più insistente.</td></tr>
+          <tr><td>Ponti confermati nel 121 ("lo conosco bene")</td><td class="num">≥ 1 per 121</td><td class="num">&lt; 1 ogni 3</td><td>Si rivedono i punti di contatto.</td></tr>
+          <tr><td>Presentazioni ottenute</td><td class="num">≥ 4</td><td class="num">0 per 2 settimane</td><td>Si rivede come si chiede nel 121.</td></tr>
+          <tr><td>Contatti segnalati ai membri</td><td class="num">≥ 1 per 121</td><td class="num">0</td><td>Si guarda il serbatoio: mancano aziende utili ai mestieri dei membri.</td></tr>
+          <tr><td>Incontri con contatti presentati</td><td class="num">≥ 2</td><td class="num">0</td><td>Si rivedono i 3 ganci.</td></tr>
+          <tr><td>Proposte e clienti</td><td class="num">si contano</td><td class="num">—</td><td>Dicono quali capitoli e quali membri portano lavoro.</td></tr>
+          <tr><td>Inviti LinkedIn accettati</td><td class="num">≥ 50%</td><td class="num"><span class="stop">blocco</span></td><td>Stop di 48 ore, poi metà ritmo.</td></tr>
+          <tr><td>Aziende nel serbatoio con un ponte</td><td class="num">~50%</td><td class="num">&lt; 25%</td><td>Si stringe la ricerca su Maps alla nicchia.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Gli obiettivi sono una prima taratura e si correggono dopo le prime 4 settimane. La prova LinkedIn del 19 ottobre ha dato 7 aziende con un ponte su 14.</p>
+  </section>
+
+  <section class="section">
+    <h2>Cosa manca ancora</h2>
+    <ul class="do">
+      <li>Gli ex clienti non sono nel percorso: sono l'altra strada che porta soldi.</li>
+      <li>Le referenze stanno nell'app BNI e non nel CRM, così non si vede quali portano clienti.</li>
+    </ul>
+  </section>
+</div>

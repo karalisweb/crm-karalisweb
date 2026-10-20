@@ -62,8 +62,7 @@ segnalare ai membri e persone da farsi presentare.
 
 **Il seguito**
 10. **Il contatto presentato** diventa primo contatto caldo, con l'analisi e i 3 ganci.
-11. **La proposta va al contatto segnalato**, non al membro. Al membro va una **commissione** quando il contatto
-    diventa cliente.
+11. **La proposta va al contatto segnalato**, non al membro. Le condizioni le decide Alessio caso per caso.
 12. **Le newsletter** (LinkedIn, Substack e quella classica, fatte con Orchestra) tengono caldi membri e contatti.
 
 ### I punti di contatto (per pesare un "contatto in comune")
@@ -93,14 +92,12 @@ Più segnali = ponte più forte. Nel 121 la domanda resta: "lo conosci bene?".
 - 121: fino a 12 a settimana; 20 richieste a settimana, al pomeriggio.
 - "Contatti da segnalare", non "referenze".
 - Non si vende al primo 121 né ai membri: si vende ai contatti segnalati dal membro.
-- Sconto 20% fattibile; commissione fino al 30% possibile.
+- Sconti e commissioni: li gestisce Alessio caso per caso, fuori dal flusso.
 
 ### Da decidere
 
-- **Sconto e commissione insieme sono il 50% del prezzo.** Proposta: commissione al membro (lo motiva a
-  segnalare) e sconto più piccolo o nessuno al contatto. Serve un listino fisso, non caso per caso.
-- La commissione va pagata con fattura (il membro fa da segnalatore): da verificare col commercialista e con le
-  regole del capitolo.
+- Schema del processo con i punti di controllo e il cruscotto settimanale: `docs/motore-121.html`.
+
 - **Gli ex clienti** non sono ancora nel flusso: sono l'altra strada che porta soldi.
 - **Tre numeri a settimana** per capire cosa funziona: 121 fatti, presentazioni ottenute, proposte e chiusure.
 - Le referenze stanno nell'app BNI e non nel CRM: così non si vede quali portano clienti.
@@ -124,7 +121,6 @@ diretto; Denotti 35 in comune; Sorgente Solare 19; Centro Piscine 12; Accadueo 5
   di contatto, e "contatti da segnalare".
 - Pagina del giorno prima del 121; vocale o Meet dopo.
 - Ricerca: il serbatoio da Maps resta piccolo e mirato; le aziende senza ponte restano in attesa.
-- Commissione al membro sul contatto segnalato che diventa cliente.
 
 ---
 
