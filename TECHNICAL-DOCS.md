@@ -1607,6 +1607,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 
 - `0 7 * * *` squadra-bni `?fase=mattina`; `0 14 * * 1-5` squadra-bni `?fase=richieste`;
   `0 17 * * 5` cruscotto.
+- **Drip opt-in a freddo spento** (2026-10-20, decisione di Alessio): la riga `*/10 7-18 * * 1-5 … opt-in-mailer`
+  è commentata nel crontab. Per riaccenderlo va tolto il commento, ma il Motore 121 dice "niente contatto a freddo".
 
 ### Limiti noti
 

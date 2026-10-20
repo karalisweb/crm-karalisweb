@@ -4,10 +4,10 @@ Per ogni punto: cosa può andare storto, cosa ho già fatto e, se serve, cosa de
 
 ## Da decidere
 
-**1. Il drip email a freddo esiste ancora.**
-Il motore "opt-in" manda mail ai vecchi lead freddi. Oggi è in pausa: nessuna mail negli ultimi 30 giorni.
-- *Fatto:* le aziende trovate dalla ricerca e quelle legate a BNI non possono più entrarci, nemmeno se togli la pausa.
-- *Da decidere:* visto che abbiamo detto "niente contatto a freddo", lo spengo del tutto?
+**1. Il drip email a freddo: SPENTO il 2026-10-20 (deciso da Alessio).**
+La riga del crontab che lo lanciava è commentata (backup in `/root/crontab-backup-*-pre-stop-optin.txt`).
+Il codice resta, ma nessun invio parte. In più, le aziende trovate dalla ricerca e quelle BNI sono escluse
+anche dal codice.
 
 **2. Il limite di LinkedIn è mensile e non lo conosciamo.**
 LinkedIn gratuito ha un limite di ricerche al mese che non pubblica. Ieri l'avviso è comparso dopo una decina di ricerche. Se lo superiamo, l'incrocio e "chi decide" si fermano fino al mese dopo.
