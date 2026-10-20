@@ -15,61 +15,95 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 
 ---
 
-## Il flusso, riprogettato (2026-10-20 — da confermare con Alessio)
+## Il flusso, riprogettato (2026-10-20 — in definizione con Alessio)
 
 Detto da Alessio il 2026-10-19: **"Il BNI deve diventare un punto di contatto forte, un terreno di gioco
-condiviso."** Il freddo non è più la strada principale: un'azienda si contatta solo se **qualcuno che Alessio
-conosce** può fare da ponte.
+condiviso."** Niente contatto a freddo: un'azienda si contatta solo se qualcuno della rete di Alessio fa da ponte.
 
-### Il principio
+### L'idea di fondo
 
-Due strade, una sola regola: **niente contatto a freddo.**
+**Il 121 è il motore.** È l'unica cosa che oggi porta soldi ed è dove sta il tempo di Alessio: tutto il resto lo
+prepara o lo sfrutta. **I membri sono partner, non clienti**: non si vende al primo 121 e non si vende ai membri,
+ma **ai contatti che il membro segnala**. Le aziende trovate dalla Ricerca servono a due cose: contatti da
+segnalare ai membri e persone da farsi presentare.
 
-- **Strada BNI**: i membri, in un ordine preciso, fino a diventare clienti o partner di referenze.
-- **Strada aziende**: le aziende trovate dalla Ricerca vanno avanti **solo se sono collegate** (LinkedIn o Meta)
-  a qualcuno della rete di Alessio. Il collegamento diventa la via d'ingresso: "me lo presenti?".
+### Le fonti: chi trova cosa
 
-Le due strade si alimentano a vicenda: ogni 121 allarga la rete di Alessio, e una rete più grande collega più
-aziende.
+| Fonte | A cosa serve | Quando |
+|---|---|---|
+| **Google Maps** (+ Google) | trovare le aziende in target, partendo dai casi studio (nicchia prima del settore) | in sottofondo, poche al giorno: riempie un **serbatoio** piccolo e mirato |
+| **LinkedIn** | trovare il ponte: chi decide e quale membro o contatto di Alessio lo conosce | passo 3 (collegamento ai membri) e passo 5 (incrocio) |
+| **Meta** | studiare: pagine, post vivi o fermi, pubblicità attive | passo 4 e analisi delle aziende |
+| **I membri stessi** | "chi sono i tuoi clienti tipo?": la fonte più calda | nel 121 |
 
-### Strada BNI — i 7 passi (per ogni capitolo)
+### I passi
 
-| # | Passo | Cosa fa l'agente | Cosa fa Alessio |
-|---|---|---|---|
-| 1 | **121 con chi fa il suo mestiere** (marketing e simili) — una specie di permesso: "posso contattare i tuoi colleghi di capitolo?" | trova il collega, prepara la richiesta in Cassetta | approva, fa il 121 |
-| 2 | **121 con la dirigenza** (presidente, formazione ed eventi) | prepara le richieste | approva, fa i 121 |
-| 3 | **Collegamento LinkedIn e iscrizione alle newsletter** (LinkedIn e Substack) | prepara l'elenco e il testo | manda lui le richieste |
-| 4 | **Studio del membro e della sua azienda**: sito, LinkedIn, Meta, Google (SEO/SEM), pubblicità | fa l'analisi della Fase 2 sull'azienda del membro | legge la scheda |
-| 5 | **121 con gli altri membri, portando referenze e chiedendone** | prepara per ogni 121 le referenze da dare (dalle aziende analizzate) e le persone da farsi presentare (dalla sua rete LinkedIn) | fa il 121, aggiorna la scheda |
-| 6 | **Proposta economica vantaggiosa perché è membro BNI** | prepara la bozza dai problemi trovati al passo 4 | la corregge e la manda |
-| 7 | **Iscrizione alla newsletter "classica"** per tenerlo caldo | la propone | approva |
+**Si apre un capitolo** (una volta per capitolo)
+1. **121 con il collega di mestiere**: il "permesso" (vedi sotto come renderlo solido).
+2. **121 con la dirigenza.**
+3. **Collegamento LinkedIn con tutti i membri** e iscrizione alle newsletter (LinkedIn e Substack). È il passo che
+   sblocca il resto: da collegato si vede la rete di ogni membro. **10-15 inviti al giorno nei giorni feriali.**
 
-Restano valide le regole già scritte nel Flusso BNI della Fase 1 (obiettivo 8 121 a settimana, visita al
-capitolo a un terzo dei membri, ruoli letti al momento, niente parte senza la Cassetta).
+**Gli agenti lavorano da soli**
+4. **Studio del membro e della sua azienda**: sito, LinkedIn, Meta, Google (SEO/SEM), pubblicità.
+5. **Incrocio**: la rete LinkedIn del membro contro il serbatoio delle aziende. Escono due liste:
+   - **chi può presentare**: i decisori delle aziende in target che conosce, con i **punti di contatto** (vedi sotto);
+   - **contatti da segnalargli** (non "referenze": diventano referenze solo quando il bisogno è verificato).
 
-**Da decidere con Alessio** (con la proposta dell'agente tra parentesi):
-- A. Se al passo 1 il collega dice di no: *(si salta il capitolo e si passa al successivo)*.
-- B. Il passo 4 si fa prima del 121 del passo 5: *(sì, così Alessio arriva con le referenze in mano)*.
-- C. La proposta del passo 6 a tutti o solo a chi ha un problema evidente: *(solo dopo uno scambio di
-  referenze e solo se il passo 4 ha trovato un problema chiaro)*.
+**La settimana**
+6. **20 richieste di 121 a settimana**, in Cassetta verso le 14, da mandare su WhatsApp **al pomeriggio**
+   (15-18). Tetto: **12 121 fissati a settimana**; oltre il tetto chi accetta va alla settimana dopo e le
+   richieste nuove si fermano.
+7. **Il giorno prima di ogni 121**: una pagina con chi è, cosa si è visto della sua azienda, i contatti da
+   segnalargli, le persone da chiedergli con i punti di contatto.
+8. **Il 121**: si dà, si chiede ("lo conosci bene?"), non si vende.
+9. **Dopo**: vocale di 2 minuti o registrazione Meet → l'agente aggiorna la scheda e mette in Cassetta le
+   richieste di presentazione.
 
-### Strada aziende — dalla Ricerca al "me lo presenti?"
+**Il seguito**
+10. **Il contatto presentato** diventa primo contatto caldo, con l'analisi e i 3 ganci.
+11. **La proposta va al contatto segnalato**, non al membro. Al membro va una **commissione** quando il contatto
+    diventa cliente.
+12. **Le newsletter** (LinkedIn, Substack e quella classica, fatte con Orchestra) tengono caldi membri e contatti.
 
-1. **Ricerca** (Fase 1) — come oggi.
-2. **Giro veloce** (Fase 2) — come oggi: sito trovato, ti trovano?, contatto, recensioni. Costa centesimi.
-3. **Controllo del collegamento** — *nuovo*. L'agente, col browser di Alessio e solo leggendo, cerca su LinkedIn
-   chi decide (titolare, socio, amministratore) e quanti contatti in comune ha con Alessio. Su Meta: quali amici
-   di Alessio seguono la pagina *(da provare: Facebook blocca facilmente chi legge troppo)*.
-   - **Collegata** = chi decide è contatto diretto di Alessio, oppure ha almeno un contatto in comune con lui.
-     Un dipendente o un ex dipendente collegato **non basta**.
-   - **Non collegata** → va in "Senza collegamento": **non si cancella**. Si ricontrolla dopo ogni nuovo 121
-     (la rete è cresciuta) e al più una volta al mese.
-   - Limite: **max 20 aziende al giorno** su LinkedIn; CAPTCHA o blocco = lavoro fallito.
-4. **Da decidere** (mail delle 7) — arrivano **solo le collegate**, con chi decide e i contatti in comune.
-5. **Approfondisci** → giro completo (Fase 2) e i 3 ganci.
-6. **Primo contatto = presentazione**: l'agente sceglie il contatto in comune migliore (prima un membro BNI, poi
-   chi Alessio conosce meglio) e prepara la richiesta "me lo presenti?". Alessio la approva e la manda.
-7. Da qui: incontro → proposta → chiusura → caso studio, che fa ripartire la Ricerca *(fasi ancora da definire)*.
+### I punti di contatto (per pesare un "contatto in comune")
+
+Un contatto in comune su LinkedIn non vuol dire che si conoscono. L'agente cerca segnali che lo rendano più
+forte, leggibili dai profili pubblici:
+- stessa azienda, oggi o in passato;
+- stessa città o stesso paese;
+- stesso capitolo BNI o stessa associazione;
+- commenti o reazioni reciproche ai post;
+- stessa scuola o università.
+Più segnali = ponte più forte. Nel 121 la domanda resta: "lo conosci bene?".
+
+### Il permesso: come non dipendere da una persona sola (proposta)
+
+- **Informare più che chiedere**: "prima di conoscere gli altri del capitolo volevo conoscere te". Un "no" diventa
+  meno probabile.
+- **Trasformare il collega in partner**: gli si propone di dividersi il lavoro (lui fa quello che fa, Alessio il
+  resto) e la stessa commissione sui contatti che gli passa.
+- **Se non risponde in 7 giorni**: si passa alla dirigenza e si dice al presidente che il collega è stato cercato.
+- **Se dice di no**: si rispetta, il capitolo si salta per i 121; i membri già collegati restano ponti.
+
+### Già deciso il 2026-10-20
+
+- Newsletter: tre (LinkedIn, Substack, classica), con Orchestra si fanno in fretta.
+- LinkedIn: 10-15 inviti al giorno.
+- 121: fino a 12 a settimana; 20 richieste a settimana, al pomeriggio.
+- "Contatti da segnalare", non "referenze".
+- Non si vende al primo 121 né ai membri: si vende ai contatti segnalati dal membro.
+- Sconto 20% fattibile; commissione fino al 30% possibile.
+
+### Da decidere
+
+- **Sconto e commissione insieme sono il 50% del prezzo.** Proposta: commissione al membro (lo motiva a
+  segnalare) e sconto più piccolo o nessuno al contatto. Serve un listino fisso, non caso per caso.
+- La commissione va pagata con fattura (il membro fa da segnalatore): da verificare col commercialista e con le
+  regole del capitolo.
+- **Gli ex clienti** non sono ancora nel flusso: sono l'altra strada che porta soldi.
+- **Tre numeri a settimana** per capire cosa funziona: 121 fatti, presentazioni ottenute, proposte e chiusure.
+- Le referenze stanno nell'app BNI e non nel CRM: così non si vede quali portano clienti.
 
 ### La prova del 2026-10-19 (filtro collegamento, fatta a mano)
 
@@ -84,10 +118,13 @@ diretto; Denotti 35 in comune; Sorgente Solare 19; Centro Piscine 12; Accadueo 5
 
 ### Cosa cambia nel codice (solo dopo la conferma)
 
-- Nuovo agente **Collegamento** (o il Decision maker rifatto): chi decide + contatti in comune, dopo il giro veloce.
-- Nuova lista **Senza collegamento** in Aziende trovate, con ricontrollo dopo ogni 121.
-- La mail delle 7 mostra solo le collegate.
-- Strada BNI: i passi 3, 4, 6 e 7 nella scheda del membro; al passo 5 le referenze da portare.
+- Richieste di 121: da 12 aperte a **20 a settimana**, in Cassetta al pomeriggio; tetto di **12 121 fissati**.
+- Collegamento LinkedIn ai membri: 10-15 inviti al giorno nei giorni feriali.
+- Nuovo agente **Incrocio**: rete del membro contro il serbatoio delle aziende → "chi può presentare" con i punti
+  di contatto, e "contatti da segnalare".
+- Pagina del giorno prima del 121; vocale o Meet dopo.
+- Ricerca: il serbatoio da Maps resta piccolo e mirato; le aziende senza ponte restano in attesa.
+- Commissione al membro sul contatto segnalato che diventa cliente.
 
 ---
 
