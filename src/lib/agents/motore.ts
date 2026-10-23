@@ -19,8 +19,9 @@ import { agentiDaEseguire } from "./regista";
 import { mezzanotteRoma, norm } from "./bni-regole";
 import {
   AGENTI_LINKEDIN, GIORNI_RICONTROLLO, ORE_STOP_LINKEDIN, SERBATOIO_MAX, bloccoLinkedin, collegamentoDa, lettureDi,
-  lettureDisponibili, messaggioPresentazione, type DecisoreLetto,
+  lettureDisponibili, messaggioPresentazione, riservaScalda, type DecisoreLetto,
 } from "./motore-121";
+import { FASI_ATTIVE } from "./rete-regole";
 import { siglaIndirizzo } from "@/lib/ricerca/regole";
 
 export const KIND_DOPO_121 = "DOPO_121";
@@ -38,16 +39,19 @@ export interface StatoLinkedinOggi {
   blocco: boolean;
   bloccoFinoAl: Date | null;
   disponibili: number;
+  /** Letture tenute per "scalda" (gli altri lavori LinkedIn non le possono usare). */
+  riservaScalda: number;
 }
 
 export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedinOggi> {
-  const [oggiRuns, blocchi] = await Promise.all([
+  const [oggiRuns, blocchi, daScaldare] = await Promise.all([
     db.agentRun.findMany({ where: { agent: { in: AGENTI_LINKEDIN }, queuedAt: { gte: mezzanotteRoma(oggi) } }, select: { agent: true, input: true } }),
     db.agentRun.findMany({
       where: { agent: { in: AGENTI_LINKEDIN }, status: "FALLITO", finishedAt: { gte: new Date(oggi.getTime() - ORE_STOP_LINKEDIN * 3600_000) } },
       select: { error: true, finishedAt: true },
       orderBy: { finishedAt: "desc" },
     }),
+    db.lavorazione.count({ where: { fase: { in: [...FASI_ATTIVE] }, decisore: { not: null }, scaldataAt: null } }),
   ]);
   const usate = oggiRuns.reduce((s, r) => s + lettureDi(r.agent, r.input), 0);
   const usateNonBni = oggiRuns.filter((r) => !AGENTI_LINKEDIN_BNI.includes(r.agent)).reduce((s, r) => s + lettureDi(r.agent, r.input), 0);
@@ -59,6 +63,7 @@ export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedi
     blocco,
     bloccoFinoAl: ultimo?.finishedAt ? new Date(ultimo.finishedAt.getTime() + ORE_STOP_LINKEDIN * 3600_000) : null,
     disponibili: lettureDisponibili(usate, blocco),
+    riservaScalda: riservaScalda(daScaldare, oggiRuns.some((r) => r.agent === "scalda"), oggi),
   };
 }
 
@@ -67,8 +72,10 @@ export async function linkedinPermette(agente: string, input: unknown, oggi = ne
   if (!AGENTI_LINKEDIN.includes(agente)) return true;
   const s = await statoLinkedinOggi(oggi);
   const costo = lettureDi(agente, input);
-  if (s.disponibili < costo) return false;
-  if (!AGENTI_LINKEDIN_BNI.includes(agente) && s.usateNonBni + costo > LETTURE_NON_BNI) return false;
+  // Scaldare chi decide viene per ultimo nel turno: le sue letture si tengono da parte, o non partirebbe mai.
+  const riserva = agente === "scalda" ? 0 : s.riservaScalda;
+  if (s.disponibili - riserva < costo) return false;
+  if (!AGENTI_LINKEDIN_BNI.includes(agente) && s.usateNonBni + costo + riserva > LETTURE_NON_BNI) return false;
   return true;
 }
 

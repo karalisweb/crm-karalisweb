@@ -14,7 +14,7 @@ import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { mezzanotteRoma } from "./bni-regole";
-import { feriale } from "./motore-121";
+import { RISERVA_SCALDA, feriale } from "./motore-121";
 import { linkedinPermette } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
@@ -28,7 +28,7 @@ export const KIND_COMMENTO = "COMMENTO_LINKEDIN";
 export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO];
 
 /** Decisori al giorno da scaldare con i commenti (letture LinkedIn). */
-const DECISORI_DA_SCALDARE = 5;
+const DECISORI_DA_SCALDARE = RISERVA_SCALDA;
 /** Commenti proposti in Cassetta al giorno: 1-2, non di più. */
 const COMMENTI_AL_GIORNO = 2;
 

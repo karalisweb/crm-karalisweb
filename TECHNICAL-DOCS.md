@@ -1583,6 +1583,8 @@ Decisione di Alessio: `PROGETTO-AGENTI.md` "La rete al centro". Casi studio + re
 - Contatti in comune (v3.57.1): `decision_maker` salva in `Persona.contattoInComune` tutti i nomi (fino a 50, `importaDecisionMaker`); il totale LinkedIn resta in `findings.persone[].numeroInComune` e la scheda azienda mostra "N in comune · di X si sa il nome".
 - Cassetta: `RETE_PONTE`, `RETE_DIRETTO`, `RETE_PROMEMORIA`, `COMMENTO_LINKEDIN`. Agente di browser `scalda` (R4) nel
   budget LinkedIn comune (`lettureDi("scalda")` = numero di decisori, max 5 al giorno).
+  Dalla v3.57.2 `riservaScalda` (motore-121.ts) tiene da parte fino a 5 letture nei feriali finché `scalda` non è accodato
+  oggi: `linkedinPermette` le sottrae a tutti gli altri lavori LinkedIn (totale e quota non BNI).
 - Turni: `turnoRete` gira nel turno di arricchimento (6:45, 14:45, 18:15) e nella fase `richieste` di squadra-bni (14:00).
 - API: `GET /api/rete`, `PATCH /api/rete/lavorazioni/[id]` (`presentato|scaldata|incontro|proposta|cliente|pausa|riprendi`),
   `POST /api/rete/cerchia` (`{nome, conosco, lavorazioneId?}`), `DELETE /api/rete/cerchia/[id]` (segna `rimosso_at`),

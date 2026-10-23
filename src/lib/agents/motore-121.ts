@@ -99,6 +99,12 @@ export function lettureDi(agente: string, input?: unknown): number {
   }
 }
 
+/** Letture tenute da parte ogni giorno feriale per scaldare chi decide, finché il lavoro "scalda" non è partito. */
+export const RISERVA_SCALDA = 5;
+export function riservaScalda(daScaldare: number, scaldaGiaOggi: boolean, oggi: Date): number {
+  return !scaldaGiaOggi && feriale(oggi) ? Math.min(RISERVA_SCALDA, daScaldare) : 0;
+}
+
 export const AGENTI_LINKEDIN = ["linkedin_membri", "rete_membro", "decision_maker", "linkedin_azienda", "cerca_linkedin", "scalda"];
 
 /** Un errore di un lavoro LinkedIn che vuol dire "LinkedIn ci ha notato": si ferma tutto per 48 ore. */

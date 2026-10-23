@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.57.2] - 2026-10-23
+
+### Fixed
+- **Il giro dei commenti ("scalda") non partiva mai**: le 15 letture LinkedIn al giorno per il lavoro non BNI le consumavano prima "Chi decide" e la ricerca, e "scalda" (che viene per ultimo nel turno) non trovava posto: dal 21 ottobre zero lavori accodati. Ora nei giorni feriali 5 letture sono tenute da parte per scaldare chi decide finché il lavoro del giorno non è partito.
+
+### Changed
+- **Piscine 2000 (Testoni)** tolto dalla cerchia: è solo un collegamento LinkedIn, non un contatto vero. L'azienda torna fra quelle da scaldare (correzione sui dati, su indicazione di Alessio).
+
 ## [3.57.1] - 2026-10-23
 
 ### Changed
