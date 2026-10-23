@@ -14,8 +14,9 @@ import { leggiPaginaPubblica } from "../fotografo";
 import type { AgenteEseguibile, ContestoAgente, Leva, Prova } from "../tipi";
 import { detectSocialLinks } from "@/lib/audit/social-detector";
 import { cercaSocialPerNome } from "../social-per-nome";
+import { noteDaReferti } from "../impressioni-sezioni";
 
-type Fonte = "sito" | "scheda" | "nome";
+type Fonte = "alessio" | "sito" | "scheda" | "nome";
 
 interface PagineSocial {
   facebook: string | null;
@@ -26,7 +27,8 @@ interface PagineSocial {
 }
 
 /**
- * Dove è presente: i link nel sito, poi quello salvato sull'azienda, poi la ricerca per nome
+ * Dove è presente: prima i link che ha trovato Alessio, poi i link nel sito, poi quello salvato
+ * sull'azienda, poi la ricerca per nome
  * (sempre, se manca uno dei tre: senza sito è l'unica strada).
  */
 async function pagineSocial(ctx: ContestoAgente): Promise<PagineSocial> {
@@ -37,6 +39,10 @@ async function pagineSocial(ctx: ContestoAgente): Promise<PagineSocial> {
       out.trovateDa[k] = fonte;
     }
   };
+  const diAlessio = noteDaReferti(await ctx.referti()).social;
+  metti("facebook", diAlessio.facebook, "alessio");
+  metti("instagram", diAlessio.instagram, "alessio");
+  metti("linkedin", diAlessio.linkedin, "alessio");
   if (ctx.lead.website) {
     try {
       const p = await ctx.pagina();

@@ -11,6 +11,7 @@
  */
 import * as cheerio from "cheerio";
 import { segniDiVita } from "../segni-vita";
+import { noteDaReferti, SEZIONI_IMPRESSIONI, type SezioneImpressione } from "../impressioni-sezioni";
 import { chiediJSON, REGOLE_COMUNI, type Schema } from "../ai";
 import { chiamaDataForSeo, dominio, LOCATION_ITALIA } from "../dataforseo";
 import { usdInCentesimiEuro } from "../costi";
@@ -516,10 +517,15 @@ export const agenteGanci: AgenteEseguibile = {
     const leve = referti.flatMap((r) => r.levers.map((l) => ({ ...l, agente: r.agent })));
     if (leve.length < 2) throw new Error("Troppo poche leve per scegliere i ganci");
     const lista = leve.map((l, i) => `${i + 1}. [${l.agente}] ${l.testo} — prova: ${l.prova}`).join("\n");
-    const riassunti = referti.map((r) => `- ${r.agent}: ${r.summary}`).join("\n");
+    const riassunti = referti.filter((r) => r.agent !== "alessio").map((r) => `- ${r.agent}: ${r.summary}`).join("\n");
+    // Quello che Alessio ha visto di persona: vale più degli agenti e corregge i loro errori.
+    const note = noteDaReferti(referti);
+    const impressioni = Object.entries(note.impressioni).map(([k, t]) => `- ${SEZIONI_IMPRESSIONI[k as SezioneImpressione]?.titolo ?? k}: ${t}`);
+    const social = Object.entries(note.social).map(([k, u]) => `- ${k}: ${u} (trovata da Alessio: è quella giusta)`);
+    const diAlessio = impressioni.length || social.length ? `\n\nQUELLO CHE HA VISTO ALESSIO DI PERSONA:\n${[...impressioni, ...social].join("\n")}` : "";
     const ai = await chiediJSON<RispostaGanci>({
-      sistema: `${REGOLE_COMUNI}\n\nScegli i 3 ganci più forti per la prima telefonata di Alessio al titolare. Preferisci i fatti con un numero o un confronto con i concorrenti, quelli che il titolare può verificare da solo e che toccano i clienti persi. Scarta i consigli generici. Usa SOLO le leve della lista e riporta ogni numero con le sue condizioni (es. "nel test con 4G lento"): il titolare deve poterlo verificare e trovarlo vero.`,
-      testo: `Azienda: ${ctx.lead.name}${ctx.lead.category ? ` (${ctx.lead.category})` : ""}, ${ctx.lead.citta ?? ""}\n\nCOSA HANNO TROVATO GLI AGENTI:\n${riassunti}\n\nLEVE:\n${lista}`,
+      sistema: `${REGOLE_COMUNI}\n\nScegli i 3 ganci più forti per la prima telefonata di Alessio al titolare. Preferisci i fatti con un numero o un confronto con i concorrenti, quelli che il titolare può verificare da solo e che toccano i clienti persi. Scarta i consigli generici. Usa SOLO le leve della lista e riporta ogni numero con le sue condizioni (es. "nel test con 4G lento"): il titolare deve poterlo verificare e trovarlo vero.${diAlessio ? ` Le leve [alessio] e le note di Alessio le ha scritte lui guardando l'azienda di persona: valgono più di quelle degli agenti. Se una nota dice che un dato degli agenti è sbagliato (es. il sito o una pagina social non è loro), scarta le leve su quel dato. Almeno un gancio, o la frase per aprire, deve tenere conto di quello che ha scritto Alessio.` : ""}`,
+      testo: `Azienda: ${ctx.lead.name}${ctx.lead.category ? ` (${ctx.lead.category})` : ""}, ${ctx.lead.citta ?? ""}\n\nCOSA HANNO TROVATO GLI AGENTI:\n${riassunti}${diAlessio}\n\nLEVE:\n${lista}`,
       schema: SCHEMA_GANCI,
     });
     const scelti = ai.dati.ganci

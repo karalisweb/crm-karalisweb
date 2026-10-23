@@ -13,6 +13,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.58.0] - 2026-10-23
+
+### Added
+- **Le tue impressioni nella scheda azienda**: in fondo a ogni sezione (Si fa trovare?, Il sito, Come la vedono i clienti, I concorrenti, Social e pubblicità, LinkedIn e chi decide, Cosa dirgli al telefono) c'è "Aggiungi le tue impressioni". Quello che scrivi lo leggono per primo i 3 ganci: vale più degli agenti e li corregge (es. "il sito non è il loro"). Salvando, i ganci si rifanno.
+- **I social che trovi tu**: nella sezione Social incolli il link di Facebook, Instagram o LinkedIn. Valgono sopra quelli degli agenti; ripartono subito Facebook e le inserzioni Meta (poi i ganci) e, sul tuo Mac, Instagram e LinkedIn se li hai cambiati.
+
+### Fixed
+- **Scheda azienda sul telefono**: alcuni blocchi con link lunghi uscivano a destra dallo schermo.
+
 ## [3.57.3] - 2026-10-23
 
 ### Changed

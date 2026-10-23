@@ -113,6 +113,11 @@ chiamata e **la prova** di ogni cosa che dice.
    **Tracciamenti**, e con il tuo browser Social, Meta, LinkedIn, Decision maker.
 5. **I 3 ganci**: in cima alla scheda, le 3 frasi da dire al titolare, ognuna con il suo numero e la
    prova, più la frase per aprire la chiamata. Si aggiornano quando arrivano i risultati dal Mac.
+6. **Le tue impressioni** (dalla v3.58): in fondo a ogni sezione della scheda premi **"Aggiungi le tue
+   impressioni"** e scrivi cosa hai visto tu ("il sito non è il loro", "Instagram è vivo, Facebook no",
+   "digli che ci siamo visti al BNI"). I 3 ganci le leggono per prime e correggono gli agenti. Nella
+   sezione Social, **"Aggiungi i link"**: incolli Facebook, Instagram o LinkedIn che hai trovato tu e le
+   ricerche sui social ripartono da quei link.
 
 Gli agenti dicono solo quello che possono provare: per esempio non dicono "non misurate le conversioni"
 se il sito usa Tag Manager, perché da fuori non si vede.

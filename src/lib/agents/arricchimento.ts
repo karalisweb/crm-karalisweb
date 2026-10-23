@@ -20,6 +20,7 @@ import {
   statoAzienda, type RiepilogoTurno,
 } from "./turno";
 import type { AziendaContesto, ContestoAgente, PaginaScaricata } from "./tipi";
+import { RETI_SOCIAL, leveDaNote, noteDaReferti, type NoteAlessio, type ReteSocial, type SezioneImpressione } from "./impressioni-sezioni";
 import { siglaIndirizzo } from "@/lib/ricerca/regole";
 import { refertiValidi } from "./turno";
 import { collegamentiDaVerificare, linkedinPermette, statoLinkedinOggi, studiaMembri, verificaCollegamento } from "./motore";
@@ -109,7 +110,7 @@ export async function giroVeloce(leadId: string, oggi = new Date()): Promise<{ f
     }
   }
 
-  // 2) Il resto del giro veloce, se c'è un sito.
+  // 2) Il resto del giro veloce, se esiste un sito.
   const azienda = aziendaContesto(l);
   if (azienda) {
     const piano = agentiDaEseguire(await statoAzienda(l.id), oggi, veloci.filter((a) => a !== "trova_sito"));
@@ -120,7 +121,7 @@ export async function giroVeloce(leadId: string, oggi = new Date()): Promise<{ f
     }
   }
 
-  // 3) Tutti hanno chiuso (o non c'è sito): si controlla se chi decide è collegato ad Alessio
+  // 3) Tutti hanno chiuso (o non esiste sito): si controlla se chi decide è collegato ad Alessio
   //    (Motore 121). Solo un'azienda collegata va in "Da decidere": la proposta la crea il controllo.
   const stati = new Map((await statoAzienda(l.id)).map((s) => [s.agente, s]));
   const finito = l.website ? veloci.every((a) => chiuso(stati.get(a), oggi)) : !veloci.includes("trova_sito") || chiuso(stati.get("trova_sito"), oggi);
@@ -266,4 +267,94 @@ export async function cambiaSito(leadId: string, sito: string, oggi = new Date()
     await eseguiAgenti(azienda, piano, oggi);
     if (approvata || (await db.agentReport.findFirst({ where: { leadId, agent: "ganci" }, select: { id: true } }))) await eseguiAgenti(azienda, ["ganci"], new Date());
   })().catch((e) => console.error("[cambia sito] fallito:", e));
+}
+
+// ─── Le impressioni di Alessio ─────────────────────────────────────────────
+// Quello che Alessio vede guardando l'azienda (per sezione) e i social che trova lui: un referto
+// dell'agente "alessio" che non scade mai. I 3 ganci lo leggono e gli danno la precedenza.
+
+const MAI = new Date("2100-01-01T00:00:00Z");
+
+export async function noteAlessio(leadId: string): Promise<NoteAlessio> {
+  const r = await db.agentReport.findFirst({ where: { leadId, agent: "alessio" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
+  return noteDaReferti(r ? [{ agent: "alessio", findings: r.findings as Record<string, unknown> }] : []);
+}
+
+async function salvaNote(leadId: string, note: NoteAlessio): Promise<void> {
+  const scritte = Object.values(note.impressioni).filter(Boolean).length;
+  const social = RETI_SOCIAL.filter((k) => note.social[k]);
+  const dati = {
+    summary: [scritte ? `${scritte} ${scritte === 1 ? "impressione" : "impressioni"}` : null, social.length ? `social trovati da te: ${social.join(", ")}` : null].filter(Boolean).join(" · ") || "Nessuna nota",
+    findings: note as unknown as Prisma.InputJsonValue,
+    levers: leveDaNote(note) as unknown as Prisma.InputJsonValue,
+    evidence: social.map((k) => ({ cosa: `Pagina ${k} trovata da Alessio`, fonte: note.social[k] })) as unknown as Prisma.InputJsonValue,
+    confidence: "ALTA" as const,
+    collectedAt: new Date(),
+    validUntil: MAI,
+  };
+  const esiste = await db.agentReport.findFirst({ where: { leadId, agent: "alessio" }, select: { id: true } });
+  if (esiste) await db.agentReport.update({ where: { id: esiste.id }, data: dati });
+  else await db.agentReport.create({ data: { leadId, agent: "alessio", ...dati } });
+}
+
+/** Il contesto per gli agenti anche senza sito (lavorano col nome, la scheda e i social). */
+async function contestoAncheSenzaSito(leadId: string): Promise<AziendaContesto | null> {
+  const l = await db.lead.findUnique({ where: { id: leadId }, select: SELEZIONE });
+  if (!l) return null;
+  return aziendaContesto(l) ?? { ...(aziendaContesto({ ...l, website: "x" }) as AziendaContesto), website: "" };
+}
+
+/** Le frasi per il telefono si rifanno se ci sono già o se l'azienda è approfondita. */
+async function rifaiGanci(azienda: AziendaContesto): Promise<void> {
+  const approvata = await db.approvalItem.findFirst({ where: { leadId: azienda.id, kind: KIND_FASCICOLO_BASE, status: "APPROVATO" }, select: { id: true } });
+  const ganci = await db.agentReport.findFirst({ where: { leadId: azienda.id, agent: "ganci" }, select: { id: true } });
+  if (approvata || ganci) await eseguiAgenti(azienda, ["ganci"], new Date());
+}
+
+/** Alessio scrive (o cancella, con testo vuoto) la sua impressione su una sezione: poi si rifanno i ganci. */
+export async function salvaImpressione(leadId: string, sezione: SezioneImpressione, testo: string): Promise<void> {
+  const note = await noteAlessio(leadId);
+  const pulito = testo.trim();
+  if ((note.impressioni[sezione] ?? "") === pulito) return;
+  if (pulito) note.impressioni[sezione] = pulito;
+  else delete note.impressioni[sezione];
+  await salvaNote(leadId, note);
+  const azienda = await contestoAncheSenzaSito(leadId);
+  if (azienda) void rifaiGanci(azienda).catch((e) => console.error("[impressioni] ganci falliti:", e));
+}
+
+/**
+ * Alessio incolla i social che ha trovato lui. Si salvano e ripartono gli agenti che li leggono:
+ * sul server Facebook e le inserzioni Meta (poi i ganci), sul Mac Instagram e LinkedIn se sono cambiati.
+ */
+export async function salvaSocial(leadId: string, social: Partial<Record<ReteSocial, string | null>>, oggi = new Date()): Promise<{ accodatiMac: string[] }> {
+  const note = await noteAlessio(leadId);
+  const cambiati: ReteSocial[] = [];
+  for (const k of RETI_SOCIAL) {
+    if (!(k in social)) continue;
+    const nuovo = social[k]?.trim() || undefined;
+    if (nuovo === note.social[k]) continue;
+    cambiati.push(k);
+    if (nuovo) note.social[k] = nuovo;
+    else delete note.social[k];
+  }
+  if (!cambiati.length) return { accodatiMac: [] };
+  await salvaNote(leadId, note);
+  const azienda = await contestoAncheSenzaSito(leadId);
+  if (!azienda) return { accodatiMac: [] };
+  const accodatiMac: string[] = [];
+  const mac = [...(cambiati.includes("instagram") || cambiati.includes("facebook") ? ["instagram"] : []), ...(cambiati.includes("linkedin") ? ["linkedin_azienda"] : [])];
+  for (const chiave of mac) {
+    try {
+      await lanciaAgente(leadId, chiave, oggi);
+      accodatiMac.push(chiave);
+    } catch (e) {
+      console.error(`[social di Alessio] ${chiave} non accodato:`, e);
+    }
+  }
+  void (async () => {
+    await eseguiAgenti(azienda, ["social", "meta_ads"], oggi);
+    await rifaiGanci(azienda);
+  })().catch((e) => console.error("[social di Alessio] fallito:", e));
+  return { accodatiMac };
 }

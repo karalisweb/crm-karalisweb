@@ -13,6 +13,7 @@ import { CHIAVI_BROWSER, schedaDi } from "./registro";
 import { SERVIZI } from "./tipi";
 import { importaMappaBni, importaProfiliMembri, type EsitoMappa } from "./bni";
 import { dopoCollegamento } from "./motore";
+import { noteAlessio } from "./arricchimento";
 import { importaScalda } from "./rete";
 import { importaAziendeLinkedin, importaAziendeMeta, importaDecisionMaker, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
@@ -71,6 +72,8 @@ function linkSocialNoti(auditData: unknown, socialUrl: string | null): Record<st
 
 /** La pagina LinkedIn dell'azienda, se la ricerca o un lavoro precedente l'ha già trovata (anche l'agente Social, per nome). */
 async function paginaLinkedinNota(leadId: string): Promise<string | null> {
+  const diAlessio = (await noteAlessio(leadId)).social.linkedin;
+  if (diAlessio) return diAlessio;
   const r = await db.agentReport.findFirst({ where: { leadId, agent: "linkedin_azienda" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
   const url = (r?.findings as { url?: unknown } | null)?.url;
   if (typeof url === "string") return url;
@@ -78,13 +81,24 @@ async function paginaLinkedinNota(leadId: string): Promise<string | null> {
   return typeof s === "string" ? s : null;
 }
 
-/** Il referto dell'agente Social: le pagine trovate (dal sito o per nome) e i dati di Facebook. */
+/**
+ * Il referto dell'agente Social: le pagine trovate (dal sito o per nome) e i dati di Facebook.
+ * Le pagine che ha trovato Alessio valgono sopra tutto (anche se il Social non ha ancora rifatto).
+ */
 async function socialNoto(leadId: string): Promise<Record<string, unknown> | null> {
-  const r = await db.agentReport.findFirst({ where: { leadId, agent: "social" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
+  const [r, note] = await Promise.all([
+    db.agentReport.findFirst({ where: { leadId, agent: "social" }, orderBy: { collectedAt: "desc" }, select: { findings: true } }),
+    noteAlessio(leadId),
+  ]);
   const f = (r?.findings ?? null) as Record<string, unknown> | null;
-  if (!f) return null;
-  const { facebook, instagram, linkedin, trovateDa, ultimo_post, post_ultimi_3_mesi, temi, follower } = f;
-  return { facebook, instagram, linkedin, trovateDa, ultimoPostFacebook: ultimo_post, postFacebookUltimi3Mesi: post_ultimi_3_mesi, temiFacebook: temi, followerFacebook: follower };
+  const diAlessio = note.social;
+  if (!f && !Object.keys(diAlessio).length) return null;
+  const { facebook, instagram, linkedin, trovateDa, ultimo_post, post_ultimi_3_mesi, temi, follower } = f ?? {};
+  return {
+    facebook: diAlessio.facebook ?? facebook, instagram: diAlessio.instagram ?? instagram, linkedin: diAlessio.linkedin ?? linkedin,
+    trovateDa: { ...((trovateDa as Record<string, string> | undefined) ?? {}), ...Object.fromEntries(Object.keys(diAlessio).map((k) => [k, "alessio"])) },
+    ultimoPostFacebook: ultimo_post, postFacebookUltimi3Mesi: post_ultimi_3_mesi, temiFacebook: temi, followerFacebook: follower,
+  };
 }
 
 /** Prende in carico fino a `limit` lavori, i più vecchi per primi. */

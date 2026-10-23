@@ -1648,6 +1648,21 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 - Le newsletter le scrive Orchestra: il CRM segna solo chi è stato invitato.
 - "Inviti LinkedIn accettati" nel cruscotto è cumulativo (non per settimana).
 
+## Impressioni di Alessio (v3.58.0)
+
+- Nessuna colonna nuova: le note sono il referto dell'agente `alessio` in `agent_reports` (uno per azienda,
+  `validUntil` 2100, `findings = { impressioni: {sezione: testo}, social: {facebook?, instagram?, linkedin?} }`).
+  Le impressioni delle sezioni con un servizio diventano `levers` (prova "L'ha visto Alessio (…)").
+- `src/lib/agents/impressioni-sezioni.ts` (senza db, usato anche dalla pagina): `SEZIONI_IMPRESSIONI`,
+  `noteDaReferti`, `leveDaNote`. `arricchimento.ts`: `salvaImpressione` (rifà i ganci se ci sono o se approvata),
+  `salvaSocial` (server: `social` + `meta_ads` poi ganci; Mac: `instagram` se cambia FB/IG, `linkedin_azienda` se cambia LI).
+- I link di Alessio hanno la precedenza: `pagineSocial` in `agenti/meta.ts` (fonte `alessio`), `socialNoto` e
+  `paginaLinkedinNota` in `browser.ts`. `agenteGanci` passa all'AI le note ("QUELLO CHE HA VISTO ALESSIO") con la
+  regola che valgono più degli agenti.
+- API (sessione): `POST /api/ricerca/aziende/[id]/impressioni` `{sezione, testo}` (testo vuoto = cancella);
+  `POST /api/ricerca/aziende/[id]/social` `{facebook?, instagram?, linkedin?}` (null/vuoto = togli; host controllato).
+- Test: `src/lib/agents/__tests__/impressioni.test.ts`.
+
 ## Agenti dell'analisi: catalogo e modi (v3.49.0)
 
 - `src/lib/agents/catalogo.ts`: una riga per agente (dove: server|mac, momento: trovata|approfondisci|sintesi,

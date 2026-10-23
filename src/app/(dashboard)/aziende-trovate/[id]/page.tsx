@@ -5,8 +5,9 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Check, Globe, Laptop, Linkedin, Loader2, MapPin, Phone, Play, RotateCcw, Search, Server, Target, Trash2, User, X } from "lucide-react";
+import { ArrowLeft, Check, Globe, Laptop, Linkedin, Loader2, MapPin, Pencil, Phone, Play, RotateCcw, Search, Server, Target, Trash2, User, X } from "lucide-react";
 import { CANALI, STATI_PRESENTAZIONE, data } from "@/components/ricerca/etichette";
+import { RETI_SOCIAL, noteDaReferti, type ReteSocial, type SezioneImpressione } from "@/lib/agents/impressioni-sezioni";
 
 interface Leva { servizio: string; testo: string; prova: string }
 interface Referto { summary: string; findings: Record<string, unknown>; levers: Leva[]; data: string }
@@ -42,7 +43,7 @@ const arr = <T,>(v: unknown) => (Array.isArray(v) ? (v as T[]) : []);
 const MOMENTO: Record<string, string> = { trovata: "nell'analisi veloce", approfondisci: "con Approfondisci", sintesi: "quando arrivano i dati" };
 
 /** I dati comuni ai blocchi: gli agenti e il pulsante per lanciarli. */
-const Ctx = createContext<{ agenti: Agente[]; analisi: Record<string, Referto>; lancia: (chiave: string) => void; inLancio: string | null }>({ agenti: [], analisi: {}, lancia: () => {}, inLancio: null });
+const Ctx = createContext<{ id: string; agenti: Agente[]; analisi: Record<string, Referto>; lancia: (chiave: string) => void; inLancio: string | null; aggiorna: () => void }>({ id: "", agenti: [], analisi: {}, lancia: () => {}, inLancio: null, aggiorna: () => {} });
 
 /**
  * Una sezione della scheda è una fisarmonica: chiusa mostra quante ricerche sono fatte e quante
@@ -64,7 +65,7 @@ function Sezione({ n, titolo, agenti: chiavi = [], aperta = false, unaColonna = 
           <span className="transition group-open:rotate-90">›</span>
         </span>
       </summary>
-      <div className={`px-3 pb-3 grid gap-2 ${unaColonna ? "" : "lg:grid-cols-2 [&>*:only-child]:lg:col-span-2"}`}>{children}</div>
+      <div className={`px-3 pb-3 grid grid-cols-1 gap-2 [&>*]:min-w-0 ${unaColonna ? "" : "lg:grid-cols-2 [&>*:only-child]:lg:col-span-2"}`}>{children}</div>
     </details>
   );
 }
@@ -126,6 +127,119 @@ function Blocco({ agente, soloDettagli = false, children }: { agente: string; so
         </>
       )}
     </div>
+  );
+}
+
+const ESEMPI: Record<SezioneImpressione, string> = {
+  trovare: "Es. cercando il nome esce prima un'altra azienda",
+  sito: "Es. il sito non è il loro · sembra vecchio ma è curato · il modulo non funziona",
+  clienti: "Es. le recensioni migliori parlano del titolare",
+  concorrenti: "Es. il vero concorrente è un altro",
+  social: "Es. Instagram è vivo, Facebook no · la pagina trovata non è la loro",
+  linkedin: "Es. il titolare vero è il figlio · lo conosco di vista",
+  telefono: "Es. digli che ci siamo visti al BNI · non parlare di prezzi",
+};
+
+/** Le impressioni di Alessio su una sezione: le scrive lui, i 3 ganci le leggono per prime. */
+function Impressione({ sezione }: { sezione: SezioneImpressione }) {
+  const { id, analisi, aggiorna } = useContext(Ctx);
+  const salvata = noteDaReferti(analisi.alessio ? [{ agent: "alessio", findings: analisi.alessio.findings }] : []).impressioni[sezione] ?? "";
+  const [aperta, setAperta] = useState(false);
+  const [testo, setTesto] = useState(salvata);
+  const [occupato, setOccupato] = useState(false);
+  const [errore, setErrore] = useState<string | null>(null);
+  const salva = async (valore: string) => {
+    setOccupato(true);
+    const r = await fetch(`/api/ricerca/aziende/${id}/impressioni`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sezione, testo: valore }) });
+    const d = await r.json().catch(() => ({}));
+    setOccupato(false);
+    if (!r.ok) return setErrore(d.error ?? "Errore");
+    setAperta(false);
+    aggiorna();
+  };
+  if (!aperta) {
+    return (
+      <div className="rounded-md border border-dashed px-3 py-2 text-sm lg:col-span-2">
+        {salvata ? (
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0 break-words whitespace-pre-line"><span className="font-medium">Le tue impressioni: </span>{salvata}</div>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setTesto(salvata); setAperta(true); }}><Pencil className="h-3.5 w-3.5 mr-1" />Cambia</Button>
+          </div>
+        ) : (
+          <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5" onClick={() => { setTesto(""); setAperta(true); }}><Pencil className="h-3.5 w-3.5" />Aggiungi le tue impressioni</button>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-md border px-3 py-2.5 space-y-2 lg:col-span-2">
+      <div className="text-sm"><b>Le tue impressioni</b> <span className="text-muted-foreground">I 3 ganci le leggono per prime e correggono gli agenti.</span></div>
+      <textarea value={testo} onChange={(e) => { setTesto(e.target.value); setErrore(null); }} maxLength={1000} rows={3} autoFocus placeholder={ESEMPI[sezione]} aria-label="Le tue impressioni" className="w-full rounded-md border bg-background px-2.5 py-2 text-sm" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" onClick={() => salva(testo)} disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salva"}</Button>
+        {salvata && <Button size="sm" variant="ghost" className="text-red-600 dark:text-red-400" onClick={() => salva("")} disabled={occupato}>Cancella</Button>}
+        <Button size="sm" variant="ghost" onClick={() => setAperta(false)} disabled={occupato}>Annulla</Button>
+        {errore && <span className="text-xs text-red-600">{errore}</span>}
+      </div>
+    </div>
+  );
+}
+
+const NOMI_SOCIAL: Record<ReteSocial, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
+
+/** "Li ho trovati io": i link ai social che ha trovato Alessio. Salvati, ripartono gli agenti che li leggono. */
+function SocialTuoi() {
+  const { id, analisi, aggiorna } = useContext(Ctx);
+  const salvati = noteDaReferti(analisi.alessio ? [{ agent: "alessio", findings: analisi.alessio.findings }] : []).social;
+  const [aperto, setAperto] = useState(false);
+  const [link, setLink] = useState<Record<ReteSocial, string>>({ facebook: "", instagram: "", linkedin: "" });
+  const [occupato, setOccupato] = useState(false);
+  const [esito, setEsito] = useState<string | null>(null);
+  const [errore, setErrore] = useState<string | null>(null);
+  const trovati = RETI_SOCIAL.filter((k) => salvati[k]);
+  if (!aperto) {
+    return (
+      <div className="rounded-md border border-dashed px-3 py-2 text-sm lg:col-span-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0 break-words">
+          {trovati.length ? (
+            <><span className="font-medium">Trovati da te: </span>{trovati.map((k, i) => <span key={k}>{i > 0 && " · "}<a href={salvati[k]} target="_blank" rel="noopener noreferrer" className="underline">{NOMI_SOCIAL[k]}</a></span>)}</>
+          ) : <span className="text-muted-foreground">Hai trovato tu un social che gli agenti non vedono, o uno giusto al posto di uno sbagliato?</span>}
+          {esito && <div className="text-xs text-muted-foreground mt-0.5">{esito}</div>}
+        </div>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setLink({ facebook: salvati.facebook ?? "", instagram: salvati.instagram ?? "", linkedin: salvati.linkedin ?? "" }); setErrore(null); setAperto(true); }}>
+          <Pencil className="h-3.5 w-3.5 mr-1" />{trovati.length ? "Cambia i link" : "Aggiungi i link"}
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <form
+      className="rounded-md border px-3 py-2.5 space-y-2 lg:col-span-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setOccupato(true);
+        const r = await fetch(`/api/ricerca/aziende/${id}/social`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(link) });
+        const d = await r.json().catch(() => ({}));
+        setOccupato(false);
+        if (!r.ok) return setErrore(d.error ?? "Errore");
+        setAperto(false);
+        setEsito(`Salvati: ripartono Facebook e le inserzioni${(d.accodatiMac ?? []).length ? ", e sul tuo Mac " + (d.accodatiMac as string[]).map((k) => (k === "instagram" ? "Instagram" : "LinkedIn")).join(" e ") : ""}.`);
+        aggiorna();
+      }}
+    >
+      <div className="text-sm"><b>I social che hai trovato tu</b> <span className="text-muted-foreground">Valgono più di quelli degli agenti. Lascia vuoto per togliere.</span></div>
+      {RETI_SOCIAL.map((k) => (
+        <label key={k} className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="w-20 shrink-0">{NOMI_SOCIAL[k]}</span>
+          <input value={link[k]} onChange={(e) => { setLink({ ...link, [k]: e.target.value }); setErrore(null); }} placeholder={`link della pagina ${NOMI_SOCIAL[k]}`} className="h-8 rounded-md border bg-transparent px-2 text-sm min-w-0 flex-1" />
+        </label>
+      ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" type="submit" disabled={occupato}>{occupato ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salva e rifai le ricerche"}</Button>
+        <Button size="sm" variant="ghost" type="button" onClick={() => setAperto(false)} disabled={occupato}>Annulla</Button>
+        {errore && <span className="text-xs text-red-600 w-full">{errore}</span>}
+      </div>
+    </form>
   );
 }
 
@@ -231,7 +345,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
   const stato = s.decisione?.status;
 
   return (
-    <Ctx.Provider value={{ agenti: s.agenti, analisi: an, lancia, inLancio }}>
+    <Ctx.Provider value={{ id, agenti: s.agenti, analisi: an, lancia, inLancio, aggiorna: () => setVersione((v) => v + 1) }}>
       <div className="max-w-6xl min-w-0 space-y-3">
         <Link href="/aziende-trovate" className="text-sm text-muted-foreground hover:underline inline-flex items-center gap-1"><ArrowLeft className="h-4 w-4" /> Aziende trovate</Link>
         <Card><CardContent className="p-4 sm:p-5">
@@ -328,6 +442,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
           <Sezione n={1} titolo="Si fa trovare?" agenti={["trova_sito", "posizioni"]}>
             <Blocco agente="trova_sito" />
             <Blocco agente="posizioni" />
+            <Impressione sezione="trovare" />
           </Sezione>
 
           <Sezione n={2} titolo="Il sito" agenti={["sito_visto", "contatto", "lettore"]}>
@@ -353,6 +468,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
             </Blocco>
+            <Impressione sezione="sito" />
           </Sezione>
 
           <Sezione n={3} titolo="Come la vedono i clienti" agenti={["scheda_google", "recensioni"]}>
@@ -365,6 +481,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
                 <div key={i} className="text-xs mt-1 break-words"><span className="text-red-600">−</span> {x.cosa}: &ldquo;{x.citazione}&rdquo;</div>
               ))}
             </Blocco>
+            <Impressione sezione="clienti" />
           </Sezione>
 
           <Sezione n={4} titolo="I concorrenti" agenti={["concorrenti"]}>
@@ -375,6 +492,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
                 ))}
               </div>
             </Blocco>
+            <Impressione sezione="concorrenti" />
           </Sezione>
 
           {/* L'ordine di Alessio: dove è presente sui social, se sono coerenti, poi le inserzioni (Meta se c'è la pagina, Google se c'è il sito). */}
@@ -388,6 +506,8 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             </Blocco>
             <Blocco agente="google_ads" />
             <Blocco agente="tracciamenti" />
+            <SocialTuoi />
+            <Impressione sezione="social" />
           </Sezione>
 
           <Sezione n={6} titolo="LinkedIn e chi decide" agenti={["linkedin_azienda", "decision_maker"]}>
@@ -421,6 +541,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
               )) : <div className="text-muted-foreground">Nessun membro BNI collegato, per ora</div>}
               {s.casi.length > 0 && <div className="text-muted-foreground">Caso da raccontare: {s.casi.map((c, i) => <span key={c.id}>{i > 0 && ", "}<Link href={`/casi-studio/${c.id}`} className="hover:underline">{c.titolo}</Link></span>)}</div>}
             </div>
+            <Impressione sezione="linkedin" />
           </Sezione>
 
           <Sezione n={7} titolo="Cosa dirgli al telefono" agenti={["ganci"]} aperta unaColonna>
@@ -435,6 +556,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
               )}
             </Blocco>
             <div className="rounded-md border px-3 py-2.5 text-sm"><span className="font-medium">Prossimo passo: </span>{s.prossimo}</div>
+            <Impressione sezione="telefono" />
           </Sezione>
 
           <section className="mt-5">
