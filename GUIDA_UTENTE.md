@@ -1,6 +1,6 @@
 # KW Sales CRM - Guida Utente
 
-Versione: **3.57.2** | Ultimo aggiornamento: 2026-10-23
+Versione: **3.57.3** | Ultimo aggiornamento: 2026-10-23
 
 > Questa guida spiega, passo dopo passo, come usare il CRM per gestire i tuoi lead dalla ricerca fino alla chiusura. È scritta per chi vende, non per chi programma: niente termini tecnici senza spiegazione.
 >
@@ -60,7 +60,7 @@ i membri ti presentano. **Niente contatto a freddo.** Lo schema completo, con i 
 7. **Il cruscotto** (menu Motore 121 → Cruscotto): 11 numeri ogni settimana, con cosa fare quando sono
    fuori. Il venerdì alle 17 arriva anche per mail.
 
-**Aziende trovate.** Dopo l'analisi veloce si controlla se chi decide è collegato a te su LinkedIn
+**Aziende trovate.** Le liste sono in fila come il lavoro: In verifica → Da decidere → Approfondite → Da contattare. Ogni azienda sta in una lista sola e passa alla successiva. Dopo l'analisi veloce si controlla se chi decide è collegato a te su LinkedIn
 (contatto diretto o contatti in comune). In "Da decidere" arrivano solo quelle con un ponte; le altre vanno
 in "senza collegamento" e si ricontrollano da sole dopo i nuovi 121. LinkedIn si usa al massimo 25 volte al
 giorno; se chiede una verifica o mostra un CAPTCHA, tutto si ferma per 48 ore.
@@ -778,7 +778,7 @@ Così smetti di chiederti "il BNI mi rende?" e lo vedi nero su bianco, persona p
 
 ---
 
-*Documento aggiornato il 2026-10-23 | KW Sales CRM v3.57.2. La versione di riferimento è la Guida interattiva dentro l'app.*
+*Documento aggiornato il 2026-10-23 | KW Sales CRM v3.57.3. La versione di riferimento è la Guida interattiva dentro l'app.*
 
 ---
 

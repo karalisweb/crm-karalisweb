@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.57.3] - 2026-10-23
+
+### Changed
+- **Aziende trovate in fila**: le liste seguono il lavoro (In verifica → Da decidere → Approfondite → Da contattare) e ogni azienda sta in un blocco solo, anche fra quelle messe da parte. Chi è "da contattare" non compare più anche in "Approfondite"; chi è "senza collegamento" non compare più anche in "In verifica".
+
 ## [3.57.2] - 2026-10-23
 
 ### Fixed

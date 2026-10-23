@@ -45,21 +45,29 @@ function ponte(a: Azienda): string | null {
 }
 
 /**
- * Le liste di lavoro (Motore 121): in "Da decidere" arrivano solo le aziende in cui chi decide è
- * collegato a te; le altre aspettano il controllo o stanno da parte ("senza collegamento", si
- * ricontrollano da sole dopo i nuovi 121).
+ * Le liste di lavoro (Motore 121), in fila come il lavoro: si trova l'azienda, analisi veloce e controllo del
+ * collegamento (In verifica), decidi (Da decidere), analisi completa e chi decide (Approfondite), poi il primo
+ * contatto (Da contattare). Ogni azienda sta in un blocco solo: il primo che le corrisponde in quest'ordine.
  */
-const LISTE: { k: string; label: string; ok: (a: Azienda) => boolean }[] = [
-  // Pronte per il primo contatto: approfondite con un ponte, più quelle che aggiungi tu.
-  { k: "contattare", label: "Da contattare", ok: (a) => a.daContattare },
-  { k: "decidere", label: "Da decidere", ok: (a) => !a.eliminata && !a.provinciaCliente && a.decisione === "IN_ATTESA" && a.collegamento === "COLLEGATA" },
-  { k: "verifica", label: "In verifica", ok: (a) => !a.eliminata && !a.provinciaCliente && (a.decisione === null || a.decisione === "IN_ATTESA") && a.collegamento !== "COLLEGATA" },
-  { k: "approfondite", label: "Approfondite", ok: (a) => !a.eliminata && a.decisione === "APPROVATO" },
+function bloccoDi(a: Azienda): string {
+  if (a.eliminata) return "eliminate";
+  if (a.daContattare) return "contattare";
+  if (a.senzaCollegamento) return "senza";
+  if (a.decisione === "SCARTATO" || a.provinciaCliente) return "scartate";
+  if (a.decisione === "APPROVATO") return "approfondite";
+  if (a.decisione === "IN_ATTESA" && a.collegamento === "COLLEGATA") return "decidere";
+  return "verifica";
+}
+const LISTE: { k: string; label: string }[] = [
+  { k: "verifica", label: "In verifica" },
+  { k: "decidere", label: "Da decidere" },
+  { k: "approfondite", label: "Approfondite" },
+  { k: "contattare", label: "Da contattare" },
 ];
-const DA_PARTE: { k: string; label: string; ok: (a: Azienda) => boolean }[] = [
-  { k: "senza", label: "senza collegamento", ok: (a) => !a.eliminata && a.senzaCollegamento },
-  { k: "scartate", label: "scartate", ok: (a) => !a.eliminata && a.decisione === "SCARTATO" && !a.senzaCollegamento },
-  { k: "eliminate", label: "eliminate", ok: (a) => a.eliminata },
+const DA_PARTE: { k: string; label: string }[] = [
+  { k: "senza", label: "senza collegamento" },
+  { k: "scartate", label: "scartate" },
+  { k: "eliminate", label: "eliminate" },
 ];
 
 /** I segnali dall'analisi: etichette sull'azienda e filtri sopra l'elenco. */
@@ -94,8 +102,7 @@ export default function AziendeTrovatePage() {
   const [versione, setVersione] = useState(0);
   const [filtro, setFiltro] = useState("decidere");
   const [segnaliScelti, setSegnaliScelti] = useState<string[]>([]);
-  const lista = [...LISTE, ...DA_PARTE].find((f) => f.k === filtro)!;
-  const visibili = (aziende ?? []).filter(lista.ok).filter((a) => segnaliScelti.every((k) => SEGNALI.find((x) => x.k === k)!.ok(a)));
+  const visibili = (aziende ?? []).filter((a) => bloccoDi(a) === filtro).filter((a) => segnaliScelti.every((k) => SEGNALI.find((x) => x.k === k)!.ok(a)));
   // Dopo un lancio l'elenco si aggiorna da solo per 3 minuti (la ricerca lavora in sottofondo).
   const [aggiornaFino, setAggiornaFino] = useState(0);
   useEffect(() => {
@@ -134,14 +141,14 @@ export default function AziendeTrovatePage() {
             <div className="flex flex-wrap gap-1.5">
               {LISTE.map((f) => (
                 <button key={f.k} onClick={() => setFiltro(f.k)} className={`text-sm px-3 py-1.5 rounded-md border transition ${filtro === f.k ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 hover:bg-muted border-transparent"}`}>
-                  {f.label} ({aziende.filter(f.ok).length})
+                  {f.label} ({aziende.filter((a) => bloccoDi(a) === f.k).length})
                 </button>
               ))}
             </div>
             <div className="text-xs text-muted-foreground">
               Messe da parte:{" "}
               {DA_PARTE.map((f, i) => (
-                <span key={f.k}>{i > 0 && " · "}<button onClick={() => setFiltro(f.k)} className={`hover:underline ${filtro === f.k ? "text-foreground font-medium underline" : ""}`}>{f.label} ({aziende.filter(f.ok).length})</button></span>
+                <span key={f.k}>{i > 0 && " · "}<button onClick={() => setFiltro(f.k)} className={`hover:underline ${filtro === f.k ? "text-foreground font-medium underline" : ""}`}>{f.label} ({aziende.filter((a) => bloccoDi(a) === f.k).length})</button></span>
               ))}
             </div>
           </div>
@@ -151,7 +158,7 @@ export default function AziendeTrovatePage() {
               const attivo = segnaliScelti.includes(x.k);
               return (
                 <button key={x.k} onClick={() => setSegnaliScelti((v) => (attivo ? v.filter((k) => k !== x.k) : [...v, x.k]))} className={`text-xs px-2 py-0.5 rounded-full border transition ${attivo ? `${TONO[x.tono]} border-transparent font-medium` : "border-border hover:bg-muted"}`}>
-                  {x.label} ({aziende.filter(lista.ok).filter(x.ok).length})
+                  {x.label} ({aziende.filter((a) => bloccoDi(a) === filtro).filter(x.ok).length})
                 </button>
               );
             })}
