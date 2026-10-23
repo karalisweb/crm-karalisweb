@@ -215,6 +215,10 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
   const a = s.azienda;
   const an = s.analisi;
   const titolare = s.persone[0];
+  // I contatti in comune con chi decide: i nomi salvati, e quanti sono per LinkedIn (può dirne di più).
+  const comuni = (titolare?.contattoInComune ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const lettoDm = arr<{ nome?: string; numeroInComune?: number }>(an.decision_maker?.findings.persone).find((p) => p.nome === titolare?.nome);
+  const totaleComuni = Math.max(comuni.length, typeof lettoDm?.numeroInComune === "number" ? lettoDm.numeroInComune : 0);
   const caso = s.perche?.chiave.casoStudio;
   const rete = s.perche?.chiave.bniMembro;
   const ganci = arr<{ frase: string; prova: string }>(an.ganci?.findings.ganci);
@@ -395,7 +399,17 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
                   {titolare.linkedinUrl && <a href={titolare.linkedinUrl} target="_blank" rel="noopener noreferrer" aria-label="Profilo LinkedIn"><Linkedin className="h-4 w-4 text-primary" /></a>}
                 </div>
               )}
-              {titolare?.contattoInComune && <div className="text-xs mt-1">Contatti in comune con te: {titolare.contattoInComune}</div>}
+              {comuni.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-xs text-muted-foreground">
+                    {totaleComuni} {totaleComuni === 1 ? "contatto" : "contatti"} in comune con te
+                    {totaleComuni > comuni.length ? ` · di ${comuni.length} si sa il nome (premi Rifai qui sopra per averli tutti)` : ""}
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {comuni.map((c) => <span key={c} className="text-xs rounded border px-1.5 py-0.5">{c}</span>)}
+                  </div>
+                </div>
+              )}
             </Blocco>
             <div className="rounded-md border px-3 py-2.5 text-sm space-y-1">
               <div className="font-medium">Chi te la può presentare</div>

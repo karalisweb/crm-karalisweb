@@ -323,7 +323,7 @@ Google Maps, pagina Facebook. Se cercando il nome il sito non esce su Google, qu
 | 5 | Le recensioni: cosa lodano e di cosa si lamentano | Recensioni *(da costruire)* |
 | 6 | La pubblicità: la fanno davvero? dove porta? | Google Ads, Meta Ad Library, Tracciamenti |
 | 7 | I social: vivi o fermi? | Social, LinkedIn azienda |
-| 8 | Il titolare, con la via corta di Alessio: azienda su LinkedIn → persone → CEO/titolare → contatti in comune (un membro BNI in comune = chi lo presenta) | Decision maker |
+| 8 | Il titolare, con la via corta di Alessio: azienda su LinkedIn → persone → CEO/titolare → tutti i contatti in comune, fino a 50 (un membro BNI in comune = chi lo presenta) | Decision maker |
 | → | I 3 ganci | Coerenza, Scheda leve, Aggancio |
 
 Fuori dall'analisi: SEO della pagina (meta tag), Blog (solo per chi vende contenuti), Regista del video.

@@ -13,6 +13,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.57.1] - 2026-10-23
+
+### Changed
+- **Tutti i contatti in comune con chi decide**: l'agente "Chi decide" apre la lista completa dei collegamenti in comune su LinkedIn e li salva tutti (fino a 50, i membri BNI per primi), non più solo i primi 5 visibili. Più nomi = più possibilità di trovare qualcuno della tua cerchia che te lo presenta.
+- **Scheda azienda**: nella sezione "LinkedIn e chi decide" i contatti in comune si vedono come elenco di nomi, con il totale di LinkedIn ("19 contatti in comune con te"). Se l'app conosce meno nomi del totale (analisi fatte prima di oggi), lo dice: basta premere "Rifai" su "Chi decide".
+
 ## [3.57.0] - 2026-10-23
 
 ### Added

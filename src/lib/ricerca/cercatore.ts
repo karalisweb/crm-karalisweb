@@ -615,7 +615,7 @@ export async function importaDecisionMaker(leadId: string | null, findings: Reco
     const comuni = (Array.isArray(p.contattiInComune) ? p.contattiInComune : [])
       .map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome, 120)))
       .filter((x): x is string => !!x)
-      .slice(0, 5);
+      .slice(0, 50);
     const url = normalizzaLinkedin(str(p.profilo, 300));
     const gia = url ? await db.persona.findUnique({ where: { linkedinUrl: url }, select: { id: true } }) : await db.persona.findFirst({ where: { leadId, nome }, select: { id: true } });
     const grado = typeof p.grado === "number" ? p.grado : null;
