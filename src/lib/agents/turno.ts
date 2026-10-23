@@ -30,7 +30,7 @@ import {
   type StatoAgenteSuAzienda,
 } from "./regista";
 import { budgetDisponibile } from "./costi";
-import { automatici, modiAgenti } from "./catalogo";
+import { agentiApprofondimento, modiAgenti } from "./catalogo";
 import type { AziendaContesto, ContestoAgente, Leva, PaginaScaricata, Prova, RefertoLetto } from "./tipi";
 import { linkedinPermette } from "./motore";
 
@@ -373,7 +373,7 @@ export async function lavoraSuApprovate(limit: number, oggi: Date, riepilogo: Ri
       ...(soloLeadId ? { id: soloLeadId } : {}),
       approvalItems: { some: { kind: KIND_FASCICOLO_BASE, status: "APPROVATO" } },
       // Già arrivate in cassetta con la scheda: il lavoro è finito.
-      NOT: [{ approvalItems: { some: { kind: KIND_SCHEDA_CONTATTO } } }, { website: "" }],
+      NOT: [{ approvalItems: { some: { kind: KIND_SCHEDA_CONTATTO } } }],
     },
     orderBy: { updatedAt: "asc" },
     take: limit,
@@ -382,13 +382,13 @@ export async function lavoraSuApprovate(limit: number, oggi: Date, riepilogo: Ri
 
   // Quali agenti partono da soli lo decide Alessio (pagina Agenti): il catalogo dice dove girano.
   const modi = await modiAgenti();
-  const server = automatici(modi, "approfondisci", "server");
-  const mac = automatici(modi, "approfondisci", "mac");
   const sintesi = modi.ganci === "auto" ? [...AGENTI_SINTESI] : [];
 
   for (const l of approvate) {
-    const azienda = aziendaContesto(l);
-    if (!azienda) continue;
+    // Anche senza sito: lavorano tutti gli agenti che non leggono il sito.
+    const azienda = aziendaContesto(l) ?? { ...(aziendaContesto({ ...l, website: "x" }) as AziendaContesto), website: "" };
+    const server = agentiApprofondimento("server", !!l.website);
+    const mac = agentiApprofondimento("mac", !!l.website);
     const stati = await statoAzienda(azienda.id);
     let toccata = false;
 

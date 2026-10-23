@@ -10,7 +10,7 @@ import { CANALI, STATI_PRESENTAZIONE, data } from "@/components/ricerca/etichett
 
 interface Leva { servizio: string; testo: string; prova: string }
 interface Referto { summary: string; findings: Record<string, unknown>; levers: Leva[]; data: string }
-interface Agente { chiave: string; nome: string; dove: "server" | "mac"; momento: string; modo: "auto" | "mano"; stato: string | null; errore: string | null; quando: string | null }
+interface Agente { chiave: string; nome: string; dove: "server" | "mac"; momento: string; modo: "auto" | "mano"; senzaSito: boolean; stato: string | null; errore: string | null; quando: string | null }
 
 interface Scheda {
   azienda: {
@@ -97,7 +97,10 @@ function Blocco({ agente, soloDettagli = false, children }: { agente: string; so
   if (lavora) stato = a.dove === "mac" && a.stato === "IN_CODA" ? "In coda per l'agente sul Mac (entro mezz'ora)" : "In corso…";
   else if (r) stato = `Fatta il ${data(r.data)}`;
   else if (a.stato === "FALLITO") stato = `Non riuscita: ${a.errore ?? "errore"}`;
-  else stato = a.modo === "auto" ? `Partirà da sola ${MOMENTO[a.momento] ?? ""}` : "Da lanciare a mano";
+  else if (a.senzaSito) stato = "Serve il sito: aggiungilo e parte da sola";
+  // Con Approfondisci partono tutte; prima, solo quelle automatiche dell'analisi veloce.
+  else if (a.momento === "sintesi") stato = a.modo === "auto" ? `Partirà da sola ${MOMENTO.sintesi}` : "Da lanciare a mano";
+  else stato = `Partirà da sola ${a.modo === "auto" && a.momento === "trovata" ? MOMENTO.trovata : MOMENTO.approfondisci}`;
   const etichetta = r ? "Rifai" : a.stato === "FALLITO" ? "Riprova" : "Lancia";
   return (
     <div className="rounded-md border px-3 py-2.5">

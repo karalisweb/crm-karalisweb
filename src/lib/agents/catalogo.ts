@@ -23,18 +23,20 @@ export interface VoceCatalogo {
   momento: Momento;
   modo: Modo;
   costo: string;
+  /** Legge il sito: senza sito non può partire (gli altri lavorano col nome, la scheda Maps, i social). */
+  serveSito?: boolean;
 }
 
 export const CATALOGO: VoceCatalogo[] = [
   { chiave: "trova_sito", nome: "Trova sito", cosa: "Trova il sito e guarda se cercando il nome su Google esce", dove: "server", momento: "trovata", modo: "auto", costo: "meno di 1 centesimo" },
-  { chiave: "posizioni", nome: "Ti trovano su Google?", cosa: "Dove esce cercando il servizio + città", dove: "server", momento: "trovata", modo: "auto", costo: "meno di 1 centesimo" },
-  { chiave: "sito_visto", nome: "Il sito visto", cosa: "Foto su telefono e computer, velocità, se sembra vecchio", dove: "server", momento: "trovata", modo: "auto", costo: "circa 1 centesimo" },
-  { chiave: "contatto", nome: "Dal cliente al contatto", cosa: "Telefono cliccabile, WhatsApp, modulo, quanti clic per un preventivo", dove: "server", momento: "trovata", modo: "auto", costo: "gratis" },
-  { chiave: "lettore", nome: "Cosa dice il sito", cosa: "Offerta, a chi parla, a quali domande del cliente risponde", dove: "server", momento: "trovata", modo: "auto", costo: "circa 1 centesimo" },
+  { chiave: "posizioni", nome: "Ti trovano su Google?", cosa: "Dove esce cercando il servizio + città", dove: "server", momento: "trovata", modo: "auto", costo: "meno di 1 centesimo" , serveSito: true },
+  { chiave: "sito_visto", nome: "Il sito visto", cosa: "Foto su telefono e computer, velocità, se sembra vecchio", dove: "server", momento: "trovata", modo: "auto", costo: "circa 1 centesimo" , serveSito: true },
+  { chiave: "contatto", nome: "Dal cliente al contatto", cosa: "Telefono cliccabile, WhatsApp, modulo, quanti clic per un preventivo", dove: "server", momento: "trovata", modo: "auto", costo: "gratis" , serveSito: true },
+  { chiave: "lettore", nome: "Cosa dice il sito", cosa: "Offerta, a chi parla, a quali domande del cliente risponde", dove: "server", momento: "trovata", modo: "auto", costo: "circa 1 centesimo" , serveSito: true },
   { chiave: "recensioni", nome: "Recensioni Google", cosa: "Voto, ultima recensione, se rispondono, cosa lodano e di cosa si lamentano", dove: "server", momento: "trovata", modo: "auto", costo: "circa 1 centesimo" },
   { chiave: "concorrenti", nome: "Concorrenti su Google Maps", cosa: "I 3 che escono prima, con stelle e recensioni", dove: "server", momento: "approfondisci", modo: "auto", costo: "meno di 1 centesimo" },
-  { chiave: "tracciamenti", nome: "Codici sul sito", cosa: "Analytics, Tag Manager, pixel di Facebook", dove: "server", momento: "approfondisci", modo: "auto", costo: "gratis" },
-  { chiave: "google_ads", nome: "Google Ads", cosa: "Se fanno pubblicità su Google, da quando, quanti annunci", dove: "server", momento: "approfondisci", modo: "auto", costo: "circa 1 centesimo" },
+  { chiave: "tracciamenti", nome: "Codici sul sito", cosa: "Analytics, Tag Manager, pixel di Facebook", dove: "server", momento: "approfondisci", modo: "auto", costo: "gratis" , serveSito: true },
+  { chiave: "google_ads", nome: "Google Ads", cosa: "Se fanno pubblicità su Google, da quando, quanti annunci", dove: "server", momento: "approfondisci", modo: "auto", costo: "circa 1 centesimo" , serveSito: true },
   { chiave: "meta_ads", nome: "Inserzioni Facebook e Instagram", cosa: "Se fanno inserzioni, da quando, cosa promettono (libreria pubblica di Meta)", dove: "server", momento: "approfondisci", modo: "auto", costo: "gratis" },
   { chiave: "social", nome: "Facebook e Instagram", cosa: "Se ci sono, ultimo post, quanto pubblicano, di cosa parlano", dove: "server", momento: "approfondisci", modo: "auto", costo: "gratis" },
   { chiave: "linkedin_azienda", nome: "LinkedIn dell'azienda", cosa: "Pagina, follower, ultimo post", dove: "mac", momento: "approfondisci", modo: "mano", costo: "il tuo LinkedIn (max 20 al giorno)" },
@@ -51,6 +53,15 @@ export async function modiAgenti(): Promise<Record<string, Modo>> {
   const s = await db.settings.findUnique({ where: { id: "default" }, select: { agentiModo: true } });
   const scelti = (s?.agentiModo ?? {}) as Record<string, unknown>;
   return Object.fromEntries(CATALOGO.map((v) => [v.chiave, scelti[v.chiave] === "auto" || scelti[v.chiave] === "mano" ? (scelti[v.chiave] as Modo) : v.modo]));
+}
+
+/**
+ * Approfondisci = tutti gli agenti dell'analisi (veloce e completa), qualunque sia il loro modo:
+ * per Alessio un'azienda approfondita ha tutte le ricerche fatte. Senza sito si saltano solo quelle
+ * che leggono il sito; Trova sito resta del giro veloce.
+ */
+export function agentiApprofondimento(dove: Dove, conSito: boolean): string[] {
+  return CATALOGO.filter((v) => v.momento !== "sintesi" && v.chiave !== "trova_sito" && v.dove === dove && (conSito || !v.serveSito)).map((v) => v.chiave);
 }
 
 /** Gli agenti che partono da soli in quel momento, divisi per dove girano. */

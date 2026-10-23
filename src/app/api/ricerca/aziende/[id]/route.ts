@@ -119,7 +119,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     sulMac: inCorso.filter((r) => CHIAVI_BROWSER.includes(r.agent)).map((r) => r.agent),
     agenti: CATALOGO.map((v) => {
       const u = ultimi.find((x) => x.agent === v.chiave);
-      return { chiave: v.chiave, nome: v.nome, dove: v.dove, momento: v.momento, modo: modi[v.chiave], stato: u?.status ?? null, errore: u?.status === "FALLITO" ? u.error : null, quando: u?.finishedAt ?? u?.queuedAt ?? null };
+      return { chiave: v.chiave, nome: v.nome, dove: v.dove, momento: v.momento, modo: modi[v.chiave], senzaSito: !!v.serveSito && !lead.website, stato: u?.status ?? null, errore: u?.status === "FALLITO" ? u.error : null, quando: u?.finishedAt ?? u?.queuedAt ?? null };
     }),
     analisi: Object.fromEntries(referti.map((r) => [r.agent, { summary: r.summary, findings: r.findings, levers: r.levers, data: r.collectedAt }])),
   });

@@ -55,3 +55,18 @@ describe("motivo dello scarto", () => {
     expect(motivoDaNota("Senza collegamento: chi decide non è collegato a te")).toBeNull();
   });
 });
+
+describe("Approfondisci lancia tutti gli agenti", async () => {
+  const { agentiApprofondimento } = await import("@/lib/agents/catalogo");
+  it("con il sito: tutti, anche quelli a mano, tranne Trova sito", () => {
+    const server = agentiApprofondimento("server", true);
+    expect(server).toEqual(expect.arrayContaining(["posizioni", "sito_visto", "contatto", "lettore", "recensioni", "concorrenti", "tracciamenti", "google_ads", "meta_ads", "social"]));
+    expect(server).not.toContain("trova_sito");
+    expect(server).not.toContain("ganci");
+    expect(agentiApprofondimento("mac", true)).toEqual(["linkedin_azienda", "decision_maker"]);
+  });
+  it("senza sito: solo quelli che non leggono il sito", () => {
+    expect(agentiApprofondimento("server", false).sort()).toEqual(["concorrenti", "meta_ads", "recensioni", "social"]);
+    expect(agentiApprofondimento("mac", false)).toEqual(["linkedin_azienda", "decision_maker"]);
+  });
+});

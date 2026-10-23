@@ -66,7 +66,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   else await db.approvalItem.create({ data: { leadId: id, kind: KIND_FASCICOLO_BASE, agent: "alessio", title: lead.name, payload: { sito: lead.website }, ...decisione } });
 
   if (status === "APPROVATO") {
-    if (!lead.website) return NextResponse.json({ ok: true, avviso: "Senza sito il giro completo non può partire" });
     void approfondisci(id).catch((e) => console.error("[decisione] approfondimento fallito:", e));
   }
   return NextResponse.json({ ok: true, status });

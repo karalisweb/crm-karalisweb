@@ -13,6 +13,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.56.0] - 2026-10-23
+
+### Changed
+- **Approfondisci lancia tutti gli agenti**: tutte le ricerche dell'analisi veloce e di quella completa, anche quelle impostate "a mano" (LinkedIn dell'azienda, Chi decide), dentro il budget LinkedIn del giorno. Prima partivano solo quelle automatiche.
+- **Anche senza sito**: prima un'azienda approfondita senza sito restava ferma ("Analisi completa avviata" ma 0 ricerche). Ora partono recensioni, concorrenti, Facebook e Instagram, inserzioni e LinkedIn; restano ferme solo le ricerche che leggono il sito, e la scheda lo dice ("Serve il sito: aggiungilo e parte da sola").
+
 ## [3.55.0] - 2026-10-23
 
 ### Added

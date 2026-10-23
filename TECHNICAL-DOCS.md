@@ -1698,7 +1698,10 @@ Processo deciso con Alessio: `PROGETTO-AGENTI.md` (Fase 2). Due giri, una decisi
   **Da contattare (v3.55.0)**: `src/lib/ricerca/contattare.ts` — regola `daContattare` (approvata + collegata o ponte BNI,
   salvo scelta a mano). Scelta a mano: voce `DA_CONTATTARE` (APPROVATO aggiunta, SCARTATO tolta), azioni
   `da_contattare|non_contattare|contattare_auto` su `POST /api/ricerca/aziende/[id]/decisione`. `GET /api/ricerca/aziende`
-  dà `daContattare`/`contattareAMano`; la scheda `contatto`. Mail: `POST /api/cron/mail-decisioni` alle 07:00
+  dà `daContattare`/`contattareAMano`; la scheda `contatto`.
+  **Approfondisci = tutti (v3.56.0)**: `lavoraSuApprovate` usa `agentiApprofondimento(dove, conSito)` (`catalogo.ts`):
+  tutto il catalogo tranne `trova_sito` e la sintesi, ignorando `agenti_modo`; senza sito salta le voci `serveSito`
+  (posizioni, sito_visto, contatto, lettore, tracciamenti, google_ads). Le aziende senza sito non sono più escluse. Mail: `POST /api/cron/mail-decisioni` alle 07:00
   (`src/lib/agents/mail-decisioni.ts`). Casella manuale: `POST /api/ricerca/manuale` (`src/lib/ricerca/manuale.ts`).
 - **Scheda azienda** (`/aziende-trovate/[id]`): decisione, i 3 ganci, chi decide, chi la presenta, ti trovano?,
   il sito (foto), recensioni, pubblicità e social, prossimo passo, storia.

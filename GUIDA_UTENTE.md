@@ -104,7 +104,8 @@ chiamata e **la prova** di ogni cosa che dice.
    Le aziende pronte per il primo contatto le trovi in **Aziende trovate → Da contattare**: entrano da
    sole quelle approfondite in cui chi decide è collegato a te; dalla scheda puoi aggiungerne altre
    (**Da contattare**) o toglierne una (**Togli**).
-4. **Giro completo** (solo con Approfondisci, parte subito): **Concorrenti** su Google Maps, **Google Ads**,
+4. **Giro completo** (solo con Approfondisci, parte subito: partono **tutte** le ricerche, anche quelle
+   segnate "a mano"; se l'azienda non ha un sito partono tutte quelle che non leggono il sito): **Concorrenti** su Google Maps, **Google Ads**,
    **Tracciamenti**, e con il tuo browser Social, Meta, LinkedIn, Decision maker.
 5. **I 3 ganci**: in cima alla scheda, le 3 frasi da dire al titolare, ognuna con il suo numero e la
    prova, più la frase per aprire la chiamata. Si aggiornano quando arrivano i risultati dal Mac.
