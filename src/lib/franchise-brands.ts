@@ -36,7 +36,7 @@ export const FRANCHISE_BRANDS: string[] = [
   // — Casa / arredo / fai da te / ceramiche —
   "Mondo Convenienza", "Maisons du Monde", "Leroy Merlin", "Bricoman", "Brico io",
   "Poltronesofà", "Chateau d'Ax", "Kasanova", "Flying Tiger", "Semeraro", "Aiazzone",
-  "Iperceramica",
+  "Iperceramica", "Piscine Laghetto", "Piscinelaghetto",
   // — Elettronica —
   "MediaWorld", "Unieuro", "Euronics", "Trony", "Comet",
   // — Telefonia (rivenditori insegna) —

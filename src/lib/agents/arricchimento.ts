@@ -65,6 +65,8 @@ async function daGiroVeloce(limit: number) {
       ritrovamenti: { some: {} },
       pipelineStage: { notIn: STADI_ESCLUSI as never },
       approvalItems: { none: { kind: KIND_FASCICOLO_BASE } },
+      // Chi aspetta già il controllo di "chi decide" non occupa un posto: altrimenti le più vecchie non tornano mai.
+      agentRuns: { none: { agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } } },
     },
     orderBy: { createdAt: "desc" },
     take: limit * 3,

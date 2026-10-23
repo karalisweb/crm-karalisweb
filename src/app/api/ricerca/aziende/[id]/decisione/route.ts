@@ -4,12 +4,14 @@ import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { approfondisci } from "@/lib/agents/arricchimento";
 import { KIND_FASCICOLO_BASE } from "@/lib/agents/turno";
+import { motivoDaNota, notaMotivo } from "@/lib/ricerca/scarti";
 
-const Schema = z.object({ azione: z.enum(["approfondisci", "scarta", "ripensaci", "elimina", "ripristina"]) });
+const Schema = z.object({ azione: z.enum(["approfondisci", "scarta", "ripensaci", "elimina", "ripristina"]), motivo: z.string().trim().max(500).optional() });
 
 /**
  * POST /api/ricerca/aziende/[id]/decisione — Approfondisci (parte subito il giro completo),
- * Scarta, o Ripensaci (torna "da decidere").
+ * Scarta, o Ripensaci (torna "da decidere"). Scarta ed Elimina possono avere il motivo: la ricerca
+ * lo legge per non riproporre aziende come quella.
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireSession();
@@ -21,11 +23,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!lead) return NextResponse.json({ error: "Azienda non trovata" }, { status: 404 });
 
   // Elimina: esce da tutti gli elenchi e dai turni degli agenti (resta in "Eliminate", ripristinabile).
+  const motivo = parsed.data.motivo ? notaMotivo(parsed.data.motivo) : null;
+  const gia = await db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" }, select: { id: true, note: true } });
   if (parsed.data.azione === "elimina") {
     await db.$transaction([
       db.lead.update({ where: { id }, data: { pipelineStage: "ARCHIVIATO" } }),
       db.agentRun.deleteMany({ where: { leadId: id, status: "IN_CODA" } }),
     ]);
+    if (motivo) {
+      if (gia) await db.approvalItem.update({ where: { id: gia.id }, data: { note: motivo } });
+      else await db.approvalItem.create({ data: { leadId: id, kind: KIND_FASCICOLO_BASE, agent: "alessio", title: lead.name, payload: { sito: lead.website }, status: "SCARTATO", decidedAt: new Date(), decidedBy: gate.userId, note: motivo } });
+    }
     return NextResponse.json({ ok: true, eliminata: true });
   }
   if (parsed.data.azione === "ripristina") {
@@ -33,9 +41,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ ok: true, eliminata: false });
   }
 
-  const status = parsed.data.azione === "approfondisci" ? "APPROVATO" : parsed.data.azione === "scarta" ? "SCARTATO" : "IN_ATTESA";
-  const decisione = { status, decidedAt: status === "IN_ATTESA" ? null : new Date(), decidedBy: gate.userId } as const;
-  const gia = await db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_FASCICOLO_BASE }, select: { id: true } });
+  const status = (parsed.data.azione === "approfondisci" ? "APPROVATO" : parsed.data.azione === "scarta" ? "SCARTATO" : "IN_ATTESA") as "APPROVATO" | "SCARTATO" | "IN_ATTESA";
+  // Il motivo vale finché l'azienda resta scartata: se Alessio ci ripensa non insegna più nulla.
+  const note = status === "SCARTATO" ? motivo ?? undefined : motivoDaNota(gia?.note) ? null : undefined;
+  const decisione = { status, decidedAt: status === "IN_ATTESA" ? null : new Date(), decidedBy: gate.userId, ...(note !== undefined ? { note } : {}) };
   if (gia) await db.approvalItem.update({ where: { id: gia.id }, data: decisione });
   else await db.approvalItem.create({ data: { leadId: id, kind: KIND_FASCICOLO_BASE, agent: "alessio", title: lead.name, payload: { sito: lead.website }, ...decisione } });
 

@@ -98,7 +98,9 @@ chiamata e **la prova** di ogni cosa che dice.
    si lamentano, se rispondono). Costa pochi centesimi.
 3. **Alle 7 ti arriva una mail** con le aziende pronte: per ognuna chi è, perché è lì e le cose più
    forti trovate. Le trovi anche in **Oggi** e in **Aziende trovate → Da decidere**. Apri la scheda e
-   premi **Approfondisci** o **Scarta**.
+   premi **Approfondisci** o **Scarta**. Quando scarti (o elimini) scrivi in due parole **perché**
+   ("è un libero professionista", "è una catena", "non è in Sardegna"): la ricerca lo impara e non ti
+   ripropone aziende così. Se ci ripensi, il motivo si cancella.
 4. **Giro completo** (solo con Approfondisci, parte subito): **Concorrenti** su Google Maps, **Google Ads**,
    **Tracciamenti**, e con il tuo browser Social, Meta, LinkedIn, Decision maker.
 5. **I 3 ganci**: in cima alla scheda, le 3 frasi da dire al titolare, ognuna con il suo numero e la

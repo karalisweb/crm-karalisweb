@@ -168,6 +168,28 @@ export function nomeConfrontabile(s: string | null | undefined): string {
     .trim();
 }
 
+/** Parole che da sole descrivono un mestiere, non un'azienda ("Libero professionista", "Studio di architettura e progettazione"). */
+const PAROLE_GENERICHE = new Set([
+  "libero", "libera", "professionista", "professionisti", "freelance", "freelancer", "self", "employed", "autonomo", "autonoma",
+  "lavoratore", "lavoratrice", "proprio", "conto", "in", "a", "da", "del", "della", "dei", "delle", "per", "the", "and", "of",
+  "studio", "studi", "associato", "associati", "tecnico", "tecnica", "professionale", "legale", "notarile", "medico", "dentistico",
+  "architettura", "architetto", "architetti", "progettazione", "ingegneria", "ingegnere", "geometra", "commercialista", "commercialisti",
+  "consulente", "consulenti", "consulenza", "consulting", "advisor", "titolare", "imprenditore", "imprenditrice", "ceo", "founder",
+  "owner", "partner", "manager", "agente", "agenzia", "ditta", "individuale", "impresa", "azienda", "societa", "gruppo",
+  "pensionato", "pensionata", "studente", "studentessa", "disoccupato", "disoccupata", "varie", "vari", "privato", "privata",
+  "edile", "immobiliare", "assicurativo", "assicurazioni", "finanziario", "aziendale", "lavoro", "design", "interior", "servizi",
+]);
+
+/**
+ * Il nome è un mestiere e non un'azienda? Su LinkedIn molti scrivono "Libero professionista" o
+ * "Studio di architettura e progettazione" al posto del nome: senza una parola propria non c'è
+ * un'azienda da cercare ("Studio Legale Dedoni" invece sì).
+ */
+export function nomeAziendaGenerico(nome: string | null | undefined): boolean {
+  const parole = nomeConfrontabile(nome).split(" ").filter(Boolean);
+  return parole.length === 0 || parole.every((p) => PAROLE_GENERICHE.has(p));
+}
+
 export function stessoNome(a: string | null | undefined, b: string | null | undefined): boolean {
   const x = nomeConfrontabile(a);
   return !!x && x === nomeConfrontabile(b);

@@ -1685,8 +1685,16 @@ Processo deciso con Alessio: `PROGETTO-AGENTI.md` (Fase 2). Due giri, una decisi
   Le chiavi PageSpeed del `.env` sono scadute/bloccate (2026-10-18): non si usano più.
 - **Turno** `eseguiTurnoArricchimento` (`src/lib/agents/arricchimento.ts`), cron `POST /api/cron/arricchimento`
   dopo ogni turno di ricerca; esclude i concorrenti diretti del cliente (`concorrenteDelCliente`).
-  Decisione: voce `FASCICOLO_BASE` (`POST /api/ricerca/aziende/[id]/decisione` approfondisci|scarta|ripensaci;
-  approfondisci avvia subito `approfondisci(leadId)`). Mail: `POST /api/cron/mail-decisioni` alle 07:00
+  Decisione: voce `FASCICOLO_BASE` (`POST /api/ricerca/aziende/[id]/decisione` approfondisci|scarta|ripensaci|elimina|ripristina,
+  con `motivo` facoltativo su scarta/elimina; approfondisci avvia subito `approfondisci(leadId)`).
+  **Motivi degli scarti (v3.54.0)**: il motivo va nella `note` della voce con il prefisso `Motivo di Alessio:`
+  (`src/lib/ricerca/scarti.ts`); `filtraSimili` (`src/lib/ricerca/filtro.ts`) legge gli ultimi 40 e li passa all'AI
+  come esempi da non ripetere. Ripensaci cancella il motivo.
+  **Pulizia (v3.54.0)**: `nomeAziendaGenerico` (`regole.ts`) blocca in `salvaPersona` le aziende con nome-mestiere;
+  `eNonAzienda` scarta elenchi e domini parcheggiati (`PARCHEGGI`, confronto sul dominio intero); `fallimentoTecnico`
+  (`motore.ts`) esclude dal conteggio "2 fallimenti = senza collegamento" i lavori di browser non partiti; `dopoCollegamento`
+  mette da parte (voce SCARTATO "Senza collegamento") anche le aziende senza voce; `daGiroVeloce` salta chi ha un
+  `decision_maker` in coda. Mail: `POST /api/cron/mail-decisioni` alle 07:00
   (`src/lib/agents/mail-decisioni.ts`). Casella manuale: `POST /api/ricerca/manuale` (`src/lib/ricerca/manuale.ts`).
 - **Scheda azienda** (`/aziende-trovate/[id]`): decisione, i 3 ganci, chi decide, chi la presenta, ti trovano?,
   il sito (foto), recensioni, pubblicità e social, prossimo passo, storia.

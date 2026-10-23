@@ -24,7 +24,7 @@ interface Scheda {
   ponti: { id: string; name: string; chapter: string | null; come: string; stato?: string }[];
   prossimo: string;
   storia: { quando: string; cosa: string }[];
-  decisione: { status: "IN_ATTESA" | "APPROVATO" | "SCARTATO"; decidedAt: string | null } | null;
+  decisione: { status: "IN_ATTESA" | "APPROVATO" | "SCARTATO"; decidedAt: string | null; note: string | null } | null;
   inCorso: { agent: string; status: string }[];
   sulMac: string[];
   agenti: Agente[];
@@ -162,6 +162,9 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
   const [occupato, setOccupato] = useState(false);
   const [inLancio, setInLancio] = useState<string | null>(null);
   const [versione, setVersione] = useState(0);
+  // Scarta ed Elimina chiedono il perché: la ricerca lo usa per non riproporre aziende così.
+  const [chiedeMotivo, setChiedeMotivo] = useState<"scarta" | "elimina" | null>(null);
+  const [motivo, setMotivo] = useState("");
 
   useEffect(() => {
     let vivo = true;
@@ -186,11 +189,12 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
     return () => clearInterval(t);
   }, [lavorando]);
 
-  const decidi = useCallback(async (azione: "approfondisci" | "scarta" | "ripensaci" | "elimina" | "ripristina") => {
-    if (azione === "elimina" && !window.confirm("Eliminare questa azienda? Esce dagli elenchi e gli agenti si fermano. La ritrovi in Aziende trovate → Eliminate, dove puoi ripristinarla.")) return;
+  const decidi = useCallback(async (azione: "approfondisci" | "scarta" | "ripensaci" | "elimina" | "ripristina", perche?: string) => {
     setOccupato(true);
-    await fetch(`/api/ricerca/aziende/${id}/decisione`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ azione }) });
+    await fetch(`/api/ricerca/aziende/${id}/decisione`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ azione, ...(perche?.trim() ? { motivo: perche.trim() } : {}) }) });
     setOccupato(false);
+    setChiedeMotivo(null);
+    setMotivo("");
     setVersione((v) => v + 1);
   }, [id]);
 
@@ -232,8 +236,32 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             {a.phone && <Button asChild variant="outline" size="sm"><a href={`tel:${a.phone}`}><Phone className="h-4 w-4 mr-1.5" />Chiama</a></Button>}
             {a.googleMapsUrl && <Button asChild variant="outline" size="sm"><a href={a.googleMapsUrl} target="_blank" rel="noopener noreferrer"><MapPin className="h-4 w-4 mr-1.5" />Mappa</a></Button>}
             <CambiaSito id={a.id} attuale={a.website} onFatto={() => setVersione((v) => v + 1)} />
-            {a.pipelineStage !== "ARCHIVIATO" && <Button variant="ghost" size="sm" className="text-red-600 dark:text-red-400 ml-auto" onClick={() => decidi("elimina")} disabled={occupato}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>}
+            {a.pipelineStage !== "ARCHIVIATO" && <Button variant="ghost" size="sm" className="text-red-600 dark:text-red-400 ml-auto" onClick={() => setChiedeMotivo("elimina")} disabled={occupato}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>}
           </div>
+
+          {chiedeMotivo && (
+            <div className="mt-4 rounded-md border px-3 py-3 space-y-2">
+              <div className="text-sm">
+                <b>{chiedeMotivo === "elimina" ? "Eliminare questa azienda?" : "Scartare questa azienda?"}</b>{" "}
+                <span className="text-muted-foreground">Scrivi perché: la ricerca lo impara e non ti ripropone aziende così.{chiedeMotivo === "elimina" && " Esce dagli elenchi e gli agenti si fermano; la ritrovi in Eliminate."}</span>
+              </div>
+              <textarea
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                maxLength={500}
+                rows={2}
+                autoFocus
+                placeholder="Es. è un libero professionista, non un'azienda · è una catena · non è in Sardegna · fa un altro mestiere"
+                className="w-full rounded-md border bg-background px-2.5 py-2 text-sm"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant={chiedeMotivo === "elimina" ? "destructive" : "default"} onClick={() => decidi(chiedeMotivo, motivo)} disabled={occupato}>
+                  {occupato ? <Loader2 className="h-4 w-4 animate-spin" /> : chiedeMotivo === "elimina" ? "Elimina" : "Scarta"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { setChiedeMotivo(null); setMotivo(""); }} disabled={occupato}>Annulla</Button>
+              </div>
+            </div>
+          )}
 
           {a.pipelineStage === "ARCHIVIATO" && (
             <div className="mt-4 rounded-md border border-red-300 bg-red-50 dark:bg-red-950/30 px-3 py-2.5 text-sm flex flex-wrap items-center justify-between gap-2">
@@ -259,13 +287,16 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             {stato === "APPROVATO" ? (
               <div className="text-sm"><Check className="h-4 w-4 inline mr-1 text-green-600" /><b>Analisi completa avviata.</b> <span className="text-muted-foreground">Le ricerche a mano le lanci dal loro blocco.</span></div>
             ) : stato === "SCARTATO" ? (
-              <div className="text-sm flex flex-wrap items-center gap-2">Scartata <Button variant="ghost" size="sm" onClick={() => decidi("ripensaci")} disabled={occupato}>Ripensaci</Button></div>
+              <div className="text-sm space-y-1">
+                <div className="flex flex-wrap items-center gap-2">Scartata <Button variant="ghost" size="sm" onClick={() => decidi("ripensaci")} disabled={occupato}>Ripensaci</Button></div>
+                {s.decisione?.note && <div className="text-muted-foreground break-words">{s.decisione.note}</div>}
+              </div>
             ) : (
               <div className="space-y-2">
                 <div className="text-sm"><b>Analisi veloce</b> {s.decisione ? "fatta. Vuoi quella completa?" : "in corso: puoi già decidere."}</div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => decidi("approfondisci")} disabled={occupato}><Search className="h-4 w-4 mr-1.5" />Approfondisci</Button>
-                  <Button size="sm" variant="outline" onClick={() => decidi("scarta")} disabled={occupato}><X className="h-4 w-4 mr-1.5" />Scarta</Button>
+                  <Button size="sm" variant="outline" onClick={() => setChiedeMotivo("scarta")} disabled={occupato}><X className="h-4 w-4 mr-1.5" />Scarta</Button>
                 </div>
               </div>
             )}

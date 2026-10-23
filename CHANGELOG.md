@@ -13,6 +13,17 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.54.0] - 2026-10-23
+
+### Added
+- **Il perché dello scarto**: in una scheda azienda, **Scarta** ed **Elimina** aprono un riquadro "Scrivi perché" (es. "è un libero professionista", "è una catena", "non è in Sardegna"). Il motivo resta nella scheda e la ricerca lo impara: il filtro dei "simili" legge gli ultimi 40 motivi e scarta le aziende con lo stesso problema. Con **Ripensaci** il motivo si cancella e non insegna più.
+
+### Fixed
+- **"Libero professionista", "Studio di architettura e progettazione" fra le aziende**: dalle reti LinkedIn dei membri BNI il mestiere della persona finiva salvato come nome dell'azienda. Ora un nome fatto solo di parole generiche non crea l'azienda (la persona resta salvata); "Studio Legale Dedoni" sì.
+- **Siti finti**: i domini parcheggiati (`parking.nidoma.com` e simili) e gli elenchi di imprese (`telefono.click`, `welinkbuilders`, `overplace`…) non valgono più come sito di un'azienda; Piscine Laghetto è riconosciuta come catena.
+- **Il filtro dei "simili"** scarta anche catene, negozi online nazionali e aziende che non lavorano nella zona cercata (per i risultati di Google, che non danno l'indirizzo).
+- **Aziende ferme "In verifica"**: quando Chrome chiedeva il permesso di aprire LinkedIn e nessuno rispondeva, il controllo di "chi decide" falliva e dopo due volte l'azienda era considerata "senza collegamento" ma restava in verifica per sempre. Ora i fallimenti tecnici (permesso, Chrome, sessione) non contano e il controllo si rifà al turno dopo; un'azienda davvero senza chi decide va in "Messe da parte → senza collegamento". Le aziende già in attesa del controllo non occupano più i posti del giro veloce, così anche le più vecchie vanno avanti.
+
 ## [3.53.1] - 2026-10-23
 
 ### Fixed

@@ -50,7 +50,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       },
     }),
     refertiValidi(id),
-    db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_FASCICOLO_BASE }, select: { status: true, decidedAt: true, createdAt: true } }),
+    db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" }, select: { status: true, decidedAt: true, createdAt: true, note: true } }),
     db.agentRun.findMany({ where: { leadId: id, status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { agent: true, status: true } }),
   ]);
   // Per ogni agente del catalogo: l'ultimo lavoro (per il pulsante e lo stato del blocco).

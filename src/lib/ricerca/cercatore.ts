@@ -24,7 +24,7 @@ import { scadenzeCasi } from "./casi-studio";
 import { filtraSimili } from "./filtro";
 import {
   AZIENDE_AL_GIORNO, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO,
-  nellaZona, nomeConfrontabile, normalizzaLinkedin, passoRicerca, prioritaChiave, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
+  nellaZona, nomeAziendaGenerico, nomeConfrontabile, normalizzaLinkedin, passoRicerca, prioritaChiave, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
 } from "./regole";
 
 type Canale = "google" | "maps" | "facebook" | "instagram" | "linkedin";
@@ -156,7 +156,7 @@ export async function salvaPersona(
   // L'azienda della persona: si collega se c'è; se non c'è si crea (non per i membri BNI: con
   // loro si costruisce una relazione, non si vende).
   let leadId: string | null = null;
-  if (p.azienda?.trim()) {
+  if (p.azienda?.trim() && !nomeAziendaGenerico(p.azienda)) {
     if (bniMembroId) {
       leadId = (await db.bniMembro.findUnique({ where: { id: bniMembroId }, select: { leadId: true } }))?.leadId ?? null;
     } else {
@@ -281,7 +281,8 @@ async function cercaSuGoogle(termine: string, zona: string, chiaveId: string, co
     }
     candidati.push({ nome: nomeDaTitolo(i.title ?? d, d), sito: `https://${d}`, indirizzo: zona, categoria: termine });
   }
-  const filtro = await filtraSimili(contesto, candidati.map((c, i) => ({ ...c, categoria: organici[i]?.title ?? c.categoria })));
+  // Google non dà l'indirizzo: la zona la giudica il filtro, dal sito e dal titolo.
+  const filtro = await filtraSimili(`${contesto} · zona cercata: ${zona}`, candidati.map((c, i) => ({ ...c, categoria: organici[i]?.title ?? c.categoria })));
   const simili = candidati.filter((_, i) => filtro.tenere.has(i));
   const e: EsitoPasso = { ricerca, canale: "google", trovati: organici.length, diversi: candidati.length - simili.length, nuove: 0, esistenti: 0, scartate, rimandati: 0, costCents: costCents + filtro.costCents };
   await salvaFinoAQuota(simili, quota, chiaveId, "google", "google_search", e);

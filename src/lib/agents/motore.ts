@@ -296,15 +296,24 @@ export async function collegamentoAzienda(leadId: string): Promise<{ stato: Stat
   const [r, attivo, falliti] = await Promise.all([
     db.agentReport.findFirst({ where: { leadId, agent: "decision_maker" }, orderBy: { collectedAt: "desc" }, select: { findings: true, collectedAt: true } }),
     db.agentRun.findFirst({ where: { leadId, agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } }),
-    db.agentRun.count({ where: { leadId, agent: "decision_maker", status: "FALLITO" } }),
+    db.agentRun.findMany({ where: { leadId, agent: "decision_maker", status: "FALLITO" }, select: { error: true } }),
   ]);
   if (r) {
     const c = collegamentoDaFindings(r.findings);
     return { stato: c.collegata ? "COLLEGATA" : "SENZA", inComune: c.inComune, diretto: c.diretto, verificatoAt: r.collectedAt };
   }
   if (attivo) return { stato: "IN_VERIFICA", inComune: 0, diretto: false, verificatoAt: null };
-  if (falliti >= 2) return { stato: "SENZA", inComune: 0, diretto: false, verificatoAt: null };
+  // Solo i controlli fatti davvero contano: un Chrome che chiedeva il permesso non dice nulla sul collegamento.
+  if (falliti.filter((f) => !fallimentoTecnico(f.error)).length >= 2) return { stato: "SENZA", inComune: 0, diretto: false, verificatoAt: null };
   return { stato: "DA_VERIFICARE", inComune: 0, diretto: false, verificatoAt: null };
+}
+
+/**
+ * Il lavoro di browser non è partito (permesso di Chrome senza risposta, LinkedIn non raggiungibile,
+ * sessione scaduta): l'azienda non è "senza collegamento", il controllo si rifà al turno dopo.
+ */
+export function fallimentoTecnico(errore: string | null | undefined): boolean {
+  return /permess|approva|chrome|browser|non raggiungibil|nessuna pagina|login|sessione|accesso a linkedin|timeout|scadut|interrott/i.test(errore ?? "");
 }
 
 export function collegamentoDaFindings(findings: unknown): { collegata: boolean; inComune: number; diretto: boolean } {
@@ -367,6 +376,18 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
     } else if (voce?.status === "SCARTATO" && voce.note?.startsWith(NOTA_SENZA)) {
       await db.approvalItem.update({ where: { id: voce.id }, data: { status: "IN_ATTESA", decidedAt: null, note: `Collegamento trovato: ${ponte}` } });
     }
+    return;
+  }
+  if (c.stato === "SENZA" && !voce && giroVeloceFinito) {
+    // Mai entrata in "Da decidere": si mette da parte lo stesso, così esce dalla verifica e dal giro veloce.
+    const l = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, website: true } });
+    if (!l) return;
+    await db.approvalItem.create({
+      data: {
+        leadId, kind: KIND_FASCICOLO_BASE, agent: "giro_veloce", title: `${l.name}: chi decide non trovato`, status: "SCARTATO", decidedAt: new Date(),
+        note: `${NOTA_SENZA}: chi decide non trovato su LinkedIn (controllo automatico)`, payload: { sito: l.website } as Prisma.InputJsonValue,
+      },
+    });
     return;
   }
   if (c.stato === "SENZA" && voce?.status === "IN_ATTESA") {

@@ -25,10 +25,16 @@ const NON_AZIENDE = [
   "tuttocitta.it", "europages", "kompass", "reteimprese.it", "trustpilot", "groupon", "thefork", "airbnb",
   "casa.it", "edilnet.it", "guidaedilizia", "infojobs", "indeed", "glassdoor", "tiktok.com", "pinterest.",
   "comune.", "regione.", ".gov.it", "aranzulla", "salvatore aranzulla", "wikihow", "quora.com", "reddit.com",
+  // Elenchi di imprese e schede telefoniche (Google Maps a volte li dà come "sito" dell'azienda).
+  "overplace.", "welinkbuilders.", "telefono.click", "paginesi.it", "prontoimprese", "informazione-aziende",
+  "dovecomequando", "hotfrog", "brownbook", "tuugo", "iltrovatore",
 ];
 
+/** Domini parcheggiati o in vendita: non sono il sito di nessuno (si confronta il dominio intero). */
+const PARCHEGGI = ["nidoma.com", "sedoparking.com", "parkingcrew.net", "bodis.com", "dan.com", "afternic.com", "hugedomains.com", "sedo.com"];
+
 export function eNonAzienda(d: string): boolean {
-  return NON_AZIENDE.some((p) => d.includes(p));
+  return NON_AZIENDE.some((p) => d.includes(p)) || PARCHEGGI.some((p) => d === p || d.endsWith(`.${p}`));
 }
 
 /**
