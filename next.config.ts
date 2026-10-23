@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['node:sqlite'],
   // Output standalone per Docker
   output: "standalone",
+  // playwright-core legge browsers.json da disco (non con require): il tracing di Next
+  // non lo vede e nello standalone manca → il fotografo fallisce. Lo copiamo intero.
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/playwright-core/**/*"],
+  },
 
   // Disabilita powered by header
   poweredByHeader: false,

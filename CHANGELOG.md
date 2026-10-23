@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.53.1] - 2026-10-23
+
+### Fixed
+- **"Il sito visto" falliva in produzione** con `Cannot find module …/playwright-core/browsers.json`: Next copiava nello standalone solo parte di playwright-core (il file `browsers.json` è letto da disco, il tracing non lo vede). Ora `outputFileTracingIncludes` copia playwright-core intero; il fotografo riparte.
+
 ## [3.53.0] - 2026-10-20
 
 ### Added
