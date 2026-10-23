@@ -5,6 +5,8 @@ import { CANALI } from "@/components/ricerca/etichette";
 import { refertiValidi, KIND_FASCICOLO_BASE } from "@/lib/agents/turno";
 import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 import { CATALOGO, modiAgenti } from "@/lib/agents/catalogo";
+import { collegamentoAzienda } from "@/lib/agents/motore";
+import { KIND_DA_CONTATTARE, daContattare, sceltaDaStato } from "@/lib/ricerca/contattare";
 
 /**
  * GET /api/ricerca/aziende/[id] — la scheda di un'azienda trovata: perché è qui, chi decide,
@@ -25,7 +27,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
   if (!lead) return NextResponse.json({ error: "Azienda non trovata" }, { status: 404 });
 
-  const [ritrovamenti, persone, referti, decisione, inCorso] = await Promise.all([
+  const [ritrovamenti, persone, referti, decisione, inCorso, collegamento, ponteBni, sceltaContatto] = await Promise.all([
     db.ritrovamento.findMany({
       where: { leadId: id },
       orderBy: { createdAt: "asc" },
@@ -52,7 +54,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     refertiValidi(id),
     db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" }, select: { status: true, decidedAt: true, createdAt: true, note: true } }),
     db.agentRun.findMany({ where: { leadId: id, status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { agent: true, status: true } }),
+    collegamentoAzienda(id),
+    db.bniPresentazione.findFirst({ where: { leadId: id }, select: { id: true } }),
+    db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_DA_CONTATTARE }, orderBy: { createdAt: "desc" }, select: { status: true } }),
   ]);
+  const scelta = sceltaDaStato(sceltaContatto?.status);
+  const contatto = {
+    daContattare: daContattare({ eliminata: lead.pipelineStage === "ARCHIVIATO", approvata: decisione?.status === "APPROVATO", collegata: collegamento.stato === "COLLEGATA" || !!ponteBni, scelta }),
+    scelta,
+  };
   // Per ogni agente del catalogo: l'ultimo lavoro (per il pulsante e lo stato del blocco).
   const [ultimi, modi] = await Promise.all([
     db.agentRun.findMany({ where: { leadId: id, agent: { in: CATALOGO.map((v) => v.chiave) } }, orderBy: { queuedAt: "desc" }, distinct: ["agent"], select: { agent: true, status: true, error: true, finishedAt: true, queuedAt: true } }),
@@ -103,6 +113,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prossimo: decisione?.status === "IN_ATTESA" ? "Decidi: approfondire o scartare" : decisione?.status === "SCARTATO" ? "Scartata" : prossimo,
     storia,
     decisione,
+    contatto,
     // Server: lavorano adesso. Browser: aspettano gli agenti sul Mac di Alessio.
     inCorso: inCorso.filter((r) => !CHIAVI_BROWSER.includes(r.agent)),
     sulMac: inCorso.filter((r) => CHIAVI_BROWSER.includes(r.agent)).map((r) => r.agent),

@@ -25,6 +25,7 @@ interface Scheda {
   prossimo: string;
   storia: { quando: string; cosa: string }[];
   decisione: { status: "IN_ATTESA" | "APPROVATO" | "SCARTATO"; decidedAt: string | null; note: string | null } | null;
+  contatto: { daContattare: boolean; scelta: "AGGIUNTA" | "TOLTA" | null };
   inCorso: { agent: string; status: string }[];
   sulMac: string[];
   agenti: Agente[];
@@ -189,7 +190,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
     return () => clearInterval(t);
   }, [lavorando]);
 
-  const decidi = useCallback(async (azione: "approfondisci" | "scarta" | "ripensaci" | "elimina" | "ripristina", perche?: string) => {
+  const decidi = useCallback(async (azione: "approfondisci" | "scarta" | "ripensaci" | "elimina" | "ripristina" | "da_contattare" | "non_contattare" | "contattare_auto", perche?: string) => {
     setOccupato(true);
     await fetch(`/api/ricerca/aziende/${id}/decisione`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ azione, ...(perche?.trim() ? { motivo: perche.trim() } : {}) }) });
     setOccupato(false);
@@ -279,6 +280,21 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
                   : rete ? <>è nella rete di <Link href={`/bni/membri/${rete.id}`} className="font-medium underline">{rete.name}</Link>.</>
                     : null}{" "}
               {s.perche.chiave.tipo !== "MANUALE" && <>Trovata su {CANALI[s.perche.canale] ?? s.perche.canale} il {data(s.perche.createdAt)}.</>}
+            </div>
+          )}
+
+          {/* Da contattare: entra da sola se approfondita e collegata a te; la puoi aggiungere o togliere tu. */}
+          {a.pipelineStage !== "ARCHIVIATO" && (
+            <div className={`mt-4 rounded-md border px-3 py-2.5 text-sm flex flex-wrap items-center gap-2 ${s.contatto.daContattare ? "border-primary bg-primary/10" : ""}`}>
+              <span className="flex-1 min-w-0">
+                {s.contatto.daContattare
+                  ? <><b>Da contattare</b> <span className="text-muted-foreground">{s.contatto.scelta === "AGGIUNTA" ? "(l'hai aggiunta tu)" : "(approfondita e collegata a te)"}</span></>
+                  : <span className="text-muted-foreground">{s.contatto.scelta === "TOLTA" ? "Tolta da \"Da contattare\" (tua scelta)." : "Non è ancora da contattare: entra da sola quando è approfondita e collegata a te."}</span>}
+              </span>
+              {s.contatto.daContattare
+                ? <Button size="sm" variant="outline" onClick={() => decidi("non_contattare")} disabled={occupato}>Togli</Button>
+                : <Button size="sm" onClick={() => decidi("da_contattare")} disabled={occupato}>Da contattare</Button>}
+              {s.contatto.scelta && <Button size="sm" variant="ghost" onClick={() => decidi("contattare_auto")} disabled={occupato}>Torna automatico</Button>}
             </div>
           )}
 

@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.55.0] - 2026-10-23
+
+### Added
+- **Da contattare**: nuova lista in **Aziende trovate** (prima delle altre) e un'etichetta sull'azienda. Ci entrano da sole le aziende approfondite in cui chi decide è collegato a te (o con un ponte BNI). Nella scheda azienda il bottone **Da contattare** ne aggiunge altre a mano, **Togli** ne toglie una, **Torna automatico** rimette la scelta alla regola. La scelta è una voce `DA_CONTATTARE` (niente colonne nuove).
+
+### Fixed
+- La nota delle aziende messe da parte dal controllo diceva "chi decide non trovato" anche quando chi decide c'era ma non era collegato: ora dice "non è collegato a te, o non si è trovato".
+
 ## [3.54.0] - 2026-10-23
 
 ### Added

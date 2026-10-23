@@ -384,8 +384,8 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
     if (!l) return;
     await db.approvalItem.create({
       data: {
-        leadId, kind: KIND_FASCICOLO_BASE, agent: "giro_veloce", title: `${l.name}: chi decide non trovato`, status: "SCARTATO", decidedAt: new Date(),
-        note: `${NOTA_SENZA}: chi decide non trovato su LinkedIn (controllo automatico)`, payload: { sito: l.website } as Prisma.InputJsonValue,
+        leadId, kind: KIND_FASCICOLO_BASE, agent: "giro_veloce", title: `${l.name}: senza collegamento`, status: "SCARTATO", decidedAt: new Date(),
+        note: `${NOTA_SENZA}: chi decide non è collegato a te, o non si è trovato (controllo automatico)`, payload: { sito: l.website } as Prisma.InputJsonValue,
       },
     });
     return;

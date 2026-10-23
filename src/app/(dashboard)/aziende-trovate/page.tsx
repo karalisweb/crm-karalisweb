@@ -33,6 +33,8 @@ interface Azienda {
   inComune: number;
   diretto: boolean;
   ponteBni: string | null;
+  daContattare: boolean;
+  contattareAMano: boolean;
 }
 
 function ponte(a: Azienda): string | null {
@@ -48,6 +50,8 @@ function ponte(a: Azienda): string | null {
  * ricontrollano da sole dopo i nuovi 121).
  */
 const LISTE: { k: string; label: string; ok: (a: Azienda) => boolean }[] = [
+  // Pronte per il primo contatto: approfondite con un ponte, più quelle che aggiungi tu.
+  { k: "contattare", label: "Da contattare", ok: (a) => a.daContattare },
   { k: "decidere", label: "Da decidere", ok: (a) => !a.eliminata && !a.provinciaCliente && a.decisione === "IN_ATTESA" && a.collegamento === "COLLEGATA" },
   { k: "verifica", label: "In verifica", ok: (a) => !a.eliminata && !a.provinciaCliente && (a.decisione === null || a.decisione === "IN_ATTESA") && a.collegamento !== "COLLEGATA" },
   { k: "approfondite", label: "Approfondite", ok: (a) => !a.eliminata && a.decisione === "APPROVATO" },
@@ -170,6 +174,7 @@ export default function AziendeTrovatePage() {
                   <Link href={`/aziende-trovate/${a.id}`} className="font-medium hover:underline break-words">{a.name}</Link>
                   <Badge variant="secondary" className="text-[10px]">{a.manuale ? "aggiunta a mano" : `trovata su ${CANALI[a.canale] ?? a.canale}`}</Badge>
                   <Badge variant="outline" className="text-[10px]">{statoDi(a)}</Badge>
+                  {a.daContattare && <Badge className="text-[10px] bg-primary text-primary-foreground hover:bg-primary">da contattare{a.contattareAMano ? " (tua scelta)" : ""}</Badge>}
                   {ponte(a) && <Badge className="text-[10px] bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-100 hover:bg-green-100">{ponte(a)}</Badge>}
                 </div>
                 <div className="text-xs text-muted-foreground break-words">{[a.category, a.address].filter(Boolean).join(" · ")}</div>

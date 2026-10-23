@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { siglaIndirizzo } from "@/lib/ricerca/regole";
 import { segnaliDa } from "@/lib/agents/segnali";
 import { collegamentoDaFindings } from "@/lib/agents/motore";
+import { KIND_DA_CONTATTARE, daContattare, sceltaDaStato } from "@/lib/ricerca/contattare";
 
 /**
  * GET /api/ricerca/aziende?canale= — il contenitore Meta + Google: le aziende trovate dagli
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
     });
   // I segnali dall'analisi: chi decide, pubblicità, sito vecchio, sito che non comunica, si fa trovare.
   const ids = aziende.map((a) => a.id);
-  const [referti, persone, dmInCorso, ponti] = await Promise.all([
+  const [referti, persone, dmInCorso, ponti, scelteContatto] = await Promise.all([
     db.agentReport.findMany({
       where: { leadId: { in: ids }, agent: { in: ["google_ads", "meta_ads", "sito_visto", "lettore", "posizioni", "decision_maker"] }, validUntil: { gt: new Date() } },
       orderBy: { collectedAt: "desc" },
@@ -42,7 +43,10 @@ export async function GET(request: NextRequest) {
     db.persona.findMany({ where: { leadId: { in: ids } }, select: { leadId: true } }),
     db.agentRun.findMany({ where: { leadId: { in: ids }, agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { leadId: true } }),
     db.bniPresentazione.findMany({ where: { leadId: { in: ids } }, select: { leadId: true, membro: { select: { name: true } } } }),
+    db.approvalItem.findMany({ where: { leadId: { in: ids }, kind: KIND_DA_CONTATTARE }, orderBy: { createdAt: "desc" }, select: { leadId: true, status: true } }),
   ]);
+  const scelte = new Map<string, string>();
+  for (const s of scelteContatto) if (!scelte.has(s.leadId!)) scelte.set(s.leadId!, s.status);
   const inVerifica = new Set(dmInCorso.map((r) => r.leadId));
   const pontiBni = new Map(ponti.map((p) => [p.leadId, p.membro.name]));
   const perLead = new Map<string, Record<string, Record<string, unknown>>>();
@@ -57,7 +61,10 @@ export async function GET(request: NextRequest) {
     const dm = perLead.get(a.id)?.decision_maker;
     const c = dm ? collegamentoDaFindings(dm) : null;
     const collegamento = c ? (c.collegata ? "COLLEGATA" : "SENZA") : inVerifica.has(a.id) ? "IN_VERIFICA" : a.senzaCollegamento ? "SENZA" : "DA_VERIFICARE";
-    return { ...a, segnali: segnaliDa(perLead.get(a.id) ?? {}, conPersona.has(a.id)), collegamento, inComune: c?.inComune ?? 0, diretto: c?.diretto ?? false, ponteBni: pontiBni.get(a.id) ?? null };
+    const ponteBni = pontiBni.get(a.id) ?? null;
+    const scelta = sceltaDaStato(scelte.get(a.id));
+    const contattare = daContattare({ eliminata: a.eliminata, approvata: a.decisione === "APPROVATO", collegata: collegamento === "COLLEGATA" || !!ponteBni, scelta });
+    return { ...a, segnali: segnaliDa(perLead.get(a.id) ?? {}, conPersona.has(a.id)), collegamento, inComune: c?.inComune ?? 0, diretto: c?.diretto ?? false, ponteBni, daContattare: contattare, contattareAMano: scelta === "AGGIUNTA" };
   });
   return NextResponse.json({ aziende: conSegnali, totale: conSegnali.length });
 }

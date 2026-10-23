@@ -5,8 +5,9 @@ import { db } from "@/lib/db";
 import { approfondisci } from "@/lib/agents/arricchimento";
 import { KIND_FASCICOLO_BASE } from "@/lib/agents/turno";
 import { motivoDaNota, notaMotivo } from "@/lib/ricerca/scarti";
+import { KIND_DA_CONTATTARE } from "@/lib/ricerca/contattare";
 
-const Schema = z.object({ azione: z.enum(["approfondisci", "scarta", "ripensaci", "elimina", "ripristina"]), motivo: z.string().trim().max(500).optional() });
+const Schema = z.object({ azione: z.enum(["approfondisci", "scarta", "ripensaci", "elimina", "ripristina", "da_contattare", "non_contattare", "contattare_auto"]), motivo: z.string().trim().max(500).optional() });
 
 /**
  * POST /api/ricerca/aziende/[id]/decisione — Approfondisci (parte subito il giro completo),
@@ -23,6 +24,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!lead) return NextResponse.json({ error: "Azienda non trovata" }, { status: 404 });
 
   // Elimina: esce da tutti gli elenchi e dai turni degli agenti (resta in "Eliminate", ripristinabile).
+  // Da contattare a mano: aggiunta (APPROVATO), tolta (SCARTATO) o di nuovo decisa dalla regola (voce cancellata).
+  if (parsed.data.azione === "da_contattare" || parsed.data.azione === "non_contattare" || parsed.data.azione === "contattare_auto") {
+    await db.approvalItem.deleteMany({ where: { leadId: id, kind: KIND_DA_CONTATTARE } });
+    if (parsed.data.azione !== "contattare_auto") {
+      const aggiunta = parsed.data.azione === "da_contattare";
+      await db.approvalItem.create({
+        data: {
+          leadId: id, kind: KIND_DA_CONTATTARE, agent: "alessio", title: `${lead.name}: ${aggiunta ? "da contattare" : "non da contattare"}`,
+          payload: { sito: lead.website }, status: aggiunta ? "APPROVATO" : "SCARTATO", decidedAt: new Date(), decidedBy: gate.userId,
+          ...(parsed.data.motivo ? { note: parsed.data.motivo } : {}),
+        },
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const motivo = parsed.data.motivo ? notaMotivo(parsed.data.motivo) : null;
   const gia = await db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" }, select: { id: true, note: true } });
   if (parsed.data.azione === "elimina") {

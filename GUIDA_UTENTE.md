@@ -101,6 +101,9 @@ chiamata e **la prova** di ogni cosa che dice.
    premi **Approfondisci** o **Scarta**. Quando scarti (o elimini) scrivi in due parole **perché**
    ("è un libero professionista", "è una catena", "non è in Sardegna"): la ricerca lo impara e non ti
    ripropone aziende così. Se ci ripensi, il motivo si cancella.
+   Le aziende pronte per il primo contatto le trovi in **Aziende trovate → Da contattare**: entrano da
+   sole quelle approfondite in cui chi decide è collegato a te; dalla scheda puoi aggiungerne altre
+   (**Da contattare**) o toglierne una (**Togli**).
 4. **Giro completo** (solo con Approfondisci, parte subito): **Concorrenti** su Google Maps, **Google Ads**,
    **Tracciamenti**, e con il tuo browser Social, Meta, LinkedIn, Decision maker.
 5. **I 3 ganci**: in cima alla scheda, le 3 frasi da dire al titolare, ognuna con il suo numero e la
