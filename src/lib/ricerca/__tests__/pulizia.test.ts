@@ -63,10 +63,38 @@ describe("Approfondisci lancia tutti gli agenti", async () => {
     expect(server).toEqual(expect.arrayContaining(["posizioni", "sito_visto", "contatto", "lettore", "recensioni", "concorrenti", "tracciamenti", "google_ads", "meta_ads", "social"]));
     expect(server).not.toContain("trova_sito");
     expect(server).not.toContain("ganci");
-    expect(agentiApprofondimento("mac", true)).toEqual(["linkedin_azienda", "decision_maker"]);
+    expect(agentiApprofondimento("mac", true)).toEqual(["instagram", "linkedin_azienda", "decision_maker"]);
   });
   it("senza sito: solo quelli che non leggono il sito", () => {
-    expect(agentiApprofondimento("server", false).sort()).toEqual(["concorrenti", "meta_ads", "recensioni", "social"]);
-    expect(agentiApprofondimento("mac", false)).toEqual(["linkedin_azienda", "decision_maker"]);
+    expect(agentiApprofondimento("server", false).sort()).toEqual(["concorrenti", "meta_ads", "recensioni", "scheda_google", "social"]);
+    expect(agentiApprofondimento("mac", false)).toEqual(["instagram", "linkedin_azienda", "decision_maker"]);
+  });
+});
+
+describe("social cercati per nome", async () => {
+  const { profiliDaRisultati } = await import("@/lib/agents/social-per-nome");
+  it("tiene i profili il cui titolo ha il nome, scarta gli altri", () => {
+    const p = profiliDaRisultati([
+      { type: "organic", url: "https://www.facebook.com/sharer/sharer.php?u=x", title: "Lotta Marco costruzioni" },
+      { type: "organic", url: "https://it-it.facebook.com/lottamarcocostruzioni/?locale=it", title: "Lotta Marco Costruzioni | Siamaggiore" },
+      { type: "organic", url: "https://www.instagram.com/p/ABC123/", title: "Lotta Marco su Instagram" },
+      { type: "organic", url: "https://www.instagram.com/lottamarco_edilizia/", title: "Lotta Marco (@lottamarco_edilizia)" },
+      { type: "organic", url: "https://it.linkedin.com/company/altra-ditta", title: "Altra Ditta Srl | LinkedIn" },
+    ], "Lotta Marco");
+    expect(p).toEqual({ facebook: "https://www.facebook.com/lottamarcocostruzioni", instagram: "https://www.instagram.com/lottamarco_edilizia", linkedin: null });
+  });
+});
+
+describe("il sito è attivo?", async () => {
+  const { segniDiVita } = await import("@/lib/agents/segni-vita");
+  const oggi = new Date("2026-10-23T08:00:00Z");
+  it("legge l'anno nel piè di pagina e l'ultima data", () => {
+    const v = segniDiVita(`<html><body><article><time datetime="2023-04-02">2 aprile</time><p>Pubblicato il 15/06/2022</p></article><footer>© 2014-2019 Edil Srl</footer></body></html>`, oggi);
+    expect(v.annoPiePagina).toBe(2019);
+    expect(v.ultimaData).toBe("2023-04-02");
+    expect(v.giorniUltimaData).toBeGreaterThan(900);
+  });
+  it("niente date: null", () => {
+    expect(segniDiVita("<html><body><p>Ciao</p></body></html>", oggi)).toEqual({ annoPiePagina: null, ultimaData: null, giorniUltimaData: null });
   });
 });

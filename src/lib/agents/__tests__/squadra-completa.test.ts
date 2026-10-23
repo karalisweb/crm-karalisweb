@@ -24,6 +24,7 @@ describe("Regista: approfondimento e sintesi", () => {
     const piano = browserDaAccodare([
       stato("social", { inCorso: true }),
       stato("meta_ads", { fallimentiDiFila: 1 }),
+      stato("instagram", { fallimentiDiFila: 1 }),
       stato("linkedin_azienda", { validoFino: giorni(10) }),
       stato("decision_maker", { validoFino: giorni(-1) }),
     ], oggi);

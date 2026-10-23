@@ -328,6 +328,24 @@ Google Maps, pagina Facebook. Se cercando il nome il sito non esce su Google, qu
 
 Fuori dall'analisi: SEO della pagina (meta tag), Blog (solo per chi vende contenuti), Regista del video.
 
+### La sequenza dell'approfondimento (decisa con Alessio il 2026-10-23, costruita in v3.57.0)
+
+È l'ordine in cui Alessio guarda un'azienda. Con "Approfondisci" partono tutti gli agenti (v3.56.0).
+I quattro pezzi mancanti (social per nome, Instagram + coerenza, aggiornamenti Maps, sito attivo) li ha
+confermati Alessio il 2026-10-23 e sono costruiti in v3.57.0: agenti `social` (per nome), `instagram` (Mac),
+`scheda_google`, e i segni di vita in `sito_visto`. La colonna "Manca" sotto è lo stato prima della v3.57.0.
+
+| # | Passo | Oggi | Manca |
+|---|---|---|---|
+| 1 | **Google Maps**: la scheda c'è? aggiornamenti recenti? recensioni | Recensioni (lodi, lamentele, risposte) | Gli **aggiornamenti** della scheda (post e foto recenti, ultimo aggiornamento) |
+| 2 | **Il sito, se esiste**: di quando sembra, se è attivo, se i contenuti sono dignitosi | Sito visto (foto, "sembra del…", velocità), Lettore (cosa dice), Contatto | "È **attivo**?": data dell'ultimo contenuto/notizia, anno nel piè di pagina |
+| 3 | **Il sito si vede?** | Posizioni (nome e servizio + città) | — |
+| 4 | **Senza sito si cambia strada**: subito i social | Dalla v3.56.0 senza sito partono gli agenti che non leggono il sito | Una **strada propria**: cercare le pagine social **per nome** (oggi Facebook si trova solo dal link nel sito) |
+| 5 | **I 3 social**: Facebook, Instagram, LinkedIn: dov'è presente? | Facebook (follower, ultimo post), Instagram solo "collegato", LinkedIn azienda | **Instagram**: ultimo post; **coerenza** fra Facebook e Instagram (stessi contenuti, stesso periodo, stesso tono) |
+| 6 | **LinkedIn**: c'è? si trova il proprietario? | LinkedIn azienda, Chi decide (col tuo Chrome) | — |
+| 7 | **Meta**: se c'è la pagina, le inserzioni | Inserzioni Facebook e Instagram (Ad Library) | Senza pagina: "salta" invece di "non riuscita" |
+| 8 | **Google Ads**: solo se c'è il sito | Google Ads (dalla v3.56.0 solo con sito) | — |
+
 ### Due giri, una sola decisione
 
 1. **Giro veloce, da solo**, su ogni azienda trovata: sito, punti 1, 3, 4, 5. Costa centesimi.

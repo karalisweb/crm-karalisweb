@@ -20,6 +20,7 @@ import { importaAziendeLinkedin, importaAziendeMeta, importaDecisionMaker, impor
 export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
   social: 30,
   meta_ads: 30,
+  instagram: 30,
   linkedin_azienda: 60,
   decision_maker: 180,
   cartografo_bni: 30,
@@ -47,9 +48,17 @@ export interface LavoroBrowser {
     telefono: string | null;
     linkNoti: Record<string, string>;
     paginaLinkedin?: string | null;
+    /** Quello che l'agente Social ha già trovato (pagine, ultimo post di Facebook, temi). */
+    social?: Record<string, unknown> | null;
   };
   input?: unknown;
   consegnaEntroOre: number;
+}
+
+function linkDaSocial(social: Record<string, unknown> | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const k of ["facebook", "instagram", "linkedin"]) if (typeof social?.[k] === "string") out[k] = social[k] as string;
+  return out;
 }
 
 function linkSocialNoti(auditData: unknown, socialUrl: string | null): Record<string, string> {
@@ -60,11 +69,22 @@ function linkSocialNoti(auditData: unknown, socialUrl: string | null): Record<st
   return out;
 }
 
-/** La pagina LinkedIn dell'azienda, se la ricerca o un lavoro precedente l'ha già trovata. */
+/** La pagina LinkedIn dell'azienda, se la ricerca o un lavoro precedente l'ha già trovata (anche l'agente Social, per nome). */
 async function paginaLinkedinNota(leadId: string): Promise<string | null> {
   const r = await db.agentReport.findFirst({ where: { leadId, agent: "linkedin_azienda" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
   const url = (r?.findings as { url?: unknown } | null)?.url;
-  return typeof url === "string" ? url : null;
+  if (typeof url === "string") return url;
+  const s = (await socialNoto(leadId))?.linkedin;
+  return typeof s === "string" ? s : null;
+}
+
+/** Il referto dell'agente Social: le pagine trovate (dal sito o per nome) e i dati di Facebook. */
+async function socialNoto(leadId: string): Promise<Record<string, unknown> | null> {
+  const r = await db.agentReport.findFirst({ where: { leadId, agent: "social" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
+  const f = (r?.findings ?? null) as Record<string, unknown> | null;
+  if (!f) return null;
+  const { facebook, instagram, linkedin, trovateDa, ultimo_post, post_ultimi_3_mesi, temi, follower } = f;
+  return { facebook, instagram, linkedin, trovateDa, ultimoPostFacebook: ultimo_post, postFacebookUltimi3Mesi: post_ultimi_3_mesi, temiFacebook: temi, followerFacebook: follower };
 }
 
 /** Prende in carico fino a `limit` lavori, i più vecchi per primi. */
@@ -96,6 +116,7 @@ export async function prendiLavori(limit: number): Promise<LavoroBrowser[]> {
     });
     if (!run) continue;
     const scheda = schedaDi(run.agent);
+    const social = run.leadId ? await socialNoto(run.leadId) : null;
     presi.push({
       runId: run.id,
       agente: run.agent,
@@ -108,8 +129,9 @@ export async function prendiLavori(limit: number): Promise<LavoroBrowser[]> {
             categoria: run.lead.category,
             indirizzo: run.lead.address,
             telefono: run.lead.phone,
-            linkNoti: linkSocialNoti(run.lead.auditData, run.lead.socialUrl),
+            linkNoti: { ...linkSocialNoti(run.lead.auditData, run.lead.socialUrl), ...linkDaSocial(social) },
             paginaLinkedin: run.leadId ? await paginaLinkedinNota(run.leadId) : null,
+            social,
           }
         : undefined,
       input: run.input ?? undefined,

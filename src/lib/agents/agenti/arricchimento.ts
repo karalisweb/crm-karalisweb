@@ -10,6 +10,7 @@
  * Ogni leva ha la sua prova (numero, link o citazione): niente consigli generici.
  */
 import * as cheerio from "cheerio";
+import { segniDiVita } from "../segni-vita";
 import { chiediJSON, REGOLE_COMUNI, type Schema } from "../ai";
 import { chiamaDataForSeo, dominio, LOCATION_ITALIA } from "../dataforseo";
 import { usdInCentesimiEuro } from "../costi";
@@ -87,10 +88,20 @@ export const agenteSitoVisto: AgenteEseguibile = {
   validitaGiorni: 90,
   aPagamento: true,
   async esegui(ctx) {
-    const url = (await ctx.pagina()).url;
+    const pagina = await ctx.pagina();
+    const url = pagina.url;
     const { telefono: tel, computer: pc } = await fotografaSito(url);
     const levers: Leva[] = [];
     const evidence: Prova[] = [];
+    // È attivo? L'anno nel piè di pagina e l'ultima data scritta nella pagina.
+    const vita = segniDiVita(pagina.html, ctx.oggi);
+    const annoOggi = ctx.oggi.getUTCFullYear();
+    if (vita.annoPiePagina != null && vita.annoPiePagina <= annoOggi - 2) {
+      levers.push({ servizio: "sito", testo: `Nel piè di pagina c'è ancora © ${vita.annoPiePagina}: il sito sembra non essere toccato da ${annoOggi - vita.annoPiePagina} anni`, prova: `${url} — piè di pagina` });
+    }
+    if (vita.giorniUltimaData != null && vita.giorniUltimaData > 365) {
+      levers.push({ servizio: "contenuti", testo: `L'ultima data scritta sul sito è ${vita.ultimaData}: nessuna notizia o contenuto nuovo da ${Math.round(vita.giorniUltimaData / 30)} mesi`, prova: `${url} — date nella homepage` });
+    }
     const sec = (n: number | null) => (n != null ? String(n).replace(".", ",") : "?");
     if (tel.lcpSecondi != null && tel.lcpSecondi >= 4) {
       levers.push({ servizio: "sito", testo: `Nel test di velocità come quello di Google (telefono con 4G lento) il sito ci mette ${sec(tel.lcpSecondi)} secondi a mostrare il contenuto principale: chi ha una connessione debole se ne va prima`, prova: "Homepage aperta come un telefono con 4G lento (150 ms, 1,6 Mbit/s), lo stesso profilo dei test di Google PageSpeed" });
@@ -117,8 +128,9 @@ export const agenteSitoVisto: AgenteEseguibile = {
       for (const p of visto.problemi.slice(0, 2)) levers.push({ servizio: "sito", testo: p.problema, prova: `Si vede nella foto (${p.dove})` });
     }
     return {
-      summary: `Sembra ${visto.sembra_anno}. Telefono con 4G lento: si vede in ${sec(tel.lcpSecondi)} s`,
+      summary: `Sembra ${visto.sembra_anno}${vita.annoPiePagina ? `, © ${vita.annoPiePagina}` : ""}${vita.ultimaData ? `, ultima data ${vita.ultimaData}` : ""}. Telefono con 4G lento: si vede in ${sec(tel.lcpSecondi)} s`,
       findings: {
+        vita,
         telefono: { lcpSecondi: tel.lcpSecondi, caricamentoSecondi: tel.caricamentoSecondi },
         computer: pc ? { lcpSecondi: pc.lcpSecondi, caricamentoSecondi: pc.caricamentoSecondi } : null,
         foto: { telefono: tel.jpeg, computer: pc?.jpeg ?? null },
@@ -256,6 +268,75 @@ async function recensioniGoogle(task: Record<string, unknown>): Promise<{ items:
   }
   throw new Error("Recensioni: Google non ha risposto in tempo");
 }
+
+// ─── La scheda Google: è curata? ────────────────────────────────────────────
+
+interface InfoScheda {
+  total_photos?: number | null;
+  is_claimed?: boolean | null;
+  description?: string | null;
+  work_time?: unknown;
+}
+
+interface Aggiornamento {
+  timestamp?: string | null;
+  post_text?: string | null;
+}
+
+/** I post della scheda (aggiornamenti): lavoro asincrono come le recensioni, al massimo ~2 minuti. */
+async function aggiornamentiScheda(placeId: string): Promise<{ items: Aggiornamento[]; costCents: number }> {
+  const auth = Buffer.from(`${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`).toString("base64");
+  const h = { Authorization: `Basic ${auth}`, "Content-Type": "application/json" };
+  const r = await fetch("https://api.dataforseo.com/v3/business_data/google/my_business_updates/task_post", {
+    method: "POST", headers: h, body: JSON.stringify([{ keyword: `place_id:${placeId}`, location_code: LOCATION_ITALIA, language_code: "it", depth: 10 }]), signal: AbortSignal.timeout(30_000),
+  });
+  const t = (await r.json())?.tasks?.[0];
+  if (!t?.id || t.status_code >= 40000) throw new Error(`Aggiornamenti della scheda: ${t?.status_message ?? "errore"}`);
+  for (let i = 0; i < 24; i++) {
+    await new Promise((res) => setTimeout(res, 5000));
+    const gt = (await (await fetch(`https://api.dataforseo.com/v3/business_data/google/my_business_updates/task_get/${t.id}`, { headers: h, signal: AbortSignal.timeout(30_000) })).json())?.tasks?.[0];
+    if (gt?.status_code === 20000) return { items: gt.result?.[0]?.items ?? [], costCents: usdInCentesimiEuro(Number(t.cost) || 0) };
+    // Nessun aggiornamento pubblicato: anche questo è un dato.
+    if (gt?.status_code === 40102) return { items: [], costCents: usdInCentesimiEuro(Number(t.cost) || 0) };
+    if (gt?.status_code && gt.status_code >= 40000 && gt.status_code !== 40602) throw new Error(`Aggiornamenti della scheda: ${gt.status_message}`);
+  }
+  throw new Error("Aggiornamenti della scheda: Google non ha risposto in tempo");
+}
+
+export const agenteSchedaGoogle: AgenteEseguibile = {
+  chiave: "scheda_google",
+  fase: "approfondimento",
+  validitaGiorni: 60,
+  aPagamento: true,
+  async esegui(ctx) {
+    const l = ctx.lead;
+    if (!l.placeId) {
+      return { summary: "Scheda Google non collegata con certezza: non letta", findings: { schedaTrovata: null }, levers: [], evidence: [], confidence: "BASSA" };
+    }
+    const info = await chiamaDataForSeo<{ items?: InfoScheda[] }>("/business_data/google/my_business_info/live", { keyword: `place_id:${l.placeId}`, location_code: LOCATION_ITALIA, language_code: "it" });
+    const s = info.result?.items?.[0] ?? null;
+    const agg = await aggiornamentiScheda(l.placeId);
+    const date = agg.items.map((i) => i.timestamp?.slice(0, 10)).filter((d): d is string => !!d).sort();
+    const ultimo = date.pop() ?? null;
+    const giorni = ultimo ? Math.round((ctx.oggi.getTime() - new Date(ultimo).getTime()) / 86400_000) : null;
+    const foto = s?.total_photos ?? null;
+    const scheda = `Scheda Google di ${l.name}`;
+    const levers: Leva[] = [];
+    if (s?.is_claimed === false) levers.push({ servizio: "seo", testo: "La scheda Google non è rivendicata: chiunque può proporre modifiche e loro non possono rispondere né aggiornarla", prova: scheda });
+    if (!ultimo) levers.push({ servizio: "seo", testo: "Sulla scheda Google non pubblicano aggiornamenti: niente novità, offerte o lavori fatti per chi li cerca su Maps", prova: `${scheda}: nessun aggiornamento` });
+    else if (giorni != null && giorni > 180) levers.push({ servizio: "seo", testo: `L'ultimo aggiornamento sulla scheda Google è di ${Math.round(giorni / 30)} mesi fa`, prova: `${scheda}: ultimo aggiornamento ${ultimo}` });
+    if (foto != null && foto < 10) levers.push({ servizio: "seo", testo: `Solo ${foto} foto sulla scheda Google: chi confronta vede poco del loro lavoro`, prova: scheda });
+    if (s && !s.description) levers.push({ servizio: "seo", testo: "La scheda Google non ha una descrizione dell'attività", prova: scheda });
+    return {
+      summary: `${s?.is_claimed === false ? "Scheda non rivendicata. " : ""}${foto ?? "?"} foto, ${ultimo ? `ultimo aggiornamento ${ultimo}` : "nessun aggiornamento pubblicato"}`,
+      findings: { rivendicata: s?.is_claimed ?? null, foto, descrizione: s?.description ?? null, aggiornamenti: agg.items.length, ultimoAggiornamento: ultimo, giorniUltimoAggiornamento: giorni, ultimiTesti: agg.items.slice(0, 3).map((i) => ({ data: i.timestamp?.slice(0, 10) ?? null, testo: i.post_text?.slice(0, 200) ?? "" })) },
+      levers,
+      evidence: [{ cosa: `${foto ?? "?"} foto, ${agg.items.length} aggiornamenti letti`, fonte: scheda }],
+      confidence: s ? "ALTA" : "MEDIA",
+      costCents: info.costCents + agg.costCents,
+    };
+  },
+};
 
 export const agenteRecensioni: AgenteEseguibile = {
   chiave: "recensioni",

@@ -351,7 +351,8 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             </Blocco>
           </Sezione>
 
-          <Sezione n={3} titolo="Come la vedono i clienti" agenti={["recensioni"]}>
+          <Sezione n={3} titolo="Come la vedono i clienti" agenti={["scheda_google", "recensioni"]}>
+            <Blocco agente="scheda_google" />
             <Blocco agente="recensioni">
               {arr<{ cosa: string; citazione: string }>(an.recensioni?.findings.lodano).slice(0, 2).map((x, i) => (
                 <div key={i} className="text-xs mt-1 break-words"><span className="text-green-600">+</span> {x.cosa}: &ldquo;{x.citazione}&rdquo;</div>
@@ -372,13 +373,17 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             </Blocco>
           </Sezione>
 
-          <Sezione n={5} titolo="Pubblicità e social" agenti={["google_ads", "tracciamenti", "meta_ads", "social"]}>
-            <Blocco agente="google_ads" />
-            <Blocco agente="tracciamenti" />
+          {/* L'ordine di Alessio: dove è presente sui social, se sono coerenti, poi le inserzioni (Meta se c'è la pagina, Google se c'è il sito). */}
+          <Sezione n={5} titolo="Social e pubblicità" agenti={["social", "instagram", "meta_ads", "google_ads", "tracciamenti"]}>
+            <Blocco agente="social" />
+            <Blocco agente="instagram">
+              {str(an.instagram?.findings.perche) && <div className="text-sm mt-1.5 break-words">{str(an.instagram?.findings.perche)}</div>}
+            </Blocco>
             <Blocco agente="meta_ads">
               {esempiMeta.slice(0, 2).map((e, i) => <div key={i} className="text-xs mt-1 break-words">&ldquo;{e.testo}&rdquo; <span className="text-muted-foreground">dal {e.dal}</span></div>)}
             </Blocco>
-            <Blocco agente="social" />
+            <Blocco agente="google_ads" />
+            <Blocco agente="tracciamenti" />
           </Sezione>
 
           <Sezione n={6} titolo="LinkedIn e chi decide" agenti={["linkedin_azienda", "decision_maker"]}>

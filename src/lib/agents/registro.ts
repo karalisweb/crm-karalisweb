@@ -16,7 +16,7 @@ import { agenteGoogleAds } from "./agenti/google-ads";
 import { agenteAggancio, agenteCoerenza, agenteRegistaVideo, agenteSchedaLeve } from "./agenti/sintesi";
 import type { AgenteEseguibile } from "./tipi";
 import { agenteMetaAdsServer, agenteSocialServer } from "./agenti/meta";
-import { agenteConcorrenti, agenteContatto, agenteGanci, agenteRecensioni, agenteSitoVisto, agenteTrovaSito } from "./agenti/arricchimento";
+import { agenteConcorrenti, agenteContatto, agenteGanci, agenteRecensioni, agenteSchedaGoogle, agenteSitoVisto, agenteTrovaSito } from "./agenti/arricchimento";
 
 export type Famiglia = "server" | "browser" | "sintesi";
 export type Squadra = "commerciale" | "bni" | "vendita" | "ricerca";
@@ -41,6 +41,7 @@ export const SQUADRA: SchedaAgente[] = [
   { chiave: "trova_sito", numero: "A0", nome: "Trova sito", compito: "Il sito per più strade (Google, email, dominio) e se cercando il nome esce", famiglia: "server", squadra: "commerciale", stato: "attivo" },
   { chiave: "sito_visto", numero: "A3", nome: "Sito visto", compito: "Foto su telefono e computer, velocità, se sembra vecchio", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
   { chiave: "contatto", numero: "A4", nome: "Dal cliente al contatto", compito: "Telefono cliccabile, WhatsApp, modulo, quanti clic per un preventivo", famiglia: "server", squadra: "commerciale", stato: "attivo" },
+  { chiave: "scheda_google", numero: "A5b", nome: "La scheda Google", compito: "Se la scheda Maps è curata: rivendicata, foto, descrizione, ultimo aggiornamento", famiglia: "server", squadra: "commerciale", stato: "attivo" },
   { chiave: "recensioni", numero: "A5", nome: "Recensioni", compito: "Cosa lodano e di cosa si lamentano i clienti, con le loro parole", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
   { chiave: "concorrenti", numero: "A2", nome: "Concorrenti", compito: "Chi esce prima su Google Maps per la stessa ricerca, e con che numeri", famiglia: "server", squadra: "commerciale", stato: "attivo" },
   { chiave: "ganci", numero: "A9", nome: "I 3 ganci", compito: "I 3 ganci con i numeri per la prima frase della chiamata", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
@@ -59,6 +60,14 @@ export const SQUADRA: SchedaAgente[] = [
   {
     chiave: "meta_ads", numero: "7", nome: "Meta Ad Library", compito: "Inserzioni attive e passate della pagina, lette dal server", famiglia: "server", squadra: "commerciale", stato: "attivo",
     istruzioni: `Apri https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=IT e cerca la PAGINA Facebook dell'azienda (non solo il nome: verifica che sia la loro, ad esempio dal link al sito). Annota: inserzioni attive ora (quante, da quando), inserzioni passate (se la libreria le mostra), cosa promettono, dove portano (sito/landing/WhatsApp). Confronta con il sito e i social. Se NON sei sicuro che la pagina sia la loro (nessun link al sito, nome uguale ma altra città), scrivi pagina: null e non dare leve: meglio niente che un dato sbagliato. Scrivi solo fatti verificabili (quante inserzioni, da quando, dove portano), mai supposizioni ("non funziona", "spendono al buio"). Leve tipiche: inserzioni attive che portano alla homepage generica; promesse diverse dal sito; mai fatto inserzioni mentre i concorrenti sì. Findings: { pagina, inserzioniAttive, attiveDal, inserzioniPassate, esempi: [{ testo, destinazione, dal }] }. ${REGOLE_BROWSER}`,
+  },
+  {
+    chiave: "instagram", numero: "6b", nome: "Instagram e coerenza", compito: "Ultimo post di Instagram, quanto pubblica e se racconta la stessa azienda di Facebook", famiglia: "browser", squadra: "commerciale", stato: "attivo",
+    nota: "Col Chrome di Alessio: Instagram senza accesso non mostra i post",
+    istruzioni: `Usa Chrome di Alessio. Apri il profilo Instagram dell'azienda (azienda.linkNoti.instagram; se manca cercalo su Instagram per nome, verificando che sia la loro: stesso nome, città, sito o telefono in bio). Se Instagram chiede l'accesso e non sei dentro, chiudi come FALLITO scrivendo "accesso a Instagram non disponibile".
+Annota: esiste?, follower, data dell'ultimo post (AAAA-MM-GG; i post fissati in alto non contano come ultimi), quanti post negli ultimi 3 mesi (anche "circa"), di cosa parlano in una frase, che tono hanno.
+Poi la COERENZA con Facebook: confronta con azienda.social (pagina Facebook, ultimo post, temi; se c'è il link apri anche la pagina Facebook). Sono la stessa azienda raccontata allo stesso modo? Stessi contenuti o diversi? Uno vivo e l'altro fermo? Tono diverso? Scrivi solo quello che vedi.
+Leve tipiche: Instagram fermo da mesi; Instagram e Facebook che raccontano cose diverse; uno curato e l'altro abbandonato; profilo assente. Findings: { url, esiste, follower, ultimoPost, postUltimi3Mesi, temi, tono, coerenzaFacebook: "coerenti"|"diversi"|"solo_instagram"|"solo_facebook"|"nessuno", perche }. ${REGOLE_BROWSER}`,
   },
   {
     chiave: "linkedin_azienda", numero: "8", nome: "LinkedIn azienda", compito: "Pagina aziendale e ultimo post", famiglia: "browser", squadra: "commerciale", stato: "attivo",
@@ -153,6 +162,7 @@ export const AGENTI_ESEGUIBILI: Record<string, AgenteEseguibile> = {
   sito_visto: agenteSitoVisto,
   contatto: agenteContatto,
   recensioni: agenteRecensioni,
+  scheda_google: agenteSchedaGoogle,
   concorrenti: agenteConcorrenti,
   ganci: agenteGanci,
   social: agenteSocialServer,

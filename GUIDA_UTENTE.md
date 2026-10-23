@@ -105,7 +105,11 @@ chiamata e **la prova** di ogni cosa che dice.
    sole quelle approfondite in cui chi decide è collegato a te; dalla scheda puoi aggiungerne altre
    (**Da contattare**) o toglierne una (**Togli**).
 4. **Giro completo** (solo con Approfondisci, parte subito: partono **tutte** le ricerche, anche quelle
-   segnate "a mano"; se l'azienda non ha un sito partono tutte quelle che non leggono il sito): **Concorrenti** su Google Maps, **Google Ads**,
+   segnate "a mano"; se l'azienda non ha un sito partono tutte quelle che non leggono il sito). L'ordine
+   è il tuo: scheda Google (aggiornamenti, foto, recensioni), il sito se c'è (di quando sembra, se è
+   attivo: anno nel piè di pagina, ultima data), si vede su Google?, i social (Facebook, Instagram e
+   LinkedIn, cercati anche per nome; Instagram e Facebook sono coerenti?), il titolare, le inserzioni
+   Meta se c'è la pagina, Google Ads se c'è il sito. Per Instagram serve il tuo Chrome con Instagram aperto: **Concorrenti** su Google Maps, **Google Ads**,
    **Tracciamenti**, e con il tuo browser Social, Meta, LinkedIn, Decision maker.
 5. **I 3 ganci**: in cima alla scheda, le 3 frasi da dire al titolare, ognuna con il suo numero e la
    prova, più la frase per aprire la chiamata. Si aggiornano quando arrivano i risultati dal Mac.

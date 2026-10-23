@@ -1701,7 +1701,13 @@ Processo deciso con Alessio: `PROGETTO-AGENTI.md` (Fase 2). Due giri, una decisi
   dà `daContattare`/`contattareAMano`; la scheda `contatto`.
   **Approfondisci = tutti (v3.56.0)**: `lavoraSuApprovate` usa `agentiApprofondimento(dove, conSito)` (`catalogo.ts`):
   tutto il catalogo tranne `trova_sito` e la sintesi, ignorando `agenti_modo`; senza sito salta le voci `serveSito`
-  (posizioni, sito_visto, contatto, lettore, tracciamenti, google_ads). Le aziende senza sito non sono più escluse. Mail: `POST /api/cron/mail-decisioni` alle 07:00
+  (posizioni, sito_visto, contatto, lettore, tracciamenti, google_ads). Le aziende senza sito non sono più escluse.
+  **Sequenza di Alessio (v3.57.0)**: `social` (`agenti/meta.ts`, `pagineSocial`) prende i profili dal sito, dalla scheda,
+  poi per nome (`social-per-nome.ts`: DataForSEO organic "<nome> <città> facebook instagram linkedin", tiene i profili col
+  nome nel titolo) e legge i numeri pubblici di Instagram; `meta_ads` riusa i findings di `social`. Nuovo agente server
+  `scheda_google` (`agenti/arricchimento.ts`: `my_business_info/live` + `my_business_updates` task). Nuovo agente browser
+  `instagram` (registro `6b`, validità 30 giorni; il lavoro riceve `azienda.social` con i findings di `social`).
+  `sito_visto` aggiunge `findings.vita` (`segni-vita.ts`: anno nel piè di pagina, ultima data). Catalogo: `social` prima di `meta_ads`. Mail: `POST /api/cron/mail-decisioni` alle 07:00
   (`src/lib/agents/mail-decisioni.ts`). Casella manuale: `POST /api/ricerca/manuale` (`src/lib/ricerca/manuale.ts`).
 - **Scheda azienda** (`/aziende-trovate/[id]`): decisione, i 3 ganci, chi decide, chi la presenta, ti trovano?,
   il sito (foto), recensioni, pubblicità e social, prossimo passo, storia.

@@ -95,7 +95,7 @@ export function levePerServizio(leve: Leva[]): Record<string, Leva[]> {
 /** Agenti dell'approfondimento che lavorano sul server (a pagamento: DataForSEO / AI). */
 export const AGENTI_APPROFONDIMENTO_SERVER = ["concorrenti", "tracciamenti", "google_ads", "meta_ads", "social"] as const;
 /** Agenti dell'approfondimento che lavorano col browser di Alessio (Claude sul Mac). */
-export const AGENTI_BROWSER_AZIENDA = ["linkedin_azienda", "decision_maker"] as const;
+export const AGENTI_BROWSER_AZIENDA = ["instagram", "linkedin_azienda", "decision_maker"] as const;
 /** La catena di sintesi, nell'ordine: ognuno legge quello che hanno scritto i precedenti. */
 export const AGENTI_SINTESI = ["ganci"] as const;
 

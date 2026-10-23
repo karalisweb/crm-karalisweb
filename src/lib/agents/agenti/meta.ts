@@ -1,8 +1,10 @@
 /**
  * Facebook, Instagram e inserzioni Meta, letti dal server senza l'account di Alessio (v3.49).
  *
- *   social   — la pagina Facebook (dal sito o dalla scheda): follower, ultimo post, di cosa parla;
- *              Instagram si segnala se è collegato dal sito, ma i dettagli richiedono l'accesso.
+ *   social   — dove è presente fra Facebook, Instagram e LinkedIn (dal sito, dalla scheda, altrimenti
+ *              cercando per nome su Google: è la strada di chi non ha il sito); la pagina Facebook
+ *              (follower, ultimo post, di cosa parla) e i numeri pubblici di Instagram. L'ultimo
+ *              post di Instagram e la coerenza con Facebook li legge l'agente sul Mac (instagram).
  *   meta_ads — la libreria pubblica delle inserzioni di Meta, cercando la PAGINA dell'azienda.
  *
  * Il testo delle pagine lo legge l'AI, ma i numeri delle leve devono comparire nel testo letto.
@@ -11,24 +13,73 @@ import { chiediJSON, REGOLE_COMUNI, type Schema } from "../ai";
 import { leggiPaginaPubblica } from "../fotografo";
 import type { AgenteEseguibile, ContestoAgente, Leva, Prova } from "../tipi";
 import { detectSocialLinks } from "@/lib/audit/social-detector";
+import { cercaSocialPerNome } from "../social-per-nome";
 
-/** La pagina Facebook dell'azienda: link nel sito, altrimenti quello salvato sull'azienda. */
-async function paginaFacebook(ctx: ContestoAgente): Promise<{ facebook: string | null; instagram: string | null }> {
-  let facebook: string | null = null;
-  let instagram: string | null = null;
-  try {
-    const p = await ctx.pagina();
-    const s = detectSocialLinks(p.html) as unknown as Record<string, { url?: string | null } | undefined>;
-    facebook = s.facebook?.url ?? null;
-    instagram = s.instagram?.url ?? null;
-  } catch {
-    /* sito non leggibile: si prova con quello che c'è */
+type Fonte = "sito" | "scheda" | "nome";
+
+interface PagineSocial {
+  facebook: string | null;
+  instagram: string | null;
+  linkedin: string | null;
+  trovateDa: Record<string, Fonte>;
+  costCents: number;
+}
+
+/**
+ * Dove è presente: i link nel sito, poi quello salvato sull'azienda, poi la ricerca per nome
+ * (sempre, se manca uno dei tre: senza sito è l'unica strada).
+ */
+async function pagineSocial(ctx: ContestoAgente): Promise<PagineSocial> {
+  const out: PagineSocial = { facebook: null, instagram: null, linkedin: null, trovateDa: {}, costCents: 0 };
+  const metti = (k: "facebook" | "instagram" | "linkedin", url: string | null | undefined, fonte: Fonte) => {
+    if (url && !out[k]) {
+      out[k] = url.replace(/^http:/, "https:").replace(/[?#].*$/, "");
+      out.trovateDa[k] = fonte;
+    }
+  };
+  if (ctx.lead.website) {
+    try {
+      const p = await ctx.pagina();
+      const s = detectSocialLinks(p.html) as unknown as Record<string, { url?: string | null } | undefined>;
+      metti("facebook", s.facebook?.url, "sito");
+      metti("instagram", s.instagram?.url, "sito");
+      metti("linkedin", s.linkedin?.url && /linkedin\.com\/company\//i.test(s.linkedin.url) ? s.linkedin.url : null, "sito");
+    } catch {
+      /* sito non leggibile: si prova con quello che c'è */
+    }
   }
   const noto = ctx.lead.socialUrl ?? null;
-  if (!facebook && noto && /facebook\.com/i.test(noto)) facebook = noto;
-  if (!instagram && noto && /instagram\.com/i.test(noto)) instagram = noto;
-  const pulisci = (u: string | null) => (u ? u.replace(/^http:/, "https:").replace(/[?#].*$/, "") : null);
-  return { facebook: pulisci(facebook), instagram: pulisci(instagram) };
+  if (noto && /facebook\.com/i.test(noto)) metti("facebook", noto, "scheda");
+  if (noto && /instagram\.com/i.test(noto)) metti("instagram", noto, "scheda");
+  if (!out.facebook || !out.instagram || !out.linkedin) {
+    try {
+      const r = await cercaSocialPerNome(ctx.lead.name, ctx.lead.citta);
+      out.costCents += r.costCents;
+      metti("facebook", r.profili.facebook, "nome");
+      metti("instagram", r.profili.instagram, "nome");
+      metti("linkedin", r.profili.linkedin, "nome");
+    } catch {
+      /* ricerca non disponibile: si resta con quello che c'è */
+    }
+  }
+  return out;
+}
+
+/** I numeri pubblici di Instagram (dall'anteprima della pagina: "120 follower, 45 post"), se si leggono. */
+async function numeriInstagram(url: string): Promise<{ follower: number | null; post: number | null }> {
+  try {
+    const p = await leggiPaginaPubblica(url, 2500);
+    const meta = p.html.match(/<meta[^>]+(?:property|name)="(?:og:)?description"[^>]+content="([^"]+)"/i)?.[1] ?? p.testo.slice(0, 500);
+    const numero = (re: RegExp) => {
+      const m = meta.match(re)?.[1];
+      if (!m) return null;
+      const n = parseFloat(m.replace(/\./g, "").replace(",", "."));
+      return /k/i.test(m) ? Math.round(n * 1000) : /m/i.test(m) ? Math.round(n * 1_000_000) : Math.round(n);
+    };
+    return { follower: numero(/([\d.,]+\s*[kKmM]?)\s*(?:follower|followers)/i), post: numero(/([\d.,]+\s*[kKmM]?)\s*(?:post|posts)\b/i) };
+  } catch {
+    return { follower: null, post: null };
+  }
 }
 
 // ─── Social ────────────────────────────────────────────────────────────────
@@ -59,11 +110,11 @@ export const agenteSocialServer: AgenteEseguibile = {
   validitaGiorni: 30,
   aPagamento: true,
   async esegui(ctx) {
-    const { facebook, instagram } = await paginaFacebook(ctx);
+    const { facebook, instagram, linkedin, trovateDa, costCents: costoRicerca } = await pagineSocial(ctx);
     const levers: Leva[] = [];
     const evidence: Prova[] = [];
     let fb: RispostaFacebook | null = null;
-    let costCents = 0;
+    let costCents = costoRicerca;
     if (facebook) {
       const p = await leggiPaginaPubblica(facebook);
       // Facebook a volte mostra solo il riquadro di accesso: senza follower né post non c'è niente da leggere.
@@ -75,22 +126,30 @@ export const agenteSocialServer: AgenteEseguibile = {
         schema: SCHEMA_FB,
       });
       fb = ai.dati;
-      costCents = ai.costCents;
+      costCents += ai.costCents;
       evidence.push({ cosa: `Pagina Facebook${fb.follower ? `: ${fb.follower} follower` : ""}`, fonte: p.url });
       const giorni = fb.ultimo_post ? Math.round((ctx.oggi.getTime() - new Date(fb.ultimo_post).getTime()) / 86400_000) : null;
       if (giorni != null && giorni > 90) {
         levers.push({ servizio: "social", testo: `La pagina Facebook è ferma: l'ultimo post è di ${Math.round(giorni / 30)} mesi fa`, prova: `${p.url} — ultimo post visibile: ${fb.ultimo_post}` });
       }
       // Quanti post fanno non si dice: da fuori si vede solo l'ultimo, il conteggio non è affidabile.
-    } else {
-      levers.push({ servizio: "social", testo: "Dal sito non si arriva a nessuna pagina Facebook", prova: "Nessun link a Facebook nella homepage" });
+    } else if (trovateDa.facebook === undefined) {
+      levers.push({ servizio: "social", testo: "Non si trova una pagina Facebook dell'azienda", prova: ctx.lead.website ? "Nessun link nella homepage né cercandoli per nome su Google" : `Ricerca su Google "${ctx.lead.name}"` });
     }
-    if (instagram) evidence.push({ cosa: "Instagram collegato dal sito (i dettagli richiedono l'accesso)", fonte: instagram });
+    if (facebook && trovateDa.facebook === "nome" && ctx.lead.website) {
+      levers.push({ servizio: "social", testo: "Hanno una pagina Facebook ma dal sito non ci si arriva", prova: `${facebook} — nessun link nella homepage` });
+    }
+    const ig = instagram ? await numeriInstagram(instagram) : null;
+    if (instagram) evidence.push({ cosa: `Instagram${ig?.follower != null ? `: ${ig.follower} follower` : ""}${ig?.post != null ? `, ${ig.post} post` : ""}`, fonte: instagram });
+    else levers.push({ servizio: "social", testo: "Non si trova un profilo Instagram dell'azienda", prova: `Ricerca su Google "${ctx.lead.name}"` });
+    if (linkedin) evidence.push({ cosa: "Pagina LinkedIn dell'azienda", fonte: linkedin });
+    if (!ctx.lead.website && !facebook && !instagram && !linkedin) {
+      levers.push({ servizio: "sito", testo: "Online non si trovano: né sito né pagine social. Chi li cerca trova solo schede di altri", prova: `Ricerca su Google "${ctx.lead.name} ${ctx.lead.citta ?? ""}"` });
+    }
+    const presenti = [facebook && "Facebook", instagram && "Instagram", linkedin && "LinkedIn"].filter(Boolean).join(", ");
     return {
-      summary: facebook
-        ? `Facebook${fb?.follower ? ` ${fb.follower} follower` : ""}${fb?.ultimo_post ? `, ultimo post ${fb.ultimo_post}` : ""}${instagram ? "; Instagram collegato" : "; Instagram non collegato"}`
-        : `Nessuna pagina Facebook dal sito${instagram ? "; Instagram collegato" : ""}`,
-      findings: { facebook, instagram, ...(fb ?? {}) },
+      summary: `${presenti ? `Presente su ${presenti}` : "Nessun profilo social trovato"}${fb?.follower ? `. Facebook ${fb.follower} follower` : ""}${fb?.ultimo_post ? `, ultimo post ${fb.ultimo_post}` : ""}${ig?.follower != null ? `. Instagram ${ig.follower} follower` : ""}`,
+      findings: { facebook, instagram, linkedin, trovateDa, instagramFollower: ig?.follower ?? null, instagramPost: ig?.post ?? null, ...(fb ?? {}) },
       levers,
       evidence,
       confidence: fb ? "MEDIA" : "ALTA",
@@ -125,7 +184,9 @@ export const agenteMetaAdsServer: AgenteEseguibile = {
   validitaGiorni: 30,
   aPagamento: true,
   async esegui(ctx) {
-    const { facebook } = await paginaFacebook(ctx);
+    // La pagina la trova l'agente Social (anche per nome): si riusa, senza ricercare.
+    const social = (await ctx.referti()).find((r) => r.agent === "social")?.findings as { facebook?: string | null } | undefined;
+    const facebook = social && "facebook" in social ? social.facebook ?? null : (await pagineSocial(ctx)).facebook;
     if (!facebook) {
       return {
         summary: "Nessuna pagina Facebook: niente inserzioni da cercare",
@@ -138,7 +199,15 @@ export const agenteMetaAdsServer: AgenteEseguibile = {
     // L'ID della pagina (sta nell'HTML della pagina Facebook) permette di vedere SOLO le sue inserzioni.
     const pagina = await leggiPaginaPubblica(facebook, 3000);
     const id = pagina.html.match(/"pageID":"(\d{6,})"|"page_id":"?(\d{6,})|fb:\/\/page\/\?id=(\d{6,})|"delegate_page":\{"id":"(\d{6,})/)?.slice(1).find(Boolean) ?? null;
-    if (!id) throw new Error("Non trovo l'identificativo della pagina Facebook");
+    if (!id) {
+      return {
+        summary: "Pagina Facebook trovata ma non leggibile senza accesso: inserzioni da guardare a mano",
+        findings: { pagina: facebook, paginaId: null, inserzioniAttive: null },
+        levers: [],
+        evidence: [{ cosa: "Pagina Facebook", fonte: facebook }],
+        confidence: "BASSA",
+      };
+    }
     const url = `https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=IT&view_all_page_id=${id}`;
     const lib = await leggiPaginaPubblica(url, 6000);
     const ai = await chiediJSON<RispostaAds>({

@@ -13,6 +13,18 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.57.0] - 2026-10-23
+
+### Added
+- **La sequenza di Alessio per l'approfondimento** (scritta in `PROGETTO-AGENTI.md`): Google Maps, il sito (se c'è, è attivo?), si vede?, senza sito subito i social, i 3 social e se sono coerenti, LinkedIn e il titolare, inserzioni Meta se c'è la pagina, Google Ads se c'è il sito. Nella scheda la sezione 5 ora segue quest'ordine ("Social e pubblicità").
+- **La scheda Google** (nuovo agente `scheda_google`, sezione 3): rivendicata o no, quante foto, descrizione, data dell'ultimo aggiornamento pubblicato e i testi degli ultimi. Leve: scheda non rivendicata, nessun aggiornamento o fermo da più di 6 mesi, meno di 10 foto, senza descrizione.
+- **Instagram e coerenza** (nuovo agente sul Mac `instagram`): ultimo post, quanti negli ultimi 3 mesi, di cosa parlano, e se Instagram e Facebook raccontano la stessa azienda. Serve il tuo Chrome con Instagram aperto.
+- **Il sito è attivo?**: "Il sito visto" legge anche l'anno nel piè di pagina (© 2019) e l'ultima data scritta nella pagina. Leve: © vecchio di 2 anni o più, nessun contenuto datato nell'ultimo anno.
+
+### Changed
+- **I social si cercano anche per nome**: se il sito non c'è o non ha i link, "Facebook e Instagram" cerca su Google le pagine Facebook, Instagram e LinkedIn dell'azienda (tiene solo quelle con il nome nel titolo). È la strada di chi non ha il sito. Leve nuove: pagina Facebook che dal sito non si raggiunge, nessun Instagram, nessuna presenza online. La pagina LinkedIn trovata passa all'agente LinkedIn.
+- **Inserzioni Meta** riusano la pagina trovata dall'agente Social; se la pagina non si legge senza accesso il risultato è "da guardare a mano" invece di "non riuscita".
+
 ## [3.56.0] - 2026-10-23
 
 ### Changed
