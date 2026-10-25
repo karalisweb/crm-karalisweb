@@ -19,13 +19,21 @@ import { linkedinPermette } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
   testoContattoDiretto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
+  COMMENTI_PER_CONTATTO, PIATTAFORME, piattaformaConsigliata, piattaformaDi, testoContattoDopoCommenti, testoMessaggioPagina,
+  type PaginaSocial, type Piattaforma,
 } from "./rete-regole";
+import { noteDaReferti } from "./impressioni-sezioni";
 
 export const KIND_RETE_PONTE = "RETE_PONTE";
 export const KIND_RETE_DIRETTO = "RETE_DIRETTO";
 export const KIND_RETE_PROMEMORIA = "RETE_PROMEMORIA";
+// Il nome resta per i commenti già in Cassetta: dal 2026-10-25 vale per le pagine Facebook, Instagram e LinkedIn.
 export const KIND_COMMENTO = "COMMENTO_LINKEDIN";
-export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO];
+/** Al 7° commento: il contatto diretto (WhatsApp, mail o telefono). */
+export const KIND_RETE_CONTATTO = "RETE_CONTATTO";
+/** Chi decide non si trova: il messaggio privato alla pagina per arrivare a lui. */
+export const KIND_RETE_PAGINA = "RETE_PAGINA";
+export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA];
 
 /** Decisori al giorno da scaldare con i commenti (letture LinkedIn). */
 const DECISORI_DA_SCALDARE = RISERVA_SCALDA;
@@ -56,7 +64,8 @@ export async function datiAzienda(leadId: string, scaldata = false): Promise<Dat
     decisori: persone.slice(0, 2).map((p) => ({
       nome: str(p.nome) ?? "",
       grado: typeof p.grado === "number" ? p.grado : null,
-      contattiInComune: (Array.isArray(p.contattiInComune) ? p.contattiInComune : []).map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome))).filter((x): x is string => !!x),
+      // In comune su LinkedIn e, dal 2026-10-25, gli amici in comune su Facebook.
+      contattiInComune: [...(Array.isArray(p.contattiInComune) ? p.contattiInComune : []), ...(Array.isArray(p.amiciInComuneFacebook) ? p.amiciInComuneFacebook : [])].map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome))).filter((x): x is string => !!x),
     })).filter((d) => d.nome),
     pontiBni: ponti.map((p) => ({ membroId: p.membroId, membro: p.membro.name, decisore: p.nome })),
     scaldata,
@@ -119,7 +128,8 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     const conForza = [];
     for (const c of candidate) {
       const d = await datiAzienda(c.id);
-      if (!d.decisori.length && !d.pontiBni.length) continue; // senza chi decide non c'è niente da lavorare
+      // Senza chi decide non si scarta (Alessio, 2026-10-25): si lavora dalla pagina, se ce n'è una.
+      if (!d.decisori.length && !d.pontiBni.length && !(await pagineAzienda(c.id)).length) continue;
       conForza.push({ id: c.id, forza: forzaAzienda(d, cerchia), creata: c.createdAt.getTime() });
     }
     conForza.sort((a, b) => b.forza - a.forza || a.creata - b.creata);
@@ -164,6 +174,8 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
   }
   const strada = nomiDaConfermare(d, c, provatiDi(l.pontiProvati)).length ? "DA_CONFERMARE" : "SCALDARE";
   if (l.strada !== strada || !l.decisore) await db.lavorazione.update({ where: { id: l.id }, data: { strada, decisore: l.decisore ?? d.decisori[0]?.nome ?? null } });
+  // Chi decide non si sa: si scrive alla pagina per arrivare a lui (e intanto si commenta).
+  if (!d.decisori.length) return messaggioAllaPagina(l.leadId, oggi);
   return false;
 }
 
@@ -287,6 +299,19 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
 export async function decisioneRete(voceId: string, decisione: "APPROVATO" | "SCARTATO"): Promise<void> {
   const v = await db.approvalItem.findUnique({ where: { id: voceId }, select: { kind: true, payload: true } });
   if (!v || !KINDS_RETE.includes(v.kind)) return;
+  // Un commento fatto: si conta; al 7° parte il contatto diretto.
+  if (v.kind === KIND_COMMENTO) {
+    const leadId = (await db.approvalItem.findUnique({ where: { id: voceId }, select: { leadId: true } }))?.leadId;
+    if (decisione === "APPROVATO" && leadId) await dopoCommento(leadId);
+    return;
+  }
+  if (v.kind === KIND_RETE_CONTATTO || v.kind === KIND_RETE_PAGINA) {
+    const leadId = (await db.approvalItem.findUnique({ where: { id: voceId }, select: { leadId: true } }))?.leadId;
+    if (decisione === "APPROVATO" && leadId && v.kind === KIND_RETE_CONTATTO) {
+      await db.lavorazione.updateMany({ where: { leadId, fase: { in: ["MAPPATA", "PONTE_SCELTO"] } }, data: { fase: "CHIESTA", strada: "SCALDATO", chiestaAt: new Date(), scaldataAt: new Date() } });
+    }
+    return;
+  }
   const id = (v.payload as { lavorazioneId?: string } | null)?.lavorazioneId;
   if (!id) return;
   if (decisione === "APPROVATO") {
@@ -304,21 +329,27 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
   const gia = await db.agentRun.findFirst({ where: { agent: "scalda", OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { queuedAt: { gte: mezzanotteRoma(oggi) } }] } });
   if (gia) return false;
   const lav = await db.lavorazione.findMany({
-    where: { fase: { in: [...FASI_ATTIVE] }, decisore: { not: null }, scaldataAt: null },
+    where: { fase: { in: [...FASI_ATTIVE] }, scaldataAt: null },
     orderBy: { updatedAt: "asc" },
     include: { lead: { select: { id: true, name: true, address: true } } },
     take: 40,
   });
   // Prima chi non ha altre strade (da scaldare), poi chi aspetta la presentazione.
   lav.sort((a, b) => Number(b.strada === "SCALDARE") - Number(a.strada === "SCALDARE"));
-  const decisori = [];
-  for (const l of lav.slice(0, DECISORI_DA_SCALDARE)) {
-    const p = await db.persona.findFirst({ where: { leadId: l.leadId, nome: l.decisore! }, select: { linkedinUrl: true } });
-    decisori.push({ leadId: l.leadId, decisore: l.decisore, azienda: l.lead.name, citta: l.lead.address, profilo: p?.linkedinUrl ?? null });
+  const aziende = [];
+  for (const l of lav) {
+    if (aziende.length >= DECISORI_DA_SCALDARE) break;
+    if ((await commentiFatti(l.leadId)) >= COMMENTI_PER_CONTATTO) continue;
+    const pagine = await pagineAzienda(l.leadId);
+    if (!pagine.length) continue;
+    const piattaforma = (await piattaformaScelta(l.leadId, pagine, oggi)) ?? pagine[0].piattaforma;
+    const pagina = pagine.find((p) => p.piattaforma === piattaforma) ?? pagine[0];
+    aziende.push({ leadId: l.leadId, azienda: l.lead.name, citta: l.lead.address, decisore: l.decisore, piattaforma: pagina.piattaforma, pagina: pagina.url });
   }
-  if (!decisori.length) return false;
-  const input = { decisori };
-  if (!(await linkedinPermette("scalda", input, oggi))) return false;
+  if (!aziende.length) return false;
+  const input = { aziende };
+  // Il budget LinkedIn conta solo se fra le pagine da leggere c'è LinkedIn.
+  if (aziende.some((a) => a.piattaforma === "linkedin") && !(await linkedinPermette("scalda", input, oggi))) return false;
   await db.agentRun.create({ data: { agent: "scalda", status: "IN_CODA", input } });
   return true;
 }
@@ -332,16 +363,18 @@ export async function importaScalda(findings: Record<string, unknown>): Promise<
     const leadId = str(c.leadId);
     const commento = str(c.commento);
     const post = str(c.post);
-    if (!leadId || !commento || !post || !/linkedin\.com/i.test(post)) continue;
+    const piattaforma = piattaformaDi(post);
+    if (!leadId || !commento || !post || !piattaforma) continue;
     const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
     if (!lead) continue;
+    const fatti = await commentiFatti(leadId);
     await db.approvalItem.create({
       data: {
         leadId,
         kind: KIND_COMMENTO,
         agent: "scalda",
-        title: `Commenta il post di ${str(c.decisore) ?? "chi decide"} (${lead.name})`,
-        payload: { post, estratto: str(c.estratto)?.slice(0, 400) ?? null, commento: commento.slice(0, 600), decisore: str(c.decisore) } as Prisma.InputJsonValue,
+        title: `Commenta il post di ${lead.name} su ${NOMI[piattaforma]} (${fatti + 1}° di ${COMMENTI_PER_CONTATTO})`,
+        payload: { post, piattaforma, estratto: str(c.estratto)?.slice(0, 400) ?? null, commento: commento.slice(0, 600), decisore: str(c.decisore) } as Prisma.InputJsonValue,
       },
     });
     e.commenti++;
@@ -410,4 +443,148 @@ export async function loConosco(nome: string, conosco: boolean, lavorazioneId?: 
   }
   // Subito: se adesso c'è un ponte, il messaggio va in Cassetta senza aspettare il turno.
   if (lavorazioneId) await avanzaMappata(lavorazioneId);
+}
+
+// ─── Entrare in relazione: le pagine, i commenti, il contatto al 7° (Alessio, 2026-10-25) ──────
+
+const NOMI: Record<Piattaforma, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
+const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+/**
+ * Le pagine dell'azienda sulle tre piattaforme, con quanto pubblicano: dai referti di Social, Instagram e
+ * LinkedIn azienda; i link trovati da Alessio valgono sopra tutto.
+ */
+export async function pagineAzienda(leadId: string): Promise<PaginaSocial[]> {
+  const referti = await db.agentReport.findMany({
+    where: { leadId, agent: { in: ["social", "instagram", "linkedin_azienda", "alessio"] } },
+    orderBy: { collectedAt: "desc" },
+    distinct: ["agent"],
+    select: { agent: true, findings: true },
+  });
+  const f = (a: string) => (referti.find((r) => r.agent === a)?.findings ?? {}) as Record<string, unknown>;
+  const social = f("social");
+  const ig = f("instagram");
+  const li = f("linkedin_azienda");
+  const diAlessio = noteDaReferti(referti.map((r) => ({ agent: r.agent, findings: r.findings as Record<string, unknown> }))).social;
+  const pagine: PaginaSocial[] = [];
+  const fb = diAlessio.facebook ?? str(social.facebook);
+  if (fb) pagine.push({ piattaforma: "facebook", url: fb, postUltimi3Mesi: num(social.post_ultimi_3_mesi), ultimoPost: str(social.ultimo_post) });
+  const insta = diAlessio.instagram ?? (ig.esiste !== false ? str(ig.url) : null) ?? str(social.instagram);
+  if (insta) pagine.push({ piattaforma: "instagram", url: insta, postUltimi3Mesi: num(ig.postUltimi3Mesi), ultimoPost: str(ig.ultimoPost) });
+  const linked = diAlessio.linkedin ?? (li.esiste !== false ? str(li.url) : null) ?? str(social.linkedin);
+  if (linked) pagine.push({ piattaforma: "linkedin", url: linked, postUltimi3Mesi: num(li.postUltimi3Mesi), ultimoPost: str(li.ultimoPost) });
+  return pagine;
+}
+
+/** Dove commentare: la scelta di Alessio se l'ha fatta, altrimenti la pagina viva che pubblica di più. */
+export async function piattaformaScelta(leadId: string, pagine?: PaginaSocial[], oggi = new Date()): Promise<Piattaforma | null> {
+  const r = await db.agentReport.findFirst({ where: { leadId, agent: "alessio" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
+  const scelta = (r?.findings as { piattaforma?: string } | null)?.piattaforma;
+  const p = pagine ?? (await pagineAzienda(leadId));
+  if (scelta && (PIATTAFORME as readonly string[]).includes(scelta) && p.some((x) => x.piattaforma === scelta)) return scelta as Piattaforma;
+  return piattaformaConsigliata(p, oggi);
+}
+
+/** I commenti fatti da Alessio sulle pagine di quest'azienda (proposti e segnati "Commentato", o segnati da lui). */
+export async function commentiFatti(leadId: string): Promise<number> {
+  return db.approvalItem.count({ where: { leadId, kind: KIND_COMMENTO, status: "APPROVATO" } });
+}
+
+/** "Ho commentato" dalla scheda: un commento fatto da Alessio da solo, che conta come gli altri. */
+export async function segnaCommento(leadId: string, piattaforma: Piattaforma): Promise<{ fatti: number; contatto: boolean }> {
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
+  if (!lead) throw new Error("Azienda non trovata");
+  await db.approvalItem.create({
+    data: {
+      leadId,
+      kind: KIND_COMMENTO,
+      agent: "alessio",
+      title: `Commento su ${NOMI[piattaforma]} a ${lead.name}`,
+      status: "APPROVATO",
+      decidedAt: new Date(),
+      note: "Segnato dalla scheda",
+      payload: { piattaforma, manuale: true } as Prisma.InputJsonValue,
+    },
+  });
+  const contatto = await dopoCommento(leadId);
+  return { fatti: await commentiFatti(leadId), contatto };
+}
+
+/** Dopo ogni commento: al 7° il contatto diretto va in Cassetta (una volta sola). */
+export async function dopoCommento(leadId: string, oggi = new Date()): Promise<boolean> {
+  if ((await commentiFatti(leadId)) < COMMENTI_PER_CONTATTO) return false;
+  const gia = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_RETE_CONTATTO }, select: { id: true } });
+  if (gia) return false;
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, phone: true, email: true } });
+  if (!lead) return false;
+  const d = await datiAzienda(leadId);
+  const decisore = d.decisori[0]?.nome ?? null;
+  const profili = await profiliDecisore(leadId);
+  // La piattaforma dove Alessio ha commentato di più: è lì che l'azienda l'ha visto.
+  const fatti = await db.approvalItem.findMany({ where: { leadId, kind: KIND_COMMENTO, status: "APPROVATO" }, select: { payload: true } });
+  const conto = new Map<Piattaforma, number>();
+  for (const f of fatti) {
+    const p = piattaformaDi(str((f.payload as { post?: unknown } | null)?.post)) ?? ((f.payload as { piattaforma?: Piattaforma } | null)?.piattaforma ?? null);
+    if (p) conto.set(p, (conto.get(p) ?? 0) + 1);
+  }
+  const piattaforma = [...conto.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? (await piattaformaScelta(leadId, undefined, oggi));
+  const motivo = await motivoDalCaso(leadId, oggi);
+  await db.approvalItem.create({
+    data: {
+      leadId,
+      kind: KIND_RETE_CONTATTO,
+      agent: "rete",
+      title: `${COMMENTI_PER_CONTATTO} commenti fatti: scrivi a ${decisore ? chiDecideTesto(decisore, lead.name) : lead.name}`,
+      payload: {
+        decisore,
+        azienda: lead.name,
+        messaggio: testoContattoDopoCommenti(decisore, lead.name, piattaforma, motivo),
+        telefono: lead.phone,
+        email: lead.email,
+        linkedin: profili.linkedin,
+        facebook: profili.facebook,
+        instagram: profili.instagram,
+        motivoDalCaso: !!motivo,
+      } as Prisma.InputJsonValue,
+    },
+  });
+  return true;
+}
+
+/** Chi decide non si sa: il messaggio privato alla pagina, una volta sola per azienda. */
+export async function messaggioAllaPagina(leadId: string, oggi = new Date()): Promise<boolean> {
+  const gia = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_RETE_PAGINA }, select: { id: true } });
+  if (gia) return false;
+  const pagine = await pagineAzienda(leadId);
+  if (!pagine.length) return false;
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
+  if (!lead) return false;
+  const piattaforma = (await piattaformaScelta(leadId, pagine, oggi)) ?? pagine[0].piattaforma;
+  const pagina = pagine.find((p) => p.piattaforma === piattaforma) ?? pagine[0];
+  await db.approvalItem.create({
+    data: {
+      leadId,
+      kind: KIND_RETE_PAGINA,
+      agent: "rete",
+      title: `Non si sa chi decide in ${lead.name}: scrivi alla pagina ${NOMI[pagina.piattaforma]}`,
+      payload: { azienda: lead.name, piattaforma: pagina.piattaforma, pagina: pagina.url, messaggio: testoMessaggioPagina(lead.name, await motivoDalCaso(leadId, oggi)) } as Prisma.InputJsonValue,
+    },
+  });
+  return true;
+}
+
+/** I profili di chi decide sulle tre piattaforme (dall'agente Chi decide; il LinkedIn anche dalle persone salvate). */
+export async function profiliDecisore(leadId: string): Promise<{ nome: string | null; ruolo: string | null; linkedin: string | null; facebook: string | null; instagram: string | null; amiciFacebook: string[] }> {
+  const r = await db.agentReport.findFirst({ where: { leadId, agent: "decision_maker" }, orderBy: { collectedAt: "desc" }, select: { findings: true } });
+  const p = ((r?.findings as { persone?: unknown } | null)?.persone as Record<string, unknown>[] | undefined)?.[0] ?? {};
+  const nome = str(p.nome);
+  const salvata = nome ? await db.persona.findFirst({ where: { leadId, nome }, select: { linkedinUrl: true } }) : null;
+  return {
+    nome,
+    ruolo: str(p.ruolo),
+    linkedin: salvata?.linkedinUrl ?? (piattaformaDi(str(p.profilo)) === "linkedin" ? str(p.profilo) : null),
+    facebook: str(p.profiloFacebook),
+    instagram: str(p.profiloInstagram),
+    amiciFacebook: (Array.isArray(p.amiciInComuneFacebook) ? p.amiciInComuneFacebook : []).map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome))).filter((x): x is string => !!x).slice(0, 30),
+  };
 }

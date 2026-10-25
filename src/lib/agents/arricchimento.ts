@@ -358,3 +358,11 @@ export async function salvaSocial(leadId: string, social: Partial<Record<ReteSoc
   })().catch((e) => console.error("[social di Alessio] fallito:", e));
   return { accodatiMac };
 }
+
+/** Alessio sceglie su quale pagina dell'azienda commentare (Facebook, Instagram o LinkedIn). */
+export async function scegliPiattaforma(leadId: string, piattaforma: ReteSocial): Promise<void> {
+  const note = await noteAlessio(leadId);
+  if (note.piattaforma === piattaforma) return;
+  note.piattaforma = piattaforma;
+  await salvaNote(leadId, note);
+}

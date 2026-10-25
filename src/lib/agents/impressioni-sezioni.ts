@@ -23,12 +23,14 @@ export type ReteSocial = (typeof RETI_SOCIAL)[number];
 export interface NoteAlessio {
   impressioni: Partial<Record<SezioneImpressione, string>>;
   social: Partial<Record<ReteSocial, string>>;
+  /** Dove commentare la pagina dell'azienda, scelto da Alessio (entrare in relazione). */
+  piattaforma?: ReteSocial;
 }
 
 /** Le note di Alessio fra i referti già letti (vuote se non ha scritto niente). */
 export function noteDaReferti(referti: { agent: string; findings: Record<string, unknown> }[]): NoteAlessio {
   const f = referti.find((r) => r.agent === "alessio")?.findings as Partial<NoteAlessio> | undefined;
-  return { impressioni: { ...(f?.impressioni ?? {}) }, social: { ...(f?.social ?? {}) } };
+  return { impressioni: { ...(f?.impressioni ?? {}) }, social: { ...(f?.social ?? {}) }, ...(f?.piattaforma ? { piattaforma: f.piattaforma } : {}) };
 }
 
 /** Le impressioni come leve: i 3 ganci le possono scegliere (quelle senza servizio restano contesto). */

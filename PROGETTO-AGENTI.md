@@ -12,9 +12,33 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 | 1. Ricerca | ✅ definita e costruita (v3.47.0, 2026-10-17) — specifica in `FASE-1-RICERCA.md` |
 | 2. Arricchimento | ✅ definita e costruita (v3.48–v3.51, 2026-10-18) |
 | La rete al centro | ✅ confermata il 2026-10-20 (v3.53.0, sezione sotto) |
+| Entrare in relazione | ✅ confermata il 2026-10-25 (sezione sotto) |
 | Motore 121 | ✅ confermato da Alessio ("il diagramma è corretto") e costruito il 2026-10-20 (v3.52.0) — schema in `docs/motore-121.html` |
 
 ---
+
+## Entrare in relazione: commenti e contatto diretto (confermata da Alessio il 2026-10-25)
+
+Da dove arrivano i clienti (dato di Alessio): da maggio 2026 BNI ne ha portati 5 (ticket medio ~4k), tutti
+membri BNI conosciuti con un 121; uno dalla SEO. Le aziende cercate e analizzate non ne hanno portato nessuno:
+il CRM deve far partire conversazioni, non solo preparare fascicoli.
+
+Il percorso di Alessio: cerco aziende (casi studio) → ha bisogno di me? è della dimensione giusta? → chi decide →
+chi me lo presenta (LinkedIn e Facebook; "lo conosco" lo conferma lui) → **in parallelo commento i post; al 7°
+commento contatto diretto** via WhatsApp, mail o telefono.
+
+- **I commenti NON su LinkedIn come scelta fissa**: i titolari aprono Facebook e Instagram ogni giorno, LinkedIn
+  raramente. Il CRM **propone tutte e tre** (Facebook, Instagram, LinkedIn): per ognuna la pagina dell'azienda,
+  ogni quanto pubblica e l'ultimo post. Alessio sceglie dove commentare.
+- **Si commenta la pagina dell'azienda**, non il profilo personale: la leggono anche i concorrenti, quindi un buon
+  commento fa conoscere Alessio a più potenziali clienti.
+- **Chi decide**: nome, ruolo e i suoi profili Facebook, Instagram e LinkedIn.
+- **Il conto dei commenti**: Alessio segna ogni commento fatto; al 7° il CRM propone il contatto diretto
+  (WhatsApp, mail o telefono) con il messaggio già scritto.
+- **Chi decide non si trova → l'azienda NON si scarta**: si preparano commenti e un messaggio privato alla pagina
+  per arrivare a lui e scoprire chi è.
+- Niente parte da solo: i testi li prepara il CRM, li manda Alessio.
+- Da fare più avanti: il controllo della dimensione (fatturato, dipendenti).
 
 ## La rete al centro: casi studio + relazione (confermata da Alessio il 2026-10-20, v3.53.0)
 

@@ -13,6 +13,18 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.59.0] - 2026-10-25
+
+### Added
+- **Entrare in relazione** (nuova sezione 7 della scheda azienda, decisa con Alessio il 2026-10-25): per Facebook, Instagram e LinkedIn la pagina dell'azienda con ogni quanto pubblica e l'ultimo post; scegli dove commentare ("Commenta qui", altrimenti propone la pagina viva che pubblica di più). Chi decide con nome, ruolo e i suoi profili LinkedIn, Facebook e Instagram, più gli amici in comune su Facebook.
+- **Conto dei commenti fino a 7**: ogni commento segnato "Commentato" (dalla Cassetta o dalla scheda, anche "Ho commentato" per quelli fatti da te) conta; **al 7° il contatto diretto va in Cassetta** con il messaggio pronto e i pulsanti WhatsApp, Mail, Chiama e i profili di chi decide.
+- **Chi decide non si trova → l'azienda non si scarta**: entra lo stesso in lavorazione se ha una pagina social, e in Cassetta arriva il messaggio privato da scrivere alla pagina per arrivare al titolare.
+
+### Changed
+- **I commenti si fanno sulla pagina dell'azienda** (la leggono anche i concorrenti), su Facebook, Instagram o LinkedIn, non più sul profilo LinkedIn personale di chi decide. L'agente sul Mac legge l'ultimo post della pagina scelta e propone il commento.
+- **Chi decide** (agente sul Mac) cerca anche i profili personali su Facebook e Instagram e gli amici in comune su Facebook; se su LinkedIn non c'è, guarda anche la pagina Facebook dell'azienda. Gli amici in comune contano per trovare chi ti presenta (membri BNI compresi).
+- **LinkedIn azienda** annota anche quanti post negli ultimi 3 mesi.
+
 ## [3.58.0] - 2026-10-23
 
 ### Added

@@ -118,6 +118,12 @@ chiamata e **la prova** di ogni cosa che dice.
    "digli che ci siamo visti al BNI"). I 3 ganci le leggono per prime e correggono gli agenti. Nella
    sezione Social, **"Aggiungi i link"**: incolli Facebook, Instagram o LinkedIn che hai trovato tu e le
    ricerche sui social ripartono da quei link.
+7. **Entrare in relazione** (dalla v3.59, sezione 7 della scheda): vedi le pagine dell'azienda su Facebook,
+   Instagram e LinkedIn con ogni quanto pubblicano, e scegli dove commentare (**Commenta qui**). Ogni giorno
+   feriale il tuo Mac legge l'ultimo post della pagina e ti prepara il commento in Cassetta: lo incolli e premi
+   **Commentato**. Se hai commentato da solo premi **Ho commentato**. **Al 7° commento** ti arriva il messaggio
+   per chi decide, con WhatsApp, Mail e Chiama. Se non si sa chi decide l'azienda non si scarta: ti arriva il
+   messaggio da scrivere alla pagina per arrivare al titolare.
 
 Gli agenti dicono solo quello che possono provare: per esempio non dicono "non misurate le conversioni"
 se il sito usa Tag Manager, perché da fuori non si vede.

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   capienzaLavorazione, forzaAzienda, nomiDaConfermare, prossimaAzione, settimanaConPosto, stessaPersona, strade, testoRichiestaPonte,
   type DatiAzienda,
+  frequenzaTesto, piattaformaConsigliata, piattaformaDi, testoContattoDopoCommenti, testoMessaggioPagina,
 } from "../rete-regole";
 
 const accadueo: DatiAzienda = {
@@ -81,5 +82,35 @@ describe("agenda e capienza", () => {
     expect(t.startsWith("Ciao Giorgio,")).toBe(true);
     expect(t).toContain("Mario Rossi di Accadueo");
     expect(testoRichiestaPonte("Giorgio Fodde", "Accadueo Sardegna (socio)", "Accadueo Srl", null)).toContain("conosci il socio di Accadueo Srl?");
+  });
+});
+
+describe("entrare in relazione: commenti sulle pagine", () => {
+  const oggi = new Date("2026-10-25T10:00:00Z");
+  it("riconosce la piattaforma dal link", () => {
+    expect(piattaformaDi("https://www.facebook.com/pizzeria")).toBe("facebook");
+    expect(piattaformaDi("https://www.instagram.com/x")).toBe("instagram");
+    expect(piattaformaDi("https://it.linkedin.com/company/x")).toBe("linkedin");
+    expect(piattaformaDi("https://x.it")).toBeNull();
+  });
+  it("scrive quanto pubblica", () => {
+    expect(frequenzaTesto({ postUltimi3Mesi: 26, ultimoPost: "2026-10-22" }, oggi)).toBe("circa 2 a settimana · ultimo 3 giorni fa");
+    expect(frequenzaTesto({ postUltimi3Mesi: 6, ultimoPost: null }, oggi)).toBe("circa 2 al mese");
+    expect(frequenzaTesto({ postUltimi3Mesi: 0, ultimoPost: "2026-05-01" }, oggi)).toBe("ferma da 6 mesi");
+    expect(frequenzaTesto({ postUltimi3Mesi: null, ultimoPost: null }, oggi)).toBe("non si sa");
+  });
+  it("consiglia la pagina viva che pubblica di più", () => {
+    const pagine = [
+      { piattaforma: "facebook" as const, url: "f", postUltimi3Mesi: 30, ultimoPost: "2026-03-01" },
+      { piattaforma: "instagram" as const, url: "i", postUltimi3Mesi: 10, ultimoPost: "2026-10-20" },
+      { piattaforma: "linkedin" as const, url: "l", postUltimi3Mesi: 2, ultimoPost: "2026-10-24" },
+    ];
+    expect(piattaformaConsigliata(pagine, oggi)).toBe("instagram");
+    expect(piattaformaConsigliata([], oggi)).toBeNull();
+  });
+  it("i messaggi: dopo i commenti e alla pagina", () => {
+    expect(testoContattoDopoCommenti("Mario Rossi", "Piscine Blu", "instagram", null)).toMatch(/^Ciao Mario, .*Piscine Blu su Instagram/);
+    expect(testoContattoDopoCommenti(null, "Piscine Blu", null, null)).toMatch(/^Buongiorno.*sentire il titolare/);
+    expect(testoMessaggioPagina("Piscine Blu", "Abbiamo aiutato un'azienda simile.")).toContain("titolare: abbiamo aiutato");
   });
 });

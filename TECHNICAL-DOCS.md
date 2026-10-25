@@ -1648,6 +1648,25 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 - Le newsletter le scrive Orchestra: il CRM segna solo chi è stato invitato.
 - "Inviti LinkedIn accettati" nel cruscotto è cumulativo (non per settimana).
 
+## Entrare in relazione (v3.59.0)
+
+Decisione di Alessio: `PROGETTO-AGENTI.md` "Entrare in relazione". Nessuna migrazione.
+- Regole pure in `rete-regole.ts`: `COMMENTI_PER_CONTATTO` (7), `PIATTAFORME`, `piattaformaDi`, `frequenzaTesto`,
+  `piattaformaConsigliata`, `testoContattoDopoCommenti`, `testoMessaggioPagina` (test in `rete-regole.test.ts`).
+- `rete.ts`: `pagineAzienda` (referti `social`, `instagram`, `linkedin_azienda`, link di Alessio sopra tutto),
+  `piattaformaScelta` (`findings.piattaforma` del referto `alessio`, scelta con `scegliPiattaforma` in
+  `arricchimento.ts`), `commentiFatti` (voci `COMMENTO_LINKEDIN` APPROVATE: il nome del kind resta per lo storico),
+  `segnaCommento`, `dopoCommento` (al 7° voce `RETE_CONTATTO`, una sola), `messaggioAllaPagina` (voce `RETE_PAGINA`),
+  `profiliDecisore`. `decisioneRete` gestisce i nuovi kind; `avanzaMappata` senza decisori crea il messaggio alla
+  pagina; l'entrata in lavorazione accetta aziende senza chi decide se hanno una pagina.
+- Lavoro `scalda`: input `{ aziende: [{ leadId, azienda, citta, decisore, piattaforma, pagina }] }`; `importaScalda`
+  accetta post Facebook/Instagram/LinkedIn. Il budget LinkedIn si controlla solo se c'è una pagina LinkedIn.
+- `decision_maker`: findings `persone[].profiloFacebook | profiloInstagram | amiciInComuneFacebook`; gli amici in comune
+  entrano in `datiAzienda` e in `importaDecisionMaker` (ponti BNI). `linkedin_azienda`: `postUltimi3Mesi`.
+- API: `GET /api/ricerca/aziende/[id]` → `relazione`; `POST /api/ricerca/aziende/[id]/relazione`
+  `{ azione: "piattaforma"|"commento", piattaforma }` | `{ azione: "messaggio_pagina" }`.
+- UI: sezione 7 della scheda (`EntrareInRelazione`), Cassetta `CorpoContatto` / `CorpoPagina`.
+
 ## Impressioni di Alessio (v3.58.0)
 
 - Nessuna colonna nuova: le note sono il referto dell'agente `alessio` in `agent_reports` (uno per azienda,

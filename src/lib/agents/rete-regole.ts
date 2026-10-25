@@ -170,3 +170,69 @@ export function testoContattoDiretto(decisore: string, azienda: string, motivo: 
 export function testoPromemoria(ponte: string, decisore: string): string {
   return `Ciao ${nomeProprio(ponte)}, ti riscrivo solo per sapere se sei riuscito a sentire ${decisore}. Nessuna fretta, e se non è il momento va benissimo. Alessio`;
 }
+
+// ─── Entrare in relazione: commenti sulle pagine (confermata da Alessio il 2026-10-25) ──────
+
+/**
+ * Si commenta la PAGINA dell'azienda (la leggono anche i concorrenti); il CRM propone Facebook, Instagram e
+ * LinkedIn con quanto pubblicano, Alessio sceglie. Al 7° commento si contatta direttamente chi decide.
+ */
+export const COMMENTI_PER_CONTATTO = 7;
+export const PIATTAFORME = ["facebook", "instagram", "linkedin"] as const;
+export type Piattaforma = (typeof PIATTAFORME)[number];
+export const NOMI_PIATTAFORMA: Record<Piattaforma, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
+
+export interface PaginaSocial {
+  piattaforma: Piattaforma;
+  url: string;
+  /** Post negli ultimi 3 mesi (stima: da fuori se ne vedono solo alcuni). */
+  postUltimi3Mesi: number | null;
+  ultimoPost: string | null;
+}
+
+/** La piattaforma di un link (null se non è uno dei tre). */
+export function piattaformaDi(url: string | null | undefined): Piattaforma | null {
+  if (!url) return null;
+  if (/facebook\.com|fb\.com/i.test(url)) return "facebook";
+  if (/instagram\.com/i.test(url)) return "instagram";
+  if (/linkedin\.com/i.test(url)) return "linkedin";
+  return null;
+}
+
+const giorniDa = (data: string | null, oggi: Date) => {
+  const t = data ? new Date(data).getTime() : NaN;
+  return Number.isNaN(t) ? null : Math.round((oggi.getTime() - t) / 86400_000);
+};
+
+/** "circa 2 a settimana · ultimo 3 giorni fa", "fermo da 4 mesi", "non si sa". */
+export function frequenzaTesto(p: Pick<PaginaSocial, "postUltimi3Mesi" | "ultimoPost">, oggi: Date): string {
+  const g = giorniDa(p.ultimoPost, oggi);
+  if (g != null && g > 90) return `ferma da ${Math.round(g / 30)} mesi`;
+  const ultimo = g == null ? null : g <= 0 ? "ultimo oggi" : g === 1 ? "ultimo ieri" : `ultimo ${g} giorni fa`;
+  const n = p.postUltimi3Mesi;
+  const ritmo = n == null ? null : n === 0 ? "nessun post in 3 mesi" : n >= 13 ? `circa ${Math.round(n / 13)} a settimana` : n >= 3 ? `circa ${Math.round(n / 3)} al mese` : `${n} in 3 mesi`;
+  return [ritmo, ultimo].filter(Boolean).join(" · ") || "non si sa";
+}
+
+/** Dove commentare se Alessio non ha scelto: la pagina viva che pubblica di più (a parità, la più recente). */
+export function piattaformaConsigliata(pagine: PaginaSocial[], oggi: Date): Piattaforma | null {
+  const vive = pagine.filter((p) => {
+    const g = giorniDa(p.ultimoPost, oggi);
+    return g == null || g <= 90;
+  });
+  const voto = (p: PaginaSocial) => (p.postUltimi3Mesi ?? 1) * 1000 - (giorniDa(p.ultimoPost, oggi) ?? 60);
+  return [...(vive.length ? vive : pagine)].sort((a, b) => voto(b) - voto(a))[0]?.piattaforma ?? null;
+}
+
+/** Al 7° commento: il primo messaggio diretto a chi decide (o all'azienda, se non si sa chi è). */
+export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, motivo: string | null): string {
+  const saluto = decisore ? `Ciao ${nomeProprio(decisore)}` : "Buongiorno";
+  const dove = piattaforma ? ` su ${NOMI_PIATTAFORMA[piattaforma]}` : "";
+  const domanda = decisore ? "Ti va di sentirci 20 minuti? Ti racconto cosa abbiamo fatto, senza impegno." : "Potrei sentire il titolare per 20 minuti? Gli racconto cosa abbiamo fatto, senza impegno.";
+  return `${saluto}, sono Alessio Loi di Karalisweb: in queste settimane ho seguito e commentato i post di ${azienda}${dove}. ${motivo ?? "Lavoro con aziende come la vostra sul web e sul marketing."} ${domanda} Alessio`;
+}
+
+/** Senza chi decide: il messaggio privato alla pagina per arrivare a lui. */
+export function testoMessaggioPagina(azienda: string, motivo: string | null): string {
+  return `Buongiorno, sono Alessio Loi di Karalisweb (Cagliari). Seguo la pagina di ${azienda} e avrei un'idea da proporre al titolare${motivo ? `: ${motivo.charAt(0).toLowerCase()}${motivo.slice(1)}` : "."} Mi dite a chi posso scrivere, o il suo nome? Grazie, Alessio`;
+}

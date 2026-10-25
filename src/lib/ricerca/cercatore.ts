@@ -612,10 +612,12 @@ export async function importaDecisionMaker(leadId: string | null, findings: Reco
       e.scartate++;
       continue;
     }
-    const comuni = (Array.isArray(p.contattiInComune) ? p.contattiInComune : [])
+    // In comune su LinkedIn e amici in comune su Facebook (dal 2026-10-25): un membro BNI fra questi è un ponte.
+    const comuni = [...(Array.isArray(p.contattiInComune) ? p.contattiInComune : []), ...(Array.isArray(p.amiciInComuneFacebook) ? p.amiciInComuneFacebook : [])]
       .map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome, 120)))
       .filter((x): x is string => !!x)
-      .slice(0, 50);
+      .filter((x, i, a) => a.indexOf(x) === i)
+      .slice(0, 80);
     const url = normalizzaLinkedin(str(p.profilo, 300));
     const gia = url ? await db.persona.findUnique({ where: { linkedinUrl: url }, select: { id: true } }) : await db.persona.findFirst({ where: { leadId, nome }, select: { id: true } });
     const grado = typeof p.grado === "number" ? p.grado : null;

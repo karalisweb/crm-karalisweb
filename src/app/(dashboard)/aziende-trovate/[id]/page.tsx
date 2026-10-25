@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Check, Globe, Laptop, Linkedin, Loader2, MapPin, Pencil, Phone, Play, RotateCcw, Search, Server, Target, Trash2, User, X } from "lucide-react";
 import { CANALI, STATI_PRESENTAZIONE, data } from "@/components/ricerca/etichette";
 import { RETI_SOCIAL, noteDaReferti, type ReteSocial, type SezioneImpressione } from "@/lib/agents/impressioni-sezioni";
+import { CorpoCommento, CorpoContatto, CorpoPagina } from "@/components/agents/voci-cassetta";
 
 interface Leva { servizio: string; testo: string; prova: string }
 interface Referto { summary: string; findings: Record<string, unknown>; levers: Leva[]; data: string }
@@ -31,6 +32,19 @@ interface Scheda {
   sulMac: string[];
   agenti: Agente[];
   analisi: Record<string, Referto>;
+  relazione: Relazione;
+}
+
+interface VoceRete { id: string; title: string; status?: string; payload: Record<string, unknown> }
+interface Relazione {
+  pagine: { piattaforma: ReteSocial; url: string; postUltimi3Mesi: number | null; ultimoPost: string | null; frequenza: string }[];
+  scelta: ReteSocial | null;
+  decisore: { nome: string | null; ruolo: string | null; linkedin: string | null; facebook: string | null; instagram: string | null; amiciFacebook: string[] };
+  commenti: number;
+  obiettivo: number;
+  commentiDaFare: VoceRete[];
+  contatto: VoceRete | null;
+  messaggioPagina: VoceRete | null;
 }
 
 function citta(indirizzo: string | null): string | null {
@@ -240,6 +254,95 @@ function SocialTuoi() {
         {errore && <span className="text-xs text-red-600 w-full">{errore}</span>}
       </div>
     </form>
+  );
+}
+
+/**
+ * Entrare in relazione (Alessio, 2026-10-25): si commenta la PAGINA dell'azienda dove pubblica di più;
+ * al 7° commento si contatta chi decide. Se chi decide non si sa, si scrive alla pagina.
+ */
+function EntrareInRelazione({ r, id, aggiorna }: { r: Relazione; id: string; aggiorna: () => void }) {
+  const [occupato, setOccupato] = useState<string | null>(null);
+  const manda = async (chiave: string, url: string, body: unknown) => {
+    setOccupato(chiave);
+    await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    setOccupato(null);
+    aggiorna();
+  };
+  const relazione = (body: unknown, chiave: string) => manda(chiave, `/api/ricerca/aziende/${id}/relazione`, body);
+  const voce = (vid: string, decisione: "APPROVATO" | "SCARTATO") => manda(vid + decisione, `/api/cassetta/${vid}`, { decisione });
+  const d = r.decisore;
+  const profili = (["linkedin", "facebook", "instagram"] as const).filter((k) => d[k]);
+  const pieno = Math.min(r.commenti, r.obiettivo);
+  return (
+    <>
+      <div className="rounded-md border px-3 py-2.5 text-sm space-y-2 lg:col-span-2">
+        <div className="font-medium">Dove commentare la pagina dell&apos;azienda</div>
+        {r.pagine.length ? r.pagine.map((p) => (
+          <div key={p.piattaforma} className={`flex flex-wrap items-center gap-2 rounded px-2 py-1.5 ${r.scelta === p.piattaforma ? "bg-primary/10" : ""}`}>
+            <a href={p.url} target="_blank" rel="noopener noreferrer" className="font-medium underline w-24 shrink-0">{NOMI_SOCIAL[p.piattaforma]}</a>
+            <span className="text-muted-foreground flex-1 min-w-0">{p.frequenza}</span>
+            {r.scelta === p.piattaforma
+              ? <span className="text-xs text-primary font-medium">si commenta qui</span>
+              : <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={!!occupato} onClick={() => relazione({ azione: "piattaforma", piattaforma: p.piattaforma }, p.piattaforma)}>Commenta qui</Button>}
+          </div>
+        )) : <div className="text-muted-foreground">Nessuna pagina trovata: aggiungi tu i link qui sopra, in Social e pubblicità.</div>}
+      </div>
+
+      <div className="rounded-md border px-3 py-2.5 text-sm space-y-1.5">
+        <div className="font-medium">Chi decide</div>
+        {d.nome ? (
+          <>
+            <div><User className="h-4 w-4 inline mr-1 -mt-0.5" />{d.nome}{d.ruolo ? <span className="text-muted-foreground"> · {d.ruolo}</span> : null}</div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {profili.length ? profili.map((k) => <a key={k} href={d[k]!} target="_blank" rel="noopener noreferrer" className="underline">{NOMI_SOCIAL[k]}</a>) : <span className="text-muted-foreground">Nessun profilo trovato</span>}
+            </div>
+            {d.amiciFacebook.length > 0 && <div className="text-xs text-muted-foreground break-words">Amici in comune su Facebook: {d.amiciFacebook.join(", ")}</div>}
+          </>
+        ) : (
+          <div className="space-y-2">
+            <div className="text-muted-foreground">Non si sa chi decide. Non si scarta: si scrive alla pagina e intanto si commenta.</div>
+            {r.messaggioPagina
+              ? <CorpoPagina p={r.messaggioPagina.payload} />
+              : r.pagine.length > 0 && <Button size="sm" variant="outline" disabled={!!occupato} onClick={() => relazione({ azione: "messaggio_pagina" }, "pagina")}>Prepara il messaggio alla pagina</Button>}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-md border px-3 py-2.5 text-sm space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-medium">Commenti fatti: {r.commenti} di {r.obiettivo}</span>
+          {r.scelta && r.commenti < r.obiettivo && (
+            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={!!occupato} onClick={() => relazione({ azione: "commento", piattaforma: r.scelta }, "commento")}>
+              {occupato === "commento" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5 mr-1" />Ho commentato</>}
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-1" aria-hidden>{Array.from({ length: r.obiettivo }, (_, i) => <span key={i} className={`h-1.5 flex-1 rounded ${i < pieno ? "bg-primary" : "bg-muted"}`} />)}</div>
+        <div className="text-xs text-muted-foreground">{r.commenti >= r.obiettivo ? "Fatto: ora scrivigli direttamente." : `Al ${r.obiettivo}° commento ti preparo il messaggio diretto (WhatsApp, mail o telefono).`}</div>
+      </div>
+
+      {r.commentiDaFare.map((v) => (
+        <div key={v.id} className="rounded-md border px-3 py-2.5 text-sm space-y-2 lg:col-span-2">
+          <div className="font-medium">{v.title}</div>
+          <CorpoCommento p={v.payload} />
+          <div className="flex gap-2">
+            <Button size="sm" disabled={!!occupato} onClick={() => voce(v.id, "APPROVATO")}>Commentato</Button>
+            <Button size="sm" variant="ghost" disabled={!!occupato} onClick={() => voce(v.id, "SCARTATO")}>Salta</Button>
+          </div>
+        </div>
+      ))}
+
+      {r.contatto && (
+        <div className="rounded-md border border-primary px-3 py-2.5 text-sm space-y-2 lg:col-span-2">
+          <div className="font-medium">{r.contatto.title}</div>
+          <CorpoContatto p={r.contatto.payload} />
+          {r.contatto.status === "IN_ATTESA"
+            ? <div className="flex gap-2"><Button size="sm" disabled={!!occupato} onClick={() => voce(r.contatto!.id, "APPROVATO")}>Mandato</Button><Button size="sm" variant="ghost" disabled={!!occupato} onClick={() => voce(r.contatto!.id, "SCARTATO")}>Non ora</Button></div>
+            : <div className="text-xs text-muted-foreground">{r.contatto.status === "APPROVATO" ? "Mandato." : "Messo da parte."}</div>}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -544,7 +647,11 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             <Impressione sezione="linkedin" />
           </Sezione>
 
-          <Sezione n={7} titolo="Cosa dirgli al telefono" agenti={["ganci"]} aperta unaColonna>
+          <Sezione n={7} titolo="Entrare in relazione" agenti={["social", "instagram", "linkedin_azienda", "decision_maker"]}>
+            <EntrareInRelazione r={s.relazione} id={id} aggiorna={() => setVersione((v) => v + 1)} />
+          </Sezione>
+
+          <Sezione n={8} titolo="Cosa dirgli al telefono" agenti={["ganci"]} aperta unaColonna>
             <Blocco agente="ganci" soloDettagli>
               {ganci.length > 0 && (
                 <div className="mt-2 rounded-md bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 space-y-2">

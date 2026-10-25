@@ -7,6 +7,8 @@ import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 import { CATALOGO, modiAgenti } from "@/lib/agents/catalogo";
 import { collegamentoAzienda } from "@/lib/agents/motore";
 import { KIND_DA_CONTATTARE, daContattare, sceltaDaStato } from "@/lib/ricerca/contattare";
+import { KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, commentiFatti, pagineAzienda, piattaformaScelta, profiliDecisore } from "@/lib/agents/rete";
+import { COMMENTI_PER_CONTATTO, frequenzaTesto } from "@/lib/agents/rete-regole";
 
 /**
  * GET /api/ricerca/aziende/[id] — la scheda di un'azienda trovata: perché è qui, chi decide,
@@ -102,6 +104,25 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     ...lead.activities.map((a) => ({ quando: a.createdAt, cosa: a.notes ? `${a.type.toLowerCase()}: ${a.notes}` : a.type.toLowerCase() })),
   ].sort((a, b) => b.quando.getTime() - a.quando.getTime());
 
+  // Entrare in relazione: le pagine dove commentare, chi decide sui social, i commenti fatti, i messaggi pronti.
+  const oggi = new Date();
+  const [pagine, decisore, fatti, voci] = await Promise.all([
+    pagineAzienda(id),
+    profiliDecisore(id),
+    commentiFatti(id),
+    db.approvalItem.findMany({ where: { leadId: id, kind: { in: [KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA] } }, orderBy: { createdAt: "desc" }, take: 30, select: { id: true, kind: true, status: true, title: true, payload: true, createdAt: true } }),
+  ]);
+  const relazione = {
+    pagine: pagine.map((p) => ({ ...p, frequenza: frequenzaTesto(p, oggi) })),
+    scelta: await piattaformaScelta(id, pagine, oggi),
+    decisore,
+    commenti: fatti,
+    obiettivo: COMMENTI_PER_CONTATTO,
+    commentiDaFare: voci.filter((v) => v.kind === KIND_COMMENTO && v.status === "IN_ATTESA").map((v) => ({ id: v.id, title: v.title, payload: v.payload })),
+    contatto: voci.find((v) => v.kind === KIND_RETE_CONTATTO) ?? null,
+    messaggioPagina: voci.find((v) => v.kind === KIND_RETE_PAGINA) ?? null,
+  };
+
   const { activities: _a, ...azienda } = lead;
   void _a;
   return NextResponse.json({
@@ -122,5 +143,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return { chiave: v.chiave, nome: v.nome, dove: v.dove, momento: v.momento, modo: modi[v.chiave], senzaSito: !!v.serveSito && !lead.website, stato: u?.status ?? null, errore: u?.status === "FALLITO" ? u.error : null, quando: u?.finishedAt ?? u?.queuedAt ?? null };
     }),
     analisi: Object.fromEntries(referti.map((r) => [r.agent, { summary: r.summary, findings: r.findings, levers: r.levers, data: r.collectedAt }])),
+    relazione,
   });
 }

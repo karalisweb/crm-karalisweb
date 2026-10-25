@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Globe, MessageCircle, Star, Video, Phone } from "lucide-react";
+import { Copy, Globe, Mail, MessageCircle, Star, Video, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { LeveList } from "@/components/agents/leve-list";
 import { SERVIZI, type Leva } from "@/lib/agents/tipi";
@@ -35,7 +35,9 @@ export const AZIONI: Record<string, { si: string; no: string; etichetta: string 
   RETE_PONTE: { si: "Mandato", no: "Non ora: prova un altro", etichetta: "Rete · me lo presenti?" },
   RETE_DIRETTO: { si: "Mandato", no: "Non ora", etichetta: "Rete · scrivi a chi decide" },
   RETE_PROMEMORIA: { si: "Mandato", no: "Non serve", etichetta: "Rete · promemoria al ponte" },
-  COMMENTO_LINKEDIN: { si: "Commentato", no: "Salta", etichetta: "Rete · scalda chi decide" },
+  COMMENTO_LINKEDIN: { si: "Commentato", no: "Salta", etichetta: "Rete · commento alla pagina" },
+  RETE_CONTATTO: { si: "Mandato", no: "Non ora", etichetta: "Rete · contatto dopo i commenti" },
+  RETE_PAGINA: { si: "Mandato", no: "Non serve", etichetta: "Rete · messaggio alla pagina" },
   PREPARAZIONE_CALL: { si: "Letta", no: "Non serve", etichetta: "Vendita · prepara la call" },
   DOPO_CALL: { si: "Mandata", no: "Scarta", etichetta: "Vendita · dopo la call" },
   RECALL: { si: "Fatto", no: "Rimanda", etichetta: "Vendita · recall" },
@@ -125,7 +127,7 @@ function Blocco({ titolo, children }: { titolo: string; children: React.ReactNod
   );
 }
 
-function Messaggio({ testo, oggetto, telefono, linkedin }: { testo: string; oggetto?: string; telefono?: string | null; linkedin?: string | null }) {
+function Messaggio({ testo, oggetto, telefono, linkedin, email, chiama, altri = [] }: { testo: string; oggetto?: string; telefono?: string | null; linkedin?: string | null; email?: string | null; chiama?: boolean; altri?: { etichetta: string; url: string }[] }) {
   const completo = oggetto ? `${oggetto}\n\n${testo}` : testo;
   const wa = linkWhatsApp(telefono, testo);
   return (
@@ -144,6 +146,21 @@ function Messaggio({ testo, oggetto, telefono, linkedin }: { testo: string; ogge
             <Button size="sm" variant="outline"><Globe className="h-3.5 w-3.5 mr-1" /> Apri LinkedIn</Button>
           </a>
         )}
+        {email && (
+          <a href={`mailto:${email}?body=${encodeURIComponent(testo)}`}>
+            <Button size="sm" variant="outline"><Mail className="h-3.5 w-3.5 mr-1" /> Mail</Button>
+          </a>
+        )}
+        {chiama && telefono && (
+          <a href={`tel:${telefono}`}>
+            <Button size="sm" variant="outline"><Phone className="h-3.5 w-3.5 mr-1" /> Chiama</Button>
+          </a>
+        )}
+        {altri.map((a) => (
+          <a key={a.url} href={a.url} target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline"><Globe className="h-3.5 w-3.5 mr-1" /> {a.etichetta}</Button>
+          </a>
+        ))}
       </div>
     </div>
   );
@@ -161,14 +178,34 @@ export function CorpoRete({ p }: { p: Record<string, unknown> }) {
   );
 }
 
-/** Il commento proposto per scaldare chi decide: lo incolli tu sotto il suo post. */
+const NOMI_SOCIAL: Record<string, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
+
+/** Il commento proposto per la pagina dell'azienda: lo incolli tu sotto il post. */
 export function CorpoCommento({ p }: { p: Record<string, unknown> }) {
+  const dove = NOMI_SOCIAL[s(p.piattaforma)] ?? (/linkedin/i.test(s(p.post)) ? "LinkedIn" : "il post");
   return (
     <div className="space-y-2">
       {s(p.estratto) && <p className="text-xs text-muted-foreground">Dal post: &quot;{s(p.estratto)}&quot;</p>}
-      <Messaggio testo={s(p.commento)} linkedin={s(p.post) || null} />
+      <Messaggio testo={s(p.commento)} altri={s(p.post) ? [{ etichetta: `Apri ${dove}`, url: s(p.post) }] : []} />
     </div>
   );
+}
+
+/** Al 7° commento: il primo messaggio a chi decide, con WhatsApp, mail, telefono e i suoi profili. */
+export function CorpoContatto({ p }: { p: Record<string, unknown> }) {
+  const altri = (["facebook", "instagram"] as const).filter((k) => s(p[k])).map((k) => ({ etichetta: `${NOMI_SOCIAL[k]} di ${s(p.decisore) || "chi decide"}`, url: s(p[k]) }));
+  return (
+    <div className="space-y-2">
+      <Messaggio testo={s(p.messaggio)} telefono={s(p.telefono) || null} email={s(p.email) || null} linkedin={s(p.linkedin) || null} chiama altri={altri} />
+      {!s(p.telefono) && !s(p.email) && <p className="text-xs text-muted-foreground">Nessun telefono né mail dell&apos;azienda: scrivigli in privato sui social.</p>}
+      {p.motivoDalCaso === false && <p className="text-xs text-muted-foreground">Aggiungi tu, a voce o per iscritto, la storia del caso studio (senza il nome del cliente).</p>}
+    </div>
+  );
+}
+
+/** Chi decide non si sa: il messaggio privato alla pagina dell'azienda. */
+export function CorpoPagina({ p }: { p: Record<string, unknown> }) {
+  return <Messaggio testo={s(p.messaggio)} altri={s(p.pagina) ? [{ etichetta: `Apri la pagina ${NOMI_SOCIAL[s(p.piattaforma)] ?? ""}`.trim(), url: s(p.pagina) }] : []} />;
 }
 
 function CorpoSchedaContatto({ p }: { p: Record<string, unknown> }) {
@@ -460,6 +497,8 @@ export function CorpoVoce({ v }: { v: VoceCassetta }) {
       {v.kind === "DOPO_121" && <CorpoDopo121 p={v.payload} />}
       {(v.kind === "RETE_PONTE" || v.kind === "RETE_DIRETTO" || v.kind === "RETE_PROMEMORIA") && <CorpoRete p={v.payload} />}
       {v.kind === "COMMENTO_LINKEDIN" && <CorpoCommento p={v.payload} />}
+      {v.kind === "RETE_CONTATTO" && <CorpoContatto p={v.payload} />}
+      {v.kind === "RETE_PAGINA" && <CorpoPagina p={v.payload} />}
       {v.kind === "PREPARAZIONE_CALL" && <CorpoPreparazione p={v.payload} />}
       {v.kind === "DOPO_CALL" && <CorpoDopoCall p={v.payload} telefono={v.trattativa?.telefono} />}
       {(v.kind === "RECALL" || v.kind === "NURTURING_PROPOSTO") && <CorpoRecall p={v.payload} telefono={v.trattativa?.telefono} />}
