@@ -1648,6 +1648,21 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 - Le newsletter le scrive Orchestra: il CRM segna solo chi è stato invitato.
 - "Inviti LinkedIn accettati" nel cruscotto è cumulativo (non per settimana).
 
+## Seguito del 121 con MSD (v3.60.0)
+
+- Fonte delle regole: `src/lib/agents/msd/scheda-msd.md` (letta a runtime, va nel prompt di sistema), derivata dalla
+  Carta Fondativa MSD v1.3 (documento interno di Alessio, non nel repository). Regole pure in `msd-regole.ts` (`controllaTesto`, `paroleVietate`,
+  `seguitoDopo121`, `richiamoDovuto`; test in `msd-regole.test.ts`).
+- `dopo-121.ts`: lo schema dell'AI ha `msd: { interesse, target, perche_target, richiesta, parole_sue, passo_fissato }`;
+  salva `one_to_ones.member_interested` / `interest_service` e chiama `seguitoMsd`.
+- `msd.ts`: voci `PROPOSTA_MSD` (una per 121; secondo tentativo se `controllaTesto` trova problemi; avvisi nel
+  payload), `MSD_FUORI_TARGET`, `RICHIAMO_MSD`. `decisioneMsd` (da `POST /api/cassetta/[id]`): proposta mandata →
+  `bni_stage = OFFERTA`, `next_recall_at` +7 giorni; fuori target approvato → proposta; richiamo → `RECALL`, in attesa.
+  `richiamiMsd` gira nel turno BNI del mattino. Lavori `agent_runs.agent = "proposta_msd"` (costo AI).
+- Link per candidarsi: variabile d'ambiente `MSD_CANDIDATURA_URL`; se manca, il testo ha "[link al tuo calendario]"
+  e un avviso.
+- Nessuna migrazione.
+
 ## Entrare in relazione (v3.59.0)
 
 Decisione di Alessio: `PROGETTO-AGENTI.md` "Entrare in relazione". Nessuna migrazione.

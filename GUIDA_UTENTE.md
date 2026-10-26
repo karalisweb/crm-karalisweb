@@ -125,6 +125,13 @@ chiamata e **la prova** di ogni cosa che dice.
    per chi decide, con WhatsApp, Mail e Chiama. Se non si sa chi decide l'azienda non si scarta: ti arriva il
    messaggio da scrivere alla pagina per arrivare al titolare.
 
+8. **Dopo il 121, la proposta MSD** (dalla v3.60): registra il 121 con il vocale o la trascrizione. Se il
+   membro è interessato per la sua azienda ed è nel perimetro del Metodo Strategico Digitale™, in Cassetta trovi
+   la proposta già scritta partendo da quello che ti ha detto: rileggila, mandala (WhatsApp, mail o copia) e premi
+   **Mandata**. Se è interessato ma fuori perimetro decidi tu (**Fai la proposta lo stesso** / **Solo
+   relazione**). Dopo una settimana senza risposta arriva **un solo richiamo**, poi il membro resta in attesa.
+   Se sopra il testo vedi un ⚠, c'è qualcosa che la Carta MSD non permette: correggilo prima di mandare.
+
 Gli agenti dicono solo quello che possono provare: per esempio non dicono "non misurate le conversioni"
 se il sito usa Tag Manager, perché da fuori non si vede.
 

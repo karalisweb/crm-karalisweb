@@ -13,6 +13,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.60.0] - 2026-10-26
+
+### Added
+- **Il seguito del 121 con il Metodo Strategico Digitale™** (Alessio: "nessuno ha mai ricevuto una proposta reale"). Quando registri un 121 con il vocale o la trascrizione, l'agente Dopo-121 capisce anche che interesse c'è (per sé, per segnalarti qualcuno, nessuno), se l'azienda è nel perimetro MSD (PMI 500 mila-5 milioni, 10-15 persone) e cosa ha chiesto con le sue parole.
+  - Interessato per sé e nel perimetro → **la proposta MSD scritta va in Cassetta**: parte da quello che ha detto, prezzo in chiaro (2.000€ + IVA), una sola chiamata all'azione "candidati per parlarne". La rileggi sempre e la mandi tu (WhatsApp, mail o copia).
+  - Interessato ma fuori perimetro o non si sa → **avviso in Cassetta**: "Fai la proposta lo stesso" o "Solo relazione".
+  - Proposta mandata → il membro passa a "Offerta inviata"; **dopo una settimana senza risposta, un solo richiamo** con un contenuto nuovo dal 121; poi resta in attesa.
+- **Ogni testo è controllato** contro le regole della Carta MSD: parole vietate (audit, prenota, brevettato…), ® invece di ™, elenchi puntati, promesse di numeri, prezzo e "candidati" mancanti. Se qualcosa non va, l'AI riscrive una volta; se resta, lo vedi segnalato sopra il testo.
+- La scheda MSD per il CRM (`src/lib/agents/msd/scheda-msd.md`, derivata dalla Carta Fondativa MSD v1.3) è nel progetto; la Carta resta fuori dal repository.
+
 ## [3.59.0] - 2026-10-25
 
 ### Added

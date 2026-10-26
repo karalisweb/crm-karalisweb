@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { applicaDecisioneVendita } from "@/lib/vendita/trattative";
 import { KIND_PRESENTAZIONE_BNI, presentazioneChiesta } from "@/lib/agents/motore";
 import { decisioneRete } from "@/lib/agents/rete";
+import { decisioneMsd } from "@/lib/agents/msd";
 
 /**
  * POST /api/cassetta/[id] — la decisione di Alessio su una voce in cassetta.
@@ -18,7 +19,9 @@ import { decisioneRete } from "@/lib/agents/rete";
  *   PRESENTAZIONE_BNI → "mandato": la richiesta di presentazione al membro è partita;
  *   DOPO_121        → "fatto" (il promemoria del vocale);
  *   RETE_PONTE / RETE_DIRETTO → "mandato" (presentazione chiesta / contatto scritto); "non ora" = ponte successivo;
- *   RETE_PROMEMORIA → "mandato"; COMMENTO_LINKEDIN → "fatto".
+ *   RETE_PROMEMORIA → "mandato"; COMMENTO_LINKEDIN → "fatto" (al 7° il contatto diretto);
+ *   PROPOSTA_MSD → "mandata" (membro in "Offerta inviata", richiamo fra 7 giorni);
+ *   MSD_FUORI_TARGET → "fai la proposta lo stesso"; RICHIAMO_MSD → "mandato" (poi in attesa).
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireSession();
@@ -49,6 +52,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (decisa?.trattativaId) await applicaDecisioneVendita(decisa, decisione, gate.userId);
   // La rete al centro: "Mandato" fa avanzare l'azienda in lavorazione, "Non ora" passa al ponte successivo.
   await decisioneRete(id, decisione);
+  // Il seguito MSD del 121: la proposta mandata, la proposta comunque, il richiamo.
+  await decisioneMsd(id, decisione);
 
   // Effetto collaterale piccolo e reversibile: un messaggio BNI mandato sposta il membro
   // da "da avvicinare" a "richiesta 121" (solo se era ancora all'inizio).

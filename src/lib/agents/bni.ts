@@ -19,6 +19,7 @@ import { budgetDisponibile } from "./costi";
 import { PROFILI_MEMBRI_GIORNO, richiesteDaPreparare } from "./motore-121";
 import { settimanaConPosto } from "./rete-regole";
 import { aziendeDaCercareNellaRete, linkedinPermette, promemoriaDopo121, proponiSegnalazioni, statoLinkedinOggi } from "./motore";
+import { richiamiMsd } from "./msd";
 import { turnoRete } from "./rete";
 import {
   capitoliInCorso,
@@ -398,6 +399,8 @@ export async function eseguiTurnoBni(oggi = new Date(), fase: FaseBni = "tutto")
 
   // Dopo il 121: se non è registrato, un promemoria per il vocale.
   r.promemoria = await promemoriaDopo121(oggi);
+  // Una settimana dopo la proposta MSD mandata, senza risposta: l'unico richiamo.
+  if (mattina) await richiamiMsd(oggi).catch((e) => console.error("[squadra-bni] richiami MSD:", e));
   // Alle 14 anche i messaggi della rete (ponti, promemoria): si mandano nella stessa finestra delle 15-18.
   if (fase === "richieste") await turnoRete(oggi).catch((e) => console.error("[squadra-bni] rete:", e));
   if (!mattina) return r;

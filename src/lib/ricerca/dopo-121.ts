@@ -12,6 +12,7 @@ import { budgetDisponibile } from "@/lib/agents/costi";
 import { accodaReteMembro, chiudiRichiesteSuperate } from "@/lib/agents/bni";
 import { norm } from "@/lib/agents/bni-regole";
 import { chiudiPromemoria, richiestePresentazione } from "@/lib/agents/motore";
+import { seguitoMsd, type LetturaInteresse } from "@/lib/agents/msd";
 
 /** Sotto questa lunghezza il testo è solo una nota: si salva, ma non si chiede all'AI. */
 export const TESTO_MINIMO_AI = 150;
@@ -37,6 +38,8 @@ interface RispostaDopo121 {
   contatti_dati: string[];
   prossimo_passo: string;
   prossimo_passo_tra_giorni: number;
+  /** Il seguito MSD (2026-10-26): che interesse c'è, se è nel perimetro, le sue parole. */
+  msd: LetturaInteresse;
 }
 
 const SCHEMA: Schema = {
@@ -83,10 +86,23 @@ const SCHEMA: Schema = {
     },
     prossimo_passo: { type: "string", description: "La prossima cosa concreta da fare con questo membro" },
     prossimo_passo_tra_giorni: { type: "integer", description: "Fra quanti giorni farla (1-60)" },
+    msd: {
+      type: "object",
+      description: "Il seguito commerciale del 121 (Metodo Strategico Digitale di Alessio)",
+      properties: {
+        interesse: { type: "string", enum: ["per_se", "segnalare", "nessuno"], description: "per_se = il membro è interessato per la SUA azienda a un lavoro di Alessio (sito, campagne, visibilità, AI, strategia…); segnalare = vuole presentargli altri; nessuno = né l'uno né l'altro" },
+        target: { type: "string", enum: ["dentro", "fuori", "incerto"], description: "Il perimetro MSD: PMI tra 500 mila e 5 milioni di fatturato e tra 10 e 15 persone, decide il titolare. fuori = ditta individuale, professionista da solo o fatturato molto più basso; incerto = dal testo non si capisce" },
+        perche_target: { type: "string", description: "Su cosa si basa il giudizio sul perimetro (quello che è detto nel 121); vuoto se non detto" },
+        richiesta: { type: "string", description: "La sua domanda operativa, come la formulerebbe lui (es. 'rifare il sito perché non porta richieste'); vuoto se non c'è" },
+        parole_sue: { type: "string", description: "Una frase sua, copiata dal testo, che dice il suo bisogno; vuoto se non c'è" },
+        passo_fissato: { type: "string", description: "Se al 121 avete già fissato un passo ('ti mando due righe e ci sentiamo giovedì'): quale; vuoto se no" },
+      },
+      required: ["interesse", "target", "perche_target", "richiesta", "parole_sue", "passo_fissato"],
+    },
   },
   required: [
     "riassunto", "cosa_fa", "cosa_non_fa", "zone", "referenze_cerca", "referenze_puo_dare", "promesse",
-    "persone_da_presentare", "membri_indicati", "ponti_confermati", "contatti_dati", "prossimo_passo", "prossimo_passo_tra_giorni",
+    "persone_da_presentare", "membri_indicati", "ponti_confermati", "contatti_dati", "prossimo_passo", "prossimo_passo_tra_giorni", "msd",
   ],
 };
 
@@ -108,6 +124,8 @@ export interface EsitoDopo121 {
   indicati: number;
   costCents: number;
   motivo?: string;
+  /** Cosa è partito dopo il 121: la proposta MSD in Cassetta, l'avviso "fuori target" o niente. */
+  seguito?: "proposta" | "fuori_target" | "niente";
 }
 
 export async function registra121(membroId: string, n: Nuovo121, utente: string | null, oggi = new Date()): Promise<EsitoDopo121> {
@@ -189,7 +207,7 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
     const nuove = d.persone_da_presentare.filter((p) => pieno(p.nome) && !giaNomi.has(norm(p.nome))).slice(0, 10);
 
     await db.$transaction([
-      db.oneToOne.update({ where: { id: uno.id }, data: { riassunto: pieno(d.riassunto), promesse: d.promesse.filter(pieno).join("\n") || null } }),
+      db.oneToOne.update({ where: { id: uno.id }, data: { riassunto: pieno(d.riassunto), promesse: d.promesse.filter(pieno).join("\n") || null, memberInterested: d.msd?.interesse === "per_se", interestService: pieno(d.msd?.richiesta)?.slice(0, 120) ?? null } }),
       db.bniMembro.update({
         where: { id: membroId },
         data: {
@@ -232,6 +250,11 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
     }
     // Le presentazioni da chiedere vanno in Cassetta con il messaggio per il membro.
     await richiestePresentazione(membroId);
+    // Il seguito MSD: interessato per sé e nel perimetro → la proposta scritta in Cassetta (la manda Alessio).
+    if (d.msd) esito.seguito = await seguitoMsd(membroId, uno.id, d.msd, oggi).catch((e) => {
+      console.error("[dopo-121] seguito MSD:", e);
+      return undefined;
+    });
     esito.presentazioni = nuove.length;
     esito.indicati = indicati.length;
     return esito;

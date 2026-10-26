@@ -38,6 +38,9 @@ export const AZIONI: Record<string, { si: string; no: string; etichetta: string 
   COMMENTO_LINKEDIN: { si: "Commentato", no: "Salta", etichetta: "Rete · commento alla pagina" },
   RETE_CONTATTO: { si: "Mandato", no: "Non ora", etichetta: "Rete · contatto dopo i commenti" },
   RETE_PAGINA: { si: "Mandato", no: "Non serve", etichetta: "Rete · messaggio alla pagina" },
+  PROPOSTA_MSD: { si: "Mandata", no: "Non la mando", etichetta: "BNI · proposta Metodo Strategico Digitale™" },
+  MSD_FUORI_TARGET: { si: "Fai la proposta lo stesso", no: "Solo relazione", etichetta: "BNI · interessato ma fuori target" },
+  RICHIAMO_MSD: { si: "Mandato", no: "Non serve", etichetta: "BNI · richiamo dopo la proposta" },
   PREPARAZIONE_CALL: { si: "Letta", no: "Non serve", etichetta: "Vendita · prepara la call" },
   DOPO_CALL: { si: "Mandata", no: "Scarta", etichetta: "Vendita · dopo la call" },
   RECALL: { si: "Fatto", no: "Rimanda", etichetta: "Vendita · recall" },
@@ -199,6 +202,35 @@ export function CorpoContatto({ p }: { p: Record<string, unknown> }) {
       <Messaggio testo={s(p.messaggio)} telefono={s(p.telefono) || null} email={s(p.email) || null} linkedin={s(p.linkedin) || null} chiama altri={altri} />
       {!s(p.telefono) && !s(p.email) && <p className="text-xs text-muted-foreground">Nessun telefono né mail dell&apos;azienda: scrivigli in privato sui social.</p>}
       {p.motivoDalCaso === false && <p className="text-xs text-muted-foreground">Aggiungi tu, a voce o per iscritto, la storia del caso studio (senza il nome del cliente).</p>}
+    </div>
+  );
+}
+
+/** La proposta MSD dopo il 121 (o il richiamo): la rileggi sempre prima di mandarla. */
+export function CorpoMsd({ p }: { p: Record<string, unknown> }) {
+  const avvisi = arr<string>(p.avvisi);
+  return (
+    <div className="space-y-2">
+      {s(p.richiesta) && <p className="text-xs text-muted-foreground">Al 121 ha chiesto: {s(p.richiesta)}</p>}
+      {s(p.passoFissato) && <p className="text-xs text-muted-foreground">Passo già fissato: {s(p.passoFissato)}</p>}
+      {avvisi.length > 0 && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-2.5 py-2 text-xs space-y-0.5">
+          {avvisi.map((a, i) => <div key={i}>⚠ {a}</div>)}
+        </div>
+      )}
+      <Messaggio testo={s(p.messaggio)} telefono={s(p.telefono) || null} email={s(p.email) || null} />
+      <p className="text-xs text-muted-foreground">Rileggila prima di mandarla. Se l&apos;avete già fissato al 121, il messaggio mantiene l&apos;accordo.</p>
+    </div>
+  );
+}
+
+/** Interessato per sé ma fuori dal perimetro MSD (o non si sa): decide Alessio. */
+export function CorpoFuoriTarget({ p }: { p: Record<string, unknown> }) {
+  return (
+    <div className="space-y-1 text-sm">
+      {s(p.richiesta) && <p>Ha chiesto: {s(p.richiesta)}</p>}
+      <p className="text-muted-foreground">{s(p.perche) || "Dal 121 non si capisce quanto è grande l'azienda."}</p>
+      <p className="text-xs text-muted-foreground">Il perimetro MSD: PMI tra 500 mila e 5 milioni, 10-15 persone. Se lo segui per la relazione, il seguito punta alle segnalazioni.</p>
     </div>
   );
 }
@@ -499,6 +531,8 @@ export function CorpoVoce({ v }: { v: VoceCassetta }) {
       {v.kind === "COMMENTO_LINKEDIN" && <CorpoCommento p={v.payload} />}
       {v.kind === "RETE_CONTATTO" && <CorpoContatto p={v.payload} />}
       {v.kind === "RETE_PAGINA" && <CorpoPagina p={v.payload} />}
+      {(v.kind === "PROPOSTA_MSD" || v.kind === "RICHIAMO_MSD") && <CorpoMsd p={v.payload} />}
+      {v.kind === "MSD_FUORI_TARGET" && <CorpoFuoriTarget p={v.payload} />}
       {v.kind === "PREPARAZIONE_CALL" && <CorpoPreparazione p={v.payload} />}
       {v.kind === "DOPO_CALL" && <CorpoDopoCall p={v.payload} telefono={v.trattativa?.telefono} />}
       {(v.kind === "RECALL" || v.kind === "NURTURING_PROPOSTO") && <CorpoRecall p={v.payload} telefono={v.trattativa?.telefono} />}
