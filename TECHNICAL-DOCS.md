@@ -523,7 +523,7 @@ Il sistema invia automaticamente una mail personalizzata (scritta da Gemini) ai 
 | `src/lib/audit/email-finder.ts` | Estrae l'email di contatto dall'HTML del sito |
 | `src/lib/gemini-outreach-email.ts` | Genera il testo AI della mail con gancio personalizzato |
 | `src/lib/opt-in-mailer.ts` | Motore di invio: warmup, cap, anti-doppione, jitter, follow-up |
-| `src/lib/daily-report.ts` | Calcola statistiche ieri e invia report mattutino |
+| `src/lib/daily-report.ts` | Report mattutino (v3.61): Cassetta per tipo, 121 di ieri, presentazioni (anche ferme >7 giorni), segnalazioni da dare, aziende nuove con chi decide collegato, trattative aperte. Niente più drip |
 | `src/app/api/cron/opt-in-mailer/route.ts` | Endpoint POST protetto da CRON_SECRET |
 | `src/app/api/cron/daily-report/route.ts` | Endpoint POST protetto da CRON_SECRET |
 

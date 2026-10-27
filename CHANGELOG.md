@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.61.0] - 2026-10-27
+
+### Changed
+- **La mail del mattino (06:00) parla del Motore 121, non più del drip a freddo** (spento dal 20/10). In cima la Cassetta: quante cose aspettano te e di che tipo. Poi: 121 fatti ieri, presentazioni chieste e ottenute ieri, quelle chieste da più di 7 giorni senza risposta (da richiamare), segnalazioni da dare ai membri, aziende nuove con chi decide collegato a te, trattative aperte (e quante con la call fissata). Il link porta dritto alla Cassetta.
+
+### Removed
+- Dalla mail del mattino: opt-in e follow-up inviati, risposte, video visti, nuovi lead, arretrato warm/hot, avvisi su pausa master e settori in pausa.
+
 ## [3.60.0] - 2026-10-26
 
 ### Added
