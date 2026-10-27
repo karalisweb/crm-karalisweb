@@ -19,7 +19,7 @@ import { linkedinPermette } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
   testoContattoDiretto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
-  COMMENTI_PER_CONTATTO, PIATTAFORME, piattaformaConsigliata, piattaformaDi, testoContattoDopoCommenti, testoMessaggioPagina,
+  COMMENTI_PER_CONTATTO, PIATTAFORME, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
   type PaginaSocial, type Piattaforma,
 } from "./rete-regole";
 import { noteDaReferti } from "./impressioni-sezioni";
@@ -339,10 +339,13 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
   const aziende = [];
   for (const l of lav) {
     if (aziende.length >= DECISORI_DA_SCALDARE) break;
-    if ((await commentiFatti(l.leadId)) >= COMMENTI_PER_CONTATTO) continue;
+    const giaFatti = piattaformaPiuCommentata(await commentiDi(l.leadId));
+    if ((giaFatti?.fatti ?? 0) >= COMMENTI_PER_CONTATTO) continue;
     const pagine = await pagineAzienda(l.leadId);
     if (!pagine.length) continue;
-    const piattaforma = (await piattaformaScelta(l.leadId, pagine, oggi)) ?? pagine[0].piattaforma;
+    // I 7 commenti vanno sulla stessa piattaforma: si resta dove si è già cominciato.
+    const iniziata = giaFatti && pagine.some((p) => p.piattaforma === giaFatti.piattaforma) ? giaFatti.piattaforma : null;
+    const piattaforma = iniziata ?? (await piattaformaScelta(l.leadId, pagine, oggi)) ?? pagine[0].piattaforma;
     const pagina = pagine.find((p) => p.piattaforma === piattaforma) ?? pagine[0];
     aziende.push({ leadId: l.leadId, azienda: l.lead.name, citta: l.lead.address, decisore: l.decisore, piattaforma: pagina.piattaforma, pagina: pagina.url });
   }
@@ -367,7 +370,7 @@ export async function importaScalda(findings: Record<string, unknown>): Promise<
     if (!leadId || !commento || !post || !piattaforma) continue;
     const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
     if (!lead) continue;
-    const fatti = await commentiFatti(leadId);
+    const fatti = await commentiFatti(leadId, piattaforma);
     await db.approvalItem.create({
       data: {
         leadId,
@@ -486,8 +489,19 @@ export async function piattaformaScelta(leadId: string, pagine?: PaginaSocial[],
 }
 
 /** I commenti fatti da Alessio sulle pagine di quest'azienda (proposti e segnati "Commentato", o segnati da lui). */
-export async function commentiFatti(leadId: string): Promise<number> {
-  return db.approvalItem.count({ where: { leadId, kind: KIND_COMMENTO, status: "APPROVATO" } });
+async function commentiDi(leadId: string): Promise<{ piattaforma?: unknown; post?: unknown }[]> {
+  const fatti = await db.approvalItem.findMany({ where: { leadId, kind: KIND_COMMENTO, status: "APPROVATO" }, select: { payload: true } });
+  return fatti.map((f) => (f.payload ?? {}) as { piattaforma?: unknown; post?: unknown });
+}
+
+/**
+ * Quanti commenti contano per il contatto: quelli sulla piattaforma indicata, o sulla più commentata. Si
+ * contano per piattaforma, non sommati (Alessio, 2026-10-27): il contatto parte al 7° sulla stessa.
+ */
+export async function commentiFatti(leadId: string, piattaforma?: Piattaforma): Promise<number> {
+  const tutti = await commentiDi(leadId);
+  if (piattaforma) return tutti.filter((c) => piattaformaPiuCommentata([c])?.piattaforma === piattaforma).length;
+  return piattaformaPiuCommentata(tutti)?.fatti ?? 0;
 }
 
 /** "Ho commentato" dalla scheda: un commento fatto da Alessio da solo, che conta come gli altri. */
@@ -520,14 +534,8 @@ export async function dopoCommento(leadId: string, oggi = new Date()): Promise<b
   const d = await datiAzienda(leadId);
   const decisore = d.decisori[0]?.nome ?? null;
   const profili = await profiliDecisore(leadId);
-  // La piattaforma dove Alessio ha commentato di più: è lì che l'azienda l'ha visto.
-  const fatti = await db.approvalItem.findMany({ where: { leadId, kind: KIND_COMMENTO, status: "APPROVATO" }, select: { payload: true } });
-  const conto = new Map<Piattaforma, number>();
-  for (const f of fatti) {
-    const p = piattaformaDi(str((f.payload as { post?: unknown } | null)?.post)) ?? ((f.payload as { piattaforma?: Piattaforma } | null)?.piattaforma ?? null);
-    if (p) conto.set(p, (conto.get(p) ?? 0) + 1);
-  }
-  const piattaforma = [...conto.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? (await piattaformaScelta(leadId, undefined, oggi));
+  // La piattaforma dove Alessio ha commentato 7 volte: è lì che l'azienda l'ha visto.
+  const piattaforma = piattaformaPiuCommentata(await commentiDi(leadId))?.piattaforma ?? (await piattaformaScelta(leadId, undefined, oggi));
   const motivo = await motivoDalCaso(leadId, oggi);
   await db.approvalItem.create({
     data: {

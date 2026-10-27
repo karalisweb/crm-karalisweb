@@ -1648,6 +1648,23 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 - Le newsletter le scrive Orchestra: il CRM segna solo chi è stato invitato.
 - "Inviti LinkedIn accettati" nel cruscotto è cumulativo (non per settimana).
 
+## Il Percorso (v3.62.0)
+
+Decisione di Alessio del 2026-10-27 ("ogni giorno un passo avanti"). Nessuna migrazione, niente colonne nuove.
+- `percorso-regole.ts` (pura, test in `percorso-regole.test.ts`): `passoDi(stato, oggi)` mette l'azienda in uno dei
+  4 passi (1 Trovate, 2 Chi me la presenta, 3 In riscaldamento, 4 Contatto) con `tocca` (te/crm/attesa), una riga
+  `cosa` e una sola `azione` (decidi, voce di Cassetta, "lo conosco", presentato, incontro). Fuori: scartate,
+  pausa, dopo l'incontro. `passoDiOggi`: dove tocca a te, prima il passo più alto, poi le più vecchie (max 5).
+- `percorso.ts` `leggiPercorso()`: lavorazioni + aziende trovate non ancora in lavorazione (stessi filtri di
+  Aziende trovate: scartate e concorrenti del cliente fuori) + voci rete in attesa + commenti fatti.
+  "Passi fatti oggi" = voci rete/FASCICOLO_BASE approvate da mezzanotte + presentati/incontri di oggi.
+- `GET /api/percorso`; pagina `/percorso` (prima voce del Motore 121 e della barra in basso). I pulsanti usano le
+  API esistenti (`/api/cassetta/[id]`, `/api/ricerca/aziende/[id]/decisione`, `/api/rete/cerchia`,
+  `/api/rete/lavorazioni/[id]`). Aziende trovate e In lavorazione passano sotto "Altro".
+- 7 commenti sulla stessa piattaforma: `piattaformaPiuCommentata` (rete-regole); `commentiFatti(leadId, piattaforma?)`
+  conta la piattaforma indicata o la più commentata, non la somma; il lavoro "scalda" resta sulla piattaforma già
+  iniziata.
+
 ## Seguito del 121 con MSD (v3.60.0)
 
 - Fonte delle regole: `src/lib/agents/msd/scheda-msd.md` (letta a runtime, va nel prompt di sistema), derivata dalla

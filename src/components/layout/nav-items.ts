@@ -14,6 +14,7 @@ import {
   Building2,
   Gauge,
   Route,
+  Footprints,
 } from "lucide-react";
 
 // Badge types per colore
@@ -48,12 +49,12 @@ export const navSections: NavSection[] = [
     // Il Motore 121 (PROGETTO-AGENTI.md): BNI per primo, poi i clienti dai casi studio.
     title: "MOTORE 121",
     items: [
+      // Il percorso (v3.62): le aziende nei 4 passi, una cosa da fare per ognuna.
+      { href: "/percorso", label: "Percorso", icon: Footprints },
       { href: "/bni", label: "Incontri BNI", icon: Handshake },
       { href: "/cruscotto", label: "Cruscotto", icon: Gauge },
       { href: "/bni/membri", label: "Rubrica BNI", icon: Users },
       { href: "/casi-studio", label: "Casi studio", icon: FileText },
-      { href: "/aziende-trovate", label: "Aziende trovate", icon: Building2 },
-      { href: "/lavorazione", label: "In lavorazione", icon: Route },
     ],
   },
   {
@@ -68,6 +69,8 @@ export const navSections: NavSection[] = [
   {
     title: "ALTRO",
     items: [
+      { href: "/aziende-trovate", label: "Aziende trovate", icon: Building2 },
+      { href: "/lavorazione", label: "In lavorazione", icon: Route },
       { href: "/agenti", label: "Agenti", icon: Bot },
       { href: "/archivio", label: "Archivio", icon: Archive },
     ],

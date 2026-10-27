@@ -13,6 +13,7 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 | 2. Arricchimento | ✅ definita e costruita (v3.48–v3.51, 2026-10-18) |
 | La rete al centro | ✅ confermata il 2026-10-20 (v3.53.0, sezione sotto) |
 | Entrare in relazione | ✅ confermata il 2026-10-25 (sezione sotto) |
+| Il Percorso | ✅ confermato il 2026-10-27 (v3.62.0): 4 passi Trovate → Chi me la presenta → In riscaldamento → Contatto, una pagina, il passo di oggi; 7 commenti sulla STESSA piattaforma |
 | Motore 121 | ✅ confermato da Alessio ("il diagramma è corretto") e costruito il 2026-10-20 (v3.52.0) — schema in `docs/motore-121.html` |
 
 ---

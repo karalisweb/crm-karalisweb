@@ -13,6 +13,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.62.0] - 2026-10-27
+
+### Added
+- **Il Percorso** (menu → Percorso, la prima voce; anche nella barra in basso del telefono). Alessio: "ogni giorno ci deve essere un passo avanti". Una pagina sola con 4 passi: **Trovate → Chi me la presenta → In riscaldamento → Contatto**. Ogni azienda sta in un passo e mostra una cosa sola da fare, con il suo pulsante (Approfondisci/Scarta, Lo conosco/No, Mandato con il testo da copiare, Commentato con il link al post, Me l'ha presentata, Incontro fissato). Se conosci tu la proprietà si salta al Contatto.
+- **Il passo di oggi**, in cima: fino a 5 aziende dove tocca a te, prima quelle più vicine al contatto, e quanti passi hai fatto oggi.
+
+### Changed
+- **I 7 commenti si contano sulla stessa piattaforma** (Facebook, Instagram o LinkedIn), non più sommati. I commenti proposti restano sulla piattaforma dove hai cominciato.
+- Aziende trovate e In lavorazione passano nel menu sotto "Altro".
+
 ## [3.61.0] - 2026-10-27
 
 ### Changed

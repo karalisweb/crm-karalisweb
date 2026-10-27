@@ -214,6 +214,21 @@ export function frequenzaTesto(p: Pick<PaginaSocial, "postUltimi3Mesi" | "ultimo
   return [ritmo, ultimo].filter(Boolean).join(" · ") || "non si sa";
 }
 
+/**
+ * I commenti fatti contano per piattaforma: il contatto parte al 7° sulla STESSA (Alessio, 2026-10-27), non
+ * sommando Facebook, Instagram e LinkedIn. Torna la piattaforma con più commenti (a parità, la prima vista).
+ */
+export function piattaformaPiuCommentata(commenti: { piattaforma?: unknown; post?: unknown }[]): { piattaforma: Piattaforma; fatti: number } | null {
+  const conto = new Map<Piattaforma, number>();
+  for (const c of commenti) {
+    const p = piattaformaDi(typeof c.post === "string" ? c.post : null) ?? ((PIATTAFORME as readonly unknown[]).includes(c.piattaforma) ? (c.piattaforma as Piattaforma) : null);
+    if (p) conto.set(p, (conto.get(p) ?? 0) + 1);
+  }
+  let meglio: { piattaforma: Piattaforma; fatti: number } | null = null;
+  for (const [piattaforma, fatti] of conto) if (!meglio || fatti > meglio.fatti) meglio = { piattaforma, fatti };
+  return meglio;
+}
+
 /** Dove commentare se Alessio non ha scelto: la pagina viva che pubblica di più (a parità, la più recente). */
 export function piattaformaConsigliata(pagine: PaginaSocial[], oggi: Date): Piattaforma | null {
   const vive = pagine.filter((p) => {

@@ -67,6 +67,24 @@ giorno; se chiede una verifica o mostra un CAPTCHA, tutto si ferma per 48 ore.
 
 ---
 
+### Il Percorso (dal 27 ottobre 2026, v3.62)
+
+Menu → **Percorso**, la prima voce. Una pagina sola per far avanzare le aziende, **un passo al giorno**:
+
+1. **Trovate**: il CRM le analizza e controlla se chi decide è collegato a te; tu decidi se approfondire.
+2. **Chi me la presenta**: la conosci tu, oppure un ponte forte (un membro BNI con cui hai fatto un 121, o
+   un contatto che hai segnato "Lo conosco") te la presenta. Qui rispondi "Lo conosco"/"No" e mandi il
+   messaggio al ponte.
+3. **In riscaldamento**: nessuno te la presenta. Commenti i post della pagina dell'azienda: **7 commenti sulla
+   stessa piattaforma** (Facebook, Instagram o LinkedIn: non si sommano).
+4. **Contatto**: scrivi a chi decide (al 7° commento, o subito se lo conosci tu), oppure fissi l'incontro se te
+   l'hanno presentata.
+
+Ogni azienda mostra **una cosa sola da fare** e il pulsante per farla (il testo del messaggio è già lì, con
+"Copia il testo"). In cima trovi **il passo di oggi**: fino a 5 aziende dove tocca a te, prima quelle più vicine
+al contatto, e quanti passi hai fatto oggi. Con "Incontro fissato" l'azienda esce dal percorso e va in Trattative.
+Aziende trovate e In lavorazione restano nel menu (sotto "Altro") come archivio.
+
 ### La rete al centro (dal 20 ottobre 2026, v3.53)
 
 Il caso studio dice chi cercare, **la tua rete dice come arrivarci**; BNI è un potenziatore. Menu → **In lavorazione**:

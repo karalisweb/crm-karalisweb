@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Home,
-  Building2,
+  Footprints,
   Handshake,
   Users,
   Menu,
@@ -13,7 +13,7 @@ import {
 
 const links = [
   { name: "Oggi", href: "/", icon: Home },
-  { name: "Aziende", href: "/aziende-trovate", icon: Building2 },
+  { name: "Percorso", href: "/percorso", icon: Footprints },
   { name: "Incontri", href: "/bni", icon: Handshake },
   { name: "Rubrica", href: "/bni/membri", icon: Users },
 ];
