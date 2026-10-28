@@ -1654,13 +1654,21 @@ Decisione di Alessio del 2026-10-27 ("ogni giorno un passo avanti"). Nessuna mig
 - `percorso-regole.ts` (pura, test in `percorso-regole.test.ts`): `passoDi(stato, oggi)` mette l'azienda in uno dei
   4 passi (1 Trovate, 2 Chi me la presenta, 3 In riscaldamento, 4 Contatto) con `tocca` (te/crm/attesa), una riga
   `cosa` e una sola `azione` (decidi, voce di Cassetta, "lo conosco", presentato, incontro). Fuori: scartate,
-  pausa, dopo l'incontro. `passoDiOggi`: dove tocca a te, prima il passo più alto, poi le più vecchie (max 5).
+  pausa, dopo l'incontro. `coseDiOggi` (v3.64): dove tocca a te, divise in contatta (passo 4 e messaggi al ponte del 2) / scalda (passo 3) /
+  valida (passo 1 "decidi" e "lo conosco" del 2), max `AL_GIORNO` 2/3/5 meno quelle già fatte oggi; prima il passo più alto.
 - `percorso.ts` `leggiPercorso()`: lavorazioni + aziende trovate non ancora in lavorazione (stessi filtri di
   Aziende trovate: scartate e concorrenti del cliente fuori) + voci rete in attesa + commenti fatti.
-  "Passi fatti oggi" = voci rete/FASCICOLO_BASE approvate da mezzanotte + presentati/incontri di oggi.
+  `fatte` (v3.64) da mezzanotte: contatta = voci RETE_CONTATTO/DIRETTO/PONTE/PROMEMORIA approvate + incontri;
+  scalda = COMMENTO_LINKEDIN/RETE_PAGINA approvate; valida = FASCICOLO_BASE decise + cerchia aggiunta oggi.
 - `GET /api/percorso`; pagina `/percorso` (prima voce del Motore 121 e della barra in basso). I pulsanti usano le
   API esistenti (`/api/cassetta/[id]`, `/api/ricerca/aziende/[id]/decisione`, `/api/rete/cerchia`,
   `/api/rete/lavorazioni/[id]`). Aziende trovate e In lavorazione passano sotto "Altro".
+- **v3.63.0 — una pagina sola.** `/aziende-trovate` e `/lavorazione` fanno `redirect("/percorso")` e sono fuori
+  dal menu (la scheda `/aziende-trovate/[id]` resta). La card è `components/percorso/scheda.tsx`
+  (`SchedaPercorso`), usata da `/percorso` e da Oggi (`/`), che legge `/api/percorso` e mostra `oggi` +
+  `fattiOggi` sotto "Da fare adesso" (tolta la riga "Decidi su N aziende"). Dalla v3.64 Oggi mostra
+  "Le aziende di oggi" in 3 blocchi (`oggi.contatta/scalda/valida` + `fatte`/`alGiorno`). Nel Percorso: passo 1 con
+  `LanciaAdesso` e `CercaTu`, passo 2 con la cerchia stretta (`/api/rete`); su ogni lavorazione "Pausa 3 mesi".
 - 7 commenti sulla stessa piattaforma: `piattaformaPiuCommentata` (rete-regole); `commentiFatti(leadId, piattaforma?)`
   conta la piattaforma indicata o la più commentata, non la somma; il lavoro "scalda" resta sulla piattaforma già
   iniziata.

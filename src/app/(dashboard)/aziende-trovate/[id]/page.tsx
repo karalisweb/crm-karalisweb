@@ -450,7 +450,7 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
   return (
     <Ctx.Provider value={{ id, agenti: s.agenti, analisi: an, lancia, inLancio, aggiorna: () => setVersione((v) => v + 1) }}>
       <div className="max-w-6xl min-w-0 space-y-3">
-        <Link href="/aziende-trovate" className="text-sm text-muted-foreground hover:underline inline-flex items-center gap-1"><ArrowLeft className="h-4 w-4" /> Aziende trovate</Link>
+        <Link href="/percorso" className="text-sm text-muted-foreground hover:underline inline-flex items-center gap-1"><ArrowLeft className="h-4 w-4" /> Percorso</Link>
         <Card><CardContent className="p-4 sm:p-5">
           <h1 className="text-2xl font-bold break-words">{a.name}</h1>
           <div className="text-sm text-muted-foreground break-words">

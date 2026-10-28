@@ -82,13 +82,17 @@ Menu → **Percorso**, la prima voce. Una pagina sola per far avanzare le aziend
    l'hanno presentata.
 
 Ogni azienda mostra **una cosa sola da fare** e il pulsante per farla (il testo del messaggio è già lì, con
-"Copia il testo"). In cima trovi **il passo di oggi**: fino a 5 aziende dove tocca a te, prima quelle più vicine
-al contatto, e quanti passi hai fatto oggi. Con "Incontro fissato" l'azienda esce dal percorso e va in Trattative.
-Aziende trovate e In lavorazione restano nel menu (sotto "Altro") come archivio.
+"Copia il testo"). **Le aziende di oggi** sono nella pagina **Oggi**, in tre righe: **2 da contattare** (scrivi a
+chi decide o a chi te la presenta), **3 da scaldare** (un commento sulla loro pagina, solo se nessuno te la
+presenta), **5 da validare** (un sì o un no). Ogni riga dice quante ne hai fatte; quando arrivi al numero è finita
+per oggi e domani ne arrivano altre. Con "Incontro fissato" l'azienda
+esce dal percorso e va in Trattative; con "Pausa 3 mesi" esce e torna da sola.
+Dalla v3.63 il Percorso è **l'unica pagina delle aziende**: Aziende trovate e In lavorazione non ci sono più
+(i vecchi indirizzi portano qui). "Cerca adesso" e "Parti da qui" sono nel passo 1, la tua cerchia stretta nel passo 2.
 
 ### La rete al centro (dal 20 ottobre 2026, v3.53)
 
-Il caso studio dice chi cercare, **la tua rete dice come arrivarci**; BNI è un potenziatore. Menu → **In lavorazione**:
+Il caso studio dice chi cercare, **la tua rete dice come arrivarci**; BNI è un potenziatore. Oggi tutto questo si vede nel **Percorso** (prima era la pagina In lavorazione):
 - ci sono 15 aziende alla volta (30 dal secondo mese), entrate da sole fra quelle che approfondisci;
 - accanto ai contatti in comune premi **"Lo conosco"** (una volta sola: da lì sono nella tua cerchia) o "No";
 - il messaggio "me lo presenti?" arriva in Cassetta già scritto; lo mandi tu e premi "Mandato";
@@ -108,19 +112,19 @@ chiamata e **la prova** di ogni cosa che dice.
 **L'arricchimento (dalla v3.48): due giri, una sola decisione tua**
 1. **La ricerca** trova 5 aziende al giorno dai casi studio: **prima la nicchia** (chi fa esattamente
    il mestiere del cliente del caso, mai nella sua provincia: sarebbero suoi concorrenti), poi il settore.
-   Puoi anche scrivere tu **un'azienda, un settore o una persona** nella casella "Parti da qui" di
-   **Aziende trovate**.
+   Puoi anche scrivere tu **un'azienda, un settore o una persona** nella casella "Parti da qui" del
+   **Percorso** (passo 1).
 2. **Giro veloce, da solo**, su ogni azienda: **Trova sito** (lo cerca per più strade e guarda se
    cercando il nome esce), **Posizioni** (cercando il servizio + città), **Sito visto** (foto su
    telefono e computer, velocità), **Dal cliente al contatto** (telefono cliccabile, WhatsApp, modulo),
    **Lettore** (cosa dice e a quali domande del cliente risponde), **Recensioni** (cosa lodano, di cosa
    si lamentano, se rispondono). Costa pochi centesimi.
 3. **Alle 7 ti arriva una mail** con le aziende pronte: per ognuna chi è, perché è lì e le cose più
-   forti trovate. Le trovi anche in **Oggi** e in **Aziende trovate → Da decidere**. Apri la scheda e
+   forti trovate. Le trovi anche in **Oggi** e nel **Percorso** (passo 1). Apri la scheda e
    premi **Approfondisci** o **Scarta**. Quando scarti (o elimini) scrivi in due parole **perché**
    ("è un libero professionista", "è una catena", "non è in Sardegna"): la ricerca lo impara e non ti
    ripropone aziende così. Se ci ripensi, il motivo si cancella.
-   Le aziende pronte per il primo contatto le trovi in **Aziende trovate → Da contattare**: entrano da
+   Le aziende pronte per il primo contatto le trovi nel **Percorso**: entrano da
    sole quelle approfondite in cui chi decide è collegato a te; dalla scheda puoi aggiungerne altre
    (**Da contattare**) o toglierne una (**Togli**).
 4. **Giro completo** (solo con Approfondisci, parte subito: partono **tutte** le ricerche, anche quelle

@@ -17,7 +17,7 @@ export async function GET() {
   const oggi = mezzanotteRoma(ora);
   const fraDueGiorni = mezzanotteRoma(ora, 2);
 
-  const [tutti, richiesteDaMandare, visiteDaMandare, fogli, aziendeDaDecidere, incontri, call, aziendeOggi, personeOggi, casiAttivi, casiDaConfermare, browserInCoda, ultimoBrowser] =
+  const [tutti, richiesteDaMandare, visiteDaMandare, fogli, aziendeDaDecidere, incontri, call, aziendeOggi, personeOggi, casiAttivi, casiDaConfermare, browserInCoda, ultimoBrowser, ultimoFatto] =
     await Promise.all([
       caricaCapitoli(ora),
       db.approvalItem.count({ where: { kind: "MESSAGGIO_BNI", status: "IN_ATTESA" } }),
@@ -40,6 +40,7 @@ export async function GET() {
       db.casoStudio.count({ where: { stato: "DA_CONFERMARE" } }),
       db.agentRun.findFirst({ where: { status: "IN_CODA", agent: { in: CHIAVI_BROWSER } }, orderBy: { queuedAt: "asc" }, select: { queuedAt: true } }),
       db.agentRun.findFirst({ where: { status: { in: ["FATTO", "FALLITO"] }, agent: { in: CHIAVI_BROWSER } }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true } }),
+      db.agentRun.findFirst({ where: { status: "FATTO", agent: { in: CHIAVI_BROWSER } }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true } }),
     ]);
 
   const settimana = await statoSettimana(ora, tutti);
@@ -48,6 +49,10 @@ export async function GET() {
 
   // Gli agenti sul Mac sono fermi se c'è lavoro in coda da più di un giorno.
   const oreFermi = browserInCoda ? Math.floor((ora.getTime() - browserInCoda.queuedAt.getTime()) / 3600_000) : 0;
+  // Oppure girano ma falliscono tutto (di solito Chrome chiede un permesso che di notte nessuno dà).
+  const ultimoOk = ultimoFatto?.finishedAt?.getTime() ?? 0;
+  const falliscono = !!ultimoBrowser?.finishedAt && ultimoBrowser.finishedAt.getTime() > ultimoOk && ora.getTime() - ultimoOk >= 24 * 3600_000;
+  const oreSenzaRisultati = falliscono ? Math.floor((ora.getTime() - Math.max(ultimoOk, browserInCoda?.queuedAt.getTime() ?? 0, ora.getTime() - 30 * 24 * 3600_000)) / 3600_000) : oreFermi;
 
   return NextResponse.json({
     daFare: {
@@ -62,6 +67,6 @@ export async function GET() {
     settimana: { fatti: settimana.fatti, fissati: settimana.fissati, obiettivo: settimana.obiettivo, richiesteAperte: settimana.richiesteAperte },
     sardegna: { conosciuti: copertura.conosciuti, totale: copertura.totale },
     ricerca: { aziendeOggi, obiettivo: AZIENDE_AL_GIORNO, personeOggi, casiAttivi },
-    agentiMac: { fermi: oreFermi >= 24, oreFermi, ultimoLavoro: ultimoBrowser?.finishedAt ?? null },
+    agentiMac: { fermi: oreFermi >= 24 || falliscono, falliscono, oreFermi: Math.max(oreFermi, oreSenzaRisultati), ultimoLavoro: ultimoBrowser?.finishedAt ?? null },
   });
 }

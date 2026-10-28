@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { passoDi, passoDiOggi, type Stato } from "../percorso-regole";
+import { coseDiOggi, passoDi, type Stato } from "../percorso-regole";
 import { piattaformaPiuCommentata } from "../rete-regole";
 
 const oggi = new Date("2026-10-27T10:00:00+01:00");
@@ -52,16 +52,30 @@ describe("fuori dal percorso", () => {
   it("in pausa", () => expect(passo({ lav: lav({ fase: "PAUSA" }) })).toEqual({ fuori: "pausa" }));
 });
 
-describe("il passo di oggi", () => {
-  it("solo dove tocca a te, prima le più vicine al contatto, poi le più vecchie", () => {
-    const a = (id: string, s: Partial<Stato>, da: number) => ({ id, esito: passoDi({ ...base, ...s }, oggi), da });
-    const scelte = passoDiOggi([
+describe("le 3 cose di oggi", () => {
+  const a = (id: string, s: Partial<Stato>, da: number) => ({ id, esito: passoDi({ ...base, ...s }, oggi), da });
+  const commento = (id: string, da: number) => a(id, { lav: lav({ strada: "SCALDARE" }), voci: [{ id, kind: "COMMENTO_LINKEDIN", payload: {} }] }, da);
+  const nessuna = { contatta: 0, scalda: 0, valida: 0 };
+  const ids = (r: Record<string, { id: string }[]>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.map((x) => x.id)]));
+
+  it("ogni azienda nella sua cosa, solo dove tocca a te, prima le più vicine al contatto", () => {
+    const r = coseDiOggi([
       a("decidi", { decisione: "IN_ATTESA", collegata: true }, 1),
       a("crm", {}, 0),
       a("contatto-nuovo", { lav: lav({ fase: "CHIESTA", strada: "BNI", presentatoAt: oggi }) }, 5),
       a("contatto-vecchio", { lav: lav({ strada: "SCALDARE" }), voci: [{ id: "k", kind: "RETE_CONTATTO", payload: {} }] }, 2),
-    ], 3);
-    expect(scelte.map((s) => s.id)).toEqual(["contatto-vecchio", "contatto-nuovo", "decidi"]);
+      a("ponte", { lav: lav({ fase: "PONTE_SCELTO", strada: "BNI" }), voci: [{ id: "p", kind: "RETE_PONTE", payload: {} }] }, 3),
+      a("conosco", { lav: lav({ strada: "DA_CONFERMARE" }), daConfermare: ["Mario"] }, 4),
+      commento("commento", 6),
+    ], nessuna);
+    expect(ids(r)).toEqual({ contatta: ["contatto-vecchio", "contatto-nuovo"], scalda: ["commento"], valida: ["conosco", "decidi"] });
+  });
+
+  it("al massimo 2 / 3 / 5, e quello che hai già fatto oggi scala dal conto", () => {
+    const tanti = [...Array(6)].map((_, i) => commento(`c${i}`, i));
+    expect(coseDiOggi(tanti, nessuna).scalda).toHaveLength(3);
+    expect(coseDiOggi(tanti, { ...nessuna, scalda: 2 }).scalda.map((x) => x.id)).toEqual(["c0"]);
+    expect(coseDiOggi(tanti, { ...nessuna, scalda: 4 }).scalda).toEqual([]);
   });
 });
 

@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2 } from "lucide-react";
 import { dataOra } from "@/components/ricerca/etichette";
+import { SchedaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
+
+// Le 3 cose di oggi (v3.64): poche aziende al giorno, ognuna con la sua cosa da fare.
+const COSE: { k: CosaDiOggi; titolo: string; spiega: string }[] = [
+  { k: "contatta", titolo: "Da contattare", spiega: "Analizzate e verificate: sai cosa dire. Scrivi a chi decide, o a chi te la presenta." },
+  { k: "scalda", titolo: "Da scaldare", spiega: "Nessuno te la presenta: commenta un post della loro pagina." },
+  { k: "valida", titolo: "Da validare", spiega: "Basta un sì o un no." },
+];
 
 interface Oggi {
   daFare: { richiesteDaMandare: number; visiteDaMandare: number; fogli: number; aziendeDaDecidere: number; casiDaConfermare: number };
@@ -14,7 +22,7 @@ interface Oggi {
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
-  agentiMac: { fermi: boolean; oreFermi: number };
+  agentiMac: { fermi: boolean; falliscono: boolean; oreFermi: number };
 }
 
 function Riga({ href, testo }: { href: string; testo: string }) {
@@ -41,9 +49,15 @@ function Numero({ valore, di, etichetta, href }: { valore: number; di?: number; 
 
 export default function HomePage() {
   const [d, setD] = useState<Oggi | null>(null);
+  const [p, setP] = useState<DatiPercorso | null>(null);
+  // Le aziende di oggi: dal Percorso, al massimo 2 da contattare, 3 da scaldare, 5 da validare.
+  const caricaPercorso = useCallback(() => {
+    fetch("/api/percorso").then((r) => (r.ok ? r.json() : null)).then(setP);
+  }, []);
   useEffect(() => {
     fetch("/api/oggi").then((r) => r.json()).then(setD);
-  }, []);
+    caricaPercorso();
+  }, [caricaPercorso]);
 
   if (!d) return <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>;
 
@@ -53,7 +67,6 @@ export default function HomePage() {
   if (f.fogli) cose.push({ href: "/bni", testo: `Leggi ${f.fogli === 1 ? "il foglio" : `i ${f.fogli} fogli`} per gli incontri di domani` });
   if (f.visiteDaMandare) cose.push({ href: "/bni", testo: `Chiedi ${f.visiteDaMandare === 1 ? "la visita" : `${f.visiteDaMandare} visite`} a un capitolo BNI` });
   if (f.casiDaConfermare) cose.push({ href: "/casi-studio", testo: `Conferma ${f.casiDaConfermare === 1 ? "il caso studio caricato" : `${f.casiDaConfermare} casi studio`}` });
-  if (f.aziendeDaDecidere) cose.push({ href: "/aziende-trovate", testo: `Decidi su ${f.aziendeDaDecidere === 1 ? "1 azienda trovata" : `${f.aziendeDaDecidere} aziende trovate`}: approfondire o scartare` });
   const s = d.settimana;
   const incontriSettimana = s.fatti + s.fissati;
 
@@ -67,18 +80,46 @@ export default function HomePage() {
       {d.agentiMac.fermi && (
         <Card className="border-amber-400"><CardContent className="p-4 text-sm flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-          <span>Gli agenti che usano il tuo Chrome (BNI Connect, LinkedIn, Facebook) sono fermi da {Math.floor(d.agentiMac.oreFermi / 24)} giorni. Apri l&apos;app Claude sul Mac e consenti l&apos;attività &quot;Squadra CRM — agenti di browser&quot;.</span>
+          {d.agentiMac.falliscono ? (
+            <span>Gli agenti che usano il tuo Chrome (BNI Connect, LinkedIn, Facebook) girano ma non portano risultati da {Math.max(1, Math.floor(d.agentiMac.oreFermi / 24))} giorni: di solito Chrome chiede il permesso di aprire una pagina e nessuno risponde. Nell&apos;estensione Claude in Chrome autorizza sempre LinkedIn, Facebook, Instagram e BNI Connect.</span>
+          ) : (
+            <span>Gli agenti che usano il tuo Chrome (BNI Connect, LinkedIn, Facebook) sono fermi da {Math.floor(d.agentiMac.oreFermi / 24)} giorni. Tieni il Mac acceso con Chrome aperto e controlla nell&apos;app Claude che l&apos;attività &quot;Squadra CRM — agenti di browser&quot; sia attiva.</span>
+          )}
         </CardContent></Card>
       )}
 
-      <section className="space-y-2">
-        <h2 className="font-semibold">Da fare adesso</h2>
-        {cose.length === 0 ? (
-          <Card><CardContent className="p-4 text-sm text-muted-foreground flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" /> Niente da fare adesso.</CardContent></Card>
-        ) : (
+      {p && (
+        <section className="space-y-4">
+          <h2 className="font-semibold">Le aziende di oggi</h2>
+          {COSE.map(({ k, titolo, spiega }) => {
+            const fatte = Math.min(p.fatte[k], p.alGiorno[k]);
+            const finite = fatte >= p.alGiorno[k];
+            return (
+              <div key={k} className="space-y-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-semibold">{titolo}</h3>
+                  <span className={`text-sm flex items-center gap-1 ${finite ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
+                    {finite && <CheckCircle2 className="h-4 w-4" />}{fatte} di {p.alGiorno[k]} fatte
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">{spiega}</p>
+                {p.oggi[k].length ? (
+                  p.oggi[k].map((a) => <SchedaPercorso key={a.leadId} a={a} passi={p.passi} onCambio={caricaPercorso} />)
+                ) : (
+                  <div className="rounded-lg border p-3 text-sm text-muted-foreground">{finite ? "Fatto per oggi. Domani ne arrivano altre." : "Per ora nessuna: le prepara il CRM."}</div>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      )}
+
+      {cose.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold">BNI e casi studio</h2>
           <div className="space-y-2">{cose.map((c, i) => <Riga key={i} {...c} />)}</div>
-        )}
-      </section>
+        </section>
+      )}
 
       {(d.incontri.length > 0 || d.call.length > 0) && (
         <section className="space-y-2">
@@ -104,7 +145,7 @@ export default function HomePage() {
         <h2 className="font-semibold">I numeri</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Numero valore={incontriSettimana} di={s.obiettivo} etichetta="Incontri BNI questa settimana" href="/bni" />
-          <Numero valore={d.ricerca.aziendeOggi} di={d.ricerca.obiettivo} etichetta="Aziende nuove trovate oggi" href="/aziende-trovate" />
+          <Numero valore={d.ricerca.aziendeOggi} di={d.ricerca.obiettivo} etichetta="Aziende nuove trovate oggi" href="/percorso" />
           <Numero valore={d.sardegna.conosciuti} di={d.sardegna.totale} etichetta="Membri BNI della Sardegna che conosci" href="/bni/membri" />
         </div>
         <p className="text-xs text-muted-foreground">

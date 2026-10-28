@@ -10,7 +10,7 @@ import { mezzanotteRoma } from "./bni-regole";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { KIND_COMMENTO, KINDS_RETE, cerchiaNomi, datiAzienda } from "./rete";
 import { nomiDaConfermare, piattaformaPiuCommentata } from "./rete-regole";
-import { PASSI, passoDi, passoDiOggi, type Azione, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
+import { AL_GIORNO, PASSI, coseDiOggi, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
 
 export interface AziendaNelPercorso {
   leadId: string;
@@ -26,14 +26,21 @@ export interface AziendaNelPercorso {
 
 export interface Percorso {
   passi: { n: Passo; nome: string; spiega: string; quante: number; toccaATe: number }[];
-  oggi: AziendaNelPercorso[];
-  fattiOggi: number;
+  /** Le 3 cose di oggi: al massimo 2 da contattare, 3 da scaldare, 5 da validare (quelle che restano). */
+  oggi: Record<Cosa, AziendaNelPercorso[]>;
+  /** Quante ne hai già fatte oggi per ogni cosa, e quante ne toccano al giorno. */
+  fatte: Record<Cosa, number>;
+  alGiorno: Record<Cosa, number>;
   aziende: AziendaNelPercorso[];
   dopo: number;
   inPausa: number;
 }
 
-const PASSI_DI_OGGI = 5;
+/** Quale voce della Cassetta, approvata, conta come cosa fatta. */
+const COSA_DELLA_VOCE: Record<string, Cosa> = {
+  RETE_CONTATTO: "contatta", RETE_DIRETTO: "contatta", RETE_PONTE: "contatta", RETE_PROMEMORIA: "contatta",
+  [KIND_COMMENTO]: "scalda", RETE_PAGINA: "scalda",
+};
 
 export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   const [lavorazioni, ritrovamenti] = await Promise.all([
@@ -123,12 +130,17 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
     righe.push({ esito, da: t.createdAt.getTime(), commenti: 0, leadId: l.id, lavorazioneId: null, nome: l.name, zona: l.address, categoria: l.category });
   }
 
-  // I passi fatti oggi: voci del percorso approvate e pulsanti premuti da mezzanotte.
+  // Le cose fatte oggi: voci approvate da mezzanotte, incontri fissati, aziende validate (sì o no) e
+  // persone che hai detto di conoscere (il "no" non lascia data: non si conta).
   const mezzanotte = mezzanotteRoma(oggi);
-  const [voceFatte, avanzate] = await Promise.all([
-    db.approvalItem.count({ where: { kind: { in: [...KINDS_RETE, KIND_FASCICOLO_BASE] }, status: "APPROVATO", decidedAt: { gte: mezzanotte } } }),
-    db.lavorazione.count({ where: { OR: [{ presentatoAt: { gte: mezzanotte } }, { incontroAt: { gte: mezzanotte } }] } }),
+  const [vociFatte, incontri, validate, conosciuti] = await Promise.all([
+    db.approvalItem.groupBy({ by: ["kind"], where: { kind: { in: Object.keys(COSA_DELLA_VOCE) }, status: "APPROVATO", decidedAt: { gte: mezzanotte } }, _count: true }),
+    db.lavorazione.count({ where: { incontroAt: { gte: mezzanotte } } }),
+    db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: { in: ["APPROVATO", "SCARTATO"] }, decidedAt: { gte: mezzanotte } } }),
+    db.cerchiaContatto.count({ where: { createdAt: { gte: mezzanotte } } }),
   ]);
+  const fatte: Record<Cosa, number> = { contatta: incontri, scalda: 0, valida: validate + conosciuti };
+  for (const v of vociFatte) fatte[COSA_DELLA_VOCE[v.kind]] += v._count;
 
   const scheda = (r: Riga): AziendaNelPercorso => {
     const e = r.esito as Extract<Esito, { dentro: true }>;
@@ -139,8 +151,9 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   const aziende = righe.sort((a, b) => tocca(a) - tocca(b) || b.commenti - a.commenti || a.da - b.da).map(scheda);
   return {
     passi: PASSI.map((p) => ({ ...p, quante: aziende.filter((a) => a.passo === p.n).length, toccaATe: aziende.filter((a) => a.passo === p.n && a.tocca === "te").length })),
-    oggi: passoDiOggi(righe, PASSI_DI_OGGI).map(scheda),
-    fattiOggi: voceFatte + avanzate,
+    oggi: Object.fromEntries(Object.entries(coseDiOggi(righe, fatte)).map(([c, r]) => [c, r.map(scheda)])) as Percorso["oggi"],
+    fatte,
+    alGiorno: AL_GIORNO,
     aziende,
     dopo,
     inPausa,

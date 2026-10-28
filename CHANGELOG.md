@@ -13,6 +13,24 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.64.0] - 2026-10-28
+
+### Changed
+- **Poche aziende al giorno, in Oggi.** Alessio: "lo strumento mi deve semplificare la vita, poche cose giornaliere". Al posto del "passo di oggi" (5 aziende mischiate) ci sono tre righe: **2 da contattare** (scrivi a chi decide o a chi te la presenta), **3 da scaldare** (commento sulla pagina, solo se nessuno te la presenta), **5 da validare** (sì o no). Ogni riga dice "N di M fatte"; quello che fai oggi scala dal conto e domani ne arrivano altre.
+
+---
+
+## [3.63.0] - 2026-10-28
+
+### Changed
+- **Una pagina sola per le aziende.** Alessio: "hai aggiunto una sezione anziché migliorare quello che c'era". Il Percorso prende il posto di **Aziende trovate** e **In lavorazione**, che escono dal menu (i vecchi indirizzi portano al Percorso; la scheda dell'azienda resta). Nel passo 1 ci sono "Cerca adesso" e "Parti da qui", nel passo 2 la tua cerchia stretta; su ogni azienda in lavorazione c'è "Pausa 3 mesi".
+- **Il passo di oggi va in Oggi**, sotto "Da fare adesso", con quanti passi hai fatto oggi. Sostituisce la riga "Decidi su N aziende trovate". Il Percorso mostra solo i 4 passi.
+
+### Removed
+- I filtri per segnale e le liste "messe da parte" (senza collegamento, scartate, eliminate) della vecchia pagina Aziende trovate.
+
+---
+
 ## [3.62.1] - 2026-10-28
 
 ### Changed
