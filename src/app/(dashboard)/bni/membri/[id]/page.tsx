@@ -76,6 +76,32 @@ function TestoModificabile({ valore, campo, id, vuoto, onSalvato }: { valore: st
   );
 }
 
+function TelefonoModificabile({ valore, id, onSalvato }: { valore: string | null; id: string; onSalvato: () => void }) {
+  const [aperto, setAperto] = useState(false);
+  const [testo, setTesto] = useState(valore ?? "");
+  async function salva() {
+    const r = await fetch(`/api/ricerca/bni/membri/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ telefono: testo.trim() || null }) });
+    if (!r.ok) return toast.error("Non sono riuscito a salvare");
+    setAperto(false);
+    onSalvato();
+  }
+  if (aperto) {
+    return (
+      <span className="flex items-center gap-2">
+        <Input value={testo} onChange={(e) => setTesto(e.target.value)} type="tel" placeholder="+39 ..." className="h-8 w-44" autoFocus onKeyDown={(e) => e.key === "Enter" && salva()} />
+        <Button size="sm" className="h-8" onClick={salva}>Salva</Button>
+        <Button size="sm" variant="ghost" className="h-8" onClick={() => setAperto(false)}>Annulla</Button>
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1">
+      {valore ? <a href={`tel:${valore}`} className="flex items-center gap-1 hover:underline"><Phone className="h-3.5 w-3.5" />{valore}</a> : <span className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3.5 w-3.5" />Nessun telefono</span>}
+      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setTesto(valore ?? ""); setAperto(true); }} aria-label="Modifica telefono"><Pencil className="h-3 w-3" /></Button>
+    </span>
+  );
+}
+
 function Registra121({ id, formatoCapitolo, onFatto }: { id: string; formatoCapitolo: string | null; onFatto: () => void }) {
   const [aperto, setAperto] = useState(false);
   const [quando, setQuando] = useState("");
@@ -248,7 +274,7 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
             </div>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            {m.telefono && <a href={`tel:${m.telefono}`} className="flex items-center gap-1 hover:underline"><Phone className="h-3.5 w-3.5" />{m.telefono}</a>}
+            <TelefonoModificabile id={m.id} valore={m.telefono} onSalvato={carica} />
             {m.email && <a href={`mailto:${m.email}`} className="flex items-center gap-1 hover:underline"><Mail className="h-3.5 w-3.5" />{m.email}</a>}
             {m.linkedin && <a href={m.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline"><Linkedin className="h-3.5 w-3.5" />LinkedIn</a>}
             {m.azienda_collegata && <Link href={`/aziende-trovate/${m.azienda_collegata.id}`} className="hover:underline">Scheda azienda{m.studiatoAt ? ` (studiata il ${data(m.studiatoAt)})` : ""}</Link>}

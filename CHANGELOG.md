@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.66.1] - 2026-10-28
+
+### Added
+- **Telefono di un membro BNI modificabile.** Nella scheda del membro (BNI → membro → "Chi è") accanto al numero c'è la matita: la tocchi, scrivi il numero nuovo e Salva. Se il numero manca compare "Nessun telefono" con la stessa matita per aggiungerlo.
+
+---
+
 ## [3.66.0] - 2026-10-28
 
 ### Changed
