@@ -76,7 +76,8 @@ export function passoDi(s: Stato, oggi: Date): Esito {
   if (!l) {
     if (s.decisione === "SCARTATO") return { dentro: false, perche: "fuori" };
     if (s.decisione === "IN_ATTESA" && s.collegata) return { dentro: true, passo: 1, tocca: "te", cosa: "Decidi: la approfondisci?", azione: { tipo: "decidi" } };
-    if (s.decisione === "APPROVATO") return { dentro: true, passo: 1, tocca: "crm", cosa: "Approfondita: entra al passo 2 appena si libera un posto", azione: null };
+    // I posti sono 30 (10 per passo): quello che manca di solito è "chi decide", non il posto.
+    if (s.decisione === "APPROVATO") return { dentro: true, passo: 1, tocca: "crm", cosa: s.collegata ? "Approfondita: entra al passo 2 al prossimo giro del CRM (alle 7 o alle 14)" : "Approfondita: il CRM cerca chi decide su LinkedIn, poi entra al passo 2", azione: null };
     if (s.decisione === "IN_ATTESA") return { dentro: true, passo: 1, tocca: "crm", cosa: "Il CRM controlla se chi decide è collegato a te", azione: null };
     return { dentro: true, passo: 1, tocca: "crm", cosa: "Il CRM la sta analizzando", azione: null };
   }
