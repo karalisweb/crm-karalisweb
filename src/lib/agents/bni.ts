@@ -23,6 +23,7 @@ import { richiamiMsd } from "./msd";
 import { turnoRete } from "./rete";
 import {
   capitoliInCorso,
+  capitoloSenza121,
   coperturaCapitolo,
   dirigenzaDa,
   dirigenzaNota,
@@ -270,8 +271,8 @@ function contaAperte(tutti: CapitoloCaricato[], oggi: Date): number {
 
 /** Le prossime persone a cui chiedere, dai capitoli in corso; se non bastano, dagli altri. */
 export function scegliProssimi(tutti: CapitoloCaricato[], quanti: number, oggi: Date): (ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] })[] {
-  // Il collega di mestiere ha detto no: il capitolo non si lavora con i 121 (Motore 121).
-  const candidati = tutti.filter((t) => t.capitolo.permesso !== "NEGATO").map((t) => ({ t, prossimi: prossimiDelCapitolo(t.membri, oggi, dirigenzaNota(t.capitolo, t.membri)) }));
+  // Il collega di mestiere ha detto no (Motore 121) o Alessio ha tolto il capitolo: niente 121.
+  const candidati = tutti.filter((t) => t.capitolo.permesso !== "NEGATO" && !capitoloSenza121(t.capitolo.name)).map((t) => ({ t, prossimi: prossimiDelCapitolo(t.membri, oggi, dirigenzaNota(t.capitolo, t.membri)) }));
   const perScelta = candidati.map(({ t, prossimi }) => {
     const cop = coperturaCapitolo(t.membri);
     return { id: t.capitolo.id, nome: t.capitolo.name, sardo: eSardo(t.capitolo), mio: t.capitolo.isMine, conosciuti: cop.conosciuti, totale: cop.totale, daChiedere: prossimi.length };
@@ -333,6 +334,14 @@ export async function eseguiTurnoBni(oggi = new Date(), fase: FaseBni = "tutto")
   });
 
   let tutti = await caricaCapitoli(oggi);
+  // Le richieste automatiche ancora da mandare nei capitoli tolti da Alessio non partono più.
+  const senza121 = tutti.filter((t) => capitoloSenza121(t.capitolo.name)).map((t) => t.capitolo.id);
+  if (senza121.length) {
+    await db.approvalItem.updateMany({
+      where: { kind: KIND_MESSAGGIO_BNI, status: "IN_ATTESA", agent: { not: "alessio" }, bniChapterId: { in: senza121 } },
+      data: { status: "SCARTATO", note: "Capitolo senza 121: scelta di Alessio", decidedAt: oggi },
+    });
+  }
   const r: RiepilogoBni = {
     settimana: await statoSettimana(oggi, tutti),
     richiesteNuove: 0, visiteProposte: 0, preparazioni: 0, retiAccodate: 0, mappeAccodate: 0, saltatiPerBudget: 0,

@@ -49,7 +49,8 @@ i membri ti presentano. **Niente contatto a freddo.** Lo schema completo, con i 
 2. **LinkedIn.** In Incontri BNI trovi chi collegare: 12 inviti al giorno nei feriali, 100 a settimana.
    Quando siete collegati, invitali alle newsletter LinkedIn e Substack e premi "Invitato".
 3. **Le richieste di 121.** 20 a settimana: arrivano in Cassetta alle 14, le mandi su WhatsApp fra le 15 e
-   le 18. Con 12 incontri in una settimana le richieste nuove si fermano.
+   le 18. Con 12 incontri in una settimana le richieste nuove si fermano. Ad **Atlantide** e **I Visionari**
+   non arrivano richieste automatiche (li conosci già): se vuoi, invita tu dalla scheda del membro.
 4. **Prima del 121** gli agenti studiano l'azienda del membro, leggono la sua rete LinkedIn cercando chi
    decide nelle aziende del serbatoio e scelgono 1-3 contatti da segnalargli. Dalla scheda del membro apri
    la **Pagina del 121**: 5 minuti di lettura.

@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.62.1] - 2026-10-28
+
+### Changed
+- **Niente richieste di 121 ad Atlantide e I Visionari** (scelta di Alessio). Il Pianificatore non li sceglie più, la scheda del capitolo non mostra "prossimi da chiedere" e le richieste automatiche già in Cassetta per quei due capitoli si scartano al turno successivo. Gli inviti fatti da Alessio di sua iniziativa restano possibili. Lista in `CAPITOLI_SENZA_121` (`src/lib/agents/bni-regole.ts`).
+
 ## [3.62.0] - 2026-10-27
 
 ### Added

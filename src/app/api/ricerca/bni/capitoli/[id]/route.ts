@@ -3,7 +3,7 @@ import { z, ZodError } from "zod";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { caricaCapitoli } from "@/lib/agents/bni";
-import { coperturaCapitolo, dirigenzaNota, formatoDa, gruppiCapitolo, prossimiDelCapitolo, visitaDaProporre } from "@/lib/agents/bni-regole";
+import { capitoloSenza121, coperturaCapitolo, dirigenzaNota, formatoDa, gruppiCapitolo, prossimiDelCapitolo, visitaDaProporre } from "@/lib/agents/bni-regole";
 
 /** GET /api/ricerca/bni/capitoli/[id] — la scheda del capitolo con l'ordine dei membri. */
 export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,7 +16,7 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
   const c = t.capitolo;
   const cop = coperturaCapitolo(t.membri);
   const nota = dirigenzaNota(c, t.membri);
-  const prossimi = new Set(c.permesso === "NEGATO" ? [] : prossimiDelCapitolo(t.membri, oggi, nota).map((p) => p.membro.id));
+  const prossimi = new Set(c.permesso === "NEGATO" || capitoloSenza121(c.name) ? [] : prossimiDelCapitolo(t.membri, oggi, nota).map((p) => p.membro.id));
   const extra = await db.bniMembro.findMany({
     where: { id: { in: t.membri.map((m) => m.id) } },
     select: { id: true, company: true, profession: true, lastOneToOneAt: true, next121At: true, conosciutoAt: true },

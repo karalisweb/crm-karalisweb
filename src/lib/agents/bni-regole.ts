@@ -65,6 +65,17 @@ export const RICHIESTE_APERTE = 12;
 export const CAPITOLI_IN_CORSO = 2;
 /** Dopo quanti giorni una richiesta senza risposta non blocca più chi viene dopo. */
 export const GIORNI_SENZA_RISPOSTA = 7;
+/**
+ * Capitoli dove il Pianificatore non chiede 121 (scelta di Alessio, 2026-10-28): l'Atlantide è il
+ * suo, i Visionari li conosce già. Gli inviti fatti da lui di sua iniziativa restano possibili.
+ */
+export const CAPITOLI_SENZA_121 = ["atlantide", "visionari"];
+
+export function capitoloSenza121(nome: string | null | undefined): boolean {
+  const n = norm(nome);
+  return CAPITOLI_SENZA_121.some((c) => n.includes(c));
+}
+
 /** La visita al capitolo si propone quando hai conosciuto questa parte dei membri. */
 export const SOGLIA_VISITA = 1 / 3;
 
