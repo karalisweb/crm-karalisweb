@@ -109,6 +109,9 @@ export const AGENTI_LINKEDIN = ["linkedin_membri", "rete_membro", "decision_make
 
 /** Un errore di un lavoro LinkedIn che vuol dire "LinkedIn ci ha notato": si ferma tutto per 48 ore. */
 export function bloccoLinkedin(errore: string | null | undefined): boolean {
+  // L'avviso "limite mensile di ricerche di profili ... Premium" non è un blocco: LinkedIn nasconde
+  // solo una parte dei risultati, profili e pagine si aprono lo stesso.
+  if (/limite mensile|premium/i.test(errore ?? "")) return false;
   return /captcha|bloccat|blocco|verifica (di sicurezza|dell.identit|dell.account)|security (check|verification)|unusual activity|attivit. insolita|limite (di ricerca|di ricerche|commercial|di uso)|commercial use limit|restrict|sospes/i.test(errore ?? "");
 }
 

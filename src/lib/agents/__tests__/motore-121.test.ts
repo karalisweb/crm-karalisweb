@@ -55,6 +55,7 @@ describe("LinkedIn", () => {
     expect(bloccoLinkedin("Compare un CAPTCHA")).toBe(true);
     expect(bloccoLinkedin("LinkedIn chiede una verifica di sicurezza")).toBe(true);
     expect(bloccoLinkedin("Raggiunto il limite di ricerche commerciali")).toBe(true);
+    expect(bloccoLinkedin('limite di ricerche: LinkedIn mostra "Hai raggiunto il limite mensile di ricerche di profili. Aggiorna a Premium Business"')).toBe(false);
     expect(bloccoLinkedin("Profilo bloccato temporaneamente")).toBe(true);
     expect(bloccoLinkedin("Azienda non trovata")).toBe(false);
     expect(bloccoLinkedin("Sito non verificato, azienda incerta")).toBe(false);
