@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { approfondisci } from "@/lib/agents/arricchimento";
+import { entraSubito } from "@/lib/agents/rete";
 import { KIND_FASCICOLO_BASE } from "@/lib/agents/turno";
 import { motivoDaNota, notaMotivo } from "@/lib/ricerca/scarti";
 import { KIND_DA_CONTATTARE } from "@/lib/ricerca/contattare";
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (status === "APPROVATO") {
     void approfondisci(id).catch((e) => console.error("[decisione] approfondimento fallito:", e));
+    void entraSubito(id).catch((e) => console.error("[decisione] ingresso nel percorso fallito:", e));
   }
   return NextResponse.json({ ok: true, status });
 }

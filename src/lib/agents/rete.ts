@@ -15,7 +15,7 @@ import { budgetDisponibile } from "./costi";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { mezzanotteRoma } from "./bni-regole";
 import { feriale } from "./motore-121";
-import { linkedinPermette } from "./motore";
+import { linkedinPermette, verificaCollegamento } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
   testoContattoDiretto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
@@ -149,6 +149,27 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   // 4) Scaldare chi decide: un lavoro al giorno, nei feriali, dentro il budget LinkedIn.
   r.scaldaAccodato = await accodaScalda(oggi);
   return r;
+}
+
+/**
+ * Dal passo 1 al passo 2 subito, senza aspettare il turno delle 7 o delle 14 (Alessio, 2026-10-28:
+ * "dal passo 1 al passo 2 dobbiamo essere superveloci"). Si chiama quando Alessio approfondisce e quando
+ * arriva il referto di "chi decide": se chi decide c'è l'azienda entra e si sceglie subito il ponte,
+ * altrimenti parte adesso il controllo di chi decide.
+ */
+export async function entraSubito(leadId: string, oggi = new Date()): Promise<"entrata" | "in_verifica" | "no"> {
+  if (await db.lavorazione.findUnique({ where: { leadId }, select: { id: true } })) return "no";
+  const voce = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" }, select: { status: true } });
+  if (voce?.status !== "APPROVATO") return "no";
+  if (!(await db.agentReport.findFirst({ where: { leadId, agent: "decision_maker" }, select: { id: true } }))) {
+    return (await verificaCollegamento(leadId, oggi)) === "IN_VERIFICA" ? "in_verifica" : "no";
+  }
+  const d = await datiAzienda(leadId);
+  if (!d.decisori.length && !d.pontiBni.length && !(await pagineAzienda(leadId)).length) return "no";
+  if ((await db.lavorazione.count({ where: { fase: { in: [...FASI_ATTIVE] } } })) >= capienzaLavorazione(oggi)) return "no";
+  const l = await db.lavorazione.create({ data: { leadId } });
+  await avanzaMappata(l.id, undefined, oggi);
+  return "entrata";
 }
 
 /**

@@ -14,7 +14,7 @@ import { SERVIZI } from "./tipi";
 import { importaMappaBni, importaProfiliMembri, type EsitoMappa } from "./bni";
 import { dopoCollegamento } from "./motore";
 import { noteAlessio } from "./arricchimento";
-import { importaScalda } from "./rete";
+import { entraSubito, importaScalda } from "./rete";
 import { importaAziendeLinkedin, importaAziendeMeta, importaDecisionMaker, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
 /** Quanto vale un referto di browser prima di essere rifatto. */
@@ -234,6 +234,9 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
     db.agentRun.update({ where: { id: run.id }, data: { status: "FATTO", finishedAt: new Date() } }),
   ]);
   // Motore 121: con il referto di "chi decide" l'azienda va in Da decidere (collegata) o resta fuori.
-  if (run.agent === "decision_maker" && run.leadId) await dopoCollegamento(run.leadId);
+  if (run.agent === "decision_maker" && run.leadId) {
+    await dopoCollegamento(run.leadId);
+    await entraSubito(run.leadId).catch((e) => console.error("[browser] ingresso nel percorso fallito:", e));
+  }
   return { ok: true, mappa, importazione };
 }
