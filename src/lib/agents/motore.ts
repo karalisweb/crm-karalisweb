@@ -320,7 +320,7 @@ export async function collegamentoAzienda(leadId: string): Promise<{ stato: Stat
  * sessione scaduta): l'azienda non è "senza collegamento", il controllo si rifà al turno dopo.
  */
 export function fallimentoTecnico(errore: string | null | undefined): boolean {
-  return /permess|approva|chrome|browser|non raggiungibil|nessuna pagina|login|sessione|accesso a linkedin|timeout|scadut|interrott/i.test(errore ?? "");
+  return /permess|approva|chrome|browser|non raggiungibil|nessuna pagina|login|sessione|accesso a linkedin|timeout|scadut|interrott|limite di ricerche|limite mensile|premium/i.test(errore ?? "");
 }
 
 export function collegamentoDaFindings(findings: unknown): { collegata: boolean; inComune: number; diretto: boolean } {
@@ -406,12 +406,14 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
 export async function collegamentiDaVerificare(oggi = new Date(), limite = 6): Promise<{ accodati: number; ricontrolli: number }> {
   let accodati = 0;
   let ricontrolli = 0;
-  const inAttesa = await db.approvalItem.findMany({
-    where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", leadId: { not: null }, lead: { agentReports: { none: { agent: "decision_maker" } } } },
-    orderBy: { createdAt: "asc" },
-    select: { leadId: true },
-    take: 30,
-  });
+  // Prima quelle già approfondite da Alessio: senza "chi decide" non entrano nel Percorso (un controllo
+  // fallito per un permesso di Chrome non si rifaceva mai — 2026-10-28).
+  const senzaChiDecide = { leadId: { not: null }, lead: { agentReports: { none: { agent: "decision_maker" } } } };
+  const [approvate, daDecidere] = await Promise.all([
+    db.approvalItem.findMany({ where: { kind: KIND_FASCICOLO_BASE, status: "APPROVATO", ...senzaChiDecide }, orderBy: { decidedAt: "asc" }, select: { leadId: true }, take: 30 }),
+    db.approvalItem.findMany({ where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", ...senzaChiDecide }, orderBy: { createdAt: "asc" }, select: { leadId: true }, take: 30 }),
+  ]);
+  const inAttesa = [...approvate, ...daDecidere];
   for (const v of inAttesa) {
     if (accodati >= limite) break;
     const prima = await collegamentoAzienda(v.leadId!);
