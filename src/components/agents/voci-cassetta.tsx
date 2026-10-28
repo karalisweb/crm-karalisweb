@@ -194,7 +194,7 @@ export function CorpoCommento({ p }: { p: Record<string, unknown> }) {
   );
 }
 
-/** Al 7° commento: il primo messaggio a chi decide, con WhatsApp, mail, telefono e i suoi profili. */
+/** Al 5° commento: il primo messaggio a chi decide, con WhatsApp, mail, telefono e i suoi profili. */
 export function CorpoContatto({ p }: { p: Record<string, unknown> }) {
   const altri = (["facebook", "instagram"] as const).filter((k) => s(p[k])).map((k) => ({ etichetta: `${NOMI_SOCIAL[k]} di ${s(p.decisore) || "chi decide"}`, url: s(p[k]) }));
   return (

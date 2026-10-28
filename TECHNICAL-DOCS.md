@@ -1669,9 +1669,18 @@ Decisione di Alessio del 2026-10-27 ("ogni giorno un passo avanti"). Nessuna mig
   `fattiOggi` sotto "Da fare adesso" (tolta la riga "Decidi su N aziende"). Dalla v3.64 Oggi mostra
   "Le aziende di oggi" in 3 blocchi (`oggi.contatta/scalda/valida` + `fatte`/`alGiorno`). Nel Percorso: passo 1 con
   `LanciaAdesso` e `CercaTu`, passo 2 con la cerchia stretta (`/api/rete`); su ogni lavorazione "Pausa 3 mesi".
-- 7 commenti sulla stessa piattaforma: `piattaformaPiuCommentata` (rete-regole); `commentiFatti(leadId, piattaforma?)`
+- 5 commenti (da v3.65; prima 7) sulla stessa piattaforma: `piattaformaPiuCommentata` (rete-regole); `commentiFatti(leadId, piattaforma?)`
   conta la piattaforma indicata o la più commentata, non la somma; il lavoro "scalda" resta sulla piattaforma già
   iniziata.
+- **v3.65.0 — ordine per stato, più posti, foglio del contatto.** `passoDi` dà a ogni azienda uno `stato` (chiavi di
+  `STATI` in `percorso-regole.ts`, nell'ordine in cui si mostrano; `ordineStato`); `leggiPercorso` ordina per stato,
+  poi commenti fatti, poi anzianità, e passa `statoNome`; `/percorso` raggruppa con il nome sopra.
+  `AZIENDE_PER_PASSO` 10 → 20 (60 in lavorazione), `COMMENTI_PER_CONTATTO` 7 → 5: il giro `scalda` chiama
+  `dopoCommento` sulle aziende già a quota, così chi era a 5-6 commenti riceve il contatto. Foglio "Cosa dirgli":
+  `GET /api/percorso/[leadId]` (ganci + apertura, riassunti dei referti per area, note di Alessio, commenti da
+  `commenti.ts` `commentiDaLeggere`), componente `components/percorso/cosa-dirgli.tsx`, pulsante sulla card al
+  passo 4. I ganci leggono i commenti fatti (la frase per aprire parte da lì) e `ganciDaRifare` li rifà quando
+  nasce un `RETE_CONTATTO` più recente dei ganci.
 
 ## Seguito del 121 con MSD (v3.60.0)
 

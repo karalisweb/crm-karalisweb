@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Footprints, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
-import { SchedaPercorso, type DatiPercorso } from "@/components/percorso/scheda";
+import { SchedaPercorso, type AziendaPercorso, type DatiPercorso } from "@/components/percorso/scheda";
 import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
 import { CercaTu } from "@/components/ricerca/cerca-tu";
 
@@ -81,7 +81,14 @@ export default function PercorsoPage() {
     carica();
   }, [carica]);
 
-  const nelPasso = (d?.aziende ?? []).filter((a) => a.passo === passo).sort((a, b) => Number(b.tocca === "te") - Number(a.tocca === "te"));
+  // Già in ordine di stato dal server: qui si raggruppano, con il nome dello stato sopra.
+  const nelPasso = (d?.aziende ?? []).filter((a) => a.passo === passo);
+  const gruppi = nelPasso.reduce<{ stato: string; nome: string; aziende: AziendaPercorso[] }[]>((g, a) => {
+    const ultimo = g[g.length - 1];
+    if (ultimo?.stato === a.stato) ultimo.aziende.push(a);
+    else g.push({ stato: a.stato, nome: a.statoNome, aziende: [a] });
+    return g;
+  }, []);
 
   return (
     <div className="space-y-5 min-w-0">
@@ -115,7 +122,12 @@ export default function PercorsoPage() {
 
         {nelPasso.length === 0
           ? <Card><CardContent className="p-4 text-sm text-muted-foreground">Nessuna azienda in questo passo.</CardContent></Card>
-          : <div className="space-y-2">{nelPasso.map((a) => <SchedaPercorso key={a.leadId} a={a} passi={d.passi} onCambio={carica} />)}</div>}
+          : <div className="space-y-4">{gruppi.map((g) => (
+            <div key={g.stato} className="space-y-2">
+              <h3 className="text-sm font-semibold">{g.nome} <span className="text-muted-foreground font-normal">({g.aziende.length})</span></h3>
+              {g.aziende.map((a) => <SchedaPercorso key={a.leadId} a={a} passi={d.passi} onCambio={carica} />)}
+            </div>
+          ))}</div>}
 
         {passo === 2 && <Cerchia />}
 

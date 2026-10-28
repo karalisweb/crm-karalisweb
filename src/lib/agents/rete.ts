@@ -29,7 +29,7 @@ export const KIND_RETE_DIRETTO = "RETE_DIRETTO";
 export const KIND_RETE_PROMEMORIA = "RETE_PROMEMORIA";
 // Il nome resta per i commenti già in Cassetta: dal 2026-10-25 vale per le pagine Facebook, Instagram e LinkedIn.
 export const KIND_COMMENTO = "COMMENTO_LINKEDIN";
-/** Al 7° commento: il contatto diretto (WhatsApp, mail o telefono). */
+/** Al 5° commento: il contatto diretto (WhatsApp, mail o telefono). */
 export const KIND_RETE_CONTATTO = "RETE_CONTATTO";
 /** Chi decide non si trova: il messaggio privato alla pagina per arrivare a lui. */
 export const KIND_RETE_PAGINA = "RETE_PAGINA";
@@ -321,7 +321,7 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
 export async function decisioneRete(voceId: string, decisione: "APPROVATO" | "SCARTATO"): Promise<void> {
   const v = await db.approvalItem.findUnique({ where: { id: voceId }, select: { kind: true, payload: true } });
   if (!v || !KINDS_RETE.includes(v.kind)) return;
-  // Un commento fatto: si conta; al 7° parte il contatto diretto.
+  // Un commento fatto: si conta; al 5° parte il contatto diretto.
   if (v.kind === KIND_COMMENTO) {
     const leadId = (await db.approvalItem.findUnique({ where: { id: voceId }, select: { leadId: true } }))?.leadId;
     if (decisione === "APPROVATO" && leadId) await dopoCommento(leadId);
@@ -365,10 +365,14 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
     if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_COMMENTO, status: "IN_ATTESA" }, select: { id: true } })) continue;
     const fattiQui = await commentiDi(l.leadId);
     const giaFatti = piattaformaPiuCommentata(fattiQui);
-    if ((giaFatti?.fatti ?? 0) >= COMMENTI_PER_CONTATTO) continue;
+    if ((giaFatti?.fatti ?? 0) >= COMMENTI_PER_CONTATTO) {
+      // Commenti già bastanti (anche perché da 7 sono scesi a 5): il contatto va in Cassetta, se non c'è.
+      await dopoCommento(l.leadId, oggi);
+      continue;
+    }
     const pagine = await pagineAzienda(l.leadId);
     if (!pagine.length) continue;
-    // I 7 commenti vanno sulla stessa piattaforma: si resta dove si è già cominciato.
+    // I 5 commenti vanno sulla stessa piattaforma: si resta dove si è già cominciato.
     const iniziata = giaFatti && pagine.some((p) => p.piattaforma === giaFatti.piattaforma) ? giaFatti.piattaforma : null;
     const piattaforma = iniziata ?? (await piattaformaScelta(l.leadId, pagine, oggi)) ?? pagine[0].piattaforma;
     const pagina = pagine.find((p) => p.piattaforma === piattaforma) ?? pagine[0];
@@ -476,7 +480,7 @@ export async function loConosco(nome: string, conosco: boolean, lavorazioneId?: 
   if (lavorazioneId) await avanzaMappata(lavorazioneId);
 }
 
-// ─── Entrare in relazione: le pagine, i commenti, il contatto al 7° (Alessio, 2026-10-25) ──────
+// ─── Entrare in relazione: le pagine, i commenti, il contatto al 5° (Alessio, 2026-10-25) ──────
 
 const NOMI: Record<Piattaforma, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -524,7 +528,7 @@ async function commentiDi(leadId: string): Promise<{ piattaforma?: unknown; post
 
 /**
  * Quanti commenti contano per il contatto: quelli sulla piattaforma indicata, o sulla più commentata. Si
- * contano per piattaforma, non sommati (Alessio, 2026-10-27): il contatto parte al 7° sulla stessa.
+ * contano per piattaforma, non sommati (Alessio, 2026-10-27): il contatto parte al 5° sulla stessa.
  */
 export async function commentiFatti(leadId: string, piattaforma?: Piattaforma): Promise<number> {
   const tutti = await commentiDi(leadId);
@@ -552,7 +556,7 @@ export async function segnaCommento(leadId: string, piattaforma: Piattaforma): P
   return { fatti: await commentiFatti(leadId), contatto };
 }
 
-/** Dopo ogni commento: al 7° il contatto diretto va in Cassetta (una volta sola). */
+/** Dopo ogni commento: al 5° il contatto diretto va in Cassetta (una volta sola). */
 export async function dopoCommento(leadId: string, oggi = new Date()): Promise<boolean> {
   if ((await commentiFatti(leadId)) < COMMENTI_PER_CONTATTO) return false;
   const gia = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_RETE_CONTATTO }, select: { id: true } });

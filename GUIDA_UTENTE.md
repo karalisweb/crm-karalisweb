@@ -76,10 +76,15 @@ Menu → **Percorso**, la prima voce. Una pagina sola per far avanzare le aziend
 2. **Chi me la presenta**: la conosci tu, oppure un ponte forte (un membro BNI con cui hai fatto un 121, o
    un contatto che hai segnato "Lo conosco") te la presenta. Qui rispondi "Lo conosco"/"No" e mandi il
    messaggio al ponte.
-3. **In riscaldamento**: nessuno te la presenta. Commenti i post della pagina dell'azienda: **7 commenti sulla
+3. **In riscaldamento**: nessuno te la presenta. Commenti i post della pagina dell'azienda: **5 commenti sulla
    stessa piattaforma** (Facebook, Instagram o LinkedIn: non si sommano).
-4. **Contatto**: scrivi a chi decide (al 7° commento, o subito se lo conosci tu), oppure fissi l'incontro se te
-   l'hanno presentata.
+4. **Contatto**: scrivi a chi decide (al 5° commento, o subito se lo conosci tu), oppure fissi l'incontro se te
+   l'hanno presentata. Prima di scrivere premi **Cosa dirgli**: un foglio con la frase per aprire, i 3 ganci con
+   le prove, la scheda tecnica (il sito, se si fa trovare su Google, cosa comunica, pubblicità), le tue note e i
+   commenti che hai fatto sulle loro pagine.
+
+In ogni passo le aziende sono **raggruppate per stato** (per esempio nel passo 1: da decidere, chi decide da
+trovare, in analisi, controllo del collegamento), prima quelle dove tocca a te. Ogni passo tiene fino a 20 aziende.
 
 Ogni azienda mostra **una cosa sola da fare** e il pulsante per farla (il testo del messaggio è già lì, con
 "Copia il testo"). **Le aziende di oggi** sono nella pagina **Oggi**, in tre righe: **2 da contattare** (scrivi a

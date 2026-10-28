@@ -33,12 +33,12 @@ describe("passo 2 — Chi me la presenta", () => {
 describe("passo 3 — In riscaldamento", () => {
   it("commento in Cassetta, con il conto sulla piattaforma", () =>
     expect(passo({ lav: lav({ strada: "SCALDARE" }), commenti: { piattaforma: "facebook", fatti: 3 }, voci: [{ id: "c", kind: "COMMENTO_LINKEDIN", payload: { commento: "Bello!", post: "https://facebook.com/x/1" } }] }))
-      .toMatchObject({ passo: 3, tocca: "te", azione: "cassetta", cosa: "Commenta il post (3 di 7 su Facebook)" }));
+      .toMatchObject({ passo: 3, tocca: "te", azione: "cassetta", cosa: "Commenta il post (3 di 5 su Facebook)" }));
   it("nessun commento pronto: il CRM cerca il post", () => expect(passo({ lav: lav({ strada: "SCALDARE" }) })).toMatchObject({ passo: 3, tocca: "crm" }));
 });
 
 describe("passo 4 — Contatto", () => {
-  it("al 7° commento: scrivi a chi decide", () =>
+  it("al 5° commento: scrivi a chi decide", () =>
     expect(passo({ lav: lav({ strada: "SCALDARE" }), voci: [{ id: "k", kind: "RETE_CONTATTO", payload: { messaggio: "Ciao" } }] })).toMatchObject({ passo: 4, tocca: "te", azione: "cassetta" }));
   it("lo conosci tu: si salta dal 1 al 4", () =>
     expect(passo({ lav: lav({ fase: "PONTE_SCELTO", strada: "DIRETTO" }), voci: [{ id: "d", kind: "RETE_DIRETTO", payload: {} }] })).toMatchObject({ passo: 4, tocca: "te" }));
@@ -79,7 +79,7 @@ describe("le 3 cose di oggi", () => {
   });
 });
 
-describe("i 7 commenti si contano sulla stessa piattaforma", () => {
+describe("i 5 commenti si contano sulla stessa piattaforma", () => {
   it("non si sommano le piattaforme", () => {
     const c = [...Array(4)].map(() => ({ piattaforma: "facebook" })).concat([...Array(3)].map(() => ({ piattaforma: "instagram" })));
     expect(piattaformaPiuCommentata(c)).toEqual({ piattaforma: "facebook", fatti: 4 });

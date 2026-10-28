@@ -24,7 +24,7 @@ import { RETI_SOCIAL, leveDaNote, noteDaReferti, type NoteAlessio, type ReteSoci
 import { siglaIndirizzo } from "@/lib/ricerca/regole";
 import { refertiValidi } from "./turno";
 import { collegamentiDaVerificare, linkedinPermette, statoLinkedinOggi, studiaMembri, verificaCollegamento } from "./motore";
-import { turnoRete, type RiepilogoRete } from "./rete";
+import { KIND_RETE_CONTATTO, turnoRete, type RiepilogoRete } from "./rete";
 
 /** Aziende al massimo in un giro veloce (le 5 al giorno della ricerca, più quelle aggiunte a mano). */
 export const GIRO_VELOCE_PER_TURNO = 8;
@@ -133,7 +133,10 @@ export async function giroVeloce(leadId: string, oggi = new Date()): Promise<{ f
   return { fatti, falliti, proposta };
 }
 
-/** Le frasi si rifanno quando arriva un dato più recente (un agente rilanciato, la parte dal Mac). */
+/**
+ * Le frasi si rifanno quando arriva un dato più recente (un agente rilanciato, la parte dal Mac) e quando
+ * dopo i commenti è ora del contatto: così la frase per aprire parte dai commenti fatti.
+ */
 async function ganciDaRifare(oggi: Date): Promise<number> {
   const approvate = await db.lead.findMany({
     where: { approvalItems: { some: { kind: KIND_FASCICOLO_BASE, status: "APPROVATO" } }, agentReports: { some: { agent: "ganci" } } },
@@ -142,11 +145,14 @@ async function ganciDaRifare(oggi: Date): Promise<number> {
   });
   let rifatti = 0;
   for (const { id } of approvate) {
-    const [ganci, browser] = await Promise.all([
+    const [ganci, browser, contatto] = await Promise.all([
       db.agentReport.findFirst({ where: { leadId: id, agent: "ganci" }, orderBy: { collectedAt: "desc" }, select: { collectedAt: true } }),
       db.agentReport.findFirst({ where: { leadId: id, agent: { not: "ganci" } }, orderBy: { collectedAt: "desc" }, select: { collectedAt: true } }),
+      db.approvalItem.findFirst({ where: { leadId: id, kind: KIND_RETE_CONTATTO }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
     ]);
-    if (!ganci || !browser || browser.collectedAt <= ganci.collectedAt) continue;
+    const datoNuovo = !!browser && !!ganci && browser.collectedAt > ganci.collectedAt;
+    const oraDelContatto = !!contatto && !!ganci && contatto.createdAt > ganci.collectedAt;
+    if (!datoNuovo && !oraDelContatto) continue;
     const l = await db.lead.findUnique({ where: { id }, select: SELEZIONE });
     const azienda = l && aziendaContesto(l);
     if (!azienda) continue;

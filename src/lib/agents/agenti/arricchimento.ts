@@ -20,6 +20,7 @@ import type { AgenteEseguibile, Leva, Prova } from "../tipi";
 import { trovaSito } from "@/lib/ricerca/trova-sito";
 import { fotografaSito } from "../fotografo";
 import { norm } from "../bni-regole";
+import { commentiDaLeggere } from "../commenti";
 
 // ─── Trova sito ────────────────────────────────────────────────────────────
 
@@ -523,9 +524,14 @@ export const agenteGanci: AgenteEseguibile = {
     const impressioni = Object.entries(note.impressioni).map(([k, t]) => `- ${SEZIONI_IMPRESSIONI[k as SezioneImpressione]?.titolo ?? k}: ${t}`);
     const social = Object.entries(note.social).map(([k, u]) => `- ${k}: ${u} (trovata da Alessio: è quella giusta)`);
     const diAlessio = impressioni.length || social.length ? `\n\nQUELLO CHE HA VISTO ALESSIO DI PERSONA:\n${[...impressioni, ...social].join("\n")}` : "";
+    // I commenti fatti sulle loro pagine: il titolare li ha visti, la prima frase parte da lì (Alessio, 2026-10-28).
+    const commenti = (await commentiDaLeggere(ctx.lead.id)).filter((c) => c.commento || c.estratto);
+    const suiPost = commenti.length
+      ? `\n\nI COMMENTI CHE ALESSIO HA GIÀ FATTO SULLE LORO PAGINE (il titolare li ha visti):\n${commenti.map((c) => `- ${c.piattaforma ?? "social"}: post "${c.estratto ?? "?"}" → commento di Alessio: "${c.commento ?? "?"}"`).join("\n")}`
+      : "";
     const ai = await chiediJSON<RispostaGanci>({
-      sistema: `${REGOLE_COMUNI}\n\nScegli i 3 ganci più forti per la prima telefonata di Alessio al titolare. Preferisci i fatti con un numero o un confronto con i concorrenti, quelli che il titolare può verificare da solo e che toccano i clienti persi. Scarta i consigli generici. Usa SOLO le leve della lista e riporta ogni numero con le sue condizioni (es. "nel test con 4G lento"): il titolare deve poterlo verificare e trovarlo vero.${diAlessio ? ` Le leve [alessio] e le note di Alessio le ha scritte lui guardando l'azienda di persona: valgono più di quelle degli agenti. Se una nota dice che un dato degli agenti è sbagliato (es. il sito o una pagina social non è loro), scarta le leve su quel dato. Almeno un gancio, o la frase per aprire, deve tenere conto di quello che ha scritto Alessio.` : ""}`,
-      testo: `Azienda: ${ctx.lead.name}${ctx.lead.category ? ` (${ctx.lead.category})` : ""}, ${ctx.lead.citta ?? ""}\n\nCOSA HANNO TROVATO GLI AGENTI:\n${riassunti}${diAlessio}\n\nLEVE:\n${lista}`,
+      sistema: `${REGOLE_COMUNI}\n\nScegli i 3 ganci più forti per la prima telefonata di Alessio al titolare. Preferisci i fatti con un numero o un confronto con i concorrenti, quelli che il titolare può verificare da solo e che toccano i clienti persi. Scarta i consigli generici. Usa SOLO le leve della lista e riporta ogni numero con le sue condizioni (es. "nel test con 4G lento"): il titolare deve poterlo verificare e trovarlo vero.${diAlessio ? ` Le leve [alessio] e le note di Alessio le ha scritte lui guardando l'azienda di persona: valgono più di quelle degli agenti. Se una nota dice che un dato degli agenti è sbagliato (es. il sito o una pagina social non è loro), scarta le leve su quel dato. Almeno un gancio, o la frase per aprire, deve tenere conto di quello che ha scritto Alessio.` : ""}${suiPost ? " Alessio ha già commentato i loro post: la frase per aprire parte da lì (un post o un commento preciso) e solo dopo porta il gancio più forte." : ""}`,
+      testo: `Azienda: ${ctx.lead.name}${ctx.lead.category ? ` (${ctx.lead.category})` : ""}, ${ctx.lead.citta ?? ""}\n\nCOSA HANNO TROVATO GLI AGENTI:\n${riassunti}${diAlessio}${suiPost}\n\nLEVE:\n${lista}`,
       schema: SCHEMA_GANCI,
     });
     const scelti = ai.dati.ganci

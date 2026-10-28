@@ -14,7 +14,7 @@ const Schema = z.discriminatedUnion("azione", [
 /**
  * POST /api/ricerca/aziende/[id]/relazione — entrare in relazione dalla scheda:
  *   piattaforma      → Alessio sceglie dove commentare la pagina dell'azienda;
- *   commento         → "Ho commentato": conta come un commento (al 7° il contatto diretto va in Cassetta);
+ *   commento         → "Ho commentato": conta come un commento (al 5° il contatto diretto va in Cassetta);
  *   messaggio_pagina → prepara il messaggio privato alla pagina (chi decide non si sa).
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

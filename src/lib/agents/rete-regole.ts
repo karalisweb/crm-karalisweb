@@ -11,8 +11,8 @@ import { norm } from "./bni-regole";
 
 // ─── Quante aziende in lavorazione ──────────────────────────────────────────
 
-/** Ogni passo punta a 10 aziende (Alessio, 2026-10-28): chi me la presenta, riscaldamento, contatto = 30 posti. */
-export const AZIENDE_PER_PASSO = 10;
+/** Ogni passo punta a 20 aziende (Alessio, 2026-10-28: prima 10, troppo poche da scaldare): 60 posti. */
+export const AZIENDE_PER_PASSO = 20;
 export const INIZIO_RETE = new Date("2026-10-20T00:00:00+02:00");
 export function capienzaLavorazione(_oggi?: Date): number {
   return AZIENDE_PER_PASSO * 3;
@@ -176,9 +176,10 @@ export function testoPromemoria(ponte: string, decisore: string): string {
 
 /**
  * Si commenta la PAGINA dell'azienda (la leggono anche i concorrenti); il CRM propone Facebook, Instagram e
- * LinkedIn con quanto pubblicano, Alessio sceglie. Al 7° commento si contatta direttamente chi decide.
+ * LinkedIn con quanto pubblicano, Alessio sceglie. Al 5° commento si contatta direttamente chi decide
+ * (Alessio, 2026-10-28: prima 7, troppo tempo per scaldarle).
  */
-export const COMMENTI_PER_CONTATTO = 7;
+export const COMMENTI_PER_CONTATTO = 5;
 export const PIATTAFORME = ["facebook", "instagram", "linkedin"] as const;
 export type Piattaforma = (typeof PIATTAFORME)[number];
 export const NOMI_PIATTAFORMA: Record<Piattaforma, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
@@ -216,7 +217,7 @@ export function frequenzaTesto(p: Pick<PaginaSocial, "postUltimi3Mesi" | "ultimo
 }
 
 /**
- * I commenti fatti contano per piattaforma: il contatto parte al 7° sulla STESSA (Alessio, 2026-10-27), non
+ * I commenti fatti contano per piattaforma: il contatto parte al 5° sulla STESSA (Alessio, 2026-10-27), non
  * sommando Facebook, Instagram e LinkedIn. Torna la piattaforma con più commenti (a parità, la prima vista).
  */
 export function piattaformaPiuCommentata(commenti: { piattaforma?: unknown; post?: unknown }[]): { piattaforma: Piattaforma; fatti: number } | null {
@@ -240,7 +241,7 @@ export function piattaformaConsigliata(pagine: PaginaSocial[], oggi: Date): Piat
   return [...(vive.length ? vive : pagine)].sort((a, b) => voto(b) - voto(a))[0]?.piattaforma ?? null;
 }
 
-/** Al 7° commento: il primo messaggio diretto a chi decide (o all'azienda, se non si sa chi è). */
+/** Al 5° commento: il primo messaggio diretto a chi decide (o all'azienda, se non si sa chi è). */
 export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, motivo: string | null): string {
   const saluto = decisore ? `Ciao ${nomeProprio(decisore)}` : "Buongiorno";
   const dove = piattaforma ? ` su ${NOMI_PIATTAFORMA[piattaforma]}` : "";

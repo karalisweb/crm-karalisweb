@@ -259,7 +259,7 @@ function SocialTuoi() {
 
 /**
  * Entrare in relazione (Alessio, 2026-10-25): si commenta la PAGINA dell'azienda dove pubblica di più;
- * al 7° commento si contatta chi decide. Se chi decide non si sa, si scrive alla pagina.
+ * al 5° commento si contatta chi decide. Se chi decide non si sa, si scrive alla pagina.
  */
 function EntrareInRelazione({ r, id, aggiorna }: { r: Relazione; id: string; aggiorna: () => void }) {
   const [occupato, setOccupato] = useState<string | null>(null);

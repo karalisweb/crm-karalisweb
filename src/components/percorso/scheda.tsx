@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { ExternalLink, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { CosaDirgli } from "./cosa-dirgli";
 
 export type Azione =
   | { tipo: "decidi" }
@@ -16,7 +17,7 @@ export type Azione =
 
 export interface AziendaPercorso {
   leadId: string; lavorazioneId: string | null; nome: string; zona: string | null; categoria: string | null;
-  passo: 1 | 2 | 3 | 4; tocca: "te" | "crm" | "attesa"; cosa: string; azione: Azione | null;
+  passo: 1 | 2 | 3 | 4; tocca: "te" | "crm" | "attesa"; stato: string; statoNome: string; cosa: string; azione: Azione | null;
 }
 export type CosaDiOggi = "contatta" | "scalda" | "valida";
 export interface PassoPercorso { n: 1 | 2 | 3 | 4; nome: string; spiega: string; quante: number; toccaATe: number }
@@ -45,6 +46,8 @@ async function chiama(url: string, metodo: string, body?: unknown): Promise<bool
 /** Un'azienda del percorso: il passo, chi deve muoversi e la cosa da fare (v3.62). Usata in Percorso e in Oggi. */
 export function SchedaPercorso({ a, passi, onCambio }: { a: AziendaPercorso; passi: PassoPercorso[]; onCambio: () => void }) {
   const [inCorso, setInCorso] = useState<string | null>(null);
+  // Al contatto il foglio "Cosa dirgli": ganci, scheda tecnica e commenti fatti (v3.65).
+  const [foglio, setFoglio] = useState(false);
   const fai = async (chiave: string, url: string, metodo: string, body: unknown, ok: string) => {
     setInCorso(chiave);
     if (await chiama(url, metodo, body)) {
@@ -69,6 +72,12 @@ export function SchedaPercorso({ a, passi, onCambio }: { a: AziendaPercorso; pas
       </div>
       {(a.zona || a.categoria) && <div className="text-xs text-muted-foreground break-words">{[a.categoria, a.zona].filter(Boolean).join(" · ")}</div>}
       <div className="text-sm">{a.cosa}</div>
+      {a.passo === 4 && (
+        <Button size="sm" variant={foglio ? "secondary" : "outline"} className="h-8 text-xs" onClick={() => setFoglio((v) => !v)}>
+          <FileText className="h-3 w-3 mr-1" />{foglio ? "Chiudi il foglio" : "Cosa dirgli"}
+        </Button>
+      )}
+      {foglio && <CosaDirgli leadId={a.leadId} />}
 
       {x?.tipo === "cassetta" && x.testo && (
         <div className="rounded-md border bg-muted/40 p-2 text-sm whitespace-pre-wrap break-words">{x.testo}</div>

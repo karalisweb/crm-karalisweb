@@ -10,7 +10,7 @@ import { mezzanotteRoma } from "./bni-regole";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { KIND_COMMENTO, KINDS_RETE, cerchiaNomi, datiAzienda } from "./rete";
 import { nomiDaConfermare, piattaformaPiuCommentata } from "./rete-regole";
-import { AL_GIORNO, PASSI, coseDiOggi, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
+import { AL_GIORNO, PASSI, STATI, coseDiOggi, ordineStato, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
 
 export interface AziendaNelPercorso {
   leadId: string;
@@ -20,6 +20,9 @@ export interface AziendaNelPercorso {
   categoria: string | null;
   passo: Passo;
   tocca: Tocca;
+  /** Lo stato nel passo e come si chiama: il Percorso le raggruppa così, nell'ordine di STATI. */
+  stato: string;
+  statoNome: string;
   cosa: string;
   azione: Azione | null;
 }
@@ -144,11 +147,11 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
 
   const scheda = (r: Riga): AziendaNelPercorso => {
     const e = r.esito as Extract<Esito, { dentro: true }>;
-    return { leadId: r.leadId, lavorazioneId: r.lavorazioneId, nome: r.nome, zona: r.zona, categoria: r.categoria, passo: e.passo, tocca: e.tocca, cosa: e.cosa, azione: e.azione };
+    return { leadId: r.leadId, lavorazioneId: r.lavorazioneId, nome: r.nome, zona: r.zona, categoria: r.categoria, passo: e.passo, tocca: e.tocca, stato: e.stato, statoNome: STATI[e.stato], cosa: e.cosa, azione: e.azione };
   };
-  // Prima quelle dove tocca ad Alessio, poi le già commentate (più commenti in alto), poi le altre (Alessio, 2026-10-28).
-  const tocca = (r: Riga) => ((r.esito as Extract<Esito, { dentro: true }>).tocca === "te" ? 0 : 1);
-  const aziende = righe.sort((a, b) => tocca(a) - tocca(b) || b.commenti - a.commenti || a.da - b.da).map(scheda);
+  // Per stato (Alessio, 2026-10-28), che mette prima quelle dove tocca a lui; poi le già commentate (più commenti in alto).
+  const stato = (r: Riga) => ordineStato((r.esito as Extract<Esito, { dentro: true }>).stato);
+  const aziende = righe.sort((a, b) => stato(a) - stato(b) || b.commenti - a.commenti || a.da - b.da).map(scheda);
   return {
     passi: PASSI.map((p) => ({ ...p, quante: aziende.filter((a) => a.passo === p.n).length, toccaATe: aziende.filter((a) => a.passo === p.n && a.tocca === "te").length })),
     oggi: Object.fromEntries(Object.entries(coseDiOggi(righe, fatte)).map(([c, r]) => [c, r.map(scheda)])) as Percorso["oggi"],

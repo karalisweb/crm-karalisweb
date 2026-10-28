@@ -13,6 +13,18 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.65.0] - 2026-10-28
+
+### Changed
+- **Aziende in ordine di stato.** Alessio: "voglio che siano ordinate per stato". In ogni passo del Percorso le aziende sono raggruppate (da decidere, chi decide da trovare, in analisi, controllo del collegamento…), prima quelle dove tocca a te.
+- **Più aziende da scaldare.** Ogni passo tiene 20 aziende invece di 10 (60 in lavorazione).
+- **Si scalda prima.** Il contatto parte al 5° commento invece che al 7°; chi aveva già 5 o 6 commenti riceve il messaggio di contatto al prossimo giro.
+
+### Added
+- **Il foglio "Cosa dirgli"** al passo Contatto: la frase per aprire, i 3 ganci con le prove, la scheda tecnica (il sito, se si fa trovare su Google, cosa comunica, pubblicità), le tue note e i commenti che hai fatto. I ganci ora leggono i commenti e si rifanno quando è ora del contatto, così la frase per aprire parte da lì.
+
+---
+
 ## [3.64.0] - 2026-10-28
 
 ### Changed

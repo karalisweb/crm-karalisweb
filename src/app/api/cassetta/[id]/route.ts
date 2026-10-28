@@ -19,7 +19,7 @@ import { decisioneMsd } from "@/lib/agents/msd";
  *   PRESENTAZIONE_BNI → "mandato": la richiesta di presentazione al membro è partita;
  *   DOPO_121        → "fatto" (il promemoria del vocale);
  *   RETE_PONTE / RETE_DIRETTO → "mandato" (presentazione chiesta / contatto scritto); "non ora" = ponte successivo;
- *   RETE_PROMEMORIA → "mandato"; COMMENTO_LINKEDIN → "fatto" (al 7° il contatto diretto);
+ *   RETE_PROMEMORIA → "mandato"; COMMENTO_LINKEDIN → "fatto" (al 5° il contatto diretto);
  *   PROPOSTA_MSD → "mandata" (membro in "Offerta inviata", richiamo fra 7 giorni);
  *   MSD_FUORI_TARGET → "fai la proposta lo stesso"; RICHIAMO_MSD → "mandato" (poi in attesa).
  */

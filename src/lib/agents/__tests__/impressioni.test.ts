@@ -19,7 +19,7 @@ describe("i 3 ganci con le impressioni", () => {
   it("passano all'AI le note di Alessio e la regola della precedenza", async () => {
     const { vi } = await import("vitest");
     let chiesto = { sistema: "", testo: "" };
-    vi.doMock("@/lib/db", () => ({ db: {} }));
+    vi.doMock("@/lib/db", () => ({ db: { approvalItem: { findMany: async () => [] } } }));
     vi.doMock("../ai", async (orig) => ({
       ...(await orig<typeof import("../ai")>()),
       chiediJSON: async (p: { sistema: string; testo: string }) => {

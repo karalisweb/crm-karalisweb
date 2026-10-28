@@ -73,9 +73,9 @@ describe("agenda e capienza", () => {
     expect(settimanaConPosto([2, 8, 8])).toBe(0);
     expect(settimanaConPosto([8, 9, 8])).toBeNull();
   });
-  it("10 aziende per passo, 30 in lavorazione", () => {
-    expect(capienzaLavorazione(new Date("2026-10-25T10:00:00+02:00"))).toBe(30);
-    expect(capienzaLavorazione(new Date("2026-11-25T10:00:00+01:00"))).toBe(30);
+  it("20 aziende per passo, 60 in lavorazione", () => {
+    expect(capienzaLavorazione(new Date("2026-10-25T10:00:00+02:00"))).toBe(60);
+    expect(capienzaLavorazione(new Date("2026-11-25T10:00:00+01:00"))).toBe(60);
   });
   it("il messaggio al ponte usa il nome proprio e non cita il cliente del caso", () => {
     const t = testoRichiestaPonte("Giorgio Fodde", "Mario Rossi", "Accadueo", "Abbiamo aiutato un'azienda di piscine in Sardegna a ricevere richieste migliori.");
