@@ -340,7 +340,10 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
   const aziende = [];
   for (const l of lav) {
     if (aziende.length >= DECISORI_DA_SCALDARE) break;
-    const giaFatti = piattaformaPiuCommentata(await commentiDi(l.leadId));
+    // Un commento al giorno per azienda: se quello di ieri aspetta ancora Alessio, non se ne aggiunge un altro.
+    if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_COMMENTO, status: "IN_ATTESA" }, select: { id: true } })) continue;
+    const fattiQui = await commentiDi(l.leadId);
+    const giaFatti = piattaformaPiuCommentata(fattiQui);
     if ((giaFatti?.fatti ?? 0) >= COMMENTI_PER_CONTATTO) continue;
     const pagine = await pagineAzienda(l.leadId);
     if (!pagine.length) continue;
@@ -348,7 +351,8 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
     const iniziata = giaFatti && pagine.some((p) => p.piattaforma === giaFatti.piattaforma) ? giaFatti.piattaforma : null;
     const piattaforma = iniziata ?? (await piattaformaScelta(l.leadId, pagine, oggi)) ?? pagine[0].piattaforma;
     const pagina = pagine.find((p) => p.piattaforma === piattaforma) ?? pagine[0];
-    aziende.push({ leadId: l.leadId, azienda: l.lead.name, citta: l.lead.address, decisore: l.decisore, piattaforma: pagina.piattaforma, pagina: pagina.url });
+    const giaCommentati = fattiQui.map((c) => c.post).filter((x): x is string => typeof x === "string");
+    aziende.push({ leadId: l.leadId, azienda: l.lead.name, citta: l.lead.address, decisore: l.decisore, piattaforma: pagina.piattaforma, pagina: pagina.url, giaCommentati });
   }
   if (!aziende.length) return false;
   const input = { aziende };
@@ -371,6 +375,8 @@ export async function importaScalda(findings: Record<string, unknown>): Promise<
     if (!leadId || !commento || !post || !piattaforma) continue;
     const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
     if (!lead) continue;
+    // Mai due volte lo stesso post (ora si commentano anche i post precedenti).
+    if (await db.approvalItem.findFirst({ where: { leadId, kind: KIND_COMMENTO, status: { in: ["IN_ATTESA", "APPROVATO"] }, payload: { path: ["post"], equals: post } }, select: { id: true } })) continue;
     const fatti = await commentiFatti(leadId, piattaforma);
     await db.approvalItem.create({
       data: {
