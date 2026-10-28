@@ -134,8 +134,9 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
     const e = r.esito as Extract<Esito, { dentro: true }>;
     return { leadId: r.leadId, lavorazioneId: r.lavorazioneId, nome: r.nome, zona: r.zona, categoria: r.categoria, passo: e.passo, tocca: e.tocca, cosa: e.cosa, azione: e.azione };
   };
-  // Prima quelle già commentate (più commenti in alto), poi le altre (Alessio, 2026-10-28).
-  const aziende = righe.sort((a, b) => b.commenti - a.commenti || a.da - b.da).map(scheda);
+  // Prima quelle dove tocca ad Alessio, poi le già commentate (più commenti in alto), poi le altre (Alessio, 2026-10-28).
+  const tocca = (r: Riga) => ((r.esito as Extract<Esito, { dentro: true }>).tocca === "te" ? 0 : 1);
+  const aziende = righe.sort((a, b) => tocca(a) - tocca(b) || b.commenti - a.commenti || a.da - b.da).map(scheda);
   return {
     passi: PASSI.map((p) => ({ ...p, quante: aziende.filter((a) => a.passo === p.n).length, toccaATe: aziende.filter((a) => a.passo === p.n && a.tocca === "te").length })),
     oggi: passoDiOggi(righe, PASSI_DI_OGGI).map(scheda),
