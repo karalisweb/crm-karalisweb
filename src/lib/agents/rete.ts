@@ -14,7 +14,7 @@ import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { mezzanotteRoma } from "./bni-regole";
-import { RISERVA_SCALDA, feriale } from "./motore-121";
+import { feriale } from "./motore-121";
 import { linkedinPermette } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
@@ -36,9 +36,10 @@ export const KIND_RETE_PAGINA = "RETE_PAGINA";
 export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA];
 
 /** Decisori al giorno da scaldare con i commenti (letture LinkedIn). */
-const DECISORI_DA_SCALDARE = RISERVA_SCALDA;
-/** Commenti proposti in Cassetta al giorno: 1-2, non di più. */
-const COMMENTI_AL_GIORNO = 2;
+/** Aziende lette dal lavoro "scalda": un po' più dei commenti, perché chi non ha post recenti si salta. */
+const DECISORI_DA_SCALDARE = 14;
+/** Commenti proposti in Cassetta al giorno (Alessio, 2026-10-28: da 2 a 10). */
+const COMMENTI_AL_GIORNO = 10;
 
 // ─── La cerchia ─────────────────────────────────────────────────────────────
 
@@ -357,7 +358,7 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
   return true;
 }
 
-/** Il referto del lavoro "scalda": 1-2 commenti in Cassetta, e chi ha già dato un segnale diventa "scaldato". */
+/** Il referto del lavoro "scalda": fino a 10 commenti in Cassetta, e chi ha già dato un segnale diventa "scaldato". */
 export async function importaScalda(findings: Record<string, unknown>): Promise<{ commenti: number; scaldate: number }> {
   const e = { commenti: 0, scaldate: 0 };
   const commenti = Array.isArray(findings.commenti) ? (findings.commenti as Record<string, unknown>[]) : [];

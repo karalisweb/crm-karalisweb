@@ -11,10 +11,11 @@ import { norm } from "./bni-regole";
 
 // ─── Quante aziende in lavorazione ──────────────────────────────────────────
 
-/** 15 il primo mese, 30 dal secondo (decisione di Alessio del 2026-10-20). */
+/** Ogni passo punta a 10 aziende (Alessio, 2026-10-28): chi me la presenta, riscaldamento, contatto = 30 posti. */
+export const AZIENDE_PER_PASSO = 10;
 export const INIZIO_RETE = new Date("2026-10-20T00:00:00+02:00");
-export function capienzaLavorazione(oggi: Date): number {
-  return oggi.getTime() < INIZIO_RETE.getTime() + 30 * 86400_000 ? 15 : 30;
+export function capienzaLavorazione(_oggi?: Date): number {
+  return AZIENDE_PER_PASSO * 3;
 }
 
 /** Le fasi che occupano un posto fra le 15 (30): con l'incontro l'azienda esce ed entra la prossima. */

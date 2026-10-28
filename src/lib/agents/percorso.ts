@@ -91,7 +91,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   for (const c of commenti) commentiDi.set(c.leadId!, [...(commentiDi.get(c.leadId!) ?? []), (c.payload ?? {}) as { piattaforma?: unknown; post?: unknown }]);
 
   const cerchia = lavorazioni.some((l) => l.fase === "MAPPATA" && l.strada === "DA_CONFERMARE") ? await cerchiaNomi() : [];
-  type Riga = { esito: Esito; da: number; leadId: string; lavorazioneId: string | null; nome: string; zona: string | null; categoria: string | null };
+  type Riga = { esito: Esito; da: number; commenti: number; leadId: string; lavorazioneId: string | null; nome: string; zona: string | null; categoria: string | null };
   const righe: Riga[] = [];
   let dopo = 0;
   let inPausa = 0;
@@ -99,10 +99,11 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   for (const l of lavorazioni) {
     const provati = Array.isArray(l.pontiProvati) ? (l.pontiProvati as string[]) : [];
     const daConfermare = l.fase === "MAPPATA" && l.strada === "DA_CONFERMARE" ? nomiDaConfermare(await datiAzienda(l.leadId, !!l.scaldataAt), cerchia, provati) : [];
+    const giaCommentata = piattaformaPiuCommentata(commentiDi.get(l.leadId) ?? []);
     const esito = passoDi({
       decisione: "APPROVATO", collegata: true,
       lav: { fase: l.fase, strada: l.strada, ponte: l.ponteNome, decisore: l.decisore, chiestaAt: l.chiestaAt, presentatoAt: l.presentatoAt },
-      commenti: piattaformaPiuCommentata(commentiDi.get(l.leadId) ?? []),
+      commenti: giaCommentata,
       voci: vociDi.get(l.leadId) ?? [],
       daConfermare,
     }, oggi);
@@ -111,7 +112,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
       if (esito.perche === "pausa") inPausa++;
       continue;
     }
-    righe.push({ esito, da: l.updatedAt.getTime(), leadId: l.leadId, lavorazioneId: l.id, nome: l.lead.name, zona: l.lead.address, categoria: l.lead.category });
+    righe.push({ esito, da: l.updatedAt.getTime(), commenti: giaCommentata?.fatti ?? 0, leadId: l.leadId, lavorazioneId: l.id, nome: l.lead.name, zona: l.lead.address, categoria: l.lead.category });
   }
 
   for (const t of trovate) {
@@ -119,7 +120,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
     const decisione = (l.approvalItems[0]?.status ?? null) as Stato["decisione"];
     const esito = passoDi({ decisione, collegata: collegata.get(l.id) ?? false, lav: null, commenti: null, voci: [], daConfermare: [] }, oggi);
     if (!esito.dentro) continue;
-    righe.push({ esito, da: t.createdAt.getTime(), leadId: l.id, lavorazioneId: null, nome: l.name, zona: l.address, categoria: l.category });
+    righe.push({ esito, da: t.createdAt.getTime(), commenti: 0, leadId: l.id, lavorazioneId: null, nome: l.name, zona: l.address, categoria: l.category });
   }
 
   // I passi fatti oggi: voci del percorso approvate e pulsanti premuti da mezzanotte.
@@ -133,7 +134,8 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
     const e = r.esito as Extract<Esito, { dentro: true }>;
     return { leadId: r.leadId, lavorazioneId: r.lavorazioneId, nome: r.nome, zona: r.zona, categoria: r.categoria, passo: e.passo, tocca: e.tocca, cosa: e.cosa, azione: e.azione };
   };
-  const aziende = righe.sort((a, b) => a.da - b.da).map(scheda);
+  // Prima quelle già commentate (più commenti in alto), poi le altre (Alessio, 2026-10-28).
+  const aziende = righe.sort((a, b) => b.commenti - a.commenti || a.da - b.da).map(scheda);
   return {
     passi: PASSI.map((p) => ({ ...p, quante: aziende.filter((a) => a.passo === p.n).length, toccaATe: aziende.filter((a) => a.passo === p.n && a.tocca === "te").length })),
     oggi: passoDiOggi(righe, PASSI_DI_OGGI).map(scheda),
