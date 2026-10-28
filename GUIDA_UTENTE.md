@@ -83,6 +83,9 @@ Menu → **Percorso**, la prima voce. Una pagina sola per far avanzare le aziend
    le prove, la scheda tecnica (il sito, se si fa trovare su Google, cosa comunica, pubblicità), le tue note e i
    commenti che hai fatto sulle loro pagine.
 
+Se di un'azienda approfondita non si trova chi decide, nessuno te la può presentare e non ha pagine social, il CRM
+**la scarta da solo**.
+
 In ogni passo le aziende sono **raggruppate per stato** (per esempio nel passo 1: da decidere, chi decide da
 trovare, in analisi, controllo del collegamento), prima quelle dove tocca a te. Ogni passo tiene fino a 20 aziende.
 

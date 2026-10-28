@@ -1681,6 +1681,10 @@ Decisione di Alessio del 2026-10-27 ("ogni giorno un passo avanti"). Nessuna mig
   `commenti.ts` `commentiDaLeggere`), componente `components/percorso/cosa-dirgli.tsx`, pulsante sulla card al
   passo 4. I ganci leggono i commenti fatti (la frase per aprire parte da lì) e `ganciDaRifare` li rifà quando
   nasce un `RETE_CONTATTO` più recente dei ganci.
+- **v3.66.0 — scarto da solo.** `rete.ts` `scartaSenzaStrade(leadId)`: con i referti `decision_maker` e `social` già
+  arrivati, se non ci sono decisori, ponti BNI né pagine (`pagineAzienda`) il FASCICOLO_BASE approvato passa a
+  SCARTATO con `decidedBy = SCARTATA_DAL_CRM` ("crm"). Gira nel turno della rete (passo 1b, su tutte le approfondite
+  senza lavorazione) e in `entraSubito`. Le "fatte" di Oggi escludono `decidedBy = "crm"`.
 
 ## Seguito del 121 con MSD (v3.60.0)
 

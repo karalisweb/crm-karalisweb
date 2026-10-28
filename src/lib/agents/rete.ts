@@ -79,6 +79,8 @@ const provatiDi = (j: Prisma.JsonValue): string[] => (Array.isArray(j) ? j.filte
 
 export interface RiepilogoRete {
   entrate: number;
+  /** Approfondite senza chi decide, ponte né pagine: scartate da sole. */
+  scartate: number;
   messaggi: number;
   promemoria: number;
   cambiPonte: number;
@@ -91,7 +93,7 @@ export interface RiepilogoRete {
 
 /** Il turno della rete: rientri, nuove entrate fino alla capienza, il seguito, i commenti. */
 export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
-  const r: RiepilogoRete = { entrate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, attive: 0, capienza: capienzaLavorazione(oggi) };
+  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, attive: 0, capienza: capienzaLavorazione(oggi) };
   const cerchia = await cerchiaNomi();
 
   // 1) Il seguito e i rientri dalla pausa.
@@ -112,6 +114,14 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     }
   }
 
+  // 1b) Le approfondite senza nessuna strada si scartano da sole (Alessio, 2026-10-28).
+  const controllate = await db.lead.findMany({
+    where: { lavorazione: null, approvalItems: { some: { kind: KIND_FASCICOLO_BASE, status: "APPROVATO" } }, agentReports: { some: { agent: "decision_maker" } } },
+    select: { id: true },
+    take: 200,
+  });
+  for (const c of controllate) if (await scartaSenzaStrade(c.id)) r.scartate++;
+
   // 2) Nuove entrate fino alla capienza: le approfondite con il ponte più forte.
   let attive = await db.lavorazione.count({ where: { fase: { in: [...FASI_ATTIVE] } } });
   if (attive < r.capienza) {
@@ -129,7 +139,7 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     const conForza = [];
     for (const c of candidate) {
       const d = await datiAzienda(c.id);
-      // Senza chi decide non si scarta (Alessio, 2026-10-25): si lavora dalla pagina, se ce n'è una.
+      // Senza chi decide si lavora dalla pagina (Alessio, 2026-10-25); senza nemmeno quella si scarta (1b).
       if (!d.decisori.length && !d.pontiBni.length && !(await pagineAzienda(c.id)).length) continue;
       conForza.push({ id: c.id, forza: forzaAzienda(d, cerchia), creata: c.createdAt.getTime() });
     }
@@ -151,6 +161,27 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   return r;
 }
 
+/** Chi la scarta da sola: si distingue dalle scelte di Alessio (non conta nelle sue "da validare" di oggi). */
+export const SCARTATA_DAL_CRM = "crm";
+
+/**
+ * Niente chi decide, nessuno che te la presenta, nessuna pagina social: si scarta e via (Alessio, 2026-10-28).
+ * Solo a controlli finiti: chi decide (decision_maker) e i social (agente "social") devono aver già risposto.
+ */
+export async function scartaSenzaStrade(leadId: string): Promise<boolean> {
+  const fatti = await db.agentReport.findMany({ where: { leadId, agent: { in: ["decision_maker", "social"] } }, distinct: ["agent"], select: { agent: true } });
+  if (fatti.length < 2) return false;
+  const d = await datiAzienda(leadId);
+  if (d.decisori.length || d.pontiBni.length || (await pagineAzienda(leadId)).length) return false;
+  const voce = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE, status: "APPROVATO" }, orderBy: { createdAt: "desc" }, select: { id: true } });
+  if (!voce) return false;
+  await db.approvalItem.update({
+    where: { id: voce.id },
+    data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: SCARTATA_DAL_CRM, note: "Scartata da sola: niente chi decide, nessuno che te la presenta, nessuna pagina social" },
+  });
+  return true;
+}
+
 /**
  * Dal passo 1 al passo 2 subito, senza aspettare il turno delle 7 o delle 14 (Alessio, 2026-10-28:
  * "dal passo 1 al passo 2 dobbiamo essere superveloci"). Si chiama quando Alessio approfondisce e quando
@@ -164,6 +195,7 @@ export async function entraSubito(leadId: string, oggi = new Date()): Promise<"e
   if (!(await db.agentReport.findFirst({ where: { leadId, agent: "decision_maker" }, select: { id: true } }))) {
     return (await verificaCollegamento(leadId, oggi)) === "IN_VERIFICA" ? "in_verifica" : "no";
   }
+  if (await scartaSenzaStrade(leadId)) return "no";
   const d = await datiAzienda(leadId);
   if (!d.decisori.length && !d.pontiBni.length && !(await pagineAzienda(leadId)).length) return "no";
   if ((await db.lavorazione.count({ where: { fase: { in: [...FASI_ATTIVE] } } })) >= capienzaLavorazione(oggi)) return "no";

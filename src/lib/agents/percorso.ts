@@ -8,7 +8,7 @@ import { siglaIndirizzo } from "@/lib/ricerca/regole";
 import { collegamentoDaFindings } from "./motore";
 import { mezzanotteRoma } from "./bni-regole";
 import { KIND_FASCICOLO_BASE } from "./turno";
-import { KIND_COMMENTO, KINDS_RETE, cerchiaNomi, datiAzienda } from "./rete";
+import { KIND_COMMENTO, KINDS_RETE, SCARTATA_DAL_CRM, cerchiaNomi, datiAzienda } from "./rete";
 import { nomiDaConfermare, piattaformaPiuCommentata } from "./rete-regole";
 import { AL_GIORNO, PASSI, STATI, coseDiOggi, ordineStato, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
 
@@ -139,7 +139,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   const [vociFatte, incontri, validate, conosciuti] = await Promise.all([
     db.approvalItem.groupBy({ by: ["kind"], where: { kind: { in: Object.keys(COSA_DELLA_VOCE) }, status: "APPROVATO", decidedAt: { gte: mezzanotte } }, _count: true }),
     db.lavorazione.count({ where: { incontroAt: { gte: mezzanotte } } }),
-    db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: { in: ["APPROVATO", "SCARTATO"] }, decidedAt: { gte: mezzanotte } } }),
+    db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: { in: ["APPROVATO", "SCARTATO"] }, decidedAt: { gte: mezzanotte }, OR: [{ decidedBy: null }, { decidedBy: { not: SCARTATA_DAL_CRM } }] } }),
     db.cerchiaContatto.count({ where: { createdAt: { gte: mezzanotte } } }),
   ]);
   const fatte: Record<Cosa, number> = { contatta: incontri, scalda: 0, valida: validate + conosciuti };

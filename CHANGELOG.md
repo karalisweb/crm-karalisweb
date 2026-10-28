@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.66.0] - 2026-10-28
+
+### Changed
+- **Senza strade si scarta da sola.** Alessio: "se non ho chi decide, chi me la presenta né pagine social si scarta e via". Un'azienda approfondita che, finiti i controlli di chi decide e dei social, non ha nessuna di queste tre strade esce dal Percorso da sola. Non conta nelle tue "da validare" di oggi.
+
+---
+
 ## [3.65.0] - 2026-10-28
 
 ### Changed
