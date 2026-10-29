@@ -8,7 +8,7 @@ import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2 } from "lucide-r
 import { dataOra } from "@/components/ricerca/etichette";
 import { SchedaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
 
-// Le 3 cose di oggi (v3.64): poche aziende al giorno, ognuna con la sua cosa da fare.
+// Le 3 cose di oggi (v3.64; dalla v3.67 tutte, senza tetto): ogni azienda con la sua cosa da fare.
 const COSE: { k: CosaDiOggi; titolo: string; spiega: string }[] = [
   { k: "contatta", titolo: "Da contattare", spiega: "Analizzate e verificate: sai cosa dire. Scrivi a chi decide, o a chi te la presenta." },
   { k: "scalda", titolo: "Da scaldare", spiega: "Nessuno te la presenta: commenta un post della loro pagina." },
@@ -92,21 +92,21 @@ export default function HomePage() {
         <section className="space-y-4">
           <h2 className="font-semibold">Le aziende di oggi</h2>
           {COSE.map(({ k, titolo, spiega }) => {
-            const fatte = Math.min(p.fatte[k], p.alGiorno[k]);
-            const finite = fatte >= p.alGiorno[k];
+            const fatte = p.fatte[k];
+            const finite = fatte > 0 && p.oggi[k].length === 0;
             return (
               <div key={k} className="space-y-2">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="text-sm font-semibold">{titolo}</h3>
                   <span className={`text-sm flex items-center gap-1 ${finite ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                    {finite && <CheckCircle2 className="h-4 w-4" />}{fatte} di {p.alGiorno[k]} fatte
+                    {finite && <CheckCircle2 className="h-4 w-4" />}{p.oggi[k].length} da fare{fatte ? ` · ${fatte} fatte oggi` : ""}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">{spiega}</p>
                 {p.oggi[k].length ? (
                   p.oggi[k].map((a) => <SchedaPercorso key={a.leadId} a={a} passi={p.passi} onCambio={caricaPercorso} />)
                 ) : (
-                  <div className="rounded-lg border p-3 text-sm text-muted-foreground">{finite ? "Fatto per oggi. Domani ne arrivano altre." : "Per ora nessuna: le prepara il CRM."}</div>
+                  <div className="rounded-lg border p-3 text-sm text-muted-foreground">{finite ? "Fatte tutte. Le prossime le prepara il CRM." : "Per ora nessuna: le prepara il CRM."}</div>
                 )}
               </div>
             );

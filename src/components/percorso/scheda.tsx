@@ -25,7 +25,6 @@ export interface DatiPercorso {
   passi: PassoPercorso[];
   oggi: Record<CosaDiOggi, AziendaPercorso[]>;
   fatte: Record<CosaDiOggi, number>;
-  alGiorno: Record<CosaDiOggi, number>;
   aziende: AziendaPercorso[];
   dopo: number;
   inPausa: number;

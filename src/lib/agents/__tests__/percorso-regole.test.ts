@@ -55,7 +55,6 @@ describe("fuori dal percorso", () => {
 describe("le 3 cose di oggi", () => {
   const a = (id: string, s: Partial<Stato>, da: number) => ({ id, esito: passoDi({ ...base, ...s }, oggi), da });
   const commento = (id: string, da: number) => a(id, { lav: lav({ strada: "SCALDARE" }), voci: [{ id, kind: "COMMENTO_LINKEDIN", payload: {} }] }, da);
-  const nessuna = { contatta: 0, scalda: 0, valida: 0 };
   const ids = (r: Record<string, { id: string }[]>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.map((x) => x.id)]));
 
   it("ogni azienda nella sua cosa, solo dove tocca a te, prima le più vicine al contatto", () => {
@@ -67,15 +66,13 @@ describe("le 3 cose di oggi", () => {
       a("ponte", { lav: lav({ fase: "PONTE_SCELTO", strada: "BNI" }), voci: [{ id: "p", kind: "RETE_PONTE", payload: {} }] }, 3),
       a("conosco", { lav: lav({ strada: "DA_CONFERMARE" }), daConfermare: ["Mario"] }, 4),
       commento("commento", 6),
-    ], nessuna);
-    expect(ids(r)).toEqual({ contatta: ["contatto-vecchio", "contatto-nuovo"], scalda: ["commento"], valida: ["conosco", "decidi"] });
+    ]);
+    expect(ids(r)).toEqual({ contatta: ["contatto-vecchio", "contatto-nuovo", "ponte"], scalda: ["commento"], valida: ["conosco", "decidi"] });
   });
 
-  it("al massimo 2 / 3 / 5, e quello che hai già fatto oggi scala dal conto", () => {
-    const tanti = [...Array(6)].map((_, i) => commento(`c${i}`, i));
-    expect(coseDiOggi(tanti, nessuna).scalda).toHaveLength(3);
-    expect(coseDiOggi(tanti, { ...nessuna, scalda: 2 }).scalda.map((x) => x.id)).toEqual(["c0"]);
-    expect(coseDiOggi(tanti, { ...nessuna, scalda: 4 }).scalda).toEqual([]);
+  it("nessun tetto al giorno: si vedono tutte, le più vecchie prima", () => {
+    const tanti = [...Array(6)].map((_, i) => commento(`c${i}`, 5 - i));
+    expect(coseDiOggi(tanti).scalda.map((x) => x.id)).toEqual(["c5", "c4", "c3", "c2", "c1", "c0"]);
   });
 });
 

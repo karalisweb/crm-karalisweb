@@ -10,7 +10,7 @@ import { mezzanotteRoma } from "./bni-regole";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { KIND_COMMENTO, KINDS_RETE, SCARTATA_DAL_CRM, cerchiaNomi, datiAzienda } from "./rete";
 import { nomiDaConfermare, piattaformaPiuCommentata } from "./rete-regole";
-import { AL_GIORNO, PASSI, STATI, coseDiOggi, ordineStato, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
+import { PASSI, STATI, coseDiOggi, ordineStato, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
 
 export interface AziendaNelPercorso {
   leadId: string;
@@ -29,11 +29,10 @@ export interface AziendaNelPercorso {
 
 export interface Percorso {
   passi: { n: Passo; nome: string; spiega: string; quante: number; toccaATe: number }[];
-  /** Le 3 cose di oggi: al massimo 2 da contattare, 3 da scaldare, 5 da validare (quelle che restano). */
+  /** Le 3 cose di oggi: tutte le aziende dove tocca a te, divise in contattare, scaldare, validare. */
   oggi: Record<Cosa, AziendaNelPercorso[]>;
-  /** Quante ne hai già fatte oggi per ogni cosa, e quante ne toccano al giorno. */
+  /** Quante ne hai già fatte oggi per ogni cosa. */
   fatte: Record<Cosa, number>;
-  alGiorno: Record<Cosa, number>;
   aziende: AziendaNelPercorso[];
   dopo: number;
   inPausa: number;
@@ -154,9 +153,8 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   const aziende = righe.sort((a, b) => stato(a) - stato(b) || b.commenti - a.commenti || a.da - b.da).map(scheda);
   return {
     passi: PASSI.map((p) => ({ ...p, quante: aziende.filter((a) => a.passo === p.n).length, toccaATe: aziende.filter((a) => a.passo === p.n && a.tocca === "te").length })),
-    oggi: Object.fromEntries(Object.entries(coseDiOggi(righe, fatte)).map(([c, r]) => [c, r.map(scheda)])) as Percorso["oggi"],
+    oggi: Object.fromEntries(Object.entries(coseDiOggi(righe)).map(([c, r]) => [c, r.map(scheda)])) as Percorso["oggi"],
     fatte,
-    alGiorno: AL_GIORNO,
     aziende,
     dopo,
     inPausa,

@@ -1658,7 +1658,7 @@ Decisione di Alessio del 2026-10-27 ("ogni giorno un passo avanti"). Nessuna mig
   4 passi (1 Trovate, 2 Chi me la presenta, 3 In riscaldamento, 4 Contatto) con `tocca` (te/crm/attesa), una riga
   `cosa` e una sola `azione` (decidi, voce di Cassetta, "lo conosco", presentato, incontro). Fuori: scartate,
   pausa, dopo l'incontro. `coseDiOggi` (v3.64): dove tocca a te, divise in contatta (passo 4 e messaggi al ponte del 2) / scalda (passo 3) /
-  valida (passo 1 "decidi" e "lo conosco" del 2), max `AL_GIORNO` 2/3/5 meno quelle già fatte oggi; prima il passo più alto.
+  valida (passo 1 "decidi" e "lo conosco" del 2), tutte (dalla v3.67 niente tetto: `AL_GIORNO` 2/3/5 tolto, `alGiorno` non c'è più nella risposta); prima il passo più alto, a parità le più vecchie. `fatte` resta solo come conteggio.
 - `percorso.ts` `leggiPercorso()`: lavorazioni + aziende trovate non ancora in lavorazione (stessi filtri di
   Aziende trovate: scartate e concorrenti del cliente fuori) + voci rete in attesa + commenti fatti.
   `fatte` (v3.64) da mezzanotte: contatta = voci RETE_CONTATTO/DIRETTO/PONTE/PROMEMORIA approvate + incontri;

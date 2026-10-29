@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.67.0] - 2026-10-29
+
+### Changed
+- **Oggi mostra tutte le aziende, non più 2 / 3 / 5.** Da contattare, da scaldare e da validare: si vedono tutte quelle dove tocca a te, prima le più vicine al contatto (lì ci sono i soldi), a parità le più vecchie. Accanto a ogni gruppo: quante da fare e quante fatte oggi.
+
+---
+
 ## [3.66.2] - 2026-10-29
 
 ### Fixed

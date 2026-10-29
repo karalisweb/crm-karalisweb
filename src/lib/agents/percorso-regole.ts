@@ -152,14 +152,13 @@ export function passoDi(s: Stato, oggi: Date): Esito {
 }
 
 /**
- * Le 3 cose di oggi (Alessio, 2026-10-28: "poche cose giornaliere"): ogni giorno al massimo 2 aziende da
- * contattare, 3 da scaldare, 5 da validare. Contattare = scrivere a chi decide o al ponte che te la presenta;
- * scaldare = commentare la pagina (solo se nessuno te la presenta: lo decide già passoDi); validare = dire sì
- * o no. Quello che hai già fatto oggi scala dal conto, così domani arrivano le nuove.
+ * Le 3 cose di oggi: contattare = scrivere a chi decide o al ponte che te la presenta; scaldare = commentare la
+ * pagina (solo se nessuno te la presenta: lo decide già passoDi); validare = dire sì o no. Nessun tetto al
+ * giorno (Alessio, 2026-10-29: "servono soldi", si vedono tutte; prima erano 2/3/5).
  */
 export type Cosa = "contatta" | "scalda" | "valida";
 
-export const AL_GIORNO: Record<Cosa, number> = { contatta: 2, scalda: 3, valida: 5 };
+export const COSE: Cosa[] = ["contatta", "scalda", "valida"];
 
 export function cosaDi(e: Esito): Cosa | null {
   if (!e.dentro || e.tocca !== "te") return null;
@@ -169,12 +168,10 @@ export function cosaDi(e: Esito): Cosa | null {
   return "valida";
 }
 
-/** Per ogni cosa le aziende di oggi: prima le più vicine al contatto (lì ci sono i soldi), a parità le più vecchie. */
-export function coseDiOggi<T extends { esito: Esito; da: number }>(aziende: T[], fatte: Record<Cosa, number>): Record<Cosa, T[]> {
+/** Per ogni cosa tutte le aziende dove tocca a te: prima le più vicine al contatto (lì ci sono i soldi), a parità le più vecchie. */
+export function coseDiOggi<T extends { esito: Esito; da: number }>(aziende: T[]): Record<Cosa, T[]> {
   const ordinate = [...aziende].sort((a, b) => (b.esito.dentro && a.esito.dentro ? b.esito.passo - a.esito.passo : 0) || a.da - b.da);
   const fuori = {} as Record<Cosa, T[]>;
-  for (const c of Object.keys(AL_GIORNO) as Cosa[]) {
-    fuori[c] = ordinate.filter((a) => cosaDi(a.esito) === c).slice(0, Math.max(0, AL_GIORNO[c] - fatte[c]));
-  }
+  for (const c of COSE) fuori[c] = ordinate.filter((a) => cosaDi(a.esito) === c);
   return fuori;
 }
