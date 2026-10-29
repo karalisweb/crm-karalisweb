@@ -390,6 +390,9 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
   });
   // Prima chi non ha altre strade (da scaldare), poi chi aspetta la presentazione.
   lav.sort((a, b) => Number(b.strada === "SCALDARE") - Number(a.strada === "SCALDARE"));
+  // LinkedIn fermo (budget o stop di 48 ore): si commenta su Facebook e Instagram, non si ferma tutto
+  // (2026-10-29: una sola azienda con la sola pagina LinkedIn bloccava il lavoro di tutte).
+  const linkedinOk = await linkedinPermette("scalda", { aziende: [] }, oggi);
   const aziende = [];
   for (const l of lav) {
     if (aziende.length >= DECISORI_DA_SCALDARE) break;
@@ -402,9 +405,11 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
       await dopoCommento(l.leadId, oggi);
       continue;
     }
-    const pagine = await pagineAzienda(l.leadId);
+    const tutte = await pagineAzienda(l.leadId);
+    const pagine = linkedinOk ? tutte : tutte.filter((p) => p.piattaforma !== "linkedin");
     if (!pagine.length) continue;
-    // I 5 commenti vanno sulla stessa piattaforma: si resta dove si è già cominciato.
+    // I 5 commenti vanno sulla stessa piattaforma: si resta dove si è già cominciato (se è LinkedIn fermo, si aspetta).
+    if (giaFatti && !linkedinOk && giaFatti.piattaforma === "linkedin" && tutte.some((p) => p.piattaforma === "linkedin")) continue;
     const iniziata = giaFatti && pagine.some((p) => p.piattaforma === giaFatti.piattaforma) ? giaFatti.piattaforma : null;
     const piattaforma = iniziata ?? (await piattaformaScelta(l.leadId, pagine, oggi)) ?? pagine[0].piattaforma;
     const pagina = pagine.find((p) => p.piattaforma === piattaforma) ?? pagine[0];
@@ -413,8 +418,6 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
   }
   if (!aziende.length) return false;
   const input = { aziende };
-  // Il budget LinkedIn conta solo se fra le pagine da leggere c'è LinkedIn.
-  if (aziende.some((a) => a.piattaforma === "linkedin") && !(await linkedinPermette("scalda", input, oggi))) return false;
   await db.agentRun.create({ data: { agent: "scalda", status: "IN_CODA", input } });
   return true;
 }

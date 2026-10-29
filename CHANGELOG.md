@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.66.2] - 2026-10-29
+
+### Fixed
+- **I commenti alle pagine non si fermano più per LinkedIn.** Quando LinkedIn era fermo (limite di letture o pausa di 48 ore dopo un avviso), bastava una sola azienda da commentare su LinkedIn per bloccare il lavoro di tutte, anche quelle su Facebook e Instagram: dal 28 ottobre non arrivava nessun commento. Ora, con LinkedIn fermo, le aziende si commentano su Facebook o Instagram; quelle che hanno solo LinkedIn (o hanno già iniziato lì) aspettano che LinkedIn riparta.
+
+---
+
 ## [3.66.1] - 2026-10-28
 
 ### Added

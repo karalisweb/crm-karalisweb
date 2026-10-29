@@ -1585,6 +1585,9 @@ Decisione di Alessio: `PROGETTO-AGENTI.md` "La rete al centro". Casi studio + re
   budget LinkedIn comune (`lettureDi("scalda")` = numero di decisori, max 5 al giorno).
   Dalla v3.57.2 `riservaScalda` (motore-121.ts) tiene da parte fino a 5 letture nei feriali finché `scalda` non è accodato
   oggi: `linkedinPermette` le sottrae a tutti gli altri lavori LinkedIn (totale e quota non BNI).
+  Dalla v3.66.2 `accodaScalda` chiede `linkedinPermette("scalda")` una volta sola all'inizio: se LinkedIn è fermo
+  (budget o stop di 48 ore) toglie le pagine LinkedIn e commenta su Facebook/Instagram; salta solo chi ha soltanto
+  LinkedIn o ha già iniziato lì. Prima una sola azienda su LinkedIn bloccava l'intero lavoro.
 - Turni: `turnoRete` gira nel turno di arricchimento (6:45, 14:45, 18:15) e nella fase `richieste` di squadra-bni (14:00).
 - API: `GET /api/rete`, `PATCH /api/rete/lavorazioni/[id]` (`presentato|scaldata|incontro|proposta|cliente|pausa|riprendi`),
   `POST /api/rete/cerchia` (`{nome, conosco, lavorazioneId?}`), `DELETE /api/rete/cerchia/[id]` (segna `rimosso_at`),
