@@ -114,3 +114,16 @@ describe("entrare in relazione: commenti sulle pagine", () => {
     expect(testoMessaggioPagina("Piscine Blu", "Abbiamo aiutato un'azienda simile.")).toContain("titolare: abbiamo aiutato");
   });
 });
+
+describe("strade dalla zona (v3.68)", () => {
+  it("un membro BNI già incontrato nella zona fa da ponte, dopo LinkedIn e solo se si sa chi decide", () => {
+    const conZona: DatiAzienda = { ...piscine2000, pontiZona: [{ membroId: "laura", membro: "Maria Laura Uleri" }] };
+    const s = strade(conZona, ["Maria Laura Uleri", "Marco Coronzu"]);
+    expect(s.map((x) => [x.strada, x.nome])).toEqual([["CERCHIA", "Marco Coronzu"], ["BNI", "Maria Laura Uleri"]]);
+    expect(s[1]).toMatchObject({ decisore: "Piermario Testoni", membroId: "laura" });
+    // Non incontrata: non vale.
+    expect(strade(conZona, ["Marco Coronzu"]).map((x) => x.nome)).toEqual(["Marco Coronzu"]);
+    // Senza chi decide non si chiede.
+    expect(strade({ ...conZona, decisori: [] }, ["Maria Laura Uleri"])).toEqual([]);
+  });
+});

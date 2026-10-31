@@ -13,6 +13,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.68.0] - 2026-10-31
+
+### Added
+- **Le presentazioni da chiedere, per nome.** Nasce dal 121 con Laura Uleri (Maestrale): ti ha segnalato Piscine Arcobaleno di sua iniziativa, ma il CRM doveva dirtelo prima. Ora per ogni persona trovi **due liste separate**: i **membri del suo capitolo** che non hai ancora sentito (diventano nuovi 121, prima commercialisti, avvocati e simili, che conoscono tante aziende) e le **aziende da farti presentare**. L'ordine delle aziende è questo: prima quelle viste fra i suoi collegamenti LinkedIn, poi i suoi rapporti stretti, poi quelle della sua zona nei settori dei tuoi casi studio, prima quelle della sua stessa città. Per ognuna c'è la frase pronta con il nome di chi decide ("Conosci Piermario Testoni di Piscine 2000? Me lo presenti?") e, in cima, **le 3 da chiedere questa volta**.
+- **Chi te la presenta, dal territorio.** Nella scheda di un'azienda compaiono anche i membri BNI della sua zona (prima quelli che hai già incontrato). Se un membro che hai già incontrato è nella zona dell'azienda e si sa chi decide, il CRM lo usa come ponte e prepara il messaggio "me lo presenti?" in Cassetta. Lo fa dopo LinkedIn e la tua cerchia, e sempre un favore alla volta.
+- **Il vocale dopo il 121 salva anche chi conosce.** I clienti, i fornitori e gli amici imprenditori di cui ti parla diventano aziende da chiedergli la volta dopo. Le aziende che ti segnala entrano **subito** nel CRM (o si collegano a quella che c'è già) e si segna se sono nel settore di un caso studio.
+- In **Oggi**, accanto a ogni incontro BNI di oggi e domani: quante presentazioni chiedere, con il link al foglio del 121.
+
+---
+
 ## [3.67.0] - 2026-10-29
 
 ### Changed

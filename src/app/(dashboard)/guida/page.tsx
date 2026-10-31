@@ -140,10 +140,10 @@ export default function GuidaPage() {
               <p><strong>121 BNI</strong>: obiettivo 8 a settimana. Ogni mattina in Cassetta trovi le richieste di 121 con &quot;Apri WhatsApp&quot;: in ogni capitolo prima chi fa il tuo mestiere, poi presidente e formazione/eventi, poi tutti gli altri. Quando ti rispondono premi &quot;Fissato&quot; e metti la data.</p>
             </Step>
             <Step n={2}>
-              <p>Fissato il 121, l&apos;agente guarda la rete LinkedIn del membro e ti prepara 3-5 persone da farti presentare. Il giorno prima trovi il foglio del 121 in Cassetta.</p>
+              <p>Fissato il 121, il foglio del 121 ti dice cosa chiedere, in due liste: i <strong>membri del suo capitolo</strong> che non hai ancora sentito e le <strong>aziende da farti presentare</strong> (dai suoi collegamenti LinkedIn, dai suoi rapporti stretti, dalle aziende dei tuoi casi studio nella sua zona), sempre con il nome di chi decide. In cima trovi le 3 da chiedere questa volta. Il giorno prima il foglio arriva anche in Cassetta, e in Oggi accanto all&apos;incontro.</p>
             </Step>
             <Step n={3}>
-              <p>Dopo il 121: nella scheda del membro <strong>Registra il 121</strong> (trascrizione di Meet o vocale dettato). La scheda si compila da sola: cosa fa, referenze che cerca, referenze che può dare.</p>
+              <p>Dopo il 121: nella scheda del membro <strong>Registra il 121</strong> (trascrizione di Meet o vocale dettato). La scheda si compila da sola: cosa fa, referenze che cerca, referenze che può dare. Racconta anche <strong>chi conosce bene</strong> (clienti, fornitori): la volta dopo il CRM te li propone. Le aziende che ti segnala entrano subito nel CRM.</p>
             </Step>
             <Step n={4}>
               <p>Qualcuno ti chiede una referenza? In <strong>Membri BNI</strong> scrivi il bisogno e trovi a chi girarla.</p>

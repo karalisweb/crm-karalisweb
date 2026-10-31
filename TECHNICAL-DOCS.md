@@ -1596,6 +1596,36 @@ Decisione di Alessio: `PROGETTO-AGENTI.md` "La rete al centro". Casi studio + re
   il pulsante "Ha risposto ai miei commenti"); il "cosa dare" c'è solo per i ponti BNI (per gli altri non si conosce il
   mestiere); il motivo dal caso studio richiede l'AI (in locale manca la chiave: si usa il testo di riserva).
 
+## Le presentazioni da chiedere (v3.68.0)
+
+Decisione di Alessio del 2026-10-31 (`PROGETTO-AGENTI.md`, Flusso BNI). Nessuna migrazione: riusa `bni_presentazioni`
+e `leads`.
+
+- `src/lib/agents/presentazioni-regole.ts` (**puro**, test `__tests__/presentazioni-regole.test.ts`): `tipoPersona`
+  (DIGITAL via `stessoRuolo` · ACCELERATORE · SETTORE_CASO · SETTORE_INTERESSE · ALTRO), `nelSettore`/`settoreDi` (radici
+  dei `termini` e `termini_settore` dei casi studio attivi), `zonaDa` (sigla nell'indirizzo + città di `ZONE`),
+  `stessaZona` (stessa provincia, o stessa città se manca), `ordinaMembri`, `ordinaAziende` (LINKEDIN → RAPPORTO → ZONA,
+  poi caso → interesse, stessa città, con chi decide), `daChiedereOra` (max 3: fino a 2 membri, almeno 1 azienda),
+  `domandaAzienda`/`domandaMembro`.
+- `src/lib/agents/presentazioni.ts` (DB): `settoriAlessio`, `zonaMembro` (indirizzo dell'azienda del membro → "città:"
+  nelle note → città del capitolo), `daChiedereA(membroId)` (le due liste + `ora`), `pontiInZona(leadId)` (membri ATTIVI
+  della zona, prima i conosciuti e la stessa città; cache di 60 s perché il turno della rete lo chiede per centinaia di
+  aziende), `trovaAzienda` (per nome senza forme societarie), `aziendaSegnalata` (lead `source=bni_segnalata`,
+  `bniOriginType=PRESENTAZIONE`, `BNI_DA_LAVORARE`, `referredByMembroId`).
+- Rete: `DatiAzienda.pontiZona` (solo membri della cerchia); `strade` aggiunge la strada `BNI` per il ponte di zona
+  dopo DIRETTO e prima di SCALDATO, solo se c'è un decisore. Così il resto (un favore alla volta, Cassetta
+  `RETE_PONTE`, Percorso) resta invariato.
+- Dopo-121 (`src/lib/ricerca/dopo-121.ts`): lo schema AI ha `persone_da_presentare[].azienda|citta|settore` e
+  `rapporti_stretti[]`. `aziendeDal121` collega o crea il lead delle aziende segnalate (forza +2 se nel settore di un
+  caso, +1 se in uno che interessa) e salva i rapporti stretti come `bni_presentazioni` `DA_CHIEDERE` con
+  `ruolo` = azienda e `perche` = "Rapporto stretto: …", che non partono da sole verso la Cassetta.
+- API: `GET /api/ricerca/bni/membri/[id]/foglio` → `daChiedere {tipo, zona, membri[], aziende[]}` con `ora`;
+  `GET /api/ricerca/aziende/[id]` → `ponti` comprende i membri della zona; `GET /api/oggi` → `incontri[].daChiedere`.
+  Il foglio in Cassetta (`preparaFoglio121`) mette le richieste di questa volta fra le domande.
+- Limiti: la zona è la provincia (in Sardegna larga: Olbia e Porto Torres sono vicine per il CRM); i membri senza
+  città nelle note, senza azienda collegata e senza la città del capitolo restano senza zona; i "settori che
+  interessano" sono solo i `termini_settore` dei casi studio.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

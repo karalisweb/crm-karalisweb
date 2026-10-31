@@ -17,7 +17,7 @@ const COSE: { k: CosaDiOggi; titolo: string; spiega: string }[] = [
 
 interface Oggi {
   daFare: { richiesteDaMandare: number; visiteDaMandare: number; fogli: number; aziendeDaDecidere: number; casiDaConfermare: number };
-  incontri: { id: string; nome: string; azienda: string | null; capitolo: string | null; quando: string }[];
+  incontri: { id: string; nome: string; azienda: string | null; capitolo: string | null; quando: string; daChiedere: number }[];
   call: { id: string; nome: string; quando: string }[];
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
@@ -126,8 +126,11 @@ export default function HomePage() {
           <h2 className="font-semibold">Oggi e domani</h2>
           <div className="space-y-2">
             {d.incontri.map((m) => (
-              <Link key={m.id} href={`/bni/membri/${m.id}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:border-primary transition">
-                <span className="text-sm min-w-0"><b>Incontro BNI</b> con {m.nome}{m.capitolo ? ` (${m.capitolo})` : ""}</span>
+              <Link key={m.id} href={`/bni/121/${m.id}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:border-primary transition">
+                <span className="text-sm min-w-0">
+                  <b>Incontro BNI</b> con {m.nome}{m.capitolo ? ` (${m.capitolo})` : ""}
+                  {m.daChiedere > 0 && <span className="block text-xs text-primary">Chiedigli {m.daChiedere === 1 ? "una presentazione" : `${m.daChiedere} presentazioni`}: le trovi nel foglio</span>}
+                </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0"><CalendarClock className="h-3.5 w-3.5" />{dataOra(m.quando)}</span>
               </Link>
             ))}

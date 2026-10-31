@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Gift, HandHelping, Linkedin, Phone, Search } from "lucide-react";
+import { ArrowLeft, Building2, Gift, HandHelping, Linkedin, Phone, Search, Users } from "lucide-react";
 import { toast } from "sonner";
 import { dataOra, data } from "@/components/ricerca/etichette";
 import { PuntiContatto, Segnalazioni, type Segnalazione } from "@/components/ricerca/motore-121";
@@ -21,6 +21,12 @@ interface Foglio {
   presentazioni: { id: string; nome: string; ruolo: string | null; perche: string | null; linkedin: string | null; forza: number; punti: string[]; stato: string }[];
   ultimo121: { date: string; riassunto: string | null; promesse: string | null } | null;
   casoStudio: { titolo: string; storia: string | null } | null;
+  daChiedere: {
+    tipo: string;
+    zona: string | null;
+    membri: { id: string; nome: string; categoria: string | null; azienda: string | null; tipo: string; domanda: string; ora: boolean }[];
+    aziende: { chiave: string; presentazioneId: string | null; leadId: string | null; azienda: string; decisore: string | null; perche: string; domanda: string; ora: boolean }[];
+  } | null;
   domande: string[];
   ricorda: string;
 }
@@ -107,19 +113,55 @@ export default function Pagina121({ params }: { params: Promise<{ id: string }> 
         <Segnalazioni lista={segnalazioni} onCambio={carica} />
       </Blocco>
 
-      <Blocco icona={<HandHelping className="h-4 w-4 text-primary" />} titolo="Cosa chiedergli: persone da farti presentare">
-        {f.presentazioni.length === 0 ? (
-          <p className="text-muted-foreground">Nessuna ancora: arrivano dalla lettura della sua rete LinkedIn (nei 3 giorni prima del 121). Chiedigli chi sono i suoi clienti tipo.</p>
+      {f.daChiedere && (f.daChiedere.membri.some((x) => x.ora) || f.daChiedere.aziende.some((x) => x.ora)) && (
+        <Blocco icona={<HandHelping className="h-4 w-4 text-primary" />} titolo="Questa volta chiedi (al massimo 3)">
+          <ul className="list-disc pl-4 space-y-1">
+            {f.daChiedere.membri.filter((x) => x.ora).map((x) => <li key={x.id}>&quot;{x.domanda}&quot;</li>)}
+            {f.daChiedere.aziende.filter((x) => x.ora).map((x) => <li key={x.chiave}>&quot;{x.domanda}&quot;</li>)}
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            {segnalazioni.length ? "Prima dai: segnalagli uno dei contatti qui sopra. " : "Prima dai: chiedigli chi cerca e pensa a chi presentargli. "}Poi chiedi sempre &quot;lo conosci bene?&quot;.
+          </p>
+        </Blocco>
+      )}
+
+      <Blocco icona={<Users className="h-4 w-4 text-primary" />} titolo="Membri del suo capitolo da farti presentare">
+        {!f.daChiedere?.membri.length ? (
+          <p className="text-muted-foreground">Nessuno: nel suo capitolo hai già sentito tutti, o il capitolo non è nel CRM.</p>
         ) : (
-          f.presentazioni.map((p) => (
-            <div key={p.id} className="border-b last:border-0 pb-2">
-              <div>{p.nome} {p.ruolo && <span className="text-muted-foreground">— {p.ruolo}</span>} {p.linkedin && <a href={p.linkedin} target="_blank" rel="noopener noreferrer" className="text-xs underline">profilo</a>}</div>
-              {p.perche && <div className="text-xs text-muted-foreground">{p.perche}</div>}
-              <PuntiContatto punti={p.punti} forza={p.forza} />
+          f.daChiedere.membri.map((x) => (
+            <div key={x.id} className="border-b last:border-0 pb-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href={`/bni/membri/${x.id}`} className="hover:underline">{x.nome}</Link>
+                {x.ora && <Badge>questa volta</Badge>}
+              </div>
+              <div className="text-xs text-muted-foreground">{[x.categoria, x.azienda, x.tipo].filter(Boolean).join(" · ")}</div>
             </div>
           ))
         )}
-        <p className="text-xs text-muted-foreground">Chiedi sempre: &quot;lo conosci bene?&quot;. Dopo il 121 dettalo nel vocale: le presentazioni confermate vanno in Cassetta con il messaggio pronto.</p>
+        <p className="text-xs text-muted-foreground">Diventano nuovi 121: contano nel tetto della settimana.</p>
+      </Blocco>
+
+      <Blocco icona={<Building2 className="h-4 w-4 text-primary" />} titolo={`Aziende da farti presentare${f.daChiedere?.zona ? ` (zona: ${f.daChiedere.zona})` : ""}`}>
+        {!f.daChiedere?.aziende.length ? (
+          <p className="text-muted-foreground">Nessuna ancora: arrivano dai suoi collegamenti LinkedIn, dai rapporti stretti che ti racconta e dalle aziende dei casi studio nella sua zona. Chiedigli chi sono i suoi clienti tipo.</p>
+        ) : (
+          f.daChiedere.aziende.map((x) => {
+            const p = x.presentazioneId ? f.presentazioni.find((y) => y.id === x.presentazioneId) : undefined;
+            return (
+              <div key={x.chiave} className="border-b last:border-0 pb-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {x.leadId ? <Link href={`/aziende-trovate/${x.leadId}`} className="hover:underline">{x.azienda || x.decisore}</Link> : <span>{x.azienda || x.decisore}</span>}
+                  {x.decisore && x.azienda && <span className="text-muted-foreground">— chi decide: {x.decisore}</span>}
+                  {x.ora && <Badge>questa volta</Badge>}
+                </div>
+                <div className="text-xs text-muted-foreground">{x.perche}</div>
+                {p && <PuntiContatto punti={p.punti} forza={p.forza} />}
+              </div>
+            );
+          })
+        )}
+        <p className="text-xs text-muted-foreground">Dopo il 121 dettalo nel vocale: le presentazioni confermate vanno in Cassetta con il messaggio pronto, le aziende che ti segnala entrano subito nel CRM.</p>
       </Blocco>
 
       {f.casoStudio?.storia && (

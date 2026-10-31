@@ -5,6 +5,7 @@ import { caricaCapitoli, statoSettimana } from "@/lib/agents/bni";
 import { coperturaCapitolo, eSardo, mezzanotteRoma } from "@/lib/agents/bni-regole";
 import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 import { AZIENDE_AL_GIORNO } from "@/lib/ricerca/regole";
+import { daChiedereA } from "@/lib/agents/presentazioni";
 
 /**
  * GET /api/oggi — la Home: solo quello che serve ad Alessio adesso. I numeri partono dalla
@@ -62,7 +63,11 @@ export async function GET() {
       aziendeDaDecidere,
       casiDaConfermare,
     },
-    incontri: incontri.map((m) => ({ id: m.id, nome: m.name, azienda: m.company, capitolo: m.chapter, quando: m.next121At })),
+    // v3.68: quante presentazioni chiedere a ogni incontro (al massimo 3, il dettaglio è nel foglio del 121).
+    incontri: await Promise.all(incontri.map(async (m) => {
+      const c = await daChiedereA(m.id).catch(() => null);
+      return { id: m.id, nome: m.name, azienda: m.company, capitolo: m.chapter, quando: m.next121At, daChiedere: c ? c.ora.membri.length + c.ora.aziende.length : 0 };
+    })),
     call: call.map((t) => ({ id: t.id, nome: t.nome, quando: t.callAt })),
     settimana: { fatti: settimana.fatti, fissati: settimana.fissati, obiettivo: settimana.obiettivo, richiesteAperte: settimana.richiesteAperte },
     sardegna: { conosciuti: copertura.conosciuti, totale: copertura.totale },

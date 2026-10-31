@@ -44,6 +44,7 @@ import {
   type Motivo,
   type ProssimoMembro,
 } from "./bni-regole";
+import { chiaveAzienda, daChiedereA } from "./presentazioni";
 
 export const KIND_MESSAGGIO_BNI = "MESSAGGIO_BNI";
 export const KIND_VISITA_CAPITOLO = "VISITA_CAPITOLO";
@@ -816,6 +817,11 @@ async function preparaFoglio121(membroId: string, quando: Date): Promise<boolean
   ]);
   if (!m) return false;
   const segnalazioni = await db.bniSegnalazione.findMany({ where: { membroId, stato: "DA_DARE" }, orderBy: { createdAt: "desc" }, take: 2 });
+  // v3.68: le richieste di questa volta (al massimo 3), membri del capitolo e aziende, per nome.
+  const chiedere = await daChiedereA(membroId).catch(() => null);
+  const richieste = chiedere
+    ? [...chiedere.membri.filter((x) => chiedere.ora.membri.includes(x.id)), ...chiedere.aziende.filter((x) => chiedere.ora.aziende.includes(chiaveAzienda(x)))].map((x) => x.domanda)
+    : [];
   const altri = capitolo
     ? await db.bniMembro.count({ where: { chapter: { equals: capitolo.name, mode: "insensitive" }, status: "ATTIVO" } })
     : 0;
@@ -843,7 +849,9 @@ async function preparaFoglio121(membroId: string, quando: Date): Promise<boolean
         domande: [
           "Chi è il tuo cliente ideale? Fammi un esempio concreto dell'ultima persona giusta per te.",
           "Chi conosci tra i tuoi clienti e nel tuo giro? Che tipo di aziende vedi ogni settimana?",
-          ...(presentazioni.length ? ["Ho visto che conosci alcune persone su LinkedIn: le conosci bene? Me le presenteresti?"] : []),
+          ...richieste,
+          ...(presentazioni.length && !richieste.length ? ["Ho visto che conosci alcune persone su LinkedIn: le conosci bene? Me le presenteresti?"] : []),
+          "Chi sono i tuoi clienti e fornitori più stretti?",
           ...(m.leadershipRole === "PRESIDENTE" ? [`Chi sono i membri più attivi o più interessanti del capitolo${altri ? ` (${altri} membri)` : ""}?`] : []),
         ],
       } as Prisma.InputJsonValue,

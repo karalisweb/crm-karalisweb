@@ -23,6 +23,7 @@ import {
   type PaginaSocial, type Piattaforma,
 } from "./rete-regole";
 import { noteDaReferti } from "./impressioni-sezioni";
+import { pontiInZona } from "./presentazioni";
 
 export const KIND_RETE_PONTE = "RETE_PONTE";
 export const KIND_RETE_DIRETTO = "RETE_DIRETTO";
@@ -69,6 +70,7 @@ export async function datiAzienda(leadId: string, scaldata = false): Promise<Dat
       contattiInComune: [...(Array.isArray(p.contattiInComune) ? p.contattiInComune : []), ...(Array.isArray(p.amiciInComuneFacebook) ? p.amiciInComuneFacebook : [])].map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome))).filter((x): x is string => !!x),
     })).filter((d) => d.nome),
     pontiBni: ponti.map((p) => ({ membroId: p.membroId, membro: p.membro.name, decisore: p.nome })),
+    pontiZona: (await pontiInZona(leadId)).filter((p) => p.conosciuto).map((p) => ({ membroId: p.membroId, membro: p.membro })),
     scaldata,
   };
 }

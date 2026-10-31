@@ -13,6 +13,7 @@ import { accodaReteMembro, chiudiRichiesteSuperate } from "@/lib/agents/bni";
 import { norm } from "@/lib/agents/bni-regole";
 import { chiudiPromemoria, richiestePresentazione } from "@/lib/agents/motore";
 import { seguitoMsd, type LetturaInteresse } from "@/lib/agents/msd";
+import { aziendaSegnalata, trovaAzienda } from "@/lib/agents/presentazioni";
 
 /** Sotto questa lunghezza il testo è solo una nota: si salva, ma non si chiede all'AI. */
 export const TESTO_MINIMO_AI = 150;
@@ -32,7 +33,9 @@ interface RispostaDopo121 {
   referenze_cerca: string;
   referenze_puo_dare: string;
   promesse: string[];
-  persone_da_presentare: { nome: string; chi_e: string; perche: string }[];
+  persone_da_presentare: { nome: string; chi_e: string; perche: string; azienda: string; citta: string; settore: string }[];
+  /** v3.68: chi conosce bene (clienti, fornitori, amici imprenditori): i suoi rapporti stretti. */
+  rapporti_stretti: { azienda: string; persona: string; legame: string; citta: string }[];
   membri_indicati: string[];
   ponti_confermati: { nome: string; lo_conosce_bene: boolean }[];
   contatti_dati: string[];
@@ -61,8 +64,25 @@ const SCHEMA: Schema = {
           nome: { type: "string" },
           chi_e: { type: "string", description: "Ruolo o azienda, se detto" },
           perche: { type: "string" },
+          azienda: { type: "string", description: "Il nome dell'azienda della persona (o l'azienda segnalata, se il membro ha parlato di un'azienda). Vuoto se non detto" },
+          citta: { type: "string", description: "La città dell'azienda, se detta. Vuoto se no" },
+          settore: { type: "string", description: "Che lavoro fa l'azienda (es. 'costruzione piscine'), se detto. Vuoto se no" },
         },
-        required: ["nome", "chi_e", "perche"],
+        required: ["nome", "chi_e", "perche", "azienda", "citta", "settore"],
+      },
+    },
+    rapporti_stretti: {
+      type: "array",
+      description: "Le aziende con cui il membro ha un rapporto stretto (suoi clienti, fornitori, amici imprenditori) di cui ha parlato, anche se non si è offerto di presentarle. Solo quelle con un nome",
+      items: {
+        type: "object",
+        properties: {
+          azienda: { type: "string", description: "Il nome dell'azienda" },
+          persona: { type: "string", description: "Chi conosce lì (nome e cognome), se detto. Vuoto se no" },
+          legame: { type: "string", description: "Che rapporto ha (es. 'suo cliente da 10 anni'), in poche parole" },
+          citta: { type: "string", description: "La città, se detta. Vuoto se no" },
+        },
+        required: ["azienda", "persona", "legame", "citta"],
       },
     },
     membri_indicati: {
@@ -102,7 +122,7 @@ const SCHEMA: Schema = {
   },
   required: [
     "riassunto", "cosa_fa", "cosa_non_fa", "zone", "referenze_cerca", "referenze_puo_dare", "promesse",
-    "persone_da_presentare", "membri_indicati", "ponti_confermati", "contatti_dati", "prossimo_passo", "prossimo_passo_tra_giorni", "msd",
+    "persone_da_presentare", "rapporti_stretti", "membri_indicati", "ponti_confermati", "contatti_dati", "prossimo_passo", "prossimo_passo_tra_giorni", "msd",
   ],
 };
 
@@ -222,7 +242,7 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
       ),
       ...nuove.map((p) =>
         db.bniPresentazione.create({
-          data: { membroId, nome: p.nome.trim().slice(0, 120), ruolo: pieno(p.chi_e)?.slice(0, 160) ?? null, perche: pieno(p.perche)?.slice(0, 300) ?? null, stato: "CHIESTA" },
+          data: { membroId, nome: p.nome.trim().slice(0, 120), ruolo: (pieno(p.chi_e) ?? pieno(p.azienda))?.slice(0, 160) ?? null, perche: pieno(p.perche)?.slice(0, 300) ?? null, stato: "CHIESTA" },
         })
       ),
       db.agentReport.create({
@@ -248,6 +268,8 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
       const s = daSegnalare.find((x) => norm(x.nome).includes(norm(nome)) || norm(nome).includes(norm(x.nome)));
       if (s) await db.bniSegnalazione.update({ where: { id: s.id }, data: { stato: "DATA", dataAt: n.data } });
     }
+    // v3.68: le aziende segnalate entrano subito nel CRM; i rapporti stretti restano da chiedere la prossima volta.
+    await aziendeDal121(membro, d, n.data).catch((e) => console.error("[dopo-121] aziende segnalate:", e));
     // Le presentazioni da chiedere vanno in Cassetta con il messaggio per il membro.
     await richiestePresentazione(membroId);
     // Il seguito MSD: interessato per sé e nel perimetro → la proposta scritta in Cassetta (la manda Alessio).
@@ -264,5 +286,44 @@ export async function registra121(membroId: string, n: Nuovo121, utente: string 
       data: { status: "FALLITO", finishedAt: new Date(), error: (err instanceof Error ? err.message : String(err)).slice(0, 500) },
     });
     return { ...esito, motivo: "L'AI non ha risposto: testo salvato, scheda non compilata" };
+  }
+}
+
+/**
+ * Dopo il 121 (v3.68): ogni azienda segnalata dal membro entra subito nel CRM e si collega alla sua
+ * presentazione; i rapporti stretti diventano aziende da chiedergli la prossima volta (non partono da soli).
+ */
+async function aziendeDal121(membro: { id: string; name: string }, d: RispostaDopo121, quando: Date): Promise<void> {
+  const presentazioni = await db.bniPresentazione.findMany({ where: { membroId: membro.id }, select: { id: true, nome: true, ruolo: true, leadId: true } });
+  for (const p of d.persone_da_presentare) {
+    const azienda = pieno(p.azienda);
+    if (!azienda) continue;
+    const pres = presentazioni.find((x) => norm(x.nome) === norm(p.nome));
+    if (!pres || pres.leadId) continue;
+    const a = await aziendaSegnalata(membro, { azienda, citta: pieno(p.citta), settore: pieno(p.settore), persona: pieno(p.nome) }, quando);
+    await db.bniPresentazione.update({
+      where: { id: pres.id },
+      data: { leadId: a.leadId, ...(a.settore === "CASO" ? { forza: { increment: 2 } } : a.settore === "INTERESSE" ? { forza: { increment: 1 } } : {}) },
+    });
+  }
+  for (const r of d.rapporti_stretti ?? []) {
+    const azienda = pieno(r.azienda);
+    if (!azienda) continue;
+    const nome = pieno(r.persona) ?? azienda;
+    if (presentazioni.some((x) => norm(x.nome) === norm(nome) || (x.ruolo && norm(x.ruolo).includes(norm(azienda))))) continue;
+    const lead = await trovaAzienda(azienda);
+    const creata = await db.bniPresentazione.create({
+      data: {
+        membroId: membro.id,
+        nome: nome.slice(0, 120),
+        // Per i rapporti stretti il ruolo è sempre l'azienda (anche quando la persona non si sa).
+        ruolo: azienda.slice(0, 160),
+        perche: `Rapporto stretto: ${pieno(r.legame) ?? "lo conosce bene"}${pieno(r.citta) ? ` (${r.citta.trim()})` : ""}`.slice(0, 300),
+        stato: "DA_CHIEDERE",
+        leadId: lead?.id ?? null,
+      },
+      select: { id: true, nome: true, ruolo: true, leadId: true },
+    });
+    presentazioni.push(creata);
   }
 }

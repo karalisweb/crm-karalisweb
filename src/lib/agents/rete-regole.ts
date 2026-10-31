@@ -4,7 +4,7 @@
  *
  *   - Un ponte vale solo se è nella cerchia stretta (membri BNI con un 121 fatto + "lo conosco").
  *   - Le strade, in ordine: membro BNI della cerchia → altro contatto della cerchia → chi decide è nella
- *     cerchia (contatto diretto) → contatto scaldato. Senza strade si chiede "lo conosci?" sui nomi visti.
+ *     cerchia (contatto diretto) → membro BNI della cerchia nella zona dell'azienda (v3.68) → contatto scaldato. Senza strade si chiede "lo conosci?" sui nomi visti.
  *   - Il seguito: promemoria dopo 5 giorni, ponte successivo dopo 10, pausa di 3 mesi dopo 3 tentativi.
  */
 import { norm } from "./bni-regole";
@@ -71,6 +71,8 @@ export interface DatiAzienda {
   decisori: { nome: string; grado: number | null; contattiInComune: string[] }[];
   /** Ponti BNI già trovati (incrocio, chi decide): membro e decisore. */
   pontiBni: { membroId: string; membro: string; decisore: string }[];
+  /** Membri BNI della cerchia nella stessa zona dell'azienda (v3.68: la ricerca dal territorio). */
+  pontiZona?: { membroId: string; membro: string }[];
   scaldata: boolean;
 }
 
@@ -88,6 +90,10 @@ export function strade(a: DatiAzienda, cerchia: string[], provati: string[] = []
     for (const c of d.contattiInComune) if (nellaCerchia(c, cerchia) && !gia(c) && !occupato(c)) out.push({ strada: "CERCHIA", nome: c, decisore: d.nome });
   }
   for (const d of a.decisori) if (nellaCerchia(d.nome, cerchia) && !gia(d.nome)) out.push({ strada: "DIRETTO", nome: d.nome, decisore: d.nome });
+  // La zona (v3.68): un membro BNI già incontrato che lavora dove sta l'azienda. Vale meno di LinkedIn, e solo
+  // se si sa chi decide (si chiede per nome, non per categoria).
+  const decisore = a.decisori[0]?.nome;
+  if (decisore) for (const z of a.pontiZona ?? []) if (nellaCerchia(z.membro, cerchia) && !gia(z.membro) && !occupato(z.membro)) out.push({ strada: "BNI", nome: z.membro, decisore, membroId: z.membroId });
   if (a.scaldata) for (const d of a.decisori) if (!gia(d.nome) && !out.some((o) => o.nome === d.nome)) out.push({ strada: "SCALDATO", nome: d.nome, decisore: d.nome });
   return out;
 }

@@ -232,6 +232,17 @@ alimenta la ricerca di clienti negli altri canali.
   (a quel punto ha visto tutta la dirigenza). Arrivare già conosciuti la rende una "visita bomba".
 - **Prima di ogni 121**: l'agente guarda la rete LinkedIn del membro e prepara **3-5 persone da chiedergli di
   presentare** (contatto presentato, non a freddo).
+- **Le presentazioni da chiedere** (confermate da Alessio il 2026-10-31, costruite in v3.68.0). Per ogni persona
+  due liste separate:
+  1. **membri del suo capitolo** che Alessio non ha ancora sentito → diventano 121 (contano nel tetto);
+  2. **aziende da farsi presentare** → possibili clienti. In ordine: viste fra i suoi collegamenti LinkedIn, poi
+     i suoi rapporti stretti (detti al 121), poi le aziende della sua zona nei settori dei casi studio (più forti)
+     o che interessano (più deboli).
+  Che persona è cambia cosa chiederle: **digital** (un collega), **settore dei casi studio**, **settore che
+  interessa**, **acceleratore** (avvocato, commercialista…: conosce tante aziende). Si chiede **per nome** di chi
+  decide; **al massimo 3 richieste** per conversazione, sempre dando prima un contatto. **Dal territorio**:
+  un'azienda ad Alghero → chi conosce Alessio lì (BNI, LinkedIn) che può presentargliela. Il vocale dopo il 121
+  salva anche **chi conosce** il membro; le aziende che segnala entrano **subito** nel CRM.
 - **Dopo ogni 121**: la rete LinkedIn del membro diventa una **chiave di ricerca** per il flusso clienti.
 - Le referenze date e ricevute si tracciano nell'**app BNI**, non nel CRM.
 

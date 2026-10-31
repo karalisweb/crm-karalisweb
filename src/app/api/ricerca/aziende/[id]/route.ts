@@ -9,6 +9,8 @@ import { collegamentoAzienda } from "@/lib/agents/motore";
 import { KIND_DA_CONTATTARE, daContattare, sceltaDaStato } from "@/lib/ricerca/contattare";
 import { KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, commentiFatti, pagineAzienda, piattaformaScelta, profiliDecisore } from "@/lib/agents/rete";
 import { COMMENTI_PER_CONTATTO, frequenzaTesto } from "@/lib/agents/rete-regole";
+import { pontiInZona } from "@/lib/agents/presentazioni";
+import { ETICHETTE_TIPO } from "@/lib/agents/presentazioni-regole";
 
 /**
  * GET /api/ricerca/aziende/[id] — la scheda di un'azienda trovata: perché è qui, chi decide,
@@ -130,7 +132,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     perche: ritrovamenti[0] ?? null,
     casi,
     persone,
-    ponti: [...ponti.values()],
+    // v3.68, la ricerca dal territorio: i membri BNI della sua zona (dopo quelli che conoscono il titolare).
+    ponti: [
+      ...ponti.values(),
+      ...(await pontiInZona(id))
+        .filter((z) => !ponti.has(z.membroId))
+        .slice(0, 4)
+        .map((z) => ({ id: z.membroId, name: z.membro, chapter: z.capitolo, come: z.conosciuto ? `è nella sua zona (${ETICHETTE_TIPO[z.tipo]})` : `è nella sua zona: prima serve il 121 (${ETICHETTE_TIPO[z.tipo]})` })),
+    ],
     prossimo: decisione?.status === "IN_ATTESA" ? "Decidi: approfondire o scartare" : decisione?.status === "SCARTATO" ? "Scartata" : prossimo,
     storia,
     decisione,
