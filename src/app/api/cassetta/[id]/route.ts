@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { applicaDecisioneVendita } from "@/lib/vendita/trattative";
 import { KIND_PRESENTAZIONE_BNI, presentazioneChiesta } from "@/lib/agents/motore";
+import { KIND_AVVISO_SETTORE, decisioneAvviso } from "@/lib/agents/avvisi-settore";
 import { decisioneRete } from "@/lib/agents/rete";
 import { decisioneMsd } from "@/lib/agents/msd";
 
@@ -21,7 +22,8 @@ import { decisioneMsd } from "@/lib/agents/msd";
  *   RETE_PONTE / RETE_DIRETTO → "mandato" (presentazione chiesta / contatto scritto); "non ora" = ponte successivo;
  *   RETE_PROMEMORIA → "mandato"; COMMENTO_LINKEDIN → "fatto" (al 5° il contatto diretto);
  *   PROPOSTA_MSD → "mandata" (membro in "Offerta inviata", richiamo fra 7 giorni);
- *   MSD_FUORI_TARGET → "fai la proposta lo stesso"; RICHIAMO_MSD → "mandato" (poi in attesa).
+ *   MSD_FUORI_TARGET → "fai la proposta lo stesso"; RICHIAMO_MSD → "mandato" (poi in attesa);
+ *   AVVISO_SETTORE → "me ne occupo" (se l'azienda era fra le eliminate torna in gioco).
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireSession();
@@ -63,6 +65,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       await db.bniChapter.updateMany({ where: { id: voce.bniChapterId, visitStatus: { notIn: ["VISITATO"] } }, data: { visitStatus: "VISITA_PIANIFICATA" } });
     }
     if (voce?.kind === KIND_PRESENTAZIONE_BNI) await presentazioneChiesta(id);
+    if (voce?.kind === KIND_AVVISO_SETTORE) await decisioneAvviso(id);
     if (voce?.kind === "MESSAGGIO_BNI" && voce.bniMembroId) {
       await db.bniMembro.updateMany({
         where: { id: voce.bniMembroId, bniStage: "DA_AVVICINARE" },

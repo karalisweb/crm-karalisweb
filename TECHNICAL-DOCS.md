@@ -1626,6 +1626,21 @@ e `leads`.
   città nelle note, senza azienda collegata e senza la città del capitolo restano senza zona; i "settori che
   interessano" sono solo i `termini_settore` dei casi studio.
 
+## Avvisi di settore (v3.69.0)
+
+Alessio, 2026-10-31: "se ci sono aziende dei miei casi studio o dei miei settori in BNI o su contatti LinkedIn me lo
+devi dire". `src/lib/agents/avvisi-settore.ts`:
+
+- `cercaAvvisi()`: membri BNI ATTIVI con `settoreDi(professione + azienda)`; `persone` con azienda/ruolo/lead del
+  settore (saltata la persona che è il membro stesso); lead `ARCHIVIATO` con ritrovamenti nel settore di un caso
+  (`CASO`), tranne i doppioni di un'azienda già attiva. Un avviso per azienda (`nomeConfrontabile` senza "srl") con
+  `righe[]` (BNI → LinkedIn → eliminate) ed `eliminataId`; ordine: caso → BNI → Sardegna.
+- `avvisaSettori()`: voci Cassetta `AVVISO_SETTORE` (dedupe su `payload.chiave`, anche se scartate; max 15 per turno).
+  Gira in `squadraBni` a ogni fase (07:00 e 14:00).
+- `decisioneAvviso()` (hook in `POST /api/cassetta/[id]` su APPROVATO): `eliminataId` torna `DA_ANALIZZARE`.
+- `GET /api/oggi` → `avvisiSettore` (5) e `avvisiSettoreTotale`; Oggi li mostra in cima.
+- `ordinaMembri` (presentazioni-regole): SETTORE_CASO prima di ACCELERATORE.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

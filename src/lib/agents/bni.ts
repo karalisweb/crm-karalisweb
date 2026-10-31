@@ -45,6 +45,7 @@ import {
   type ProssimoMembro,
 } from "./bni-regole";
 import { chiaveAzienda, daChiedereA } from "./presentazioni";
+import { avvisaSettori } from "./avvisi-settore";
 
 export const KIND_MESSAGGIO_BNI = "MESSAGGIO_BNI";
 export const KIND_VISITA_CAPITOLO = "VISITA_CAPITOLO";
@@ -309,6 +310,8 @@ export interface RiepilogoBni {
   richiesteNuove: number;
   visiteProposte: number;
   preparazioni: number;
+  /** Aziende dei settori di Alessio segnalate in Cassetta in questo turno. */
+  avvisiSettore: number;
   retiAccodate: number;
   mappeAccodate: number;
   saltatiPerBudget: number;
@@ -345,7 +348,7 @@ export async function eseguiTurnoBni(oggi = new Date(), fase: FaseBni = "tutto")
   }
   const r: RiepilogoBni = {
     settimana: await statoSettimana(oggi, tutti),
-    richiesteNuove: 0, visiteProposte: 0, preparazioni: 0, retiAccodate: 0, mappeAccodate: 0, saltatiPerBudget: 0,
+    richiesteNuove: 0, visiteProposte: 0, preparazioni: 0, avvisiSettore: 0, retiAccodate: 0, mappeAccodate: 0, saltatiPerBudget: 0,
     vecchieChiuse: vecchie.count, riscritte: 0, profiliLinkedin: 0, promemoria: 0, linkedinFermo: false, coperturaSardegna: null,
   };
   const mattina = fase !== "richieste";
@@ -409,6 +412,11 @@ export async function eseguiTurnoBni(oggi = new Date(), fase: FaseBni = "tutto")
 
   // Dopo il 121: se non è registrato, un promemoria per il vocale.
   r.promemoria = await promemoriaDopo121(oggi);
+  // v3.69: le aziende dei settori dei casi studio in BNI, su LinkedIn o fra le eliminate vanno dette ad Alessio.
+  r.avvisiSettore = await avvisaSettori().catch((e) => {
+    console.error("[squadra-bni] avvisi di settore:", e);
+    return 0;
+  });
   // Una settimana dopo la proposta MSD mandata, senza risposta: l'unico richiamo.
   if (mattina) await richiamiMsd(oggi).catch((e) => console.error("[squadra-bni] richiami MSD:", e));
   // Alle 14 anche i messaggi della rete (ponti, promemoria): si mandano nella stessa finestra delle 15-18.

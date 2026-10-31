@@ -19,6 +19,8 @@ interface Oggi {
   daFare: { richiesteDaMandare: number; visiteDaMandare: number; fogli: number; aziendeDaDecidere: number; casiDaConfermare: number };
   incontri: { id: string; nome: string; azienda: string | null; capitolo: string | null; quando: string; daChiedere: number }[];
   call: { id: string; nome: string; quando: string }[];
+  avvisiSettore: { id: string; titolo: string; riga: string; altre: number; cosaFare: string; link: string }[];
+  avvisiSettoreTotale: number;
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
@@ -86,6 +88,23 @@ export default function HomePage() {
             <span>Gli agenti che usano il tuo Chrome (BNI Connect, LinkedIn, Facebook) sono fermi da {Math.floor(d.agentiMac.oreFermi / 24)} giorni. Tieni il Mac acceso con Chrome aperto e controlla nell&apos;app Claude che l&apos;attività &quot;Squadra CRM — agenti di browser&quot; sia attiva.</span>
           )}
         </CardContent></Card>
+      )}
+
+      {d.avvisiSettore.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-semibold">Nei tuoi settori: te lo devo dire</h2>
+            <Link href="/cassetta" className="text-sm text-primary hover:underline">{d.avvisiSettoreTotale > d.avvisiSettore.length ? `Tutti e ${d.avvisiSettoreTotale} in Cassetta` : "Apri la Cassetta"}</Link>
+          </div>
+          <p className="text-xs text-muted-foreground">Aziende dei tuoi casi studio o dei tuoi settori viste fra i membri BNI, sui contatti LinkedIn o fra le eliminate.</p>
+          {d.avvisiSettore.map((a) => (
+            <Link key={a.id} href={a.link} className="block rounded-lg border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 p-3 hover:border-primary transition">
+              <div className="text-sm font-medium break-words">{a.titolo}</div>
+              <div className="text-xs text-muted-foreground break-words">{a.riga}{a.altre ? ` · e in altri ${a.altre} posti` : ""}</div>
+              <div className="text-xs mt-1 break-words">{a.cosaFare}</div>
+            </Link>
+          ))}
+        </section>
       )}
 
       {p && (

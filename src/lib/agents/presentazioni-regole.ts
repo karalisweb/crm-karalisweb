@@ -138,8 +138,11 @@ export interface AziendaDaPresentare {
   stessaCitta?: boolean;
 }
 
-/** Prima chi porta clienti (acceleratori e settori dei casi), poi gli altri; i colleghi digital alla fine. */
-const ORDINE_MEMBRI: Record<TipoPersona, number> = { ACCELERATORE: 0, SETTORE_CASO: 1, SETTORE_INTERESSE: 2, ALTRO: 3, DIGITAL: 4 };
+/**
+ * Prima chi è nel settore di un caso studio (Alessio, 2026-10-31: "me lo devi dire"), poi gli acceleratori,
+ * poi gli altri; i colleghi digital alla fine.
+ */
+const ORDINE_MEMBRI: Record<TipoPersona, number> = { SETTORE_CASO: 0, ACCELERATORE: 1, SETTORE_INTERESSE: 2, ALTRO: 3, DIGITAL: 4 };
 
 export function ordinaMembri(m: MembroDaPresentare[]): MembroDaPresentare[] {
   return [...m].sort((a, b) => ORDINE_MEMBRI[a.tipo] - ORDINE_MEMBRI[b.tipo] || b.punteggio - a.punteggio || a.nome.localeCompare(b.nome));

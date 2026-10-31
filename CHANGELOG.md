@@ -13,6 +13,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.69.0] - 2026-10-31
+
+### Added
+- **Nei tuoi settori: te lo devo dire.** Se un'azienda dei tuoi casi studio (o dei tuoi settori) compare fra i **membri BNI**, fra i **contatti LinkedIn** o fra le **aziende eliminate**, il CRM te lo scrive in **Cassetta** e in cima a **Oggi**: un avviso per azienda, con tutti i posti dove l'ha vista e cosa fare. Nasce da Piscine Arcobaleno: il titolare, Claudio Conti, è membro BNI del capitolo Maestrale (lo stesso di Laura Uleri), l'azienda era fra i contatti LinkedIn ed era finita fra le eliminate. Il CRM l'aveva vista tre volte e non te l'ha mai detto. Con "Me ne occupo" un'azienda eliminata torna in gioco. Il controllo gira nei turni BNI delle 7 e delle 14.
+
+### Changed
+- Nei **membri del capitolo da farti presentare** vengono prima quelli che lavorano nel settore di un caso studio, poi commercialisti, avvocati e simili.
+
+---
+
 ## [3.68.0] - 2026-10-31
 
 ### Added

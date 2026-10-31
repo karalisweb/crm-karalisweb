@@ -243,6 +243,8 @@ alimenta la ricerca di clienti negli altri canali.
   decide; **al massimo 3 richieste** per conversazione, sempre dando prima un contatto. **Dal territorio**:
   un'azienda ad Alghero → chi conosce Alessio lì (BNI, LinkedIn) che può presentargliela. Il vocale dopo il 121
   salva anche **chi conosce** il membro; le aziende che segnala entrano **subito** nel CRM.
+- **Te lo devo dire** (Alessio, 2026-10-31): un'azienda dei settori dei casi studio vista fra i membri BNI, i contatti
+  LinkedIn o le eliminate va **sempre** segnalata ad Alessio (Cassetta e Oggi), mai lasciata sparire in silenzio.
 - **Dopo ogni 121**: la rete LinkedIn del membro diventa una **chiave di ricerca** per il flusso clienti.
 - Le referenze date e ricevute si tracciano nell'**app BNI**, non nel CRM.
 

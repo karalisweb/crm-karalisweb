@@ -44,9 +44,9 @@ describe("la zona", () => {
 
 describe("le due liste", () => {
   const m = (nome: string, tipo: MembroDaPresentare["tipo"], punteggio = 0): MembroDaPresentare => ({ id: nome, nome, categoria: null, azienda: null, tipo, punteggio });
-  it("i membri: prima gli acceleratori, i colleghi digital alla fine", () => {
-    const o = ordinaMembri([m("Dario", "DIGITAL"), m("Anna", "ALTRO"), m("Carla", "ACCELERATORE", 10), m("Bruno", "ACCELERATORE", 60)]);
-    expect(o.map((x) => x.nome)).toEqual(["Bruno", "Carla", "Anna", "Dario"]);
+  it("i membri: prima il settore del caso studio, poi gli acceleratori, i colleghi digital alla fine", () => {
+    const o = ordinaMembri([m("Dario", "DIGITAL"), m("Anna", "ALTRO"), m("Carla", "ACCELERATORE", 10), m("Bruno", "ACCELERATORE", 60), m("Claudio Conti", "SETTORE_CASO")]);
+    expect(o.map((x) => x.nome)).toEqual(["Claudio Conti", "Bruno", "Carla", "Anna", "Dario"]);
   });
   it("le aziende: LinkedIn, poi rapporti stretti, poi zona; a parità il caso studio", () => {
     const a = (azienda: string, fonte: AziendaDaPresentare["fonte"], settore: AziendaDaPresentare["settore"], decisore: string | null = null): AziendaDaPresentare => ({ presentazioneId: null, leadId: null, azienda, decisore, fonte, settore, citta: null });

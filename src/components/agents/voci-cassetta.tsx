@@ -46,6 +46,7 @@ export const AZIONI: Record<string, { si: string; no: string; etichetta: string 
   RECALL: { si: "Fatto", no: "Rimanda", etichetta: "Vendita · recall" },
   NURTURING_PROPOSTO: { si: "Passa a nurturing", no: "Riprova fra 7 giorni", etichetta: "Vendita · nessuna risposta" },
   MESSAGGIO_NURTURING: { si: "Mandato", no: "Salta questo giro", etichetta: "Vendita · nurturing" },
+  AVVISO_SETTORE: { si: "Me ne occupo", no: "Non mi interessa", etichetta: "Avviso · nei tuoi settori" },
 };
 
 /** Etichetta del "sì" del Dopo-call: dipende da cosa raccomanda l'agente. */
@@ -515,6 +516,17 @@ export function CorpoNurturing({ p, telefono }: { p: Record<string, unknown>; te
   );
 }
 
+export function CorpoAvvisoSettore({ p }: { p: Record<string, unknown> }) {
+  return (
+    <div className="space-y-2 text-sm">
+      <ul className="list-disc pl-4 space-y-0.5">{arr<string>(p.righe).map((r, i) => <li key={i}>{r}</li>)}</ul>
+      {s(p.zona) && <p className="text-xs text-muted-foreground">Zona: {s(p.zona)}</p>}
+      <p className="font-medium">{s(p.cosaFare)}</p>
+      {s(p.link) && <Link href={s(p.link)}><Button size="sm" variant="outline">Apri la scheda</Button></Link>}
+    </div>
+  );
+}
+
 export function CorpoVoce({ v }: { v: VoceCassetta }) {
   return (
     <>
@@ -537,6 +549,7 @@ export function CorpoVoce({ v }: { v: VoceCassetta }) {
       {v.kind === "DOPO_CALL" && <CorpoDopoCall p={v.payload} telefono={v.trattativa?.telefono} />}
       {(v.kind === "RECALL" || v.kind === "NURTURING_PROPOSTO") && <CorpoRecall p={v.payload} telefono={v.trattativa?.telefono} />}
       {v.kind === "MESSAGGIO_NURTURING" && <CorpoNurturing p={v.payload} telefono={v.trattativa?.telefono} />}
+      {v.kind === "AVVISO_SETTORE" && <CorpoAvvisoSettore p={v.payload} />}
     </>
   );
 }
