@@ -13,6 +13,20 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.70.0] - 2026-10-31
+
+### Added
+- **I tuoi settori caldi, in un elenco solo.** Oltre ai casi studio, il CRM conosce i settori che per te contano anche senza un caso: **casa** (edilizia, arredi, infissi, impianti, giardini, piscine, movimento terra, piattaforme aeree, elettromeccanica e affini), **turismo** (piccole strutture, eventi, catering), **bellezza e benessere** (centri estetici, osteopati, fisioterapisti…). Valgono per gli avvisi, per le aziende da farti presentare e per le persone da incontrare.
+
+### Changed
+- **Con chi parlare prima, sempre nello stesso ordine:** colleghi di mestiere, poi acceleratori (commercialisti, avvocati, finanza agevolata…), poi chi lavora nei settori dei casi studio, poi nei settori caldi. Vale per i membri del capitolo da farti presentare, per chi ti presenta un'azienda e per le richieste di 121 dentro ogni capitolo (dopo colleghi e dirigenza).
+- **Avvisi "nei tuoi settori":** prima le persone BNI (ci si relaziona), poi LinkedIn, poi le eliminate; i casi studio prima dei settori caldi, la Sardegna prima. Gli acceleratori non finiscono fra gli avvisi di settore: si incontrano comunque, prima degli altri.
+
+### Fixed
+- Un settore si riconosce solo a inizio parola: "mobili" non trova più "immobiliare".
+
+---
+
 ## [3.69.0] - 2026-10-31
 
 ### Added

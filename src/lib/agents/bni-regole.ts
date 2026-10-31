@@ -95,6 +95,11 @@ export interface MembroPerRegole {
   fissato121At: Date | null;
   /** Alessio ha scartato la richiesta di recente ("non ora"): non si ripropone e non blocca gli altri. */
   rinviato: boolean;
+  /**
+   * Con chi parlare prima dentro il gruppo (v3.70, Alessio 2026-10-31): 0 colleghi di mestiere, 1 acceleratori,
+   * 2 settori dei casi studio, 3 settori caldi, 4 altri. Vedi ORDINE_PERSONE in presentazioni-regole.ts.
+   */
+  rango?: number;
 }
 
 export type Motivo = "STESSO_RUOLO" | "DIRIGENZA" | "PRESIDENTE" | "INDICATO" | "ALTRI";
@@ -107,7 +112,9 @@ export interface Gruppo {
 const DIRIGENZA_PRIMA: string[] = ["PRESIDENTE", "FORMAZIONE", "EVENTI"];
 
 function perNome(a: MembroPerRegole, b: MembroPerRegole): number {
-  // Prima chi ha un telefono (gli si può scrivere), poi in ordine alfabetico.
+  // Prima il tipo di persona (colleghi, acceleratori, casi studio, settori caldi), poi chi ha un telefono
+  // (gli si può scrivere), poi in ordine alfabetico.
+  if ((a.rango ?? 4) !== (b.rango ?? 4)) return (a.rango ?? 4) - (b.rango ?? 4);
   if (!!a.phone !== !!b.phone) return a.phone ? -1 : 1;
   return a.name.localeCompare(b.name, "it");
 }

@@ -7,8 +7,8 @@
  *     e le AZIENDE da farsi presentare (diventano possibili clienti).
  *   - Aziende, in ordine: quelle viste fra i suoi collegamenti LinkedIn, poi i suoi rapporti stretti
  *     (detti al 121), poi quelle della sua zona nei settori dei casi studio (più forti) o che interessano.
- *   - Che persona è: digital (un collega), nei settori dei casi studio, nei settori che interessano,
- *     acceleratore (avvocato, commercialista…: conosce tante aziende) o altro.
+ *   - Che persona è, nell'ordine in cui parlarci: collega di mestiere (digital), acceleratore (avvocato,
+ *     commercialista…: conosce tante aziende), nei settori dei casi studio, nei settori caldi, altro.
  *   - Si chiede per nome di chi decide, non per categoria; al massimo 3 richieste per conversazione.
  */
 import { norm, stessoRuolo } from "./bni-regole";
@@ -22,7 +22,7 @@ export const ETICHETTE_TIPO: Record<TipoPersona, string> = {
   DIGITAL: "digital, un collega",
   ACCELERATORE: "acceleratore: conosce tante aziende",
   SETTORE_CASO: "settore dei casi studio",
-  SETTORE_INTERESSE: "settore che interessa",
+  SETTORE_INTERESSE: "settore caldo",
   ALTRO: "altro",
 };
 
@@ -34,7 +34,31 @@ const ACCELERATORI = [
   /sicurezza sul lavoro|rspp/, /immobiliar/,
 ];
 
-/** Le parole dei settori: dai casi studio (termini) e dai settori più larghi (termini del settore). */
+/**
+ * I settori caldi di Alessio (2026-10-31), prioritari anche senza un caso studio: la casa, il turismo piccolo,
+ * bellezza e benessere. Basta che la radice delle parole lunghe di una voce stia nel testo.
+ */
+export const SETTORI_CALDI: Record<"CASA" | "TURISMO" | "BENESSERE", string[]> = {
+  CASA: [
+    "edilizia", "edile", "edili", "costruzioni edili", "impresa costruzioni", "ristrutturazioni", "arredi", "arredamento", "arredamenti",
+    "mobili", "mobilificio", "cucine", "falegnameria", "infissi", "serramenti", "finestre", "porte blindate", "tende da sole",
+    "impianti", "impiantistica", "elettricista", "impianti elettrici", "idraulico", "idraulica", "termoidraulica", "climatizzazione",
+    "condizionatori", "fotovoltaico", "giardini", "giardinaggio", "giardiniere", "vivaio", "verde pubblico", "paesaggista",
+    "piscine", "piscina", "movimento terra", "movimenti terra", "scavi", "piattaforme aeree", "piattaforma aerea", "noleggio piattaforme",
+    "elettromeccanica", "carpenteria", "pavimenti", "parquet", "ceramiche", "piastrelle", "domotica", "cancelli", "recinzioni",
+    "imbiancatura", "imbianchino", "cartongesso", "isolamento termico", "coperture", "lattoneria",
+  ],
+  TURISMO: [
+    "bed and breakfast", "affittacamere", "casa vacanze", "case vacanza", "guest house", "agriturismo", "residence",
+    "albergo", "piccolo hotel", "boutique hotel", "eventi", "organizzazione eventi", "wedding", "matrimoni", "catering", "banqueting",
+  ],
+  BENESSERE: [
+    "centro estetico", "estetica", "estetista", "bellezza", "beauty", "benessere", "osteopata", "osteopatia", "fisioterapia",
+    "fisioterapista", "massaggi", "massoterapia", "naturopata", "parrucchiere", "acconciature", "onicotecnica", "dermopigmentazione",
+  ],
+};
+
+/** Le parole dei settori: dai casi studio (termini) e dai settori caldi (quelli di Alessio + i settori larghi dei casi). */
 export interface Settori {
   caso: string[];
   interesse: string[];
@@ -53,7 +77,8 @@ export function nelSettore(testo: string | null | undefined, termini: string[]):
   if (!t) return false;
   return termini.some((x) => {
     const r = radici(x);
-    return r.length > 0 && r.every((p) => t.includes(p));
+    // La radice deve stare all'inizio di una parola: "mobili" non deve trovare "immobiliare".
+    return r.length > 0 && r.every((p) => new RegExp(`(^|[^a-z])${p}`).test(t));
   });
 }
 
@@ -139,10 +164,11 @@ export interface AziendaDaPresentare {
 }
 
 /**
- * Prima chi è nel settore di un caso studio (Alessio, 2026-10-31: "me lo devi dire"), poi gli acceleratori,
- * poi gli altri; i colleghi digital alla fine.
+ * Con chi parlare prima (Alessio, 2026-10-31): i colleghi di mestiere, poi gli acceleratori, poi chi lavora nei
+ * settori dei casi studio, poi nei settori caldi, poi gli altri.
  */
-const ORDINE_MEMBRI: Record<TipoPersona, number> = { SETTORE_CASO: 0, ACCELERATORE: 1, SETTORE_INTERESSE: 2, ALTRO: 3, DIGITAL: 4 };
+export const ORDINE_PERSONE: Record<TipoPersona, number> = { DIGITAL: 0, ACCELERATORE: 1, SETTORE_CASO: 2, SETTORE_INTERESSE: 3, ALTRO: 4 };
+const ORDINE_MEMBRI = ORDINE_PERSONE;
 
 export function ordinaMembri(m: MembroDaPresentare[]): MembroDaPresentare[] {
   return [...m].sort((a, b) => ORDINE_MEMBRI[a.tipo] - ORDINE_MEMBRI[b.tipo] || b.punteggio - a.punteggio || a.nome.localeCompare(b.nome));

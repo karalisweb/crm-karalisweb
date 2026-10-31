@@ -1639,7 +1639,11 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   Gira in `squadraBni` a ogni fase (07:00 e 14:00).
 - `decisioneAvviso()` (hook in `POST /api/cassetta/[id]` su APPROVATO): `eliminataId` torna `DA_ANALIZZARE`.
 - `GET /api/oggi` → `avvisiSettore` (5) e `avvisiSettoreTotale`; Oggi li mostra in cima.
-- `ordinaMembri` (presentazioni-regole): SETTORE_CASO prima di ACCELERATORE.
+- v3.70: `SETTORI_CALDI` (CASA, TURISMO, BENESSERE) in `presentazioni-regole.ts` entrano in `settoriAlessio().interesse`;
+  `nelSettore` vuole la radice a inizio parola. `ORDINE_PERSONE` (DIGITAL 0 · ACCELERATORE 1 · SETTORE_CASO 2 ·
+  SETTORE_INTERESSE 3 · ALTRO 4) ordina `ordinaMembri`, `pontiInZona` e, via `MembroPerRegole.rango` (impostato in
+  `caricaCapitoli`), i gruppi di `gruppiCapitolo`. Gli avvisi BNI prendono solo i tipi SETTORE_CASO/SETTORE_INTERESSE e
+  si ordinano BNI → LinkedIn → eliminate, poi caso → caldo, poi Sardegna.
 
 ## Motore 121 (v3.52.0)
 

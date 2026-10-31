@@ -11,18 +11,18 @@ import { db } from "@/lib/db";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { nomeConfrontabile, stessoNome } from "@/lib/ricerca/regole";
 import {
-  daChiedereOra, domandaAzienda, domandaMembro, ordinaAziende, ordinaMembri, settoreDi, stessaZona, tipoPersona, zonaDa,
+  ORDINE_PERSONE, SETTORI_CALDI, daChiedereOra, domandaAzienda, domandaMembro, ordinaAziende, ordinaMembri, settoreDi, stessaZona, tipoPersona, zonaDa,
   type AziendaDaPresentare, type MembroDaPresentare, type Settori, type TipoPersona, type Zona,
 } from "./presentazioni-regole";
 
 const termini = (j: unknown): string[] => (Array.isArray(j) ? j.filter((x): x is string => typeof x === "string") : []);
 
-/** I settori di Alessio: quelli dei casi studio attivi e quelli più larghi che interessano. */
+/** I settori di Alessio: quelli dei casi studio attivi, poi i settori caldi (i suoi e quelli larghi dei casi). */
 export async function settoriAlessio(): Promise<Settori> {
   const casi = await db.casoStudio.findMany({ where: { stato: "ATTIVO" }, select: { settore: true, termini: true, terminiSettore: true } });
   return {
     caso: casi.flatMap((c) => [...termini(c.termini), ...(c.settore ? [c.settore] : [])]),
-    interesse: casi.flatMap((c) => termini(c.terminiSettore)),
+    interesse: [...Object.values(SETTORI_CALDI).flat(), ...casi.flatMap((c) => termini(c.terminiSettore))],
   };
 }
 
@@ -99,7 +99,7 @@ export async function daChiedereA(membroId: string): Promise<DaChiedere | null> 
         select: { id: true, name: true, profession: true, company: true, partnerScore: true },
       })
     : [];
-  const membri = ordinaMembri(colleghi.map((c) => ({ id: c.id, nome: c.name, categoria: c.profession, azienda: c.company, tipo: tipoPersona(c.profession, c.company, s), punteggio: c.partnerScore }))).slice(0, 5);
+  const membri = ordinaMembri(colleghi.map((c) => ({ id: c.id, nome: c.name, categoria: c.profession, azienda: c.company, tipo: tipoPersona(c.profession, c.company, s), punteggio: c.partnerScore }))).slice(0, 8);
 
   // 2) Le aziende: quelle già segnate per lui (LinkedIn o rapporti stretti), poi quelle della sua zona.
   const segnate = await db.bniPresentazione.findMany({
@@ -186,11 +186,12 @@ async function membriConZona(): Promise<MembroConZona[]> {
   return out;
 }
 
-const ORDINE_PONTE: Record<TipoPersona, number> = { ACCELERATORE: 0, DIGITAL: 1, SETTORE_CASO: 2, SETTORE_INTERESSE: 2, ALTRO: 3 };
+// Chi presenta un'azienda: stesso ordine delle persone (colleghi, acceleratori, casi studio, settori caldi).
+const ORDINE_PONTE = ORDINE_PERSONE;
 
 /**
  * I membri BNI della zona dell'azienda, prima quelli che Alessio ha già incontrato (possono chiedere
- * subito), poi gli altri (prima serve il 121). Prima la stessa città, poi gli acceleratori.
+ * subito), poi gli altri (prima serve il 121). Prima la stessa città, poi colleghi, acceleratori, casi studio, settori caldi.
  */
 export async function pontiInZona(leadId: string): Promise<PonteInZona[]> {
   const l = await db.lead.findUnique({ where: { id: leadId }, select: { address: true } });
@@ -243,7 +244,7 @@ export async function aziendaSegnalata(
       referredByMembroId: membro.id,
       notes: [
         `Segnalata da ${membro.name} (BNI) al 121 del ${giorno}${a.persona ? `: ${a.persona}` : ""}.`,
-        settore === "CASO" ? "È nel settore di un caso studio." : settore === "INTERESSE" ? "È in un settore che interessa." : null,
+        settore === "CASO" ? "È nel settore di un caso studio." : settore === "INTERESSE" ? "È in un tuo settore caldo." : null,
       ].filter(Boolean).join(" "),
     },
     select: { id: true },

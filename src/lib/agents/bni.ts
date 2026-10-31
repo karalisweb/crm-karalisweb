@@ -44,7 +44,8 @@ import {
   type Motivo,
   type ProssimoMembro,
 } from "./bni-regole";
-import { chiaveAzienda, daChiedereA } from "./presentazioni";
+import { chiaveAzienda, daChiedereA, settoriAlessio } from "./presentazioni";
+import { ORDINE_PERSONE, tipoPersona } from "./presentazioni-regole";
 import { avvisaSettori } from "./avvisi-settore";
 
 export const KIND_MESSAGGIO_BNI = "MESSAGGIO_BNI";
@@ -174,7 +175,7 @@ export interface CapitoloCaricato {
 
 /** Capitoli e membri attivi, con lo stato delle richieste di 121 di ciascun membro. */
 export async function caricaCapitoli(oggi = new Date()): Promise<CapitoloCaricato[]> {
-  const [capitoli, membri, richieste] = await Promise.all([
+  const [capitoli, membri, richieste, settori] = await Promise.all([
     db.bniChapter.findMany({ orderBy: { name: "asc" } }),
     db.bniMembro.findMany({
       where: { status: "ATTIVO" },
@@ -188,6 +189,7 @@ export async function caricaCapitoli(oggi = new Date()): Promise<CapitoloCaricat
       select: { bniMembroId: true, status: true, createdAt: true, decidedAt: true },
       orderBy: { createdAt: "desc" },
     }),
+    settoriAlessio(),
   ]);
   const ultima = new Map<string, (typeof richieste)[number]>();
   for (const r of richieste) if (!ultima.has(r.bniMembroId!)) ultima.set(r.bniMembroId!, r);
@@ -212,6 +214,7 @@ export async function caricaCapitoli(oggi = new Date()): Promise<CapitoloCaricat
           richiestaAt: r && !scartata ? r.createdAt : null,
           fissato121At: m.next121At && m.next121At.getTime() > oggi.getTime() - 86400_000 ? m.next121At : null,
           rinviato: scartata && (r!.decidedAt ?? r!.createdAt).getTime() > limiteRinvio,
+          rango: ORDINE_PERSONE[tipoPersona(m.profession, m.company, settori)],
         };
       }),
   }));

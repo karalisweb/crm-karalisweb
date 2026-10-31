@@ -47,7 +47,7 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
       membri: daChiedere.membri.map((x) => ({ id: x.id, nome: x.nome, categoria: x.categoria, azienda: x.azienda, tipo: ETICHETTE_TIPO[x.tipo], domanda: x.domanda, ora: daChiedere.ora.membri.includes(x.id) })),
       aziende: daChiedere.aziende.map((x) => ({
         chiave: x.presentazioneId ?? x.leadId ?? x.azienda, presentazioneId: x.presentazioneId, leadId: x.leadId, azienda: x.azienda, decisore: x.decisore, citta: x.citta,
-        perche: [ETICHETTE_FONTE[x.fonte], x.settore === "CASO" ? "settore dei casi studio" : x.settore === "INTERESSE" ? "settore che interessa" : null, x.citta].filter(Boolean).join(" · "),
+        perche: [ETICHETTE_FONTE[x.fonte], x.settore === "CASO" ? "settore dei casi studio" : x.settore === "INTERESSE" ? "settore caldo" : null, x.citta].filter(Boolean).join(" · "),
         domanda: x.domanda, ora: daChiedere.ora.aziende.includes(x.presentazioneId ?? x.leadId ?? x.azienda),
       })),
     },

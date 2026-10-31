@@ -3,7 +3,7 @@
  * in BNI o su contatti LinkedIn me lo devi dire". Piscine Arcobaleno era nel CRM dal 18/10 (fra i contatti
  * LinkedIn legati a IEM Piscine) ma era finita fra le eliminate senza che lui lo sapesse.
  *
- * A ogni turno si cercano le aziende nei settori dei casi studio (o in quelli che interessano):
+ * A ogni turno si cercano le aziende nei settori dei casi studio e nei settori caldi (SETTORI_CALDI):
  *   - fra i membri BNI (l'azienda del membro è del settore);
  *   - fra le persone viste su LinkedIn (la loro azienda è del settore);
  *   - fra le aziende eliminate (del settore di un caso studio): si possono rimettere in gioco con un sì.
@@ -12,13 +12,13 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { settoriAlessio } from "./presentazioni";
-import { settoreDi, zonaDa } from "./presentazioni-regole";
+import { settoreDi, tipoPersona, zonaDa } from "./presentazioni-regole";
 import { stessaPersona } from "./rete-regole";
 import { nomeConfrontabile } from "@/lib/ricerca/regole";
 
 export const KIND_AVVISO_SETTORE = "AVVISO_SETTORE";
 
-/** Voci nuove al massimo per turno: prima i settori dei casi studio e la Sardegna. */
+/** Voci nuove al massimo per turno: prima le persone BNI, poi LinkedIn, poi le eliminate; casi studio prima dei caldi. */
 const AVVISI_PER_TURNO = 15;
 const SIGLE_SARDEGNA = ["CA", "SU", "SS", "NU", "OR"];
 
@@ -57,8 +57,10 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     select: { id: true, name: true, company: true, profession: true, chapter: true, notes: true, conosciutoAt: true, oneToOneCount: true, lead: { select: { address: true } } },
   });
   for (const m of membri) {
-    const settore = settoreDi(`${m.profession ?? ""} ${m.company ?? ""}`, s);
-    if (!settore) continue;
+    // Colleghi e acceleratori si incontrano comunque (prima di tutti): qui solo chi lavora nei settori.
+    const tipo = tipoPersona(m.profession, m.company, s);
+    if (tipo !== "SETTORE_CASO" && tipo !== "SETTORE_INTERESSE") continue;
+    const settore = tipo === "SETTORE_CASO" ? "CASO" : "INTERESSE";
     const z = zonaDa(m.lead?.address, m.notes?.match(/citt[aà]:\s*([^·\n]+)/i)?.[1]);
     const conosciuto = !!m.conosciutoAt || m.oneToOneCount > 0;
     out.push({
@@ -133,7 +135,8 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
   }
   return [...perAzienda.values()]
     .map((a) => (a.eliminataId && a.dove !== "ELIMINATA" ? { ...a, cosaFare: `${a.cosaFare} Ed è fra le eliminate: con il sì la rimetto in gioco.` } : a))
-    .sort((a, b) => Number(a.settore !== "CASO") - Number(b.settore !== "CASO") || ordine[a.dove] - ordine[b.dove] || Number(!a.sardegna) - Number(!b.sardegna) || a.azienda.localeCompare(b.azienda));
+    // Prima le persone BNI (ci si relaziona), poi LinkedIn, poi le eliminate; dentro, casi studio prima dei settori caldi.
+    .sort((a, b) => ordine[a.dove] - ordine[b.dove] || Number(a.settore !== "CASO") - Number(b.settore !== "CASO") || Number(!a.sardegna) - Number(!b.sardegna) || a.azienda.localeCompare(b.azienda));
 }
 
 /** Le voci nuove in Cassetta (una volta sola per chiave, anche se poi scartata). */
@@ -155,7 +158,7 @@ export async function avvisaSettori(): Promise<number> {
         agent: "avvisi_settore",
         leadId: a.leadId,
         bniMembroId: a.membroId,
-        title: `${a.settore === "CASO" ? "Nel settore del tuo caso studio" : "Nel tuo settore"}: ${a.azienda}`,
+        title: `${a.settore === "CASO" ? "Nel settore del tuo caso studio" : "In un tuo settore caldo"}: ${a.azienda}`,
         payload: a as unknown as Prisma.InputJsonValue,
       },
     });
