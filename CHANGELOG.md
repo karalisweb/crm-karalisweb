@@ -13,6 +13,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.71.0] - 2026-10-31
+
+### Changed
+- **Gli avvisi "nei tuoi settori" stanno in un posto solo: Oggi.** Prima erano in cima a Oggi (5) e in Cassetta (tutti): due posti, confusione. Ora sono tutti in Oggi, ognuno con i pulsanti **"Me ne occupo"** e **"Non mi interessa"**: tocchi e sparisce. In Cassetta non ci sono più.
+
 ## [3.70.0] - 2026-10-31
 
 ### Added

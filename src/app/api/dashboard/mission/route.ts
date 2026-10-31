@@ -105,7 +105,7 @@ export async function GET() {
         where: { stage: { in: ["DA_SENTIRE", "IN_CORSO", "PREVENTIVO"] }, nextFollowupAt: { not: null, lte: new Date() } },
       }),
       // Cassetta della squadra di agenti: fascicoli in attesa di decisione.
-      db.approvalItem.count({ where: { status: "IN_ATTESA" } }),
+      db.approvalItem.count({ where: { status: "IN_ATTESA", kind: { not: "AVVISO_SETTORE" } } }),
       // Trattative che aspettano Alessio: prossimo passo scaduto, o call passata da più di un giorno.
       db.trattativa.count({
         where: {

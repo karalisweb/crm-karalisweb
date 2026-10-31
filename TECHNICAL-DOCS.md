@@ -1644,6 +1644,9 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   SETTORE_INTERESSE 3 · ALTRO 4) ordina `ordinaMembri`, `pontiInZona` e, via `MembroPerRegole.rango` (impostato in
   `caricaCapitoli`), i gruppi di `gruppiCapitolo`. Gli avvisi BNI prendono solo i tipi SETTORE_CASO/SETTORE_INTERESSE e
   si ordinano BNI → LinkedIn → eliminate, poi caso → caldo, poi Sardegna.
+- v3.71 (Alessio: "un posto solo, o bianco o nero"): gli avvisi stanno **solo in Oggi**. `GET /api/oggi` li dà tutti
+  (con `righe[]`), la home li decide con `POST /api/cassetta/[id]`; `GET /api/cassetta` e il contatore di
+  `/api/dashboard/mission` escludono `AVVISO_SETTORE`. Restano `approval_items` (storico e dedupe).
 
 ## Motore 121 (v3.52.0)
 

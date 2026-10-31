@@ -70,12 +70,11 @@ export async function GET() {
       return { id: m.id, nome: m.name, azienda: m.company, capitolo: m.chapter, quando: m.next121At, daChiedere: c ? c.ora.membri.length + c.ora.aziende.length : 0 };
     })),
     call: call.map((t) => ({ id: t.id, nome: t.nome, quando: t.callAt })),
-    avvisiSettoreTotale: await db.approvalItem.count({ where: { kind: KIND_AVVISO_SETTORE, status: "IN_ATTESA" } }),
-    // v3.69: le aziende dei tuoi settori viste in BNI, su LinkedIn o fra le eliminate (in cima a Oggi).
-    avvisiSettore: (await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, take: 5, select: { id: true, title: true, payload: true } }))
+    // v3.69: le aziende dei tuoi settori viste in BNI, su LinkedIn o fra le eliminate. Dalla v3.71 solo qui, tutte.
+    avvisiSettore: (await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, payload: true } }))
       .map((v) => {
         const p = (v.payload ?? {}) as { righe?: string[]; cosaFare?: string; link?: string };
-        return { id: v.id, titolo: v.title, riga: p.righe?.[0] ?? "", altre: Math.max(0, (p.righe?.length ?? 1) - 1), cosaFare: p.cosaFare ?? "", link: p.link ?? "/cassetta" };
+        return { id: v.id, titolo: v.title, righe: p.righe ?? [], cosaFare: p.cosaFare ?? "", link: p.link ?? "/" };
       }),
     settimana: { fatti: settimana.fatti, fissati: settimana.fissati, obiettivo: settimana.obiettivo, richiesteAperte: settimana.richiesteAperte },
     sardegna: { conosciuti: copertura.conosciuti, totale: copertura.totale },

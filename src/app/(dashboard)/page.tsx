@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2 } from "lucide-react";
 import { dataOra } from "@/components/ricerca/etichette";
 import { SchedaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
@@ -19,8 +20,7 @@ interface Oggi {
   daFare: { richiesteDaMandare: number; visiteDaMandare: number; fogli: number; aziendeDaDecidere: number; casiDaConfermare: number };
   incontri: { id: string; nome: string; azienda: string | null; capitolo: string | null; quando: string; daChiedere: number }[];
   call: { id: string; nome: string; quando: string }[];
-  avvisiSettore: { id: string; titolo: string; riga: string; altre: number; cosaFare: string; link: string }[];
-  avvisiSettoreTotale: number;
+  avvisiSettore: { id: string; titolo: string; righe: string[]; cosaFare: string; link: string }[];
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
@@ -61,6 +61,15 @@ export default function HomePage() {
     caricaPercorso();
   }, [caricaPercorso]);
 
+  // Gli avvisi di settore si decidono qui (v3.71): deciso, sparisce.
+  const [decidendo, setDecidendo] = useState<string | null>(null);
+  const decidiAvviso = async (id: string, decisione: "APPROVATO" | "SCARTATO") => {
+    setDecidendo(id);
+    const r = await fetch(`/api/cassetta/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decisione }) }).catch(() => null);
+    if (r && (r.ok || r.status === 409)) setD((x) => (x ? { ...x, avvisiSettore: x.avvisiSettore.filter((a) => a.id !== id) } : x));
+    setDecidendo(null);
+  };
+
   if (!d) return <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>;
 
   const cose: { href: string; testo: string }[] = [];
@@ -92,17 +101,18 @@ export default function HomePage() {
 
       {d.avvisiSettore.length > 0 && (
         <section className="space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-semibold">Nei tuoi settori: te lo devo dire</h2>
-            <Link href="/cassetta" className="text-sm text-primary hover:underline">{d.avvisiSettoreTotale > d.avvisiSettore.length ? `Tutti e ${d.avvisiSettoreTotale} in Cassetta` : "Apri la Cassetta"}</Link>
-          </div>
-          <p className="text-xs text-muted-foreground">Aziende dei tuoi casi studio o dei tuoi settori viste fra i membri BNI, sui contatti LinkedIn o fra le eliminate.</p>
+          <h2 className="font-semibold">Nei tuoi settori: te lo devo dire ({d.avvisiSettore.length})</h2>
+          <p className="text-xs text-muted-foreground">Aziende dei tuoi casi studio o dei tuoi settori viste fra i membri BNI, sui contatti LinkedIn o fra le eliminate. Stanno solo qui: decidi e spariscono.</p>
           {d.avvisiSettore.map((a) => (
-            <Link key={a.id} href={a.link} className="block rounded-lg border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 p-3 hover:border-primary transition">
-              <div className="text-sm font-medium break-words">{a.titolo}</div>
-              <div className="text-xs text-muted-foreground break-words">{a.riga}{a.altre ? ` · e in altri ${a.altre} posti` : ""}</div>
-              <div className="text-xs mt-1 break-words">{a.cosaFare}</div>
-            </Link>
+            <div key={a.id} className="rounded-lg border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+              <Link href={a.link} className="block text-sm font-medium break-words hover:underline">{a.titolo}</Link>
+              <ul className="text-xs text-muted-foreground space-y-0.5">{a.righe.map((r, i) => <li key={i} className="break-words">{r}</li>)}</ul>
+              <div className="text-xs break-words">{a.cosaFare}</div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={decidendo === a.id} onClick={() => decidiAvviso(a.id, "APPROVATO")}>Me ne occupo</Button>
+                <Button size="sm" variant="outline" disabled={decidendo === a.id} onClick={() => decidiAvviso(a.id, "SCARTATO")}>Non mi interessa</Button>
+              </div>
+            </div>
           ))}
         </section>
       )}
