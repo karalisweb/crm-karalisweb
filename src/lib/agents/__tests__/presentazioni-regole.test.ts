@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  SETTORI_CALDI, daChiedereOra, domandaAzienda, domandaMembro, nelSettore, ordinaAziende, ordinaMembri, stessaZona, tipoPersona, zonaDa,
+  SETTORI_CALDI, daChiedereOra, gruppiSettore, qualeSettore, domandaAzienda, domandaMembro, nelSettore, ordinaAziende, ordinaMembri, stessaZona, tipoPersona, zonaDa,
   type AziendaDaPresentare, type MembroDaPresentare, type Settori,
 } from "../presentazioni-regole";
 
@@ -42,6 +42,16 @@ describe("i settori caldi", () => {
     expect(tipoPersona("Software gestionale", null, caldi)).toBe("ALTRO");
     expect(tipoPersona("Diritto immobiliare", "Avv. Rossi", caldi)).toBe("ACCELERATORE");
     expect(nelSettore("Servizi e prodotti multimediali", caldi.interesse)).toBe(false);
+  });
+});
+
+describe("quale settore", () => {
+  const g = gruppiSettore([{ nome: "IEM Piscine", settore: "costruzione e manutenzione piscine", termini: piscine.caso, terminiSettore: ["spa e centri benessere"] }]);
+  it("dice il caso studio per nome, o il settore caldo", () => {
+    expect(qualeSettore("Piscine Arcobaleno Srl", g)?.nome).toBe("costruzione e manutenzione piscine, come il caso IEM Piscine");
+    expect(qualeSettore("Serramenti Rossi", g)?.nome).toMatch(/^casa/);
+    expect(qualeSettore("Catering Sardo", g)?.nome).toMatch(/^turismo/);
+    expect(qualeSettore("Pizzeria", g)).toBeNull();
   });
 });
 

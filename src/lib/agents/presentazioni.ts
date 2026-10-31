@@ -11,8 +11,8 @@ import { db } from "@/lib/db";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { nomeConfrontabile, stessoNome } from "@/lib/ricerca/regole";
 import {
-  ORDINE_PERSONE, SETTORI_CALDI, daChiedereOra, domandaAzienda, domandaMembro, ordinaAziende, ordinaMembri, settoreDi, stessaZona, tipoPersona, zonaDa,
-  type AziendaDaPresentare, type MembroDaPresentare, type Settori, type TipoPersona, type Zona,
+  ORDINE_PERSONE, SETTORI_CALDI, daChiedereOra, gruppiSettore, domandaAzienda, domandaMembro, ordinaAziende, ordinaMembri, settoreDi, stessaZona, tipoPersona, zonaDa,
+  type AziendaDaPresentare, type GruppoSettore, type MembroDaPresentare, type Settori, type TipoPersona, type Zona,
 } from "./presentazioni-regole";
 
 const termini = (j: unknown): string[] => (Array.isArray(j) ? j.filter((x): x is string => typeof x === "string") : []);
@@ -24,6 +24,12 @@ export async function settoriAlessio(): Promise<Settori> {
     caso: casi.flatMap((c) => [...termini(c.termini), ...(c.settore ? [c.settore] : [])]),
     interesse: [...Object.values(SETTORI_CALDI).flat(), ...casi.flatMap((c) => termini(c.terminiSettore))],
   };
+}
+
+/** I settori con il nome (il caso studio per nome, o il settore caldo), per dire ad Alessio quale. */
+export async function settoriConNome(): Promise<GruppoSettore[]> {
+  const casi = await db.casoStudio.findMany({ where: { stato: "ATTIVO" }, orderBy: { createdAt: "asc" }, select: { titolo: true, aziendaNome: true, settore: true, termini: true, terminiSettore: true } });
+  return gruppiSettore(casi.map((c) => ({ nome: c.aziendaNome ?? c.titolo.split(":")[0].trim(), settore: c.settore, termini: termini(c.termini), terminiSettore: termini(c.terminiSettore) })));
 }
 
 /** La zona di un membro: l'indirizzo della sua azienda, la città nelle note, la città del capitolo. */

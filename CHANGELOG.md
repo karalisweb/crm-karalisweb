@@ -13,6 +13,19 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.72.0] - 2026-10-31
+
+### Changed
+- **Gli avvisi dicono le cose chiare.** Titolo: "Aziende dei tuoi settori trovate in BNI e su LinkedIn". Ogni scheda dice **quale settore**, per nome: "piscine, come il caso IEM Piscine", oppure "casa (edilizia, impianti, infissi…)".
+- **Il pulsante del sì dice cosa fa, e lo fa davvero:**
+  - membro BNI → **"Chiedi il 121 a [nome]"**: il CRM scrive la richiesta di 121, la trovi in Oggi fra le richieste BNI da mandare;
+  - azienda vista su LinkedIn o fra le eliminate → **"Sì, contattala"**: entra fra "Le aziende di oggi", dove il CRM ti dice a chi scrivere o se prima scaldarla.
+  - **"No, non mi interessa"**: sparisce e non torna.
+- Gli avvisi già arrivati si riscrivono con le parole nuove; in Oggi prima i membri BNI, poi LinkedIn, poi le eliminate.
+
+### Fixed
+- Se il sì non riesce (per esempio il messaggio del 121 non si scrive), l'avviso resta lì da decidere invece di sparire.
+
 ## [3.71.0] - 2026-10-31
 
 ### Changed

@@ -88,6 +88,33 @@ export function settoreDi(testo: string | null | undefined, s: Settori): "CASO" 
   return null;
 }
 
+/** Un settore con il suo nome, per dire ad Alessio quale (v3.72): un caso studio o un settore caldo. */
+export interface GruppoSettore {
+  nome: string;
+  settore: "CASO" | "INTERESSE";
+  termini: string[];
+}
+
+export const NOMI_CALDI: Record<keyof typeof SETTORI_CALDI, string> = {
+  CASA: "casa (edilizia, impianti, infissi, arredi, giardini…)",
+  TURISMO: "turismo (piccole strutture, eventi, catering)",
+  BENESSERE: "bellezza e benessere (centri estetici, osteopati…)",
+};
+
+/** I gruppi in ordine: prima i casi studio, poi i settori larghi dei casi, poi i settori caldi. */
+export function gruppiSettore(casi: { nome: string; settore: string | null; termini: string[]; terminiSettore: string[] }[]): GruppoSettore[] {
+  return [
+    ...casi.map((c) => ({ nome: `${c.settore ?? c.termini[0] ?? "settore"}, come il caso ${c.nome}`, settore: "CASO" as const, termini: [...c.termini, ...(c.settore ? [c.settore] : [])] })),
+    ...casi.filter((c) => c.terminiSettore.length).map((c) => ({ nome: `vicino al caso ${c.nome}`, settore: "INTERESSE" as const, termini: c.terminiSettore })),
+    ...(Object.keys(SETTORI_CALDI) as (keyof typeof SETTORI_CALDI)[]).map((k) => ({ nome: NOMI_CALDI[k], settore: "INTERESSE" as const, termini: SETTORI_CALDI[k] })),
+  ];
+}
+
+/** Il nome del settore in cui sta un testo (il primo gruppo che lo prende), o null. */
+export function qualeSettore(testo: string | null | undefined, gruppi: GruppoSettore[]): GruppoSettore | null {
+  return gruppi.find((g) => nelSettore(testo, g.termini)) ?? null;
+}
+
 /** Conta la categoria BNI (il mestiere); il nome dell'azienda aiuta solo per i settori. */
 export function tipoPersona(categoria: string | null | undefined, azienda: string | null | undefined, s: Settori): TipoPersona {
   if (stessoRuolo(categoria)) return "DIGITAL";

@@ -65,7 +65,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       await db.bniChapter.updateMany({ where: { id: voce.bniChapterId, visitStatus: { notIn: ["VISITATO"] } }, data: { visitStatus: "VISITA_PIANIFICATA" } });
     }
     if (voce?.kind === KIND_PRESENTAZIONE_BNI) await presentazioneChiesta(id);
-    if (voce?.kind === KIND_AVVISO_SETTORE) await decisioneAvviso(id);
+    if (voce?.kind === KIND_AVVISO_SETTORE) {
+      // Se l'azione non riesce (es. il messaggio del 121 non si scrive) l'avviso torna da decidere: non si perde.
+      try {
+        await decisioneAvviso(id);
+      } catch (e) {
+        await db.approvalItem.update({ where: { id }, data: { status: "IN_ATTESA", decidedAt: null, decidedBy: null } });
+        return NextResponse.json({ error: `Non ci sono riuscito: ${e instanceof Error ? e.message : "errore"}. Riprova fra poco.` }, { status: 500 });
+      }
+    }
     if (voce?.kind === "MESSAGGIO_BNI" && voce.bniMembroId) {
       await db.bniMembro.updateMany({
         where: { id: voce.bniMembroId, bniStage: "DA_AVVICINARE" },

@@ -7,12 +7,18 @@
  *   - fra i membri BNI (l'azienda del membro è del settore);
  *   - fra le persone viste su LinkedIn (la loro azienda è del settore);
  *   - fra le aziende eliminate (del settore di un caso studio): si possono rimettere in gioco con un sì.
- * Ognuna diventa una voce in Cassetta, una volta sola; in Oggi si vedono in cima.
+ * Ognuna diventa una voce (approval_items), una volta sola; si vede solo in Oggi (v3.71).
+ *
+ * v3.72 (Alessio: "Me ne occupo che vuol dire? Il mio caso studio quale?"): ogni avviso dice il settore per nome
+ * (il caso studio o il settore caldo) e ha un'azione sola, che il sì fa davvero:
+ *   - "121": è un membro BNI → si prepara la richiesta di 121 (in Oggi, fra le richieste BNI da mandare);
+ *   - "AZIENDA": è un'azienda vista su LinkedIn o fra le eliminate → entra in lavorazione, cioè fra
+ *     "Le aziende di oggi", con il messaggio pronto e a chi mandarlo.
  */
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { settoriAlessio } from "./presentazioni";
-import { settoreDi, tipoPersona, zonaDa } from "./presentazioni-regole";
+import { aziendaSegnalata, settoriAlessio, settoriConNome, trovaAzienda } from "./presentazioni";
+import { qualeSettore, settoreDi, tipoPersona, zonaDa, type GruppoSettore } from "./presentazioni-regole";
 import { stessaPersona } from "./rete-regole";
 import { nomeConfrontabile } from "@/lib/ricerca/regole";
 
@@ -23,6 +29,7 @@ const AVVISI_PER_TURNO = 15;
 const SIGLE_SARDEGNA = ["CA", "SU", "SS", "NU", "OR"];
 
 export type DoveAvviso = "BNI" | "LINKEDIN" | "ELIMINATA";
+export type AzioneAvviso = "121" | "AZIENDA";
 
 export interface Avviso {
   chiave: string;
@@ -34,6 +41,11 @@ export interface Avviso {
   azienda: string;
   persona: string | null;
   settore: "CASO" | "INTERESSE";
+  /** Il settore per nome: "piscine, come il caso IEM Piscine" o "casa (edilizia, impianti…)". */
+  perche: string;
+  azione: AzioneAvviso;
+  /** Il testo del pulsante del sì: dice cosa succede. */
+  bottone: string;
   zona: string | null;
   come: string;
   cosaFare: string;
@@ -43,12 +55,15 @@ export interface Avviso {
   sardegna: boolean;
 }
 
+const COSA_AZIENDA = "Sì = entra fra \"Le aziende di oggi\", qui sotto: lì il CRM ti dice cosa fare (a chi scrivere, o prima scaldarla con un commento).";
+
 const sarda = (provincia: string | null) => !!provincia && SIGLE_SARDEGNA.includes(provincia);
 
 /** Tutte le aziende dei settori di Alessio che stanno in BNI, su LinkedIn o fra le eliminate. */
 export async function cercaAvvisi(): Promise<Avviso[]> {
-  const s = await settoriAlessio();
+  const [s, gruppi] = await Promise.all([settoriAlessio(), settoriConNome()]);
   if (!s.caso.length && !s.interesse.length) return [];
+  const perche = (testo: string) => (qualeSettore(testo, gruppi) as GruppoSettore | null)?.nome ?? "uno dei tuoi settori";
   const out: Avviso[] = [];
 
   // 1) Membri BNI la cui azienda è del settore.
@@ -65,8 +80,10 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     const conosciuto = !!m.conosciutoAt || m.oneToOneCount > 0;
     out.push({
       chiave: `bni:${m.id}`, dove: "BNI", righe: [], eliminataId: null, azienda: m.company ?? m.name, persona: m.name, settore, zona: z.citta ?? z.provincia,
-      come: `${m.name} è membro BNI${m.chapter ? ` del capitolo ${m.chapter}` : ""}${m.profession ? ` (${m.profession.toLowerCase()})` : ""}`,
-      cosaFare: conosciuto ? "Lo conosci già: raccontagli il caso studio e chiedigli chi conosce nel suo settore." : "Chiedigli un 121: è nel tuo settore, raccontagli il caso studio.",
+      perche: perche(`${m.profession ?? ""} ${m.company ?? ""}`), azione: "121",
+      bottone: conosciuto ? `Chiedi un altro 121 a ${m.name}` : `Chiedi il 121 a ${m.name}`,
+      come: `${m.name} è membro BNI${m.chapter ? ` del capitolo ${m.chapter}` : ""}${m.profession ? ` (${m.profession.toLowerCase()})` : ""}${conosciuto ? ": lo conosci già" : ": non lo conosci ancora"}`,
+      cosaFare: "Sì = ti preparo il messaggio per il 121: lo trovi qui in Oggi, in \"BNI e casi studio\".",
       link: `/bni/membri/${m.id}`, leadId: null, membroId: m.id, sardegna: sarda(z.provincia),
     });
   }
@@ -86,8 +103,9 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     const tramite = p.bniMembro ? `fra i contatti LinkedIn di ${p.bniMembro.name} (BNI)` : p.contattoInComune ? `su LinkedIn, in comune con te: ${p.contattoInComune.split(",").slice(0, 3).join(",").trim()}` : "su LinkedIn";
     out.push({
       chiave: `linkedin:${p.id}`, dove: "LINKEDIN", righe: [], eliminataId: null, azienda, persona: p.nome, settore, zona: z.citta ?? z.provincia ?? p.localita,
+      perche: perche(`${azienda} ${p.ruolo ?? ""} ${p.lead?.category ?? ""}`), azione: "AZIENDA", bottone: "Sì, contattala",
       come: `${p.nome}${p.ruolo ? ` (${p.ruolo})` : ""} di ${azienda}: è ${tramite}`,
-      cosaFare: p.bniMembro ? `Chiedi a ${p.bniMembro.name} di presentartelo.` : p.contattoInComune ? "Chiedi una presentazione a chi avete in comune." : "Collegati e guarda chi avete in comune.",
+      cosaFare: COSA_AZIENDA,
       link: p.leadId ? `/aziende-trovate/${p.leadId}` : p.bniMembro ? `/bni/membri/${p.bniMembro.id}` : "/aziende-trovate",
       leadId: p.leadId, membroId: p.bniMembro?.id ?? null, sardegna: sarda(z.provincia),
     });
@@ -110,8 +128,9 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     const z = zonaDa(l.address);
     out.push({
       chiave: `eliminata:${l.id}`, dove: "ELIMINATA", righe: [], eliminataId: l.id, azienda: l.name, persona: null, settore: "CASO", zona: z.citta ?? z.provincia ?? l.address,
+      perche: perche(`${l.category ?? ""} ${l.name}`), azione: "AZIENDA", bottone: "Sì, contattala",
       come: motivo ? `È fra le eliminate (motivo: ${motivo})` : "È fra le eliminate, senza un motivo scritto: forse non l'hai tolta tu",
-      cosaFare: "Sì = la rimetto in gioco. No = resta fuori.",
+      cosaFare: COSA_AZIENDA,
       link: `/aziende-trovate/${l.id}`, leadId: l.id, membroId: null, sardegna: sarda(z.provincia),
     });
   }
@@ -134,31 +153,32 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     c.zona ??= a.zona;
   }
   return [...perAzienda.values()]
-    .map((a) => (a.eliminataId && a.dove !== "ELIMINATA" ? { ...a, cosaFare: `${a.cosaFare} Ed è fra le eliminate: con il sì la rimetto in gioco.` } : a))
     // Prima le persone BNI (ci si relaziona), poi LinkedIn, poi le eliminate; dentro, casi studio prima dei settori caldi.
     .sort((a, b) => ordine[a.dove] - ordine[b.dove] || Number(a.settore !== "CASO") - Number(b.settore !== "CASO") || Number(!a.sardegna) - Number(!b.sardegna) || a.azienda.localeCompare(b.azienda));
 }
+
+const titolo = (a: Avviso) => `${a.azienda} · ${a.perche}`;
 
 /** Le voci nuove in Cassetta (una volta sola per chiave, anche se poi scartata). */
 export async function avvisaSettori(): Promise<number> {
   const avvisi = await cercaAvvisi();
   if (!avvisi.length) return 0;
-  const gia = new Set(
-    (await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE }, select: { payload: true } }))
-      .map((v) => (v.payload as { chiave?: string } | null)?.chiave)
-      .filter(Boolean),
-  );
+  const voci = await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE }, select: { id: true, status: true, payload: true } });
+  const gia = new Map(voci.map((v) => [(v.payload as { chiave?: string } | null)?.chiave, v]));
   let creati = 0;
   for (const a of avvisi) {
-    if (gia.has(a.chiave)) continue;
-    if (creati >= AVVISI_PER_TURNO) break;
+    const v = gia.get(a.chiave);
+    // Quelle ancora da decidere si riscrivono con le parole e i dati di oggi.
+    if (v?.status === "IN_ATTESA") await db.approvalItem.update({ where: { id: v.id }, data: { title: titolo(a), payload: a as unknown as Prisma.InputJsonValue, leadId: a.leadId ?? a.eliminataId, bniMembroId: a.membroId } });
+    if (v) continue;
+    if (creati >= AVVISI_PER_TURNO) continue;
     await db.approvalItem.create({
       data: {
         kind: KIND_AVVISO_SETTORE,
         agent: "avvisi_settore",
-        leadId: a.leadId,
+        leadId: a.leadId ?? a.eliminataId,
         bniMembroId: a.membroId,
-        title: `${a.settore === "CASO" ? "Nel settore del tuo caso studio" : "In un tuo settore caldo"}: ${a.azienda}`,
+        title: titolo(a),
         payload: a as unknown as Prisma.InputJsonValue,
       },
     });
@@ -167,11 +187,36 @@ export async function avvisaSettori(): Promise<number> {
   return creati;
 }
 
-/** Il sì su un avviso: un'azienda eliminata torna in gioco (da analizzare). */
-export async function decisioneAvviso(voceId: string): Promise<void> {
+/**
+ * Il sì su un avviso fa l'azione scritta sul pulsante:
+ *   - "121": la richiesta di 121 al membro, scritta e pronta da mandare (come l'invito dalla sua scheda);
+ *   - "AZIENDA": l'azienda (trovata o creata) torna in gioco se era eliminata ed entra in lavorazione:
+ *     il CRM sceglie chi te la presenta e prepara il messaggio, come per le altre aziende di oggi.
+ */
+export async function decisioneAvviso(voceId: string, oggi = new Date()): Promise<void> {
   const v = await db.approvalItem.findUnique({ where: { id: voceId }, select: { payload: true } });
-  const p = (v?.payload ?? {}) as { eliminataId?: string | null };
-  if (p.eliminataId) {
-    await db.lead.updateMany({ where: { id: p.eliminataId, pipelineStage: "ARCHIVIATO" }, data: { pipelineStage: "DA_ANALIZZARE" } });
+  const p = (v?.payload ?? {}) as Partial<Avviso>;
+  const azione: AzioneAvviso = p.azione ?? (p.dove === "BNI" ? "121" : "AZIENDA");
+  if (azione === "121" && p.membroId) {
+    const { invitoManuale } = await import("./bni");
+    await invitoManuale(p.membroId, oggi);
+    return;
   }
+  let leadId = p.leadId ?? p.eliminataId ?? (p.azienda ? (await trovaAzienda(p.azienda))?.id : null) ?? null;
+  if (!leadId && p.azienda && p.membroId) {
+    const m = await db.bniMembro.findUnique({ where: { id: p.membroId }, select: { id: true, name: true } });
+    if (m) leadId = (await aziendaSegnalata(m, { azienda: p.azienda, citta: p.zona, persona: p.persona }, oggi)).leadId;
+  }
+  if (!leadId && p.azienda) {
+    leadId = (await db.lead.create({
+      data: { name: p.azienda.slice(0, 200), address: p.zona ?? null, source: "avviso_settore", pipelineStage: "DA_ANALIZZARE", notes: `Dagli avvisi nei tuoi settori (${p.perche ?? ""}): ${(p.righe ?? []).join(" · ")}` },
+      select: { id: true },
+    })).id;
+  }
+  if (!leadId) return;
+  await db.lead.updateMany({ where: { id: leadId, pipelineStage: { in: ["ARCHIVIATO", "NON_TARGET"] } }, data: { pipelineStage: "DA_ANALIZZARE" } });
+  if (await db.lavorazione.findUnique({ where: { leadId }, select: { id: true } })) return;
+  const { avanzaMappata } = await import("./rete");
+  const l = await db.lavorazione.create({ data: { leadId } });
+  await avanzaMappata(l.id, undefined, oggi);
 }

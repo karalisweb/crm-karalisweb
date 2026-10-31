@@ -20,7 +20,7 @@ interface Oggi {
   daFare: { richiesteDaMandare: number; visiteDaMandare: number; fogli: number; aziendeDaDecidere: number; casiDaConfermare: number };
   incontri: { id: string; nome: string; azienda: string | null; capitolo: string | null; quando: string; daChiedere: number }[];
   call: { id: string; nome: string; quando: string }[];
-  avvisiSettore: { id: string; titolo: string; righe: string[]; cosaFare: string; link: string }[];
+  avvisiSettore: { id: string; azienda: string; perche: string | null; righe: string[]; cosaFare: string; bottone: string; link: string }[];
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
@@ -66,7 +66,15 @@ export default function HomePage() {
   const decidiAvviso = async (id: string, decisione: "APPROVATO" | "SCARTATO") => {
     setDecidendo(id);
     const r = await fetch(`/api/cassetta/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decisione }) }).catch(() => null);
-    if (r && (r.ok || r.status === 409)) setD((x) => (x ? { ...x, avvisiSettore: x.avvisiSettore.filter((a) => a.id !== id) } : x));
+    if (r && !r.ok && r.status !== 409) alert((await r.json().catch(() => null))?.error ?? "Non ci sono riuscito, riprova.");
+    if (r && (r.ok || r.status === 409)) {
+      setD((x) => (x ? { ...x, avvisiSettore: x.avvisiSettore.filter((a) => a.id !== id) } : x));
+      // Il sì prepara un messaggio o porta l'azienda fra quelle di oggi: si ricarica il resto della pagina.
+      if (decisione === "APPROVATO") {
+        fetch("/api/oggi").then((r) => r.json()).then((n) => setD((x) => (x ? { ...n, avvisiSettore: x.avvisiSettore } : n)));
+        caricaPercorso();
+      }
+    }
     setDecidendo(null);
   };
 
@@ -101,16 +109,19 @@ export default function HomePage() {
 
       {d.avvisiSettore.length > 0 && (
         <section className="space-y-2">
-          <h2 className="font-semibold">Nei tuoi settori: te lo devo dire ({d.avvisiSettore.length})</h2>
-          <p className="text-xs text-muted-foreground">Aziende dei tuoi casi studio o dei tuoi settori viste fra i membri BNI, sui contatti LinkedIn o fra le eliminate. Stanno solo qui: decidi e spariscono.</p>
+          <h2 className="font-semibold">Aziende dei tuoi settori trovate in BNI e su LinkedIn ({d.avvisiSettore.length})</h2>
+          <p className="text-xs text-muted-foreground">Per ognuna: sì o no. Deciso, sparisce.</p>
           {d.avvisiSettore.map((a) => (
             <div key={a.id} className="rounded-lg border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
-              <Link href={a.link} className="block text-sm font-medium break-words hover:underline">{a.titolo}</Link>
+              <div>
+                <Link href={a.link} className="block text-sm font-medium break-words hover:underline">{a.azienda}</Link>
+                {a.perche && <div className="text-xs break-words">Settore: {a.perche}</div>}
+              </div>
               <ul className="text-xs text-muted-foreground space-y-0.5">{a.righe.map((r, i) => <li key={i} className="break-words">{r}</li>)}</ul>
               <div className="text-xs break-words">{a.cosaFare}</div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" disabled={decidendo === a.id} onClick={() => decidiAvviso(a.id, "APPROVATO")}>Me ne occupo</Button>
-                <Button size="sm" variant="outline" disabled={decidendo === a.id} onClick={() => decidiAvviso(a.id, "SCARTATO")}>Non mi interessa</Button>
+                <Button size="sm" disabled={decidendo === a.id} onClick={() => decidiAvviso(a.id, "APPROVATO")}>{a.bottone}</Button>
+                <Button size="sm" variant="outline" disabled={decidendo === a.id} onClick={() => decidiAvviso(a.id, "SCARTATO")}>No, non mi interessa</Button>
               </div>
             </div>
           ))}

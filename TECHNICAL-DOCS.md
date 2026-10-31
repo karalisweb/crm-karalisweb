@@ -1647,6 +1647,12 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.71 (Alessio: "un posto solo, o bianco o nero"): gli avvisi stanno **solo in Oggi**. `GET /api/oggi` li dà tutti
   (con `righe[]`), la home li decide con `POST /api/cassetta/[id]`; `GET /api/cassetta` e il contatore di
   `/api/dashboard/mission` escludono `AVVISO_SETTORE`. Restano `approval_items` (storico e dedupe).
+- v3.72: payload con `perche` (da `qualeSettore` su `gruppiSettore`/`settoriConNome()`: caso studio per nome, settori
+  larghi dei casi, `NOMI_CALDI`), `azione` ("121" | "AZIENDA") e `bottone`. `decisioneAvviso`: "121" → `invitoManuale`
+  (MESSAGGIO_BNI); "AZIENDA" → lead trovato/creato (`aziendaSegnalata` o source `avviso_settore`), ARCHIVIATO/NON_TARGET
+  → DA_ANALIZZARE, `lavorazione` + `avanzaMappata`. Se fallisce, `POST /api/cassetta/[id]` rimette la voce IN_ATTESA.
+  `avvisaSettori()` riscrive le voci IN_ATTESA (titolo e payload) e il tetto di 15 vale solo per le nuove; `GET /api/oggi`
+  lo chiama al più ogni 15 minuti e ordina BNI → LinkedIn → eliminate, caso → caldo, Sardegna.
 
 ## Motore 121 (v3.52.0)
 

@@ -6,7 +6,10 @@ import { coperturaCapitolo, eSardo, mezzanotteRoma } from "@/lib/agents/bni-rego
 import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 import { AZIENDE_AL_GIORNO } from "@/lib/ricerca/regole";
 import { daChiedereA } from "@/lib/agents/presentazioni";
-import { KIND_AVVISO_SETTORE } from "@/lib/agents/avvisi-settore";
+import { KIND_AVVISO_SETTORE, avvisaSettori } from "@/lib/agents/avvisi-settore";
+
+// Gli avvisi si riscrivono con le parole di oggi al più ogni 15 minuti (non solo ai turni delle 7 e delle 14).
+let avvisiAggiornatiAt = 0;
 
 /**
  * GET /api/oggi — la Home: solo quello che serve ad Alessio adesso. I numeri partono dalla
@@ -71,11 +74,20 @@ export async function GET() {
     })),
     call: call.map((t) => ({ id: t.id, nome: t.nome, quando: t.callAt })),
     // v3.69: le aziende dei tuoi settori viste in BNI, su LinkedIn o fra le eliminate. Dalla v3.71 solo qui, tutte.
-    avvisiSettore: (await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, payload: true } }))
+    avvisiSettore: (await (async () => {
+      if (Date.now() - avvisiAggiornatiAt > 15 * 60_000) {
+        avvisiAggiornatiAt = Date.now();
+        await avvisaSettori().catch(() => 0);
+      }
+    })(), await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, payload: true } }))
       .map((v) => {
-        const p = (v.payload ?? {}) as { righe?: string[]; cosaFare?: string; link?: string };
-        return { id: v.id, titolo: v.title, righe: p.righe ?? [], cosaFare: p.cosaFare ?? "", link: p.link ?? "/" };
-      }),
+        const p = (v.payload ?? {}) as { azienda?: string; perche?: string; bottone?: string; righe?: string[]; cosaFare?: string; link?: string; dove?: string; settore?: string; sardegna?: boolean };
+        // Prima le persone BNI, poi LinkedIn, poi le eliminate; dentro, i casi studio e la Sardegna.
+        const ordine = ({ BNI: 0, LINKEDIN: 1, ELIMINATA: 2 } as Record<string, number>)[p.dove ?? ""] ?? 3;
+        return { ordine: ordine * 4 + (p.settore === "CASO" ? 0 : 2) + (p.sardegna ? 0 : 1), id: v.id, azienda: p.azienda ?? v.title, perche: p.perche ?? null, righe: p.righe ?? [], cosaFare: p.cosaFare ?? "", bottone: p.bottone ?? "Sì", link: p.link ?? "/" };
+      })
+      .sort((a, b) => a.ordine - b.ordine)
+      .map(({ ordine: _o, ...a }) => a),
     settimana: { fatti: settimana.fatti, fissati: settimana.fissati, obiettivo: settimana.obiettivo, richiesteAperte: settimana.richiesteAperte },
     sardegna: { conosciuti: copertura.conosciuti, totale: copertura.totale },
     ricerca: { aziendeOggi, obiettivo: AZIENDE_AL_GIORNO, personeOggi, casiAttivi },
