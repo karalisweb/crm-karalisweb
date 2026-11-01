@@ -69,7 +69,8 @@ export function richiesteDaPreparare(s: StatoRichieste, oggi: Date): number {
 
 export const INVITI_LINKEDIN_GIORNO = 12;
 export const INVITI_LINKEDIN_SETTIMANA = 100;
-export const LETTURE_LINKEDIN_GIORNO = 25;
+// v3.82 (Alessio, 2026-11-01: "10 controlli anziché 5"): da 25 a 35 letture al giorno.
+export const LETTURE_LINKEDIN_GIORNO = 35;
 export const ORE_STOP_LINKEDIN = 48;
 /** Profili dei membri da cercare al giorno (prima erano 20: ora il budget è comune). */
 export const PROFILI_MEMBRI_GIORNO = 8;

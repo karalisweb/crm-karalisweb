@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.82.0] - 2026-11-01
+
+### Changed
+- **Più veloce, come chiesto da Alessio.** Fino a 10 controlli "chi decide" su LinkedIn per giro (prima 6) e 35 letture LinkedIn al giorno (prima 25, di cui 25 fuori BNI invece di 15). Tre giri di commenti al giorno (6:45, 14:45, 18:15) invece di due; resta un commento al giorno per azienda.
+
+---
+
 ## [3.81.0] - 2026-11-01
 
 ### Fixed

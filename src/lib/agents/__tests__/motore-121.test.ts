@@ -41,7 +41,7 @@ describe("LinkedIn", () => {
     expect(lettureDi("linkedin_membri", { membri: [1, 2, 3] })).toBe(3);
     expect(lettureDi("rete_membro", { aziendeDaCercare: [1, 2, 3, 4] })).toBe(5);
     expect(lettureDi("tecnico")).toBe(0);
-    expect(lettureDisponibili(20, false)).toBe(5);
+    expect(lettureDisponibili(30, false)).toBe(5);
     expect(lettureDisponibili(0, true)).toBe(0);
   });
   it("tiene 5 letture per scaldare chi decide, anche nel weekend (v3.80), finché non è partito", () => {

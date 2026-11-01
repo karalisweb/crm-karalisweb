@@ -1693,6 +1693,9 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.81 `statoLinkedinOggi()`: i lavori FALLITO per `fallimentoTecnico` (e non `bloccoLinkedin`) non contano nelle letture
   del giorno né nella riserva di "scalda".
 
+- v3.82 Limiti alzati: `LETTURE_LINKEDIN_GIORNO` 35, `LETTURE_NON_BNI` 25, `collegamentiDaVerificare(limite = 10)`,
+  `GIRI_SCALDA_AL_GIORNO` 3.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

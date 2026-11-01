@@ -381,7 +381,7 @@ export async function decisioneRete(voceId: string, decisione: "APPROVATO" | "SC
 
 /** Giri "scalda" al giorno: alle 7 e alle 14, tutti i giorni (v3.80, Alessio: "accelerare ed evitare blocchi da mie
  *  assenze"; prima uno solo, nei feriali: segnando "Commentato" dopo le 7 si perdeva la giornata, e il weekend era fermo). */
-const GIRI_SCALDA_AL_GIORNO = 2;
+const GIRI_SCALDA_AL_GIORNO = 3; // v3.82: tre giri (6:45, 14:45, 18:15)
 
 async function accodaScalda(oggi: Date): Promise<boolean> {
   const mezzanotte = mezzanotteRoma(oggi);

@@ -29,7 +29,8 @@ export const KIND_PRESENTAZIONE_BNI = "PRESENTAZIONE_BNI";
 
 const AGENTI_LINKEDIN_BNI = ["linkedin_membri", "rete_membro"];
 /** Letture al giorno che i lavori non BNI (chi decide, LinkedIn azienda) possono usare. */
-const LETTURE_NON_BNI = 15;
+// v3.82: da 15 a 25 (10 controlli "chi decide" da 2 letture + la riserva di "scalda").
+const LETTURE_NON_BNI = 25;
 
 // ─── Budget LinkedIn ────────────────────────────────────────────────────────
 
@@ -406,7 +407,7 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
 }
 
 /** Le aziende in attesa di decisione senza controllo del collegamento, e i ricontrolli dopo un nuovo 121. */
-export async function collegamentiDaVerificare(oggi = new Date(), limite = 6): Promise<{ accodati: number; ricontrolli: number }> {
+export async function collegamentiDaVerificare(oggi = new Date(), limite = 10): Promise<{ accodati: number; ricontrolli: number }> {
   let accodati = 0;
   let ricontrolli = 0;
   // Prima quelle già approfondite da Alessio: senza "chi decide" non entrano nel Percorso (un controllo
