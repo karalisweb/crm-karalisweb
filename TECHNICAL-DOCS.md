@@ -1713,6 +1713,9 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.85 Ricerca a turno: `prioritaChiave()` guarda solo la Sardegna (non più nicchia prima del settore), quindi conta
   `ultimoUsoAt`; `AZIENDE_PER_RICERCA` = 4 limita le nuove di una ricerca (Maps + Google).
 
+- v3.86 Niente validazione per le collegate sarde: `dopoCollegamento` (COLLEGATA) chiama `mandaAScaldare(…, nota)`;
+  il `turnoRete` fa avanzare le FASCICOLO IN_ATTESA con `payload.collegamento`. Crontab arricchimento ogni 30 minuti.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

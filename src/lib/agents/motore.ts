@@ -326,7 +326,7 @@ export function indirizzoSardo(indirizzo: string | null | undefined, altro: { te
  * presentano, o commento per scaldare la relazione"). Un'azienda sarda senza collegamento non si scarta più: si approva da
  * sola, parte l'approfondimento ed entra nel Percorso, dove senza ponte va a scaldare (passo 3).
  */
-export async function mandaAScaldare(leadId: string, oggi = new Date()): Promise<boolean> {
+export async function mandaAScaldare(leadId: string, oggi = new Date(), nota = NOTA_SCALDARE): Promise<boolean> {
   const l = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, website: true, address: true, phone: true, pipelineStage: true } });
   if (!l || !indirizzoSardo(l.address, { telefono: l.phone, nome: l.name }) || ["NON_TARGET", "CLIENTE", "PERSO", "ARCHIVIATO"].includes(l.pipelineStage)) return false;
   const voce = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" }, select: { id: true, status: true, decidedBy: true } });
@@ -336,7 +336,7 @@ export async function mandaAScaldare(leadId: string, oggi = new Date()): Promise
     const n = await db.approvalItem.findUnique({ where: { id: voce.id }, select: { note: true } });
     if (!n?.note?.startsWith(NOTA_SENZA)) return false;
   }
-  const dati = { status: "APPROVATO" as const, decidedAt: oggi, decidedBy: DECISO_DAL_CRM_SCALDARE, note: NOTA_SCALDARE };
+  const dati = { status: "APPROVATO" as const, decidedAt: oggi, decidedBy: DECISO_DAL_CRM_SCALDARE, note: nota };
   if (voce) await db.approvalItem.update({ where: { id: voce.id }, data: dati });
   else await db.approvalItem.create({ data: { leadId, kind: KIND_FASCICOLO_BASE, agent: "giro_veloce", title: `${l.name}: da scaldare`, payload: { sito: l.website } as Prisma.InputJsonValue, ...dati } });
   const [{ approfondisci }, { entraSubito }] = await Promise.all([import("./arricchimento"), import("./rete")]);
@@ -445,6 +445,9 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
     } else if (voce?.status === "SCARTATO" && voce.note?.startsWith(NOTA_SENZA)) {
       await db.approvalItem.update({ where: { id: voce.id }, data: { status: "IN_ATTESA", decidedAt: null, note: `Collegamento trovato: ${ponte}` } });
     }
+    // v3.86 (Alessio: "da validare le porti a scaldare e poi le porti da me in maniera veloce"): anche la collegata
+    // sarda va avanti da sola, senza il suo sì: nel Percorso trova il ponte (passo 2) o si scalda (passo 3).
+    if (giroVeloceFinito) await mandaAScaldare(leadId, new Date(), `Va avanti da sola: ${ponte} (deciso dal CRM)`);
     return;
   }
   // Sarda: si scalda con i commenti invece di scartarla (v3.83).

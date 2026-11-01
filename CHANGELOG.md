@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.86.0] - 2026-11-01
+
+### Changed
+- **Niente più "da validare" per le aziende sarde collegate a te:** vanno avanti da sole nel Percorso (al passo 2 se c'è chi te le presenta, altrimenti a scaldare). Ti arrivano solo quando c'è da contattare o commentare.
+- **Il giro del server ogni 30 minuti** (7:15–20:45), così il Mac trova sempre lavoro in coda.
+
+---
+
 ## [3.85.0] - 2026-11-01
 
 ### Fixed

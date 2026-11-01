@@ -158,6 +158,11 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   // 2b) Sempre almeno 10 da scaldare (v3.83): prima escono le pagine ferme (v3.84), poi se mancano si riprendono
   //     le sarde scartate "senza collegamento".
   r.pagineFerme = await liberaPagineFerme(oggi);
+  // v3.86: le collegate ferme in "da decidere" vanno avanti da sole (prima aspettavano il sì di Alessio).
+  for (const v of await db.approvalItem.findMany({ where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", lead: { lavorazione: null, agentReports: { some: { agent: "decision_maker" } } } }, select: { leadId: true, note: true, payload: true }, take: 30 })) {
+    const ponte = (v.payload as { collegamento?: string } | null)?.collegamento;
+    if (v.leadId && ponte) await mandaAScaldare(v.leadId, oggi, `Va avanti da sola: ${ponte} (deciso dal CRM)`);
+  }
   r.daScaldareAggiunte = await riempiScaldare(oggi);
 
   // 3) Le mappate: si sceglie il ponte e il messaggio va in Cassetta.
