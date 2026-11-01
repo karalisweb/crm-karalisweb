@@ -1682,6 +1682,10 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   "valida" si divide per passo (1: approfondisci, 2: li conosci). Il Percorso legge i parametri, apre il passo, evidenzia
   la scheda (`SchedaPercorso` con id `azienda-<leadId>`, prop `evidenziata`) e la porta in vista.
 
+- v3.79 Oggi, aziende in attesa: per ogni lista le aziende di `p.aziende` con `tocca` ≠ "te" (passo 1 → valida, 3 → scalda,
+  2 e 4 → contatta), contate per stato. `GET /api/oggi` dà `linkedinFermo` (ultimo `decision_maker` FALLITO per
+  `fallimentoTecnico` più recente dell'ultimo FATTO): con gli stati analisi/collegamento/chi_decide/cerca_post, avviso Chrome.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

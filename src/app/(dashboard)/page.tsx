@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2 } from "lucide-react";
 import { dataOra } from "@/components/ricerca/etichette";
-import { type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
+import { type AziendaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
 
 // Le 3 cose di oggi (v3.64; dalla v3.67 tutte, senza tetto): ogni azienda con la sua cosa da fare.
 const COSE: { k: CosaDiOggi; titolo: string; spiega: string }[] = [
@@ -25,6 +25,7 @@ interface Oggi {
   sardegna: { conosciuti: number; totale: number };
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
   agentiMac: { fermi: boolean; falliscono: boolean; oreFermi: number };
+  linkedinFermo: boolean;
 }
 
 function Riga({ href, testo }: { href: string; testo: string }) {
@@ -48,6 +49,14 @@ function Numero({ valore, di, etichetta, href }: { valore: number; di?: number; 
     </Link>
   );
 }
+
+/**
+ * Le aziende del Percorso dove non tocca a te, divise come le tre liste (v3.79, Alessio: il Percorso dice 49 e Oggi 0,
+ * "c'è qualcosa che mi confonde"): così i numeri tornano e si vede perché una lista è vuota.
+ */
+const cosaInAttesa = (a: AziendaPercorso): CosaDiOggi => (a.passo === 1 ? "valida" : a.passo === 3 ? "scalda" : "contatta");
+/** Gli stati che aspettano gli agenti nel tuo Chrome (LinkedIn, Facebook): fermi se Chrome è fermo. */
+const STATI_CHROME = ["analisi", "collegamento", "chi_decide", "cerca_post"];
 
 /** Avvisi di settore mostrati insieme (v3.76, Alessio: "pagina lunghissima"): deciso uno, entra il prossimo. */
 const AVVISI_VISIBILI = 5;
@@ -169,6 +178,24 @@ export default function HomePage() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">{spiega}</p>
+                {(() => {
+                  const attesa = p.aziende.filter((a) => a.tocca !== "te" && cosaInAttesa(a) === k);
+                  if (!attesa.length) return null;
+                  const perStato = attesa.reduce<{ stato: string; nome: string; n: number }[]>((g, a) => {
+                    const c = g.find((x) => x.stato === a.stato);
+                    if (c) c.n++;
+                    else g.push({ stato: a.stato, nome: a.statoNome, n: 1 });
+                    return g;
+                  }, []);
+                  const chromeFermo = (d.linkedinFermo || d.agentiMac.fermi) && perStato.some((x) => STATI_CHROME.includes(x.stato));
+                  return (
+                    <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-0.5">
+                      <div className="font-medium">{attesa.length} {attesa.length === 1 ? "azienda in attesa" : "aziende in attesa"} (non tocca a te):</div>
+                      {perStato.map((x) => <div key={x.stato}>· {x.n} {x.nome.toLowerCase()}</div>)}
+                      {chromeFermo && <div className="text-amber-600 dark:text-amber-400 pt-1">Ferme perché Chrome chiede il permesso di aprire LinkedIn e nessuno risponde: autorizzalo &quot;sempre&quot; in Claude in Chrome.</div>}
+                    </div>
+                  );
+                })()}
                 {tutte.length ? gruppi.map((g, i) => (
                   <div key={i} className="space-y-1.5">
                     {g.titolo && <div className="text-xs font-semibold text-muted-foreground pt-1">{g.titolo} ({g.aziende.length})</div>}
@@ -183,7 +210,7 @@ export default function HomePage() {
                       </Link>
                     ))}
                   </div>
-                )) : (
+                )) : p.aziende.some((a) => a.tocca !== "te" && cosaInAttesa(a) === k) ? null : (
                   <div className="rounded-lg border p-3 text-sm text-muted-foreground">{finite ? "Fatte tutte. Le prossime le prepara il CRM." : "Per ora nessuna: le prepara il CRM."}</div>
                 )}
               </div>

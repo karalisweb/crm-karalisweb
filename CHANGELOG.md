@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.79.0] - 2026-11-01
+
+### Changed
+- **Oggi dice perché una lista è vuota.** Sotto ogni lista c'è quante aziende sono in attesa e di cosa (es. "41 in attesa: 35 in analisi, 6 chi decide da trovare"): i numeri tornano con il Percorso. Se il controllo su LinkedIn è fermo perché Chrome chiede il permesso, lo scrive lì.
+
+---
+
 ## [3.78.0] - 2026-11-01
 
 ### Changed

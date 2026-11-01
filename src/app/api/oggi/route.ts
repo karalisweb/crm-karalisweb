@@ -7,6 +7,7 @@ import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 import { AZIENDE_AL_GIORNO } from "@/lib/ricerca/regole";
 import { daChiedereA } from "@/lib/agents/presentazioni";
 import { KIND_AVVISO_SETTORE, avvisaSettori } from "@/lib/agents/avvisi-settore";
+import { fallimentoTecnico } from "@/lib/agents/motore";
 
 // Gli avvisi si riscrivono con le parole di oggi al più ogni 15 minuti (non solo ai turni delle 7 e delle 14).
 let avvisiAggiornatiAt = 0;
@@ -91,6 +92,15 @@ export async function GET() {
     settimana: { fatti: settimana.fatti, fissati: settimana.fissati, obiettivo: settimana.obiettivo, richiesteAperte: settimana.richiesteAperte },
     sardegna: { conosciuti: copertura.conosciuti, totale: copertura.totale },
     ricerca: { aziendeOggi, obiettivo: AZIENDE_AL_GIORNO, personeOggi, casiAttivi },
+    // v3.79: il controllo "chi decide" su LinkedIn fallisce per un problema del Chrome (permesso, sessione) più di
+    // recente di quanto riesce: Oggi lo dice sotto le aziende in attesa.
+    linkedinFermo: await (async () => {
+      const [ok, ko] = await Promise.all([
+        db.agentRun.findFirst({ where: { agent: "decision_maker", status: "FATTO" }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true } }),
+        db.agentRun.findFirst({ where: { agent: "decision_maker", status: "FALLITO" }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true, error: true } }),
+      ]);
+      return !!ko?.finishedAt && fallimentoTecnico(ko.error) && (!ok?.finishedAt || ko.finishedAt > ok.finishedAt);
+    })(),
     agentiMac: { fermi: oreFermi >= 24 || falliscono, falliscono, oreFermi: Math.max(oreFermi, oreSenzaRisultati), ultimoLavoro: ultimoBrowser?.finishedAt ?? null },
   });
 }
