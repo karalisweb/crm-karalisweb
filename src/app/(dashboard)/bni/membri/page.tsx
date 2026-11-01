@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -105,11 +106,19 @@ function RigaMembro({ m, conCapitolo, dettaglio }: { m: Membro; conCapitolo?: bo
   );
 }
 
+// useSearchParams vuole un Suspense intorno, o la build non prepara la pagina.
 export default function MembriBniPage() {
+  return <Suspense><RubricaBni /></Suspense>;
+}
+
+function RubricaBni() {
   const [q, setQ] = useState("");
   const [cerca, setCerca] = useState("");
   const [risultato, setRisultato] = useState<{ per: string; membri: Membro[]; totale: number } | null>(null);
   const [capitoli, setCapitoli] = useState<Record<string, InfoCapitolo>>({});
+  // Una regione alla volta (v3.76): la Sardegna; le altre (il Lazio) da un link, per non perdere il lavoro fatto.
+  const regione = useSearchParams().get("regione") || "Sardegna";
+  const [altreRegioni, setAltreRegioni] = useState<{ regione: string; capitoli: number }[]>([]);
   const membri = risultato?.membri ?? [];
   const totale = risultato?.totale ?? 0;
   const loading = risultato?.per !== cerca;
@@ -122,23 +131,33 @@ export default function MembriBniPage() {
 
   useEffect(() => {
     let vivo = true;
-    fetch(`/api/ricerca/bni/membri${cerca ? `?q=${encodeURIComponent(cerca)}` : ""}`)
+    fetch(`/api/ricerca/bni/membri?regione=${encodeURIComponent(regione)}${cerca ? `&q=${encodeURIComponent(cerca)}` : ""}`)
       .then((r) => r.json())
       .then((d) => {
         if (!vivo) return;
         setRisultato({ per: cerca, membri: d.membri ?? [], totale: d.totale ?? 0 });
+        setAltreRegioni(d.altreRegioni ?? []);
         if (d.capitoli) setCapitoli(Object.fromEntries((d.capitoli as ({ name: string } & InfoCapitolo)[]).map((c) => [c.name.toLowerCase(), { id: c.id, regione: c.regione, isMine: c.isMine }])));
       });
     return () => {
       vivo = false;
     };
-  }, [cerca]);
+  }, [cerca, regione]);
 
   return (
     <div className="space-y-5 min-w-0">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Rubrica BNI</h1>
-        <p className="text-sm text-muted-foreground">Chi fa cosa nei capitoli BNI della Sardegna. Qualcuno ti chiede una referenza? Scrivi di cosa ha bisogno e trovi a chi girarla.</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Rubrica BNI · {regione}</h1>
+        <p className="text-sm text-muted-foreground">Chi fa cosa nei capitoli BNI {regione === "Sardegna" ? "della Sardegna" : `della regione ${regione}`}. Qualcuno ti chiede una referenza? Scrivi di cosa ha bisogno e trovi a chi girarla.</p>
+        {altreRegioni.length > 0 && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+            {altreRegioni.map((r) => (
+              <Link key={r.regione} href={r.regione === "Sardegna" ? "/bni/membri" : `/bni/membri?regione=${encodeURIComponent(r.regione)}`} className="text-primary hover:underline">
+                {r.regione === "Sardegna" ? "← Torna alla Sardegna" : `Capitoli ${r.regione} →`}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
       <div className="relative">
         <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -189,15 +208,7 @@ export default function MembriBniPage() {
               </details>
             );
           });
-          // La Sardegna aperta (si lavora lì); le altre regioni chiuse, da aprire quando servono (v3.76).
-          return regione === "Sardegna" ? (
-            <section key={regione} className="space-y-2">{titolo}{corpo}</section>
-          ) : (
-            <details key={regione} className="space-y-2">
-              <summary className="cursor-pointer">{titolo}</summary>
-              <div className="space-y-2 pt-2">{corpo}</div>
-            </details>
-          );
+          return <section key={regione} className="space-y-2">{titolo}{corpo}</section>;
           })}
         </div>
       )}

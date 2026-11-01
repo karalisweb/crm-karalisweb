@@ -1675,6 +1675,9 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   da sole. Oggi mostra 5 avvisi alla volta (`AVVISI_VISIBILI`). `GET /api/ricerca/bni/membri` dà solo i capitoli sardi
   (prima `slice(0, 1000)` con ordine alfabetico tagliava fuori la Sardegna dopo l'import del Lazio).
 
+- v3.77 Rubrica per regione: `GET /api/ricerca/bni/membri?regione=Lazio` (default Sardegna) filtra membri e capitoli
+  della regione e dà `altreRegioni`; `/bni/membri?regione=…` mostra quella regione, con i link alle altre.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

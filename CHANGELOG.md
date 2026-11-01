@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.77.0] - 2026-11-01
+
+### Added
+- **Rubrica BNI, pagina Lazio.** La Rubrica apre sulla Sardegna (9 capitoli). In alto c'è il link "Capitoli Lazio →": ci clicchi e vedi i 52 capitoli del Lazio, con "← Torna alla Sardegna" per tornare. Il lavoro sul Lazio resta, ma non si mischia più.
+
+---
+
 ## [3.76.0] - 2026-11-01
 
 ### Fixed
