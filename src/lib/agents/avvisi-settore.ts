@@ -20,6 +20,7 @@ import { db } from "@/lib/db";
 import { aziendaSegnalata, settoriAlessio, settoriConNome, trovaAzienda } from "./presentazioni";
 import { qualeSettore, settoreDi, tipoPersona, zonaDa, type GruppoSettore } from "./presentazioni-regole";
 import { stessaPersona } from "./rete-regole";
+import { eSardo } from "./bni-regole";
 import { nomeConfrontabile } from "@/lib/ricerca/regole";
 
 export const KIND_AVVISO_SETTORE = "AVVISO_SETTORE";
@@ -55,9 +56,11 @@ export interface Avviso {
   sardegna: boolean;
 }
 
-const COSA_AZIENDA = "Sì = entra fra \"Le aziende di oggi\", qui sotto: lì il CRM ti dice cosa fare (a chi scrivere, o prima scaldarla con un commento).";
+const COSA_AZIENDA = "Perché: è un'azienda sarda del tuo settore. Sì = entra nel Percorso: il CRM cerca chi c'è dietro e chi te la può presentare; se non c'è nessuno, la scaldi con i commenti.";
 
 const sarda = (provincia: string | null) => !!provincia && SIGLE_SARDEGNA.includes(provincia);
+/** v3.76 (Alessio: "hai mischiato Sardegna e Lazio"): gli avvisi sono solo per la Sardegna. */
+const inSardegna = (provincia: string | null, ...testi: (string | null | undefined)[]) => sarda(provincia) || testi.some((t) => /sardegna|sardinia/i.test(t ?? ""));
 
 /** Tutte le aziende dei settori di Alessio che stanno in BNI, su LinkedIn o fra le eliminate. */
 export async function cercaAvvisi(): Promise<Avviso[]> {
@@ -72,7 +75,7 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
       where: { status: "ATTIVO" },
       select: { id: true, name: true, company: true, profession: true, chapter: true, notes: true, conosciutoAt: true, oneToOneCount: true, isCustomer: true, bniStage: true, lead: { select: { address: true } } },
     }),
-    db.bniChapter.findMany({ where: { isMine: true }, select: { name: true } }),
+    db.bniChapter.findMany({ select: { name: true, isMine: true, region: true, regioneItaliana: true } }),
     db.cerchiaContatto.findMany({ where: { rimossoAt: null }, select: { nome: true } }),
     db.bniPresentazione.findMany({ where: { stato: "PRESENTATO" }, select: { nome: true } }),
     db.approvalItem.findMany({ where: { kind: "MESSAGGIO_BNI", status: "IN_ATTESA", bniMembroId: { not: null } }, select: { bniMembroId: true } }),
@@ -80,7 +83,8 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
   // v3.73 (Alessio: "Giorgio Fodde è nel mio capitolo e ho già fatto 121, Claudio Conti me lo hanno presentato"):
   // a chi conosci già non si chiede un 121 da qui. Conosciuto = 121 fatto, segnato conosciuto, cliente, del tuo
   // capitolo, già oltre "da avvicinare", nella cerchia, presentato da qualcuno, o con una richiesta già pronta.
-  const mio = new Set(mieiCapitoli.map((c) => c.name));
+  const mio = new Set(mieiCapitoli.filter((c) => c.isMine).map((c) => c.name));
+  const capitoliSardi = new Set(mieiCapitoli.filter((c) => eSardo(c)).map((c) => c.name));
   const nomiNoti = [...cerchia.map((c) => c.nome), ...presentati.map((x) => x.nome)];
   const giaInviato = new Set(richiesteAperte.map((r) => r.bniMembroId));
   const aziendeNote = new Set<string>();
@@ -88,6 +92,7 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     // Colleghi e acceleratori si incontrano comunque (prima di tutti): qui solo chi lavora nei settori.
     const tipo = tipoPersona(m.profession, m.company, s);
     if (tipo !== "SETTORE_CASO" && tipo !== "SETTORE_INTERESSE") continue;
+    if (!m.chapter || !capitoliSardi.has(m.chapter)) continue;
     const conosciuto = !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer || (!!m.chapter && mio.has(m.chapter))
       || m.bniStage !== "DA_AVVICINARE" || giaInviato.has(m.id) || nomiNoti.some((n) => stessaPersona(n, m.name));
     if (conosciuto) {
@@ -101,7 +106,7 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
       perche: perche(`${m.profession ?? ""} ${m.company ?? ""}`), azione: "121",
       bottone: "Sì, scrivimi il messaggio",
       come: `${m.name} è membro BNI${m.chapter ? ` del capitolo ${m.chapter}` : ""}${m.profession ? ` (${m.profession.toLowerCase()})` : ""}: non vi conoscete ancora`,
-      cosaFare: `Sì = il CRM scrive il messaggio WhatsApp per chiedere a ${m.name} un incontro a due (il 121). Non parte niente da solo: lo trovi in Oggi, in "Manda le richieste di incontro BNI", e lo mandi tu. Se lo conosci già, premi "Lo conosco già".`,
+      cosaFare: `Perché: la sua azienda è nel tuo settore, in Sardegna, e lui è in BNI: la relazione parte da lì, con un incontro a due (121). Sì = il CRM scrive il messaggio WhatsApp per chiederglielo; non parte niente da solo, lo trovi in Oggi fra le richieste BNI e lo mandi tu.`,
       link: `/bni/membri/${m.id}`, leadId: null, membroId: m.id, sardegna: sarda(z.provincia),
     });
   }
@@ -118,6 +123,7 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     const settore = settoreDi(`${azienda ?? ""} ${p.ruolo ?? ""} ${p.lead?.category ?? ""}`, s);
     if (!settore || !azienda) continue;
     const z = zonaDa(p.lead?.address, p.localita);
+    if (!inSardegna(z.provincia, p.lead?.address, p.localita)) continue;
     const tramite = p.bniMembro ? `fra i contatti LinkedIn di ${p.bniMembro.name} (BNI)` : p.contattoInComune ? `su LinkedIn, in comune con te: ${p.contattoInComune.split(",").slice(0, 3).join(",").trim()}` : "su LinkedIn";
     out.push({
       chiave: `linkedin:${p.id}`, dove: "LINKEDIN", righe: [], eliminataId: null, azienda, persona: p.nome, settore, zona: z.citta ?? z.provincia ?? p.localita,
@@ -144,6 +150,7 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     if (attive.has(nomeConfrontabile(l.name).replace(/\bsrl\b/g, "").trim())) continue;
     const motivo = l.approvalItems[0]?.note;
     const z = zonaDa(l.address);
+    if (!inSardegna(z.provincia, l.address)) continue;
     out.push({
       chiave: `eliminata:${l.id}`, dove: "ELIMINATA", righe: [], eliminataId: l.id, azienda: l.name, persona: null, settore: "CASO", zona: z.citta ?? z.provincia ?? l.address,
       perche: perche(`${l.category ?? ""} ${l.name}`), azione: "AZIENDA", bottone: "Sì, contattala",

@@ -1670,6 +1670,11 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   tetto 6 per turno e budget LinkedIn (15 letture non-BNI, 2 a controllo). `bloccoLinkedin()` ignora gli errori di
   permesso di Chrome ("nessun blocco", "permess", "approvazion"), che fermavano LinkedIn per `ORE_STOP_LINKEDIN` (48h).
 
+- v3.76 Solo Sardegna: `cercaAvvisi()` scarta i membri di capitoli non sardi (`eSardo`) e persone/aziende fuori
+  Sardegna (`inSardegna`: provincia sarda da `zonaDa` o "Sardegna" nel testo); le voci IN_ATTESA di fuori si chiudono
+  da sole. Oggi mostra 5 avvisi alla volta (`AVVISI_VISIBILI`). `GET /api/ricerca/bni/membri` dà solo i capitoli sardi
+  (prima `slice(0, 1000)` con ordine alfabetico tagliava fuori la Sardegna dopo l'import del Lazio).
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

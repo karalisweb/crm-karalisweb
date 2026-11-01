@@ -49,6 +49,9 @@ function Numero({ valore, di, etichetta, href }: { valore: number; di?: number; 
   );
 }
 
+/** Avvisi di settore mostrati insieme (v3.76, Alessio: "pagina lunghissima"): deciso uno, entra il prossimo. */
+const AVVISI_VISIBILI = 5;
+
 export default function HomePage() {
   const [d, setD] = useState<Oggi | null>(null);
   const [p, setP] = useState<DatiPercorso | null>(null);
@@ -118,9 +121,9 @@ export default function HomePage() {
 
       {d.avvisiSettore.length > 0 && (
         <section className="space-y-2">
-          <h2 className="font-semibold">Aziende dei tuoi settori trovate in BNI e su LinkedIn ({d.avvisiSettore.length})</h2>
-          <p className="text-xs text-muted-foreground">Per ognuna: sì o no. Deciso, sparisce.</p>
-          {d.avvisiSettore.map((a) => (
+          <h2 className="font-semibold">Aziende sarde dei tuoi settori, trovate in BNI e su LinkedIn</h2>
+          <p className="text-xs text-muted-foreground">Per ognuna: sì o no. Deciso, sparisce.{d.avvisiSettore.length > AVVISI_VISIBILI && ` Ne vedi ${AVVISI_VISIBILI} alla volta: ne restano altre ${d.avvisiSettore.length - AVVISI_VISIBILI}.`}</p>
+          {d.avvisiSettore.slice(0, AVVISI_VISIBILI).map((a) => (
             <div key={a.id} className="rounded-lg border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
               <div>
                 <Link href={a.link} className="block text-sm font-medium break-words hover:underline">{a.azienda}</Link>

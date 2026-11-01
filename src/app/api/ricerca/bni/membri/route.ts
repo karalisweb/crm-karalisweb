@@ -21,13 +21,18 @@ export async function GET(request: NextRequest) {
       cosaFa: true, seeking: true, referenzePuoDare: true, conosciutoAt: true, leadershipRole: true, oneToOneCount: true, isCustomer: true, next121At: true,
     },
   });
-  const righe = membri.map((m) => ({ ...m, conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer }));
+  // v3.76 (Alessio: "il Lazio per il momento non mi serve"): la Rubrica mostra solo i capitoli sardi.
+  // Prima il tetto di 1000 tagliava fuori la Sardegna: i capitoli del Lazio ("BNI …") venivano prima.
+  const capitoli = (await db.bniChapter.findMany({ select: { id: true, name: true, region: true, regioneItaliana: true, isMine: true } }))
+    .filter((c) => eSardo(c))
+    .map((c) => ({ id: c.id, name: c.name, isMine: c.isMine, regione: "Sardegna" }));
+  const sardi = new Set(capitoli.map((c) => norm(c.name)));
+  const righe = membri
+    .filter((m) => sardi.has(norm(m.chapter)))
+    .map((m) => ({ ...m, conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer }));
   if (!q) {
     righe.sort((a, b) => norm(a.chapter).localeCompare(norm(b.chapter)) || a.name.localeCompare(b.name, "it"));
-    // v3.73 (Alessio: "sono mischiati Lazio e Sardegna"): ogni capitolo con la sua regione, per separarli.
-    const capitoli = (await db.bniChapter.findMany({ select: { id: true, name: true, region: true, regioneItaliana: true, isMine: true } }))
-      .map((c) => ({ id: c.id, name: c.name, isMine: c.isMine, regione: eSardo(c) ? "Sardegna" : c.regioneItaliana?.trim() || null }));
-    return NextResponse.json({ membri: righe.slice(0, 1000), totale: righe.length, capitoli });
+    return NextResponse.json({ membri: righe, totale: righe.length, capitoli });
   }
   const trovati = righe
     .map((m) => ({ ...m, punteggio: punteggioBisogno(q, m) }))

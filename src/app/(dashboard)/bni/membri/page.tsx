@@ -138,7 +138,7 @@ export default function MembriBniPage() {
     <div className="space-y-5 min-w-0">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6 text-primary" /> Rubrica BNI</h1>
-        <p className="text-sm text-muted-foreground">Chi fa cosa nei capitoli BNI. Qualcuno ti chiede una referenza? Scrivi di cosa ha bisogno e trovi a chi girarla.</p>
+        <p className="text-sm text-muted-foreground">Chi fa cosa nei capitoli BNI della Sardegna. Qualcuno ti chiede una referenza? Scrivi di cosa ha bisogno e trovi a chi girarla.</p>
       </div>
       <div className="relative">
         <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -153,10 +153,9 @@ export default function MembriBniPage() {
         <div className="space-y-2">{membri.map((m) => <RigaMembro key={m.id} m={m} conCapitolo dettaglio />)}</div>
       ) : (
         <div className="space-y-6">
-          {perRegione(membri, capitoli).map(([regione, caps]) => (
-          <section key={regione} className="space-y-2">
-            <h2 className="font-semibold">{regione} <span className="text-xs font-normal text-muted-foreground">· {caps.length} {caps.length === 1 ? "capitolo" : "capitoli"}, {caps.reduce((n, [, l]) => n + l.length, 0)} membri</span></h2>
-          {caps.map(([capitolo, lista]) => {
+          {perRegione(membri, capitoli).map(([regione, caps]) => {
+          const titolo = <h2 className="font-semibold inline">{regione} <span className="text-xs font-normal text-muted-foreground">· {caps.length} {caps.length === 1 ? "capitolo" : "capitoli"}, {caps.reduce((n, [, l]) => n + l.length, 0)} membri</span></h2>;
+          const corpo = caps.map(([capitolo, lista]) => {
             const conosciuti = lista.filter((m) => statoDi(m) === "CONOSCIUTO").length;
             const fissati = lista.filter((m) => statoDi(m) === "FISSATO").length;
             return (
@@ -189,9 +188,17 @@ export default function MembriBniPage() {
                 </div>
               </details>
             );
+          });
+          // La Sardegna aperta (si lavora lì); le altre regioni chiuse, da aprire quando servono (v3.76).
+          return regione === "Sardegna" ? (
+            <section key={regione} className="space-y-2">{titolo}{corpo}</section>
+          ) : (
+            <details key={regione} className="space-y-2">
+              <summary className="cursor-pointer">{titolo}</summary>
+              <div className="space-y-2 pt-2">{corpo}</div>
+            </details>
+          );
           })}
-          </section>
-          ))}
         </div>
       )}
     </div>

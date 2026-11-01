@@ -13,6 +13,17 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.76.0] - 2026-11-01
+
+### Fixed
+- **Rubrica BNI: tornati i capitoli della Sardegna.** La lista si fermava a 1000 persone e i capitoli del Lazio ("BNI …") venivano prima: i sardi sparivano. Ora la Rubrica mostra solo la Sardegna (il Lazio per ora non serve), tutti i 9 capitoli.
+- **Oggi: solo aziende sarde.** Gli avvisi dei tuoi settori erano 49, di cui 30 persone del Lazio. Ora solo Sardegna (membri dei capitoli sardi, persone e aziende sarde viste su LinkedIn o fra le eliminate), e se ne vedono 5 alla volta.
+
+### Changed
+- Ogni avviso dice **perché** e **come**: in BNI la relazione parte da un 121; un'azienda vista su LinkedIn entra nel Percorso, dove il CRM cerca chi c'è dietro e chi te la presenta, altrimenti la scaldi con i commenti.
+
+---
+
 ## [3.75.0] - 2026-11-01
 
 ### Fixed
