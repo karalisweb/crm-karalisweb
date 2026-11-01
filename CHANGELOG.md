@@ -25,6 +25,8 @@ Le correzioni ai rischi del piano "5 contatti al giorno, 10 da scaldare".
 ### Fixed
 - **Le pagine ferme non occupano più i posti:** se in 10 giorni il CRM ha letto la pagina 3 volte senza trovare un post da commentare, l'azienda va in pausa 45 giorni e il posto passa a un'altra.
 - **Se LinkedIn è fermo per il Chrome del Mac, te lo dice la mail delle 7** (anche se non ci sono aziende da decidere), oltre a Oggi.
+- **La ricerca di aziende nuove gira tutti i giorni** (6:30 e 14:30, anche nel weekend).
+- **Tolte 6 aziende non sarde** riprese per errore dal primo giro (Rossatogroup, Abruzzo Piscine, L'Arte della Piscina, Piscine Luna, Digital360, Ibluepiscine).
 - **Avvisi:** un'azienda eliminata conta come sarda solo con una prova vera (sigla, CAP, prefisso o nome), non con la sola città della ricerca.
 
 ---
