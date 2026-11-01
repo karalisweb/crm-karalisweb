@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.81.0] - 2026-11-01
+
+### Fixed
+- **La coda non si svuota più per un permesso di Chrome.** I controlli falliti perché Chrome chiedeva il permesso (nessuna pagina aperta) consumavano il limite giornaliero di LinkedIn: dopo 7 fallimenti il CRM non metteva in coda altro fino al giorno dopo, e il Mac diceva "nessun lavoro". Ora non contano.
+
+---
+
 ## [3.80.0] - 2026-11-01
 
 ### Changed

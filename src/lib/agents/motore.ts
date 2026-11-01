@@ -45,7 +45,7 @@ export interface StatoLinkedinOggi {
 
 export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedinOggi> {
   const [oggiRuns, blocchi, daScaldare] = await Promise.all([
-    db.agentRun.findMany({ where: { agent: { in: AGENTI_LINKEDIN }, queuedAt: { gte: mezzanotteRoma(oggi) } }, select: { agent: true, input: true } }),
+    db.agentRun.findMany({ where: { agent: { in: AGENTI_LINKEDIN }, queuedAt: { gte: mezzanotteRoma(oggi) } }, select: { agent: true, input: true, status: true, error: true } }),
     db.agentRun.findMany({
       where: { agent: { in: AGENTI_LINKEDIN }, status: "FALLITO", finishedAt: { gte: new Date(oggi.getTime() - ORE_STOP_LINKEDIN * 3600_000) } },
       select: { error: true, finishedAt: true },
@@ -53,8 +53,11 @@ export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedi
     }),
     db.lavorazione.count({ where: { fase: { in: [...FASI_ATTIVE] }, decisore: { not: null }, scaldataAt: null } }),
   ]);
-  const usate = oggiRuns.reduce((s, r) => s + lettureDi(r.agent, r.input), 0);
-  const usateNonBni = oggiRuns.filter((r) => !AGENTI_LINKEDIN_BNI.includes(r.agent)).reduce((s, r) => s + lettureDi(r.agent, r.input), 0);
+  // v3.81: un lavoro fallito perché Chrome chiedeva il permesso non ha aperto LinkedIn: non consuma le letture del giorno
+  // (prima 7 lavori falliti così esaurivano il limite e la coda restava vuota fino al giorno dopo).
+  const contano = oggiRuns.filter((r) => !(r.status === "FALLITO" && fallimentoTecnico(r.error) && !bloccoLinkedin(r.error)));
+  const usate = contano.reduce((s, r) => s + lettureDi(r.agent, r.input), 0);
+  const usateNonBni = contano.filter((r) => !AGENTI_LINKEDIN_BNI.includes(r.agent)).reduce((s, r) => s + lettureDi(r.agent, r.input), 0);
   const ultimo = blocchi.find((b) => bloccoLinkedin(b.error));
   const blocco = !!ultimo;
   return {
@@ -63,7 +66,7 @@ export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedi
     blocco,
     bloccoFinoAl: ultimo?.finishedAt ? new Date(ultimo.finishedAt.getTime() + ORE_STOP_LINKEDIN * 3600_000) : null,
     disponibili: lettureDisponibili(usate, blocco),
-    riservaScalda: riservaScalda(daScaldare, oggiRuns.some((r) => r.agent === "scalda")),
+    riservaScalda: riservaScalda(daScaldare, contano.some((r) => r.agent === "scalda")),
   };
 }
 

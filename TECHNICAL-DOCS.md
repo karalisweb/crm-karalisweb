@@ -1690,6 +1690,9 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   un COMMENTO_LINKEDIN al giorno per azienda; `riservaScalda()` non guarda più il feriale. Crontab VPS (2026-11-01, copia in
   `/root/crontab-backup-20261101.txt`): `/api/cron/arricchimento` tutti i giorni alle 6:45, 14:45 e 18:15 (prima `1-5`).
 
+- v3.81 `statoLinkedinOggi()`: i lavori FALLITO per `fallimentoTecnico` (e non `bloccoLinkedin`) non contano nelle letture
+  del giorno né nella riserva di "scalda".
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema
