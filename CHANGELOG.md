@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.80.0] - 2026-11-01
+
+### Changed
+- **Commenti proposti due volte al giorno** (giro del mattino e del pomeriggio), anche nel weekend. Se segni "Commentato" dopo il mattino, il commento successivo arriva il pomeriggio, non il giorno dopo. Resta un commento al giorno per azienda.
+
+---
+
 ## [3.79.0] - 2026-11-01
 
 ### Changed

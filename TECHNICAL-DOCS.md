@@ -1686,6 +1686,10 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   2 e 4 → contatta), contate per stato. `GET /api/oggi` dà `linkedinFermo` (ultimo `decision_maker` FALLITO per
   `fallimentoTecnico` più recente dell'ultimo FATTO): con gli stati analisi/collegamento/chi_decide/cerca_post, avviso Chrome.
 
+- v3.80 `accodaScalda()` tutti i giorni, fino a `GIRI_SCALDA_AL_GIORNO` = 2 lavori al giorno (mai due in coda insieme),
+  un COMMENTO_LINKEDIN al giorno per azienda; `riservaScalda()` non guarda più il feriale. Nel weekend gira solo se il
+  crontab VPS lancia `/api/cron/arricchimento` anche sabato e domenica.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

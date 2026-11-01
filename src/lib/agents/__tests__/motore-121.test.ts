@@ -44,12 +44,10 @@ describe("LinkedIn", () => {
     expect(lettureDisponibili(20, false)).toBe(5);
     expect(lettureDisponibili(0, true)).toBe(0);
   });
-  it("tiene 5 letture per scaldare chi decide, solo nei feriali e finché non è partito", () => {
-    const venerdi = new Date("2026-10-23T08:00:00+02:00");
-    expect(riservaScalda(7, false, venerdi)).toBe(5);
-    expect(riservaScalda(2, false, venerdi)).toBe(2);
-    expect(riservaScalda(7, true, venerdi)).toBe(0);
-    expect(riservaScalda(7, false, new Date("2026-10-24T08:00:00+02:00"))).toBe(0);
+  it("tiene 5 letture per scaldare chi decide, anche nel weekend (v3.80), finché non è partito", () => {
+    expect(riservaScalda(7, false)).toBe(5);
+    expect(riservaScalda(2, false)).toBe(2);
+    expect(riservaScalda(7, true)).toBe(0);
   });
   it("riconosce gli errori di blocco", () => {
     expect(bloccoLinkedin("Compare un CAPTCHA")).toBe(true);

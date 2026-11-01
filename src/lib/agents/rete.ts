@@ -14,7 +14,6 @@ import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { mezzanotteRoma } from "./bni-regole";
-import { feriale } from "./motore-121";
 import { linkedinPermette, verificaCollegamento } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
@@ -380,10 +379,14 @@ export async function decisioneRete(voceId: string, decisione: "APPROVATO" | "SC
 
 // ─── Scaldare chi decide ────────────────────────────────────────────────────
 
+/** Giri "scalda" al giorno: alle 7 e alle 14, tutti i giorni (v3.80, Alessio: "accelerare ed evitare blocchi da mie
+ *  assenze"; prima uno solo, nei feriali: segnando "Commentato" dopo le 7 si perdeva la giornata, e il weekend era fermo). */
+const GIRI_SCALDA_AL_GIORNO = 2;
+
 async function accodaScalda(oggi: Date): Promise<boolean> {
-  if (!feriale(oggi)) return false;
-  const gia = await db.agentRun.findFirst({ where: { agent: "scalda", OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { queuedAt: { gte: mezzanotteRoma(oggi) } }] } });
-  if (gia) return false;
+  const mezzanotte = mezzanotteRoma(oggi);
+  if (await db.agentRun.findFirst({ where: { agent: "scalda", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } })) return false;
+  if ((await db.agentRun.count({ where: { agent: "scalda", queuedAt: { gte: mezzanotte } } })) >= GIRI_SCALDA_AL_GIORNO) return false;
   const lav = await db.lavorazione.findMany({
     where: { fase: { in: [...FASI_ATTIVE] }, scaldataAt: null },
     orderBy: { updatedAt: "asc" },
@@ -400,6 +403,8 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
     if (aziende.length >= DECISORI_DA_SCALDARE) break;
     // Un commento al giorno per azienda: se quello di ieri aspetta ancora Alessio, non se ne aggiunge un altro.
     if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_COMMENTO, status: "IN_ATTESA" }, select: { id: true } })) continue;
+    // E uno solo al giorno per azienda, anche con due giri: non deve sembrare spam.
+    if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_COMMENTO, createdAt: { gte: mezzanotte } }, select: { id: true } })) continue;
     const fattiQui = await commentiDi(l.leadId);
     const giaFatti = piattaformaPiuCommentata(fattiQui);
     if ((giaFatti?.fatti ?? 0) >= COMMENTI_PER_CONTATTO) {

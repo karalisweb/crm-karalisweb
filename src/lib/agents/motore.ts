@@ -63,7 +63,7 @@ export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedi
     blocco,
     bloccoFinoAl: ultimo?.finishedAt ? new Date(ultimo.finishedAt.getTime() + ORE_STOP_LINKEDIN * 3600_000) : null,
     disponibili: lettureDisponibili(usate, blocco),
-    riservaScalda: riservaScalda(daScaldare, oggiRuns.some((r) => r.agent === "scalda"), oggi),
+    riservaScalda: riservaScalda(daScaldare, oggiRuns.some((r) => r.agent === "scalda")),
   };
 }
 
