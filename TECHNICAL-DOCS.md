@@ -1723,6 +1723,12 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.86 Niente validazione per le collegate sarde: `dopoCollegamento` (COLLEGATA) chiama `mandaAScaldare(…, nota)`;
   il `turnoRete` fa avanzare le FASCICOLO IN_ATTESA con `payload.collegamento`. Crontab arricchimento ogni 30 minuti.
 
+- v3.87 Contatto diretto: in `avanzaMappata` un ponte BNI/CERCHIA con chi decide noto porta a strada DIRETTO e
+  `creaMessaggio(DIRETTO, inComune)` (`inComune` = il ponte, null se `Ponte.zona`); testo `testoDirettoConPonte`;
+  canali da `canaleDiretto()` (wa.me ed email dal sito e dalla pagina contatti, cellulare dell'azienda, LinkedIn della
+  persona) nel payload (`telefono`, `email`, `linkedin`, `inComune`). `daCassetta` porta i canali nella scheda del
+  Percorso (pulsanti WhatsApp/Email/LinkedIn). Nel `turnoRete` le PONTE_SCELTO con RETE_PONTE IN_ATTESA tornano MAPPATA.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

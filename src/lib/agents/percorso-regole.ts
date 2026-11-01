@@ -25,7 +25,7 @@ export type Tocca = "te" | "crm" | "attesa";
 
 export type Azione =
   | { tipo: "decidi" } // approfondisci / scarta
-  | { tipo: "cassetta"; voceId: string; si: string; no: string; testo: string | null; link: string | null }
+  | { tipo: "cassetta"; voceId: string; si: string; no: string; testo: string | null; link: string | null; whatsapp?: string | null; email?: string | null; linkedin?: string | null }
   | { tipo: "conosco"; nomi: string[] }
   | { tipo: "presentato" } // il ponte me l'ha presentata
   | { tipo: "incontro" }; // incontro fissato: esce dal percorso
@@ -91,7 +91,8 @@ const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null
 
 function daCassetta(v: Voce, si: string, no: string): Azione {
   const p = v.payload ?? {};
-  return { tipo: "cassetta", voceId: v.id, si, no, testo: str(p.messaggio) ?? str(p.commento), link: str(p.post) };
+  // I canali per scrivere subito (v3.87): WhatsApp, mail e LinkedIn di chi decide o del ponte.
+  return { tipo: "cassetta", voceId: v.id, si, no, testo: str(p.messaggio) ?? str(p.commento), link: str(p.post), whatsapp: str(p.telefono), email: str(p.email), linkedin: str(p.linkedin) };
 }
 
 const giorniDa = (d: Date, oggi: Date) => Math.max(0, Math.floor((oggi.getTime() - d.getTime()) / 86400_000));
@@ -117,7 +118,12 @@ export function passoDi(s: Stato, oggi: Date): Esito {
   const contatto = voce("RETE_CONTATTO");
   if (contatto) return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: `${COMMENTI_PER_CONTATTO} commenti fatti: scrivi a ${nomeDi(s)}`, azione: daCassetta(contatto, "Mandato", "Non ora") };
   const diretto = voce("RETE_DIRETTO");
-  if (diretto) return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: `Scrivi a ${nomeDi(s)}: lo conosci tu`, azione: daCassetta(diretto, "Mandato", "Non ora") };
+  if (diretto) {
+    const inComune = str(diretto.payload?.inComune);
+    const viaPonte = diretto.payload && "inComune" in diretto.payload;
+    const cosa = inComune ? `Scrivi a ${nomeDi(s)}: avete in comune ${inComune}` : viaPonte ? `Scrivi a ${nomeDi(s)}, chi decide` : `Scrivi a ${nomeDi(s)}: lo conosci tu`;
+    return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa, azione: daCassetta(diretto, "Mandato", "Non ora") };
+  }
   const conPonte = l.strada === "BNI" || l.strada === "CERCHIA";
   if (l.fase === "CHIESTA" && conPonte && l.presentatoAt) return { dentro: true, passo: 4, tocca: "te", stato: "incontro", cosa: `${l.ponte ?? "Il ponte"} te l'ha presentata: fissa l'incontro con ${nomeDi(s)}`, azione: { tipo: "incontro" } };
   if (l.fase === "CHIESTA" && !conPonte) return { dentro: true, passo: 4, tocca: "attesa", stato: "risposta", cosa: `Hai scritto a ${nomeDi(s)}: aspetti la risposta`, azione: { tipo: "incontro" } };

@@ -10,7 +10,7 @@ import { CosaDirgli } from "./cosa-dirgli";
 
 export type Azione =
   | { tipo: "decidi" }
-  | { tipo: "cassetta"; voceId: string; si: string; no: string; testo: string | null; link: string | null }
+  | { tipo: "cassetta"; voceId: string; si: string; no: string; testo: string | null; link: string | null; whatsapp?: string | null; email?: string | null; linkedin?: string | null }
   | { tipo: "conosco"; nomi: string[] }
   | { tipo: "presentato" }
   | { tipo: "incontro" };
@@ -101,6 +101,10 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
         {x?.tipo === "cassetta" && <>
           {x.testo && bottone("copia", "Copia il testo", () => { void navigator.clipboard.writeText(x.testo!).then(() => toast.success("Copiato")); })}
           {x.link && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Apri il post</a></Button>}
+          {/* Scrivere subito, col testo già dentro (v3.87). */}
+          {x.whatsapp && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer">WhatsApp</a></Button>}
+          {x.email && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`mailto:${x.email}?subject=${encodeURIComponent(`Per ${a.nome}`)}&body=${encodeURIComponent(x.testo ?? "")}`}>Email</a></Button>}
+          {x.linkedin && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></Button>}
           {bottone("si", x.si, () => fai("si", `/api/cassetta/${x.voceId}`, "POST", { decisione: "APPROVATO" }, "Fatto: un passo avanti"), "default")}
           {bottone("no", x.no, () => fai("no", `/api/cassetta/${x.voceId}`, "POST", { decisione: "SCARTATO" }, "Segnato"), "ghost")}
         </>}

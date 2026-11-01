@@ -65,6 +65,8 @@ export interface Ponte {
   nome: string;
   decisore: string;
   membroId?: string | null;
+  /** Membro BNI della zona: non è detto che conosca chi decide (non si cita come "in comune"). */
+  zona?: boolean;
 }
 
 export interface DatiAzienda {
@@ -93,7 +95,7 @@ export function strade(a: DatiAzienda, cerchia: string[], provati: string[] = []
   // La zona (v3.68): un membro BNI già incontrato che lavora dove sta l'azienda. Vale meno di LinkedIn, e solo
   // se si sa chi decide (si chiede per nome, non per categoria).
   const decisore = a.decisori[0]?.nome;
-  if (decisore) for (const z of a.pontiZona ?? []) if (nellaCerchia(z.membro, cerchia) && !gia(z.membro) && !occupato(z.membro)) out.push({ strada: "BNI", nome: z.membro, decisore, membroId: z.membroId });
+  if (decisore) for (const z of a.pontiZona ?? []) if (nellaCerchia(z.membro, cerchia) && !gia(z.membro) && !occupato(z.membro)) out.push({ strada: "BNI", nome: z.membro, decisore, membroId: z.membroId, zona: true });
   if (a.scaldata) for (const d of a.decisori) if (!gia(d.nome) && !out.some((o) => o.nome === d.nome)) out.push({ strada: "SCALDATO", nome: d.nome, decisore: d.nome });
   return out;
 }
@@ -172,6 +174,14 @@ export function testoRichiestaPonte(ponte: string, decisore: string, azienda: st
 
 export function testoContattoDiretto(decisore: string, azienda: string, motivo: string | null): string {
   return `Ciao ${nomeProprio(decisore)}, ti scrivo perché ${motivo ?? `lavoro con aziende come ${azienda}`}. Ti va di sentirci 20 minuti? Ti racconto cosa abbiamo fatto. Alessio`;
+}
+
+/**
+ * v3.87 (Alessio: "dobbiamo contattare le aziende, non trovare interlocutori"): il messaggio va a chi decide, subito,
+ * citando la persona che avete in comune (se c'è davvero) e il caso studio. Il ponte non è più un passaggio obbligato.
+ */
+export function testoDirettoConPonte(decisore: string, azienda: string, inComune: string | null, motivo: string | null): string {
+  return `Buongiorno ${nomeProprio(decisore)}, sono Alessio Loi di Karalisweb (Cagliari).${inComune ? ` Abbiamo in comune ${inComune}.` : ""} ${motivo ?? `Lavoro con aziende come ${azienda}.`} Le andrebbe di sentirci 20 minuti? Le racconto cosa abbiamo fatto. Grazie, Alessio`;
 }
 
 export function testoPromemoria(ponte: string, decisore: string): string {

@@ -17,11 +17,14 @@ import { mezzanotteRoma } from "./bni-regole";
 import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
-  testoContattoDiretto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
+  testoContattoDiretto, testoDirettoConPonte, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
   COMMENTI_PER_CONTATTO, PIATTAFORME, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
   type PaginaSocial, type Piattaforma,
 } from "./rete-regole";
 import { noteDaReferti } from "./impressioni-sezioni";
+import { scaricaPagina } from "./pagina";
+import { extractWhatsAppNumber, normalizePhoneForWhatsApp } from "@/lib/audit/whatsapp-extractor";
+import { extractContactEmail } from "@/lib/audit/email-finder";
 import { pontiInZona } from "./presentazioni";
 import { NOTA_PAGINA_FERMA } from "./presentazioni-regole";
 
@@ -166,6 +169,17 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   }
   r.daScaldareAggiunte = await riempiScaldare(oggi);
 
+  // 2c) v3.87: la richiesta al ponte non ancora mandata diventa il messaggio diretto a chi decide (si riparte da
+  //     "mappata": avanzaMappata sceglie lo stesso ponte e scrive a chi decide, citandolo se lo conosce davvero).
+  const daConvertire = await db.lavorazione.findMany({
+    where: { fase: "PONTE_SCELTO", strada: { in: ["BNI", "CERCHIA"] }, decisore: { not: null }, lead: { approvalItems: { some: { kind: KIND_RETE_PONTE, status: "IN_ATTESA" } } } },
+    select: { id: true, leadId: true },
+  });
+  for (const c of daConvertire) {
+    await db.approvalItem.updateMany({ where: { leadId: c.leadId, kind: KIND_RETE_PONTE, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: "rete", note: "Sostituita dal messaggio diretto a chi decide" } });
+    await db.lavorazione.update({ where: { id: c.id }, data: { fase: "MAPPATA", strada: null, ponteNome: null, ponteMembroId: null } });
+  }
+
   // 3) Le mappate: si sceglie il ponte e il messaggio va in Cassetta.
   const mappate = await db.lavorazione.findMany({ where: { fase: "MAPPATA" }, select: { id: true } });
   for (const l of mappate) if (await avanzaMappata(l.id, cerchia, oggi)) r.messaggi++;
@@ -294,6 +308,12 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
   const s = strade(d, c, provatiDi(l.pontiProvati), occupati);
   if (s.length) {
     await scegliPonte(l.id, s[0]);
+    // v3.87: con chi decide noto si scrive subito a lui, citando chi avete in comune (non il membro "di zona",
+    // che non è detto lo conosca). Il ponte resta come aiuto, non come passaggio obbligato.
+    if ((s[0].strada === "BNI" || s[0].strada === "CERCHIA") && s[0].decisore) {
+      await db.lavorazione.update({ where: { id: l.id }, data: { strada: "DIRETTO" } });
+      return creaMessaggio(l.id, "DIRETTO", oggi, s[0].zona ? null : s[0].nome);
+    }
     return creaMessaggio(l.id, s[0].strada === "BNI" || s[0].strada === "CERCHIA" ? "PONTE" : "DIRETTO", oggi);
   }
   // C'è un ponte valido ma è occupato: si aspetta che si liberi.
@@ -380,8 +400,39 @@ async function cosaDare(membroId: string | null): Promise<string | null> {
   return s ? `Prima dai: segnalagli ${s.nome}${s.motivo ? ` (${s.motivo})` : ""}.` : null;
 }
 
+/**
+ * Come scrivere direttamente a chi decide (v3.87): il suo LinkedIn se l'abbiamo, e dal sito dell'azienda il WhatsApp
+ * (link wa.me) e la mail; il telefono dell'azienda per chiamare. Senza sito, solo quello che c'è già nel CRM.
+ */
+export async function canaleDiretto(leadId: string, decisore: string): Promise<{ whatsapp: string | null; email: string | null; telefono: string | null; linkedin: string | null }> {
+  const [lead, persona, contatto] = await Promise.all([
+    db.lead.findUnique({ where: { id: leadId }, select: { website: true, phone: true, email: true } }),
+    db.persona.findFirst({ where: { leadId, nome: decisore }, select: { linkedinUrl: true } }),
+    db.agentReport.findFirst({ where: { leadId, agent: "contatto" }, orderBy: { collectedAt: "desc" }, select: { findings: true } }),
+  ]);
+  let whatsapp: string | null = null;
+  let email = lead?.email ?? null;
+  if (lead?.website) {
+    const pagine = [lead.website, (contatto?.findings as { paginaContatti?: string } | null)?.paginaContatti].filter((u): u is string => !!u);
+    for (const url of pagine) {
+      if (whatsapp && email) break;
+      try {
+        const html = (await scaricaPagina(url)).html;
+        whatsapp ??= extractWhatsAppNumber(html);
+        email ??= extractContactEmail(html, new URL(url.startsWith("http") ? url : `https://${url}`).hostname.replace(/^www\./, ""));
+      } catch {
+        // Sito che non risponde: si va con quello che c'è.
+      }
+    }
+  }
+  // Un cellulare dell'azienda (3…) vale anche per WhatsApp.
+  const tel = lead?.phone ?? null;
+  if (!whatsapp && tel && /^(\+?39)?\s*3/.test(tel.replace(/[^\d+]/g, ""))) whatsapp = normalizePhoneForWhatsApp(tel);
+  return { whatsapp, email, telefono: tel, linkedin: persona?.linkedinUrl ?? null };
+}
+
 /** Il messaggio in Cassetta per una lavorazione: al ponte, a chi decide, o il promemoria. Una volta sola per tipo e ponte. */
-export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRETTO" | "PROMEMORIA", oggi = new Date()): Promise<boolean> {
+export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRETTO" | "PROMEMORIA", oggi = new Date(), inComune?: string | null): Promise<boolean> {
   const l = await db.lavorazione.findUnique({ where: { id: lavorazioneId }, include: { lead: { select: { id: true, name: true } } } });
   if (!l || !l.ponteNome) return false;
   const kind = tipo === "PONTE" ? KIND_RETE_PONTE : tipo === "DIRETTO" ? KIND_RETE_DIRETTO : KIND_RETE_PROMEMORIA;
@@ -392,8 +443,12 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
   const profiloDecisore = !membro && l.decisore ? (await db.persona.findFirst({ where: { leadId: l.leadId, nome: l.decisore }, select: { linkedinUrl: true } }))?.linkedinUrl ?? null : null;
   const decisore = l.decisore ?? "chi decide";
   const motivo = tipo === "PROMEMORIA" ? null : await motivoDalCaso(l.leadId, oggi);
+  // Contatto diretto via ponte (v3.87): a chi decide, con chi avete in comune, sui suoi canali.
+  const viaPonte = tipo === "DIRETTO" && inComune !== undefined;
+  const canale = viaPonte ? await canaleDiretto(l.leadId, decisore) : null;
   const messaggio =
     tipo === "PONTE" ? testoRichiestaPonte(l.ponteNome, decisore, l.lead.name, motivo)
+    : viaPonte ? testoDirettoConPonte(decisore, l.lead.name, inComune ?? null, motivo)
     : tipo === "DIRETTO" ? testoContattoDiretto(decisore, l.lead.name, motivo)
     : testoPromemoria(l.ponteNome, decisore);
   const titolo =
@@ -413,9 +468,9 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
         decisore,
         strada: l.strada,
         messaggio,
-        canale: membro?.phone ? "whatsapp" : "linkedin",
-        telefono: membro?.phone ?? null,
-        linkedin: membro?.linkedinUrl ?? profiloDecisore,
+        ...(canale
+          ? { canale: canale.whatsapp ? "whatsapp" : canale.email ? "email" : "linkedin", telefono: canale.whatsapp, email: canale.email, chiamare: canale.telefono, linkedin: canale.linkedin, inComune: inComune ?? null }
+          : { canale: membro?.phone ? "whatsapp" : "linkedin", telefono: membro?.phone ?? null, linkedin: membro?.linkedinUrl ?? profiloDecisore }),
         dare: tipo === "PONTE" ? await cosaDare(l.ponteMembroId) : null,
         motivoDalCaso: !!motivo,
       } as Prisma.InputJsonValue,
