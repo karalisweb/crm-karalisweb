@@ -19,6 +19,7 @@ Obiettivo di Alessio: **ogni giorno 5 aziende da contattare, e sempre 10 da scal
 
 ### Changed
 - **Nessuna azienda sarda buttata.** Se chi decide non è collegato a te, prima l'azienda finiva "Senza collegamento" e usciva. Ora va da sola nel Percorso: con un ponte al passo 2, altrimenti al passo 3 a scaldare con i commenti. Non devi validarla tu.
+- **"Sarda" vuol dire davvero sarda:** sigla o CAP sardo nell'indirizzo, prefisso fisso sardo, o "Sardegna" nel nome. Una città sarda da sola non basta (spesso è solo dove la ricerca l'ha trovata).
 - **Sempre almeno 10 da scaldare.** Se in riscaldamento sono meno di 10, il CRM riprende le aziende sarde messe da parte "senza collegamento", prima le più vecchie.
 - **Più aziende in entrata:** la ricerca porta fino a 20 aziende nuove al giorno (prima 5), **solo in Sardegna**, tutti i giorni.
 - **Giro del server ogni 2 ore** (6:45–20:45, tutti i giorni) invece di 3 volte nei feriali.

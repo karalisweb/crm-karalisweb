@@ -22,7 +22,7 @@ import {
   lettureDisponibili, messaggioPresentazione, riservaScalda, type DecisoreLetto,
 } from "./motore-121";
 import { FASI_ATTIVE } from "./rete-regole";
-import { ZONE, ZONE_SARDEGNA, siglaIndirizzo } from "@/lib/ricerca/regole";
+import { siglaIndirizzo } from "@/lib/ricerca/regole";
 
 export const KIND_DOPO_121 = "DOPO_121";
 export const KIND_PRESENTAZIONE_BNI = "PRESENTAZIONE_BNI";
@@ -305,12 +305,18 @@ const NOTA_SENZA = "Senza collegamento";
 export const DECISO_DAL_CRM_SCALDARE = "crm_scalda";
 const NOTA_SCALDARE = "Da scaldare: chi decide non è collegato a te, la relazione parte dai commenti (deciso dal CRM)";
 
-/** L'indirizzo è in Sardegna (sigla di provincia sarda, o una città sarda nel testo). */
-export function indirizzoSardo(indirizzo: string | null | undefined): boolean {
+/**
+ * L'azienda è in Sardegna? Sigla di provincia sarda o CAP sardo (07…, 08…, 09…) nell'indirizzo, prefisso fisso sardo
+ * (070–079, 0781–0789), o "Sardegna" nel nome o nell'indirizzo. Una città sarda da sola non basta: spesso è la zona
+ * in cui la ricerca l'ha trovata, non dove sta (Rossatogroup, Abruzzo Piscine: "Sanluri").
+ */
+export function indirizzoSardo(indirizzo: string | null | undefined, altro: { telefono?: string | null; nome?: string | null } = {}): boolean {
   const sigla = siglaIndirizzo(indirizzo);
   if (sigla) return ["CA", "SU", "SS", "NU", "OR"].includes(sigla);
-  const t = norm(indirizzo);
-  return /sardegna/.test(t) || ZONE.slice(0, ZONE_SARDEGNA).some((z) => t.includes(norm(z)));
+  if (/\b0[789]\d{3}\b/.test(indirizzo ?? "")) return true;
+  const tel = (altro.telefono ?? "").replace(/[^\d+]/g, "").replace(/^(\+39|0039)/, "");
+  if (/^07[0-9]/.test(tel)) return true;
+  return /sardegna|sardinia|\bsard[aoei]\b/.test(norm(`${altro.nome ?? ""} ${indirizzo ?? ""}`));
 }
 
 /**
@@ -319,8 +325,8 @@ export function indirizzoSardo(indirizzo: string | null | undefined): boolean {
  * sola, parte l'approfondimento ed entra nel Percorso, dove senza ponte va a scaldare (passo 3).
  */
 export async function mandaAScaldare(leadId: string, oggi = new Date()): Promise<boolean> {
-  const l = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, website: true, address: true, pipelineStage: true } });
-  if (!l || !indirizzoSardo(l.address) || ["NON_TARGET", "CLIENTE", "PERSO", "ARCHIVIATO"].includes(l.pipelineStage)) return false;
+  const l = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, website: true, address: true, phone: true, pipelineStage: true } });
+  if (!l || !indirizzoSardo(l.address, { telefono: l.phone, nome: l.name }) || ["NON_TARGET", "CLIENTE", "PERSO", "ARCHIVIATO"].includes(l.pipelineStage)) return false;
   const voce = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" }, select: { id: true, status: true, decidedBy: true } });
   // Una scelta di Alessio (o "scartata da sola" senza strade) non si tocca.
   if (voce?.status === "APPROVATO") return false;

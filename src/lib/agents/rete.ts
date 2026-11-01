@@ -180,13 +180,13 @@ async function riempiScaldare(oggi: Date): Promise<number> {
   const candidate = await db.approvalItem.findMany({
     where: { kind: KIND_FASCICOLO_BASE, status: "SCARTATO", note: { startsWith: "Senza collegamento" }, lead: { lavorazione: null, agentReports: { some: { agent: "decision_maker" } } } },
     orderBy: { createdAt: "asc" },
-    select: { leadId: true, lead: { select: { address: true } } },
+    select: { leadId: true, lead: { select: { address: true, phone: true, name: true } } },
     take: 100,
   });
   let aggiunte = 0;
   for (const c of candidate) {
     if (mancano <= 0) break;
-    if (!c.leadId || !indirizzoSardo(c.lead?.address)) continue;
+    if (!c.leadId || !indirizzoSardo(c.lead?.address, { telefono: c.lead?.phone, nome: c.lead?.name })) continue;
     if (!(await mandaAScaldare(c.leadId, oggi))) continue;
     aggiunte++;
     mancano = MINIMO_DA_SCALDARE - (await daScaldare());
