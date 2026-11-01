@@ -1687,8 +1687,8 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   `fallimentoTecnico` più recente dell'ultimo FATTO): con gli stati analisi/collegamento/chi_decide/cerca_post, avviso Chrome.
 
 - v3.80 `accodaScalda()` tutti i giorni, fino a `GIRI_SCALDA_AL_GIORNO` = 2 lavori al giorno (mai due in coda insieme),
-  un COMMENTO_LINKEDIN al giorno per azienda; `riservaScalda()` non guarda più il feriale. Nel weekend gira solo se il
-  crontab VPS lancia `/api/cron/arricchimento` anche sabato e domenica.
+  un COMMENTO_LINKEDIN al giorno per azienda; `riservaScalda()` non guarda più il feriale. Crontab VPS (2026-11-01, copia in
+  `/root/crontab-backup-20261101.txt`): `/api/cron/arricchimento` tutti i giorni alle 6:45, 14:45 e 18:15 (prima `1-5`).
 
 ## Motore 121 (v3.52.0)
 

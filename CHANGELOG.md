@@ -16,6 +16,7 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ## [3.80.0] - 2026-11-01
 
 ### Changed
+- **Il Percorso non si ferma nel weekend.** Il giro che manda avanti le aziende (controllo di chi decide, ponti, commenti) gira tutti i giorni alle 6:45, 14:45 e 18:15, anche sabato e domenica.
 - **Commenti proposti due volte al giorno** (giro del mattino e del pomeriggio), anche nel weekend. Se segni "Commentato" dopo il mattino, il commento successivo arriva il pomeriggio, non il giorno dopo. Resta un commento al giorno per azienda.
 
 ---
