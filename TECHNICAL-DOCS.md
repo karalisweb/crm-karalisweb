@@ -1678,6 +1678,10 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.77 Rubrica per regione: `GET /api/ricerca/bni/membri?regione=Lazio` (default Sardegna) filtra membri e capitoli
   della regione e dà `altreRegioni`; `/bni/membri?regione=…` mostra quella regione, con i link alle altre.
 
+- v3.78 Oggi senza pulsanti: le liste di `p.oggi` (da `GET /api/percorso`) sono link a `/percorso?passo=N&azienda=ID`;
+  "valida" si divide per passo (1: approfondisci, 2: li conosci). Il Percorso legge i parametri, apre il passo, evidenzia
+  la scheda (`SchedaPercorso` con id `azienda-<leadId>`, prop `evidenziata`) e la porta in vista.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

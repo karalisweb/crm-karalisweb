@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.78.0] - 2026-11-01
+
+### Changed
+- **Oggi è il riassunto del Percorso, senza pulsanti.** Le tre liste (Da contattare, Da scaldare, Da validare) dicono per ogni azienda da quale passo viene e cosa c'è da fare. Si decide in un posto solo, il Percorso: tocchi l'azienda e si apre il Percorso su quel passo, con l'azienda evidenziata.
+- **"Da validare" diviso in due**, perché sono due domande diverse: "Decidi se approfondirle (passo 1)" e "Dimmi se conosci queste persone (passo 2)".
+
+---
+
 ## [3.77.0] - 2026-11-01
 
 ### Added

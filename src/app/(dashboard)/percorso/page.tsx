@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,10 +64,19 @@ function Cerchia() {
  * Il percorso (v3.63): l'unica pagina delle aziende, 4 passi. Ha preso il posto di "Aziende trovate" e
  * "In lavorazione"; le cose da fare oggi stanno nella pagina Oggi.
  */
+// useSearchParams vuole un Suspense intorno, o la build non prepara la pagina.
 export default function PercorsoPage() {
+  return <Suspense><Percorso /></Suspense>;
+}
+
+function Percorso() {
   const [d, setD] = useState<DatiPercorso | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
-  const [passo, setPasso] = useState<1 | 2 | 3 | 4>(1);
+  // Da Oggi si arriva con ?passo=N&azienda=ID (v3.78): si apre quel passo e si va su quell'azienda.
+  const cerca = useSearchParams();
+  const daOggi = cerca.get("azienda");
+  const passoIniziale = Number(cerca.get("passo"));
+  const [passo, setPasso] = useState<1 | 2 | 3 | 4>(passoIniziale >= 1 && passoIniziale <= 4 ? (passoIniziale as 1 | 2 | 3 | 4) : 1);
   const carica = useCallback(async () => {
     setErrore(null);
     try {
@@ -80,6 +90,12 @@ export default function PercorsoPage() {
   useEffect(() => {
     carica();
   }, [carica]);
+  useEffect(() => {
+    if (!d || !daOggi) return;
+    // Dopo che la pagina si è disegnata, o lo scorrimento si perde.
+    const t = setTimeout(() => document.getElementById(`azienda-${daOggi}`)?.scrollIntoView({ block: "center" }), 300);
+    return () => clearTimeout(t);
+  }, [d, daOggi]);
 
   // Già in ordine di stato dal server: qui si raggruppano, con il nome dello stato sopra.
   const nelPasso = (d?.aziende ?? []).filter((a) => a.passo === passo);
@@ -125,7 +141,7 @@ export default function PercorsoPage() {
           : <div className="space-y-4">{gruppi.map((g) => (
             <div key={g.stato} className="space-y-2">
               <h3 className="text-sm font-semibold">{g.nome} <span className="text-muted-foreground font-normal">({g.aziende.length})</span></h3>
-              {g.aziende.map((a) => <SchedaPercorso key={a.leadId} a={a} passi={d.passi} onCambio={carica} />)}
+              {g.aziende.map((a) => <SchedaPercorso key={a.leadId} a={a} passi={d.passi} onCambio={carica} evidenziata={a.leadId === daOggi} />)}
             </div>
           ))}</div>}
 

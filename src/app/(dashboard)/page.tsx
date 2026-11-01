@@ -7,12 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2 } from "lucide-react";
 import { dataOra } from "@/components/ricerca/etichette";
-import { SchedaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
+import { type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
 
 // Le 3 cose di oggi (v3.64; dalla v3.67 tutte, senza tetto): ogni azienda con la sua cosa da fare.
 const COSE: { k: CosaDiOggi; titolo: string; spiega: string }[] = [
-  { k: "contatta", titolo: "Da contattare", spiega: "Analizzate e verificate: sai cosa dire. Scrivi a chi decide, o a chi te la presenta." },
-  { k: "scalda", titolo: "Da scaldare", spiega: "Nessuno te la presenta: commenta un post della loro pagina." },
+  { k: "contatta", titolo: "Da contattare", spiega: "Passo 4: scrivi a chi decide. Passo 2: scrivi a chi te la presenta." },
+  { k: "scalda", titolo: "Da scaldare", spiega: "Passo 3: nessuno te la presenta, commenta un post della loro pagina." },
   { k: "valida", titolo: "Da validare", spiega: "Basta un sì o un no." },
 ];
 
@@ -145,22 +145,45 @@ export default function HomePage() {
 
       {p && (
         <section className="space-y-4">
-          <h2 className="font-semibold">Le aziende di oggi</h2>
+          <div>
+            <h2 className="font-semibold">Le aziende di oggi</h2>
+            <p className="text-xs text-muted-foreground">Il riassunto del <Link href="/percorso" className="underline">Percorso</Link>: tocca un&apos;azienda e la apri lì, dove decidi.</p>
+          </div>
           {COSE.map(({ k, titolo, spiega }) => {
             const fatte = p.fatte[k];
-            const finite = fatte > 0 && p.oggi[k].length === 0;
+            const tutte = p.oggi[k];
+            const finite = fatte > 0 && tutte.length === 0;
+            // "Da validare" sono due domande diverse: dal passo 1 (la approfondisci?) e dal passo 2 (li conosci?).
+            const gruppi = k === "valida"
+              ? [
+                { titolo: "Decidi se approfondirle (passo 1 · Trovate)", aziende: tutte.filter((a) => a.passo === 1) },
+                { titolo: "Dimmi se conosci queste persone (passo 2 · Chi me la presenta)", aziende: tutte.filter((a) => a.passo === 2) },
+              ].filter((g) => g.aziende.length)
+              : [{ titolo: null, aziende: tutte }];
             return (
               <div key={k} className="space-y-2">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="text-sm font-semibold">{titolo}</h3>
                   <span className={`text-sm flex items-center gap-1 ${finite ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                    {finite && <CheckCircle2 className="h-4 w-4" />}{p.oggi[k].length} da fare{fatte ? ` · ${fatte} fatte oggi` : ""}
+                    {finite && <CheckCircle2 className="h-4 w-4" />}{tutte.length} da fare{fatte ? ` · ${fatte} fatte oggi` : ""}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">{spiega}</p>
-                {p.oggi[k].length ? (
-                  p.oggi[k].map((a) => <SchedaPercorso key={a.leadId} a={a} passi={p.passi} onCambio={caricaPercorso} />)
-                ) : (
+                {tutte.length ? gruppi.map((g, i) => (
+                  <div key={i} className="space-y-1.5">
+                    {g.titolo && <div className="text-xs font-semibold text-muted-foreground pt-1">{g.titolo} ({g.aziende.length})</div>}
+                    {g.aziende.map((a) => (
+                      <Link key={a.leadId} href={`/percorso?passo=${a.passo}&azienda=${a.leadId}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:border-primary transition">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium break-words">{a.nome}</div>
+                          <div className="text-xs text-muted-foreground break-words">Passo {a.passo} · {p.passi.find((x) => x.n === a.passo)?.nome}{a.zona ? ` · ${a.zona}` : ""}</div>
+                          <div className="text-xs break-words mt-0.5">{a.cosa}</div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                )) : (
                   <div className="rounded-lg border p-3 text-sm text-muted-foreground">{finite ? "Fatte tutte. Le prossime le prepara il CRM." : "Per ora nessuna: le prepara il CRM."}</div>
                 )}
               </div>

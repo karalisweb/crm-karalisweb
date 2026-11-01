@@ -42,8 +42,8 @@ async function chiama(url: string, metodo: string, body?: unknown): Promise<bool
   return r.ok;
 }
 
-/** Un'azienda del percorso: il passo, chi deve muoversi e la cosa da fare (v3.62). Usata in Percorso e in Oggi. */
-export function SchedaPercorso({ a, passi, onCambio }: { a: AziendaPercorso; passi: PassoPercorso[]; onCambio: () => void }) {
+/** Un'azienda del percorso: il passo, chi deve muoversi e la cosa da fare (v3.62). Solo in Percorso: Oggi ne mostra il riassunto (v3.78). */
+export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: AziendaPercorso; passi: PassoPercorso[]; onCambio: () => void; evidenziata?: boolean }) {
   const [inCorso, setInCorso] = useState<string | null>(null);
   // Al contatto il foglio "Cosa dirgli": ganci, scheda tecnica e commenti fatti (v3.65).
   const [foglio, setFoglio] = useState(false);
@@ -63,7 +63,8 @@ export function SchedaPercorso({ a, passi, onCambio }: { a: AziendaPercorso; pas
   const x = a.azione;
   const lav = a.lavorazioneId ? `/api/rete/lavorazioni/${a.lavorazioneId}` : null;
   return (
-    <Card><CardContent className="p-3 space-y-2">
+    // L'id serve a Oggi per aprire il Percorso proprio su quest'azienda (v3.78).
+    <Card id={`azienda-${a.leadId}`} className={`scroll-mt-24 ${evidenziata ? "ring-2 ring-primary" : ""}`}><CardContent className="p-3 space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Link href={`/aziende-trovate/${a.leadId}`} className="font-medium hover:underline break-words">{a.nome}</Link>
         <span className="text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground">{a.passo}. {passi.find((p) => p.n === a.passo)?.nome}</span>
