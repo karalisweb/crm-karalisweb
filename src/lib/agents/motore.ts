@@ -42,7 +42,12 @@ export interface StatoLinkedinOggi {
   disponibili: number;
   /** Letture tenute per "scalda" (gli altri lavori LinkedIn non le possono usare). */
   riservaScalda: number;
+  /** Messaggi a chi decide accodati oggi (v3.89). */
+  contattiOggi: number;
 }
+
+/** Messaggi a chi decide che il Mac manda al massimo in un giorno su LinkedIn. */
+export const CONTATTI_AL_GIORNO = 5;
 
 export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedinOggi> {
   const [oggiRuns, blocchi, daScaldare] = await Promise.all([
@@ -68,6 +73,7 @@ export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedi
     bloccoFinoAl: ultimo?.finishedAt ? new Date(ultimo.finishedAt.getTime() + ORE_STOP_LINKEDIN * 3600_000) : null,
     disponibili: lettureDisponibili(usate, blocco),
     riservaScalda: riservaScalda(daScaldare, contano.some((r) => r.agent === "scalda")),
+    contattiOggi: contano.filter((r) => r.agent === "contatta_persona").length,
   };
 }
 
@@ -75,6 +81,9 @@ export async function statoLinkedinOggi(oggi = new Date()): Promise<StatoLinkedi
 export async function linkedinPermette(agente: string, input: unknown, oggi = new Date()): Promise<boolean> {
   if (!AGENTI_LINKEDIN.includes(agente)) return true;
   const s = await statoLinkedinOggi(oggi);
+  // v3.89: il messaggio a chi decide viene prima di tutto (Alessio: "5 aziende al giorno in contatto"): non aspetta
+  // le letture lasciate dalle ricerche, si ferma solo con un blocco di LinkedIn o dopo 5 messaggi nel giorno.
+  if (agente === "contatta_persona") return !s.blocco && s.contattiOggi < CONTATTI_AL_GIORNO;
   const costo = lettureDi(agente, input);
   // Scaldare chi decide viene per ultimo nel turno: le sue letture si tengono da parte, o non partirebbe mai.
   const riserva = agente === "scalda" ? 0 : s.riservaScalda;

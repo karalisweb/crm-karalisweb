@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+
+## [3.89.0] - 2026-11-01
+
+### Fixed
+- Il messaggio a chi decide su LinkedIn (agente `contatta_persona`) non aspetta più le letture lasciate dalle
+  ricerche di "chi decide": parte sempre, fino a 5 al giorno, e si ferma solo con un blocco di LinkedIn.
+  Prima, a budget consumato, il messaggio a Macciocco restava fermo.
+
 ## [3.88.0] - 2026-11-01
 
 Decisione di Alessio: **il CRM fa tutto da solo**, anche quando lui non c'è. Tolta la regola "niente parte a nome di Alessio senza la sua approvazione".
