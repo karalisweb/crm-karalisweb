@@ -145,11 +145,16 @@ export function passoRicerca(termini: string[], indice: number, escluse: readonl
  * la Sardegna passa dopo un settore che è ancora in Sardegna.
  *   0 = nicchia in Sardegna · 1 = settore in Sardegna · 2 = nicchia fuori · 3 = settore fuori
  */
-export function prioritaChiave(tipo: string, zona: string | null): number {
+export function prioritaChiave(_tipo: string, zona: string | null): number {
+  // v3.85 (Alessio: "sempre e solo piscine"): la nicchia non passa più sempre davanti ai settori. Prima i settori dei
+  // casi studio (ristrutturazioni, segnaletica, consulenza) non erano mai partiti; ora si va a turno, la chiave usata
+  // meno di recente per prima.
   const inSardegna = !!zona && ZONE.indexOf(zona) < ZONE_SARDEGNA;
-  const nicchia = tipo === "AZIENDA";
-  return (inSardegna ? 0 : 2) + (nicchia ? 0 : 1);
+  return inSardegna ? 0 : 2;
 }
+
+/** Aziende nuove al massimo da una sola ricerca: così un settore ricco (le piscine) non riempie da solo la giornata. */
+export const AZIENDE_PER_RICERCA = 4;
 
 // ─── Doppioni ───────────────────────────────────────────────────────────────
 

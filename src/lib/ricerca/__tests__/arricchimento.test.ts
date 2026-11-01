@@ -29,8 +29,8 @@ describe("Nicchia, settore e provincia", () => {
     expect(passoRicerca(["piscine"], 0)).toEqual({ termine: "piscine", zona: "Cagliari" });
     expect(nellaZona("Via Roma 1, 09045 Quartu Sant'Elena CA", "Iglesias", ["CA"])).toBe(false);
   });
-  it("prima la nicchia, ma la Sardegna prima di tutto", () => {
-    expect(prioritaChiave("AZIENDA", "Sassari")).toBeLessThan(prioritaChiave("SETTORE", "Cagliari"));
+  it("nicchia e settore a turno (v3.85), la Sardegna prima di tutto", () => {
+    expect(prioritaChiave("AZIENDA", "Sassari")).toBe(prioritaChiave("SETTORE", "Cagliari"));
     expect(prioritaChiave("SETTORE", "Cagliari")).toBeLessThan(prioritaChiave("AZIENDA", "Roma"));
   });
   it("legge la sigla della provincia", () => {

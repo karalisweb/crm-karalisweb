@@ -23,7 +23,7 @@ import { linkedinPermette, serbatoioPieno } from "@/lib/agents/motore";
 import { scadenzeCasi } from "./casi-studio";
 import { filtraSimili } from "./filtro";
 import {
-  AZIENDE_AL_GIORNO, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO,
+  AZIENDE_AL_GIORNO, AZIENDE_PER_RICERCA, LAVORI_LINKEDIN_AL_GIORNO, MESI_VALIDITA_RETE, RICERCHE_PER_TURNO,
   nellaZona, nomeAziendaGenerico, nomeConfrontabile, normalizzaLinkedin, passoRicerca, prioritaChiave, prossimaChiave, stessoNome, terminiDi, type TipoChiave,
 } from "./regole";
 
@@ -367,7 +367,8 @@ export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?:
     const contesto = await contestoChiave(k);
     const run = await db.agentRun.create({ data: { agent: "esploratore", status: "IN_CORSO", attempts: 1, startedAt: new Date(), input: { chiaveId: k.id, ...passo } } });
     try {
-      const quota = () => AZIENDE_AL_GIORNO - r.nuoveOggiPrima - r.nuove;
+      const daQui = r.nuove;
+      const quota = () => Math.min(AZIENDE_AL_GIORNO - r.nuoveOggiPrima - r.nuove, AZIENDE_PER_RICERCA - (r.nuove - daQui));
       const esiti = [await cercaSuMaps(passo.termine, passo.zona, k.id, contesto, quota(), escluseDi(k))];
       r.nuove += esiti[0].nuove;
       if (esiti[0].nuove < 3 && quota() > 0) {

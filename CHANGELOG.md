@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.85.0] - 2026-11-01
+
+### Fixed
+- **Non più solo piscine.** La ricerca metteva sempre davanti le "nicchie" dei casi studio, e quella di IEM Piscine porta più risultati: le ricerche per settore (ristrutturazioni, segnaletica, consulenza B2B) non erano mai partite. Ora casi studio e settori vanno a turno, e una sola ricerca porta al massimo 4 aziende nuove.
+
+---
+
 ## [3.84.0] - 2026-11-01
 
 Le correzioni ai rischi del piano "5 contatti al giorno, 10 da scaldare".
