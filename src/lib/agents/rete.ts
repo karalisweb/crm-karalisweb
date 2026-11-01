@@ -13,7 +13,7 @@ import { db } from "@/lib/db";
 import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import { KIND_FASCICOLO_BASE } from "./turno";
-import { mezzanotteRoma } from "./bni-regole";
+import { mezzanotteRoma, norm } from "./bni-regole";
 import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
@@ -365,7 +365,7 @@ interface RispostaMotivo {
 const SCHEMA_MOTIVO: Schema = {
   type: "object",
   properties: {
-    motivo: { type: "string", description: "Una o due frasi: perché all'azienda conviene parlare con Alessio, dal caso studio, SENZA nominare il cliente del caso" },
+    motivo: { type: "string", description: "Una o due frasi in PRIMA PERSONA (parla Alessio: \"Ho aiutato…\"), dal caso studio, SENZA nominare il cliente del caso" },
   },
   required: ["motivo"],
 };
@@ -374,17 +374,25 @@ const SCHEMA_MOTIVO: Schema = {
 async function motivoDalCaso(leadId: string, oggi: Date): Promise<string | null> {
   const l = await db.lead.findUnique({
     where: { id: leadId },
-    select: { name: true, category: true, ritrovamenti: { take: 1, orderBy: { createdAt: "asc" }, select: { chiave: { select: { casoStudio: { select: { storia: true, settore: true, aziendaNome: true } } } } } } },
+    select: { name: true, category: true, ritrovamenti: { take: 5, orderBy: { createdAt: "asc" }, select: { chiave: { select: { casoStudio: { select: { storia: true, settore: true, aziendaNome: true } } } } } } },
   });
-  const caso = l?.ritrovamenti[0]?.chiave.casoStudio;
+  // Il caso della ricerca che l'ha trovata; se arriva da altre strade (rete di un membro, LinkedIn), il caso attivo
+  // dello stesso settore (v3.87: Centro Piscine e Macciocco partivano senza caso studio nel messaggio).
+  let caso = l?.ritrovamenti.map((r) => r.chiave.casoStudio).find((c) => c?.storia) ?? null;
+  if (l && !caso) {
+    const testo = norm(`${l.category ?? ""} ${l.name}`);
+    const casi = await db.casoStudio.findMany({ where: { stato: "ATTIVO", storia: { not: null } }, select: { storia: true, settore: true, aziendaNome: true } });
+    caso = casi.find((c) => norm(c.settore).split(/\s+/).some((w) => w.length >= 5 && testo.includes(w.slice(0, -1)))) ?? null;
+  }
   if (!l || !caso?.storia || !(await budgetDisponibile(oggi)).ok) return null;
   try {
     const ai = await chiediJSON<RispostaMotivo>({
-      sistema: `${REGOLE_COMUNI}\n\nScrivi il motivo concreto per cui un'azienda dovrebbe ascoltare Alessio Loi (Karalisweb, web e marketing digitale), partendo dal caso studio. REGOLA: il cliente del caso NON si nomina mai per iscritto (lo racconta Alessio a voce): descrivilo come "un'azienda che …" con il mestiere e la zona. Una o due frasi, tono semplice, niente promesse vaghe, nessun numero che non sia nel caso.`,
+      sistema: `${REGOLE_COMUNI}\n\nScrivi il motivo concreto per cui un'azienda dovrebbe ascoltare Alessio Loi (Karalisweb, web e marketing digitale), partendo dal caso studio. REGOLA: il cliente del caso NON si nomina mai per iscritto (lo racconta Alessio a voce): descrivilo come "un'azienda che …" con il mestiere e la zona. Una o due frasi, tono semplice, niente promesse vaghe, nessun numero che non sia nel caso. Scrivi in PRIMA PERSONA, perché il messaggio lo firma Alessio: "Ho aiutato un'azienda che…", mai "Alessio Loi ha aiutato" né "Karalisweb ha aiutato".`,
       testo: `AZIENDA DA CONTATTARE: ${l.name}${l.category ? ` (${l.category})` : ""}\nCLIENTE DEL CASO (da NON nominare): ${caso.aziendaNome ?? ""}\nSETTORE DEL CASO: ${caso.settore ?? ""}\nSTORIA DEL CASO:\n${caso.storia}`,
       schema: SCHEMA_MOTIVO,
     });
-    let motivo = ai.dati.motivo.trim();
+    // Rete di sicurezza: il messaggio lo firma Alessio, quindi niente terza persona (v3.87).
+    let motivo = ai.dati.motivo.trim().replace(/^(Alessio Loi|Alessio|Karalisweb|karalisweb)\s+ha\s+/i, "Ho ");
     // Rete di sicurezza: se il nome del cliente scappa comunque, si toglie il motivo.
     if (caso.aziendaNome && motivo.toLowerCase().includes(caso.aziendaNome.toLowerCase().split(" ")[0])) motivo = "";
     return motivo || null;

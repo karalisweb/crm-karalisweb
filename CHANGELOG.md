@@ -26,6 +26,7 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 - **"Da contattare" vuol dire scrivere a chi decide.** Prima il CRM preparava un messaggio al ponte ("conosci X? ce lo presenti?") e il contatto vero dipendeva dalla sua risposta. Ora, quando sa chi decide, prepara il messaggio **direttamente a lui**: chi sei, la persona che avete in comune (solo se lo conosce davvero) e il caso studio. Il ponte resta un aiuto, non un passaggio obbligato.
 - **Il canale è già pronto:** il CRM cerca sul sito dell'azienda il WhatsApp e la mail, più il LinkedIn di chi decide. Nel Percorso, accanto al messaggio, ci sono i pulsanti **WhatsApp**, **Email** e **LinkedIn**, col testo già dentro.
 - Le richieste ai ponti non ancora mandate diventano messaggi diretti al prossimo giro.
+- **Il caso studio in prima persona** ("Ho aiutato un'azienda che…", non "Alessio Loi ha aiutato"), e se l'azienda non arriva da una ricerca si usa il caso attivo dello stesso settore.
 
 ---
 
