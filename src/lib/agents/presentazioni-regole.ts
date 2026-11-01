@@ -188,6 +188,34 @@ export interface AziendaDaPresentare {
   citta: string | null;
   /** Nella stessa città della persona (non solo nella provincia). */
   stessaCitta?: boolean;
+  /** v3.87: social fermi e invisibile su Google; il perché, da dire al membro. */
+  ferma?: string | null;
+}
+
+// ─── Le pagine ferme (v3.87) ────────────────────────────────────────────────
+
+/** L'inizio della nota di una lavorazione messa in pausa per pagina ferma (la scrive rete.ts). */
+export const NOTA_PAGINA_FERMA = "Pagina ferma";
+
+/** Quello che dicono gli agenti Posizioni, Google Ads e Meta Ad Library (undefined = non ancora controllato). */
+export interface Visibilita {
+  posizione?: number | null;
+  annunciGoogleAttivi?: number | null;
+  inserzioniMetaAttive?: number | null;
+}
+
+/**
+ * Social fermi: si guarda se l'azienda si fa trovare in altro modo (Alessio, 2026-11-01: "magari sono da contattare,
+ * dopo aver verificato se hanno SEO, se hanno ADV"). In prima pagina su Google o con pubblicità attiva non è
+ * invisibile (null); altrimenti il perché, che va al membro BNI insieme alla domanda.
+ */
+export function perchePaginaFerma(v: Visibilita): string | null {
+  if (typeof v.posizione === "number" && v.posizione <= 10) return null;
+  if ((v.annunciGoogleAttivi ?? 0) > 0 || (v.inserzioniMetaAttive ?? 0) > 0) return null;
+  const pezzi = ["social fermi"];
+  if (v.posizione === null || typeof v.posizione === "number") pezzi.push("non esce in prima pagina su Google");
+  if (v.annunciGoogleAttivi != null || v.inserzioniMetaAttive != null) pezzi.push("nessuna pubblicità attiva");
+  return pezzi.join(", ");
 }
 
 /**
@@ -204,10 +232,13 @@ export function ordinaMembri(m: MembroDaPresentare[]): MembroDaPresentare[] {
 const ORDINE_FONTE: Record<FonteAzienda, number> = { LINKEDIN: 0, RAPPORTO: 1, ZONA: 2 };
 const ORDINE_SETTORE = (s: AziendaDaPresentare["settore"]) => (s === "CASO" ? 0 : s === "INTERESSE" ? 1 : 2);
 
-/** LinkedIn, poi rapporti stretti, poi la zona; a parità, i settori dei casi studio, la stessa città e chi ha il nome di chi decide. */
+/**
+ * LinkedIn, poi rapporti stretti, poi la zona; a parità, le pagine ferme (v3.87: hanno bisogno, e senza commenti
+ * l'unica strada è una presentazione), i settori dei casi studio, la stessa città e chi ha il nome di chi decide.
+ */
 export function ordinaAziende(a: AziendaDaPresentare[]): AziendaDaPresentare[] {
   return [...a].sort(
-    (x, y) => ORDINE_FONTE[x.fonte] - ORDINE_FONTE[y.fonte] || ORDINE_SETTORE(x.settore) - ORDINE_SETTORE(y.settore) || Number(!x.stessaCitta) - Number(!y.stessaCitta) || Number(!x.decisore) - Number(!y.decisore) || x.azienda.localeCompare(y.azienda),
+    (x, y) => ORDINE_FONTE[x.fonte] - ORDINE_FONTE[y.fonte] || Number(!x.ferma) - Number(!y.ferma) || ORDINE_SETTORE(x.settore) - ORDINE_SETTORE(y.settore) || Number(!x.stessaCitta) - Number(!y.stessaCitta) || Number(!x.decisore) - Number(!y.decisore) || x.azienda.localeCompare(y.azienda),
   );
 }
 

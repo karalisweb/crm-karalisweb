@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  SETTORI_CALDI, daChiedereOra, gruppiSettore, qualeSettore, domandaAzienda, domandaMembro, nelSettore, ordinaAziende, ordinaMembri, stessaZona, tipoPersona, zonaDa,
+  SETTORI_CALDI, daChiedereOra, gruppiSettore, qualeSettore, domandaAzienda, domandaMembro, nelSettore, ordinaAziende, ordinaMembri, perchePaginaFerma, stessaZona, tipoPersona, zonaDa,
   type AziendaDaPresentare, type MembroDaPresentare, type Settori,
 } from "../presentazioni-regole";
 
@@ -99,5 +99,24 @@ describe("le frasi", () => {
     expect(domandaAzienda({ azienda: "Sorgente Solare", decisore: null })).toBe("Conosci qualcuno in Sorgente Solare? Chi decide lì?");
     expect(domandaAzienda({ azienda: "", decisore: "Mario Rossi" })).toBe("Conosci bene Mario Rossi? Me lo presenti?");
     expect(domandaMembro({ nome: "Mario Rossi", categoria: "Commercialista" })).toContain("Mi presenti Mario Rossi (commercialista)?");
+  });
+});
+
+describe("pagine ferme (v3.87)", () => {
+  it("Piscine in Sardegna: non esce su Google e nessuna pubblicità, va presentata", () => {
+    expect(perchePaginaFerma({ posizione: null, annunciGoogleAttivi: 0, inserzioniMetaAttive: 0 })).toBe("social fermi, non esce in prima pagina su Google, nessuna pubblicità attiva");
+  });
+  it("in prima pagina su Google o con pubblicità attiva si fa trovare: niente presentazione", () => {
+    expect(perchePaginaFerma({ posizione: 4, annunciGoogleAttivi: 0, inserzioniMetaAttive: 0 })).toBeNull();
+    expect(perchePaginaFerma({ posizione: null, annunciGoogleAttivi: 2 })).toBeNull();
+    expect(perchePaginaFerma({ posizione: 15, inserzioniMetaAttive: 1 })).toBeNull();
+  });
+  it("controlli mancanti: si dice solo quello che si sa", () => {
+    expect(perchePaginaFerma({})).toBe("social fermi");
+    expect(perchePaginaFerma({ posizione: 18 })).toBe("social fermi, non esce in prima pagina su Google");
+  });
+  it("fra le aziende della zona, le pagine ferme vengono prima", () => {
+    const a = (azienda: string, ferma: string | null): AziendaDaPresentare => ({ presentazioneId: null, leadId: azienda, azienda, decisore: null, fonte: "ZONA", settore: "CASO", citta: null, ferma });
+    expect(ordinaAziende([a("Alfa", null), a("Zeta", "social fermi")]).map((x) => x.azienda)).toEqual(["Zeta", "Alfa"]);
   });
 });

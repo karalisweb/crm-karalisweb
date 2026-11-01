@@ -11,7 +11,7 @@ import { db } from "@/lib/db";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { nomeConfrontabile, stessoNome } from "@/lib/ricerca/regole";
 import {
-  ORDINE_PERSONE, SETTORI_CALDI, daChiedereOra, gruppiSettore, domandaAzienda, domandaMembro, ordinaAziende, ordinaMembri, settoreDi, stessaZona, tipoPersona, zonaDa,
+  NOTA_PAGINA_FERMA, ORDINE_PERSONE, SETTORI_CALDI, daChiedereOra, gruppiSettore, domandaAzienda, domandaMembro, ordinaAziende, ordinaMembri, perchePaginaFerma, settoreDi, stessaZona, tipoPersona, zonaDa,
   type AziendaDaPresentare, type GruppoSettore, type MembroDaPresentare, type Settori, type TipoPersona, type Zona,
 } from "./presentazioni-regole";
 
@@ -58,24 +58,54 @@ async function decisoriDi(leadIds: string[]): Promise<Map<string, string>> {
   return out;
 }
 
-/** Le aziende del serbatoio (trovate dai casi studio) nei settori di Alessio, con la loro zona. */
+/**
+ * Le aziende del serbatoio (trovate dai casi studio) nei settori di Alessio, con la loro zona. Dalla v3.87 anche
+ * quelle uscite dal riscaldamento per pagina ferma, se non si fanno trovare in altro modo (né Google né pubblicità):
+ * senza post da commentare, l'unica strada è farsele presentare.
+ */
 async function serbatoioNeiSettori(s: Settori) {
   const leads = await db.lead.findMany({
     where: {
-      ritrovamenti: { some: {} },
       bniOriginType: null,
       pipelineStage: { notIn: nonInLavoro },
       approvalItems: { none: { kind: KIND_FASCICOLO_BASE, status: "SCARTATO" } },
-      // Già presentata o già in mano a un altro ponte: non si chiede due volte.
-      OR: [{ lavorazione: null }, { lavorazione: { is: { fase: "MAPPATA" } } }],
+      OR: [
+        // Già presentata o già in mano a un altro ponte: non si chiede due volte.
+        { ritrovamenti: { some: {} }, OR: [{ lavorazione: null }, { lavorazione: { is: { fase: "MAPPATA" } } }] },
+        { lavorazione: { is: { fase: "PAUSA", note: { startsWith: NOTA_PAGINA_FERMA } } } },
+      ],
     },
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, category: true, address: true },
+    select: { id: true, name: true, category: true, address: true, lavorazione: { select: { fase: true } } },
     take: 600,
   });
+  const ferme = leads.filter((l) => l.lavorazione?.fase === "PAUSA").map((l) => l.id);
+  const perche = await visibilitaDi(ferme);
   return leads
-    .map((l) => ({ ...l, settore: settoreDi(`${l.category ?? ""} ${l.name}`, s), zona: zonaDa(l.address) }))
-    .filter((l) => l.settore);
+    .map((l) => ({ ...l, settore: settoreDi(`${l.category ?? ""} ${l.name}`, s), zona: zonaDa(l.address), ferma: l.lavorazione?.fase === "PAUSA" ? perche.get(l.id) ?? null : null }))
+    .filter((l) => (l.lavorazione?.fase === "PAUSA" ? !!l.ferma : !!l.settore));
+}
+
+/** Perché un'azienda con la pagina ferma va presentata: Posizioni, Google Ads e Meta Ad Library (null = si fa trovare). */
+async function visibilitaDi(leadIds: string[]): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>();
+  if (!leadIds.length) return out;
+  const referti = await db.agentReport.findMany({
+    where: { leadId: { in: leadIds }, agent: { in: ["posizioni", "google_ads", "meta_ads"] } },
+    orderBy: { collectedAt: "desc" },
+    select: { leadId: true, agent: true, findings: true },
+  });
+  const num = (x: unknown) => (typeof x === "number" ? x : null);
+  for (const id of leadIds) {
+    const ultimo = (agente: string) => referti.find((r) => r.leadId === id && r.agent === agente)?.findings as Record<string, unknown> | undefined;
+    const [pos, gads, meta] = [ultimo("posizioni"), ultimo("google_ads"), ultimo("meta_ads")];
+    out.set(id, perchePaginaFerma({
+      posizione: pos ? num(pos.posizione) : undefined,
+      annunciGoogleAttivi: gads ? num(gads.attiviOra) ?? 0 : undefined,
+      inserzioniMetaAttive: meta ? num(meta.inserzioniAttive) ?? 0 : undefined,
+    }));
+  }
+  return out;
 }
 
 export interface DaChiedere {
@@ -129,7 +159,7 @@ export async function daChiedereA(membroId: string): Promise<DaChiedere | null> 
     const gia = new Set(aziende.map((a) => a.leadId).filter(Boolean));
     const vicine = (await serbatoioNeiSettori(s)).filter((l) => !gia.has(l.id) && l.id !== m.leadId && stessaZona(zona, l.zona));
     const decisori = await decisoriDi(vicine.map((l) => l.id));
-    for (const l of vicine) aziende.push({ presentazioneId: null, leadId: l.id, azienda: l.name, decisore: decisori.get(l.id) ?? null, fonte: "ZONA", settore: l.settore, citta: l.zona.citta, stessaCitta: !!zona.citta && l.zona.citta === zona.citta });
+    for (const l of vicine) aziende.push({ presentazioneId: null, leadId: l.id, azienda: l.name, decisore: decisori.get(l.id) ?? null, fonte: "ZONA", settore: l.settore, citta: l.zona.citta, stessaCitta: !!zona.citta && l.zona.citta === zona.citta, ferma: l.ferma });
   }
   const ordinate = ordinaAziende(aziende).slice(0, 8);
   const ora = daChiedereOra(membri, ordinate);

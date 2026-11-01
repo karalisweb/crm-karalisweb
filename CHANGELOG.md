@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.87.0] - 2026-11-01
+
+### Changed
+- **Le pagine ferme non si buttano: si cerca chi te le presenta.** Un'azienda che esce dal riscaldamento perché non pubblica, se non esce in prima pagina su Google e non fa pubblicità (né Google né Meta), entra fra le aziende da chiedere ai membri BNI della sua zona, prima delle altre, con il perché ("social fermi, non esce in prima pagina su Google, nessuna pubblicità attiva"). Se invece si fa trovare su Google o fa pubblicità, resta solo in pausa come prima.
+
+---
+
 ## [3.86.0] - 2026-11-01
 
 ### Changed

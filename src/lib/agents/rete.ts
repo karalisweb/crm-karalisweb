@@ -23,6 +23,7 @@ import {
 } from "./rete-regole";
 import { noteDaReferti } from "./impressioni-sezioni";
 import { pontiInZona } from "./presentazioni";
+import { NOTA_PAGINA_FERMA } from "./presentazioni-regole";
 
 export const KIND_RETE_PONTE = "RETE_PONTE";
 export const KIND_RETE_DIRETTO = "RETE_DIRETTO";
@@ -200,7 +201,8 @@ async function liberaPagineFerme(oggi: Date): Promise<number> {
   let uscite = 0;
   for (const l of lav) {
     if ((lette.get(l.leadId) ?? 0) < LETTURE_PAGINA_FERMA || conCommento.has(l.leadId)) continue;
-    await mettiInPausa(l.id, `Pagina ferma: in ${GIORNI_PAGINA_FERMA} giorni nessun post da commentare`, GIORNI_PAUSA_PAGINA_FERMA);
+    // v3.87: in pausa esce dai commenti ma entra fra le aziende da chiedere ai membri BNI della zona (presentazioni.ts).
+    await mettiInPausa(l.id, `${NOTA_PAGINA_FERMA}: in ${GIORNI_PAGINA_FERMA} giorni nessun post da commentare, si cerca chi la presenta`, GIORNI_PAUSA_PAGINA_FERMA);
     uscite++;
   }
   return uscite;

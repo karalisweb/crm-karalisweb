@@ -1596,6 +1596,13 @@ Decisione di Alessio: `PROGETTO-AGENTI.md` "La rete al centro". Casi studio + re
   il pulsante "Ha risposto ai miei commenti"); il "cosa dare" c'è solo per i ponti BNI (per gli altri non si conosce il
   mestiere); il motivo dal caso studio richiede l'AI (in locale manca la chiave: si usa il testo di riserva).
 
+- Pagine ferme (v3.87): `liberaPagineFerme` (rete.ts) mette in pausa 45 gg con nota che inizia per
+  `NOTA_PAGINA_FERMA` ("Pagina ferma"). `serbatoioNeiSettori` (presentazioni.ts) include anche queste lavorazioni in
+  `PAUSA` (senza bisogno di ritrovamenti né settore) se `perchePaginaFerma` (presentazioni-regole.ts, puro) non è null:
+  null quando `posizioni.posizione <= 10` o `google_ads.attiviOra > 0` o `meta_ads.inserzioniAttive > 0`.
+  `AziendaDaPresentare.ferma` porta il perché; `ordinaAziende` le mette prima a parità di fonte; il foglio del 121 lo
+  scrive nel "perché".
+
 ## Le presentazioni da chiedere (v3.68.0)
 
 Decisione di Alessio del 2026-10-31 (`PROGETTO-AGENTI.md`, Flusso BNI). Nessuna migrazione: riusa `bni_presentazioni`
