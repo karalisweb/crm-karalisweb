@@ -13,6 +13,17 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.88.0] - 2026-11-01
+
+Decisione di Alessio: **il CRM fa tutto da solo**, anche quando lui non c'è. Tolta la regola "niente parte a nome di Alessio senza la sua approvazione".
+
+### Changed
+- **I commenti li pubblica il CRM.** Il lavoro "Commenti alle pagine" non propone più: scrive il commento sotto il post della pagina dell'azienda, mette "mi piace" a quel post, e il commento conta subito. Al 3° commento parte il contatto con chi decide.
+- **Il messaggio a chi decide lo manda il CRM su LinkedIn.** Nuovo lavoro "Messaggio a chi decide": se siete collegati manda il messaggio, altrimenti la richiesta di collegamento con una nota breve (la persona in comune, oppure i commenti fatti). Parte solo quando c'è una relazione: la persona in comune vera o i commenti. Scrive alla persona, mai a info@ dell'azienda.
+- Si vede tutto nel Percorso: le voci fatte dal CRM risultano già mandate, e l'azienda passa ad "aspetti la risposta".
+
+---
+
 ## [3.87.0] - 2026-11-01
 
 ### Changed

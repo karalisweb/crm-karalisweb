@@ -94,13 +94,14 @@ export interface RiepilogoRete {
   scaldaAccodato: boolean;
   daScaldareAggiunte: number;
   pagineFerme: number;
+  contattiAccodati: number;
   attive: number;
   capienza: number;
 }
 
 /** Il turno della rete: rientri, nuove entrate fino alla capienza, il seguito, i commenti. */
 export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
-  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, daScaldareAggiunte: 0, pagineFerme: 0, attive: 0, capienza: capienzaLavorazione(oggi) };
+  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, daScaldareAggiunte: 0, pagineFerme: 0, contattiAccodati: 0, attive: 0, capienza: capienzaLavorazione(oggi) };
   const cerchia = await cerchiaNomi();
 
   // 1) Il seguito e i rientri dalla pausa.
@@ -184,8 +185,10 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   const mappate = await db.lavorazione.findMany({ where: { fase: "MAPPATA" }, select: { id: true } });
   for (const l of mappate) if (await avanzaMappata(l.id, cerchia, oggi)) r.messaggi++;
 
-  // 4) Scaldare chi decide: un lavoro al giorno, nei feriali, dentro il budget LinkedIn.
+  // 4) Scaldare chi decide: fino a 3 lavori al giorno, dentro il budget LinkedIn.
   r.scaldaAccodato = await accodaScalda(oggi);
+  // 5) I messaggi a chi decide li manda il Mac su LinkedIn (v3.88).
+  r.contattiAccodati = await accodaContatti(oggi);
   return r;
 }
 
@@ -248,6 +251,55 @@ async function riempiScaldare(oggi: Date): Promise<number> {
     mancano = MINIMO_DA_SCALDARE - (await daScaldare());
   }
   return aggiunte;
+}
+
+/**
+ * v3.88 (Alessio: "voglio che faccia tutto in autonomia: commenti e messaggio"): i messaggi a chi decide ancora da
+ * mandare, con il suo profilo LinkedIn, diventano un lavoro per il Mac che li manda (messaggio se collegati, altrimenti
+ * richiesta di collegamento con la nota). Uno alla volta per azienda, dentro il budget LinkedIn.
+ */
+const LUNGHEZZA_NOTA = 280;
+
+export function notaInvito(decisore: string | null, testo: string): string {
+  const nome = decisore ? decisore.trim().split(/\s+/)[0] : null;
+  const inComune = testo.match(/Abbiamo in comune ([^.]+)\./)?.[1];
+  const commenti = /commentato i post/.test(testo);
+  const base = `${nome ? `Buongiorno ${nome}` : "Buongiorno"}, sono Alessio Loi di Karalisweb (Cagliari).${inComune ? ` Abbiamo in comune ${inComune}.` : commenti ? " Ho seguito e commentato i vostri post." : ""} Lavoro con aziende come la vostra: mi farebbe piacere collegarci.`;
+  return base.length <= LUNGHEZZA_NOTA ? base : `${base.slice(0, LUNGHEZZA_NOTA - 1)}…`;
+}
+
+async function accodaContatti(oggi: Date): Promise<number> {
+  const voci = await db.approvalItem.findMany({
+    where: { kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA", leadId: { not: null } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, leadId: true, payload: true, lead: { select: { name: true } } },
+    take: 20,
+  });
+  let accodati = 0;
+  for (const v of voci) {
+    const p = (v.payload ?? {}) as { linkedin?: string; messaggio?: string; decisore?: string };
+    if (!v.leadId || !p.linkedin || !/linkedin\.com\/in\//i.test(p.linkedin) || !p.messaggio) continue;
+    if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", status: { in: ["IN_CODA", "IN_CORSO", "FATTO"] } }, select: { id: true } })) continue;
+    if (!(await linkedinPermette("contatta_persona", null, oggi))) break;
+    const decisore = p.decisore && p.decisore !== "chi decide" ? p.decisore : null;
+    await db.agentRun.create({
+      data: { agent: "contatta_persona", status: "IN_CODA", leadId: v.leadId, input: { voceId: v.id, leadId: v.leadId, persona: decisore, azienda: v.lead?.name ?? null, profilo: p.linkedin, messaggio: p.messaggio, nota: notaInvito(decisore, p.messaggio) } },
+    });
+    accodati++;
+  }
+  return accodati;
+}
+
+/** Il referto del Mac: messaggio o invito partito → la voce è fatta e l'azienda passa a "aspetti la risposta". */
+export async function importaContattoPersona(findings: Record<string, unknown>): Promise<void> {
+  const leadId = str(findings.leadId);
+  const esito = str(findings.esito);
+  if (!leadId || (esito !== "MESSAGGIO" && esito !== "INVITO")) return;
+  const voce = await db.approvalItem.findFirst({ where: { leadId, kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true } });
+  if (!voce) return;
+  await db.approvalItem.update({ where: { id: voce.id }, data: { status: "APPROVATO", decidedAt: new Date(), decidedBy: "crm_auto", note: esito === "MESSAGGIO" ? "Messaggio mandato su LinkedIn dal CRM" : "Richiesta di collegamento con nota mandata su LinkedIn dal CRM" } });
+  await decisioneRete(voce.id, "APPROVATO");
+  await db.activity.create({ data: { leadId, type: "LINKEDIN_SENT", notes: `[Contatto-auto] ${esito === "MESSAGGIO" ? "messaggio LinkedIn a chi decide" : "invito LinkedIn con nota a chi decide"}` } }).catch(() => null);
 }
 
 /** Chi la scarta da sola: si distingue dalle scelte di Alessio (non conta nelle sue "da validare" di oggi). */
@@ -582,15 +634,19 @@ export async function importaScalda(findings: Record<string, unknown>): Promise<
     // Mai due volte lo stesso post (ora si commentano anche i post precedenti).
     if (await db.approvalItem.findFirst({ where: { leadId, kind: KIND_COMMENTO, status: { in: ["IN_ATTESA", "APPROVATO"] }, payload: { path: ["post"], equals: post } }, select: { id: true } })) continue;
     const fatti = await commentiFatti(leadId, piattaforma);
+    // v3.88: il commento l'ha già pubblicato l'agente (autonomia): conta subito, e al 3° parte il contatto.
+    const pubblicato = c.pubblicato === true;
     await db.approvalItem.create({
       data: {
         leadId,
         kind: KIND_COMMENTO,
         agent: "scalda",
-        title: `Commenta il post di ${lead.name} su ${NOMI[piattaforma]} (${fatti + 1}° di ${COMMENTI_PER_CONTATTO})`,
-        payload: { post, piattaforma, estratto: str(c.estratto)?.slice(0, 400) ?? null, commento: commento.slice(0, 600), decisore: str(c.decisore) } as Prisma.InputJsonValue,
+        title: `${pubblicato ? "Commentato" : "Commenta"} il post di ${lead.name} su ${NOMI[piattaforma]} (${fatti + 1}° di ${COMMENTI_PER_CONTATTO})`,
+        payload: { post, piattaforma, estratto: str(c.estratto)?.slice(0, 400) ?? null, commento: commento.slice(0, 600), decisore: str(c.decisore), pubblicato } as Prisma.InputJsonValue,
+        ...(pubblicato ? { status: "APPROVATO" as const, decidedAt: new Date(), decidedBy: "crm_auto", note: "Pubblicato dal CRM" } : {}),
       },
     });
+    if (pubblicato) await dopoCommento(leadId);
     e.commenti++;
   }
   const segnali = Array.isArray(findings.segnali) ? (findings.segnali as Record<string, unknown>[]) : [];

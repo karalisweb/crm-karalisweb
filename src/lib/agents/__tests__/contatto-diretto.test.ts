@@ -13,3 +13,17 @@ describe("messaggio diretto a chi decide", () => {
     expect(testoDirettoConPonte("Pietro Deiana", "Centro Piscine", null, null)).not.toContain("in comune");
   });
 });
+
+import { notaInvito } from "../rete";
+
+describe("nota dell'invito LinkedIn", () => {
+  it("corta, con la persona in comune se c'è", () => {
+    const n = notaInvito("Salvatore Macciocco", "Buongiorno Salvatore, sono Alessio Loi di Karalisweb (Cagliari). Abbiamo in comune Sandra Manca. Lavoro con aziende come la vostra.");
+    expect(n).toContain("Buongiorno Salvatore");
+    expect(n).toContain("Abbiamo in comune Sandra Manca.");
+    expect(n.length).toBeLessThanOrEqual(280);
+  });
+  it("dopo i commenti li ricorda", () => {
+    expect(notaInvito(null, "Ciao, in queste settimane ho seguito e commentato i post di X.")).toContain("commentato i vostri post");
+  });
+});

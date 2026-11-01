@@ -1729,6 +1729,13 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   persona) nel payload (`telefono`, `email`, `linkedin`, `inComune`). `daCassetta` porta i canali nella scheda del
   Percorso (pulsanti WhatsApp/Email/LinkedIn). Nel `turnoRete` le PONTE_SCELTO con RETE_PONTE IN_ATTESA tornano MAPPATA.
 
+- v3.88 Autonomia: `scalda` pubblica (istruzioni in `registro.ts`; `importaScalda` crea il COMMENTO già APPROVATO,
+  `decidedBy: "crm_auto"`, e chiama `dopoCommento` se `pubblicato`). Nuovo agente di browser `contatta_persona` (R5,
+  1 lettura LinkedIn): `accodaContatti()` nel `turnoRete` lo accoda per le RETE_DIRETTO/RETE_CONTATTO IN_ATTESA con
+  profilo `linkedin.com/in/` (input: messaggio e `notaInvito()` ≤280 caratteri); `importaContattoPersona()` su
+  MESSAGGIO/INVITO approva la voce (`decisioneRete` → CHIESTA) e registra un'attività LINKEDIN_SENT.
+  `agenti-browser/ISTRUZIONI.md`: "solo lettura" tranne questi due lavori.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

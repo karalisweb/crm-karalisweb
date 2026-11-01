@@ -91,6 +91,8 @@ export function lettureDi(agente: string, input?: unknown): number {
       return 2;
     case "cerca_linkedin":
       return 6;
+    case "contatta_persona":
+      return 1;
     case "scalda": {
       const d = (input as { decisori?: unknown[] } | null)?.decisori;
       return Array.isArray(d) ? d.length : 5;
@@ -106,7 +108,7 @@ export function riservaScalda(daScaldare: number, scaldaGiaOggi: boolean): numbe
   return !scaldaGiaOggi ? Math.min(RISERVA_SCALDA, daScaldare) : 0;
 }
 
-export const AGENTI_LINKEDIN = ["linkedin_membri", "rete_membro", "decision_maker", "linkedin_azienda", "cerca_linkedin", "scalda"];
+export const AGENTI_LINKEDIN = ["linkedin_membri", "rete_membro", "decision_maker", "linkedin_azienda", "cerca_linkedin", "scalda", "contatta_persona"];
 
 /** Un errore di un lavoro LinkedIn che vuol dire "LinkedIn ci ha notato": si ferma tutto per 48 ore. */
 export function bloccoLinkedin(errore: string | null | undefined): boolean {

@@ -29,14 +29,17 @@ LinkedIn: la persona del caso studio o il membro BNI, la zona). Un lavoro preso 
 
 - Segui le `istruzioni` del lavoro. Usa Chrome di Alessio (in una scheda nuova), con calma, come
   una persona: una pagina alla volta.
-- **Solo lettura.** Non scrivere a nessuno, non mettere like, non seguire, non accettare inviti.
+- **Solo lettura**, tranne due lavori: `scalda` (pubblica il commento sotto il post della pagina e mette
+  "mi piace" a quel post) e `contatta_persona` (manda su LinkedIn il messaggio a chi decide, o la richiesta di
+  collegamento con la nota). Testi e destinatari arrivano già pronti nel lavoro: usali esattamente come sono.
+  Per tutti gli altri lavori: non scrivere a nessuno, non mettere like, non seguire, non accettare inviti.
 - Cookie: rifiuta quelli facoltativi.
 - **LinkedIn: al massimo 20 aziende al giorno** in tutto (conta i lavori `linkedin_azienda` e
   `decision_maker` già fatti oggi). Oltre, chiudi come FALLITO con "limite giornaliero LinkedIn".
   `rete_membro` e `cerca_linkedin` sono al massimo 2 al giorno (li limita già l'app): apri al più una
   quindicina di profili per lavoro.
-- **Mai richieste di collegamento né messaggi** su LinkedIn, Facebook o Instagram: le persone che
-  trovi le contatta Alessio (o si fa presentare dal membro BNI).
+- **Richieste di collegamento e messaggi solo nel lavoro `contatta_persona`**, e solo alla persona indicata.
+  Le persone che trovi negli altri lavori non le contatti tu: le contatta il CRM con il suo lavoro.
 - **CAPTCHA, accesso richiesto, pagina bloccata:** non provare ad aggirarli. Chiudi il lavoro come
   FALLITO spiegando cosa è successo.
 - Decision maker: solo nome, ruolo e link al profilo pubblico di chi decide (max 2 persone).
@@ -80,6 +83,12 @@ Se la risposta è 400, il referto non rispetta lo schema: leggi `dettaglio`, cor
 Per il Cartografo (`cartografo_bni`) i `findings` sono la mappa della regione: l'app crea o
 completa da sola capitoli e membri (non cancella nulla). I ruoli di dirigenza riportali come sono
 **adesso**: l'app sovrascrive quelli vecchi.
+
+BNI Connect non ha la ricerca per regione: i capitoli si leggono da
+`https://bni-italia.com/it/advancedchaptersearch` (campo "Region": per il Lazio le region 61–69) e dalla
+pagina di ogni capitolo (giorno, ora, sede, "Leadership del Capitolo" e "Mostra Membri" con telefono).
+Se in `/Users/alessioloi/.karalisweb/referti/` c'è `mappa-<regione>-referto-pronto.json` di meno di 7
+giorni, non rifare il giro: copia il file come `<runId>.json`, metti il `runId` del lavoro e consegnalo.
 
 Per `cerca_meta` i `findings` sono `{ aziende: [...] }`, per `cerca_linkedin` e `rete_membro`
 `{ persone: [...] }` (più `profiloMembro` per la rete): l'app salva aziende e persone, le collega fra

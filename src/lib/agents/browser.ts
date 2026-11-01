@@ -14,7 +14,7 @@ import { SERVIZI } from "./tipi";
 import { importaMappaBni, importaProfiliMembri, type EsitoMappa } from "./bni";
 import { dopoCollegamento } from "./motore";
 import { noteAlessio } from "./arricchimento";
-import { entraSubito, importaScalda } from "./rete";
+import { entraSubito, importaContattoPersona, importaScalda } from "./rete";
 import { importaAziendeLinkedin, importaAziendeMeta, importaDecisionMaker, importaPersoneLinkedin, importaReteMembro, type EsitoImport } from "@/lib/ricerca/cercatore";
 
 /** Quanto vale un referto di browser prima di essere rifatto. */
@@ -27,6 +27,7 @@ export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
   cartografo_bni: 30,
   rete_membro: 180,
   scalda: 1,
+  contatta_persona: 1,
   linkedin_membri: 90,
   cerca_meta: 60,
   cerca_linkedin: 60,
@@ -213,6 +214,7 @@ export async function chiudiLavoro(c: Chiusura): Promise<{ ok: true; mappa?: Esi
   if (run.agent === "decision_maker") importazione = await importaDecisionMaker(run.leadId, c.referto.findings);
   let scalda: { commenti: number; scaldate: number } | undefined;
   if (run.agent === "scalda") scalda = await importaScalda(c.referto.findings);
+  if (run.agent === "contatta_persona") await importaContattoPersona(c.referto.findings);
 
   await db.$transaction([
     db.agentReport.create({

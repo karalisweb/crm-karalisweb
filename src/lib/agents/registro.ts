@@ -112,15 +112,26 @@ Apri al massimo una quindicina di pagine in tutto, con calma. Non mandare richie
     istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Il lavoro ha una lista di membri BNI della Sardegna (id, nome, azienda, categoria, capitolo). Per ognuno: cerca nome e cognome tra le Persone, verifica che sia lui o lei (azienda, mestiere o località in Sardegna). Guarda il pulsante sul profilo: "Messaggio" vuol dire già collegati con Alessio, "In sospeso" vuol dire richiesta già inviata, "Collegati" vuol dire da collegare. NON premere nessun pulsante: solo lettura. Se non lo trovi con certezza, segnalo come non trovato (meglio nessun profilo che quello sbagliato). Con calma, una ricerca alla volta. Findings: { profili: [{ id, profilo, stato: "DA_COLLEGARE" | "COLLEGATI" | "RICHIESTA_INVIATA" | "NON_TROVATO" }] }. ${REGOLE_BROWSER}`,
   },
   {
-    chiave: "scalda", numero: "R4", nome: "Commenti alle pagine", compito: "Legge i post della pagina dell'azienda (Facebook, Instagram o LinkedIn), anche i precedenti fino a 90 giorni, e propone fino a 10 commenti al giorno, uno per azienda: al 5° si contatta chi decide", famiglia: "browser", squadra: "ricerca", stato: "attivo",
-    nota: "Solo lettura: i commenti li incolla Alessio dalla Cassetta (decisione del 2026-10-25: si commenta la pagina dell'azienda, la leggono anche i concorrenti)",
+    chiave: "scalda", numero: "R4", nome: "Commenti alle pagine", compito: "Legge i post della pagina dell'azienda (Facebook, Instagram o LinkedIn), anche i precedenti fino a 90 giorni, e pubblica un commento al giorno per azienda (fino a 10): al 3° si contatta chi decide", famiglia: "browser", squadra: "ricerca", stato: "attivo",
+    nota: "Pubblica da solo (v3.88, Alessio 2026-11-01: \"voglio che faccia tutto in autonomia: commenti e messaggio\"); si commenta la pagina dell'azienda, la leggono anche i concorrenti",
     istruzioni: `Usa Chrome di Alessio (è già entrato in Facebook, Instagram e LinkedIn). Il lavoro ha una lista di aziende (leadId, azienda, città, decisore se noto, piattaforma, pagina = link alla PAGINA DELL'AZIENDA su quella piattaforma, giaCommentati = link dei post già commentati da Alessio).
 1. Per ognuna apri la pagina (non il profilo personale di chi decide) e prendi il post più recente dell'azienda che NON è in giaCommentati (non i post fissati in alto, non le condivisioni senza testo), purché sia degli ultimi 90 giorni: se l'ultimo è già commentato, scendi al precedente. Se non c'è nessun post da commentare negli ultimi 90 giorni, salta l'azienda.
-2. Scrivi un commento proposto: 1-2 frasi in italiano, con la voce di Alessio (titolare di un'agenzia web e marketing a Cagliari), specifico su quello che dice il post, utile o sincero. Lo leggono anche i concorrenti dell'azienda: deve far fare bella figura sia all'azienda sia ad Alessio. Niente vendita, niente link, niente "complimenti per il post" generici, niente emoji in fila.
-3. Segnali: se negli ultimi 30 giorni la pagina o chi decide ha risposto a un commento di Alessio, messo un like o scritto ad Alessio, riportalo.
-NON pubblicare nulla, NON mettere like, NON seguire: solo lettura. Al massimo 3 pagine per azienda.
-Un commento per azienda, al massimo 10 in tutto: prima le aziende già commentate (si va avanti verso il 5°), poi le altre.
-Findings: { commenti: [{ leadId, piattaforma, post (link al post), estratto (una frase del post), commento }], segnali: [{ leadId, tipo: "like" | "commento" | "risposta" | "messaggio" }] }. ${REGOLE_BROWSER}`,
+2. Scrivi il commento: 1-2 frasi in italiano, con la voce di Alessio (titolare di un'agenzia web e marketing a Cagliari), specifico su quello che dice il post, utile o sincero. Lo leggono anche i concorrenti dell'azienda: deve far fare bella figura sia all'azienda sia ad Alessio. Niente vendita, niente link, niente "complimenti per il post" generici, niente emoji in fila.
+3. PUBBLICALO sotto il post, a nome di Alessio, e metti "mi piace" a quel post. Controlla che il commento compaia. Se la piattaforma non lascia commentare (commenti chiusi, accesso richiesto), non pubblicare e riportalo con pubblicato: false.
+4. Segnali: se negli ultimi 30 giorni la pagina o chi decide ha risposto a un commento di Alessio, messo un like o scritto ad Alessio, riportalo.
+Non seguire pagine, non scrivere messaggi privati: solo il commento e il "mi piace" al post commentato. Al massimo 3 pagine per azienda.
+Un commento per azienda, al massimo 10 in tutto: prima le aziende già commentate (si va avanti verso il 3°), poi le altre.
+Findings: { commenti: [{ leadId, piattaforma, post (link al post), estratto (una frase del post), commento, pubblicato: true | false }], segnali: [{ leadId, tipo: "like" | "commento" | "risposta" | "messaggio" }] }. Per questo lavoro NON vale la regola "solo lettura": pubblica il commento e il "mi piace" al post. ${REGOLE_BROWSER}`,
+  },
+  {
+    chiave: "contatta_persona", numero: "R5", nome: "Messaggio a chi decide", compito: "Scrive a chi decide su LinkedIn: il messaggio se siete collegati, altrimenti la richiesta di collegamento con una nota", famiglia: "browser", squadra: "ricerca", stato: "attivo",
+    nota: "Manda da solo (v3.88): il messaggio è già scritto dal CRM, con la persona in comune, i commenti fatti e il caso studio",
+    istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Il lavoro ha: leadId, persona (nome di chi decide), azienda, profilo (link al suo profilo LinkedIn), messaggio (il testo completo), nota (la versione corta, massimo 280 caratteri).
+1. Apri il profilo. Controlla che sia la persona giusta (nome e azienda). Se non lo è o il profilo non c'è, non scrivere: esito NON_TROVATO.
+2. Se sul profilo c'è il pulsante "Messaggio" (siete già collegati): apri la chat e manda il testo di "messaggio" esattamente com'è. Esito MESSAGGIO.
+3. Se c'è "Collegati" (a volte è dentro "Altro"): premi Collegati, scegli "Aggiungi una nota", incolla "nota" esattamente com'è e invia. Esito INVITO.
+4. Se c'è "In sospeso": la richiesta è già partita, non fare nulla. Esito GIA_IN_SOSPESO.
+Un solo profilo, nessun'altra azione. Findings: { leadId, esito: "MESSAGGIO" | "INVITO" | "GIA_IN_SOSPESO" | "NON_TROVATO", profilo }. Per questo lavoro NON vale la regola "solo lettura": manda il messaggio o la richiesta. ${REGOLE_BROWSER}`,
   },
   { chiave: "dopo_121", numero: "B6", nome: "Dopo-121", compito: "Dalla trascrizione di Meet o dal vocale compila la scheda del membro", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
   { chiave: "preparazione_call", numero: "V1", nome: "Preparatore call", compito: "La pagina da avere davanti durante la call di vendita", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },
