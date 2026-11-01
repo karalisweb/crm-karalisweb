@@ -1660,6 +1660,10 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   `decidedBy: avvisi_settore`) le voci IN_ATTESA la cui chiave non esce più. In Oggi il pulsante è "Sì, scrivimi il
   messaggio" e c'è "Lo conosco già" (`PATCH /api/ricerca/bni/membri/[id]` `{conosciuto:true}` + scarto della voce).
 
+- v3.74 Rubrica BNI (`/bni/membri`): `GET /api/ricerca/bni/membri` dà per ogni capitolo `regione` (`eSardo` →
+  "Sardegna", altrimenti `regioneItaliana`) e `isMine`; la pagina raggruppa regione → capitolo (`perRegione`):
+  Sardegna prima, poi le altre in ordine alfabetico, "Regione non indicata" in fondo; il capitolo `isMine` in cima.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

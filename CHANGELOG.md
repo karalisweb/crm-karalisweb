@@ -13,6 +13,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.74.0] - 2026-11-01
+
+### Fixed
+- **Rubrica BNI divisa per regione.** Prima i capitoli erano tutti in una lista, Lazio e Sardegna mischiati. Ora c'è un blocco per regione: prima la Sardegna (con il tuo capitolo in cima, segnato "il tuo"), poi le altre regioni, per nome; in fondo i capitoli senza regione.
+
+---
+
 ## [3.73.0] - 2026-11-01
 
 ### Fixed

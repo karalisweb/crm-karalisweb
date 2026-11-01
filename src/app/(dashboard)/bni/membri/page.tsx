@@ -51,6 +51,21 @@ function perCapitolo(membri: Membro[]): [string, Membro[]][] {
   return [...gruppi.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], "it"));
 }
 
+interface InfoCapitolo { id: string; regione: string | null; isMine: boolean }
+const SENZA_REGIONE = "Regione non indicata";
+
+/** I capitoli divisi per regione (v3.73): prima la Sardegna (il tuo capitolo in cima), poi le altre, per nome. */
+function perRegione(membri: Membro[], info: Record<string, InfoCapitolo>): [string, [string, Membro[]][]][] {
+  const regioni = new Map<string, [string, Membro[]][]>();
+  for (const [capitolo, lista] of perCapitolo(membri)) {
+    const r = info[capitolo.toLowerCase()]?.regione ?? SENZA_REGIONE;
+    regioni.set(r, [...(regioni.get(r) ?? []), [capitolo, lista]]);
+  }
+  for (const caps of regioni.values()) caps.sort((a, b) => Number(!info[a[0].toLowerCase()]?.isMine) - Number(!info[b[0].toLowerCase()]?.isMine));
+  const peso = (r: string) => (r === "Sardegna" ? 0 : r === SENZA_REGIONE ? 2 : 1);
+  return [...regioni.entries()].sort((a, b) => peso(a[0]) - peso(b[0]) || a[0].localeCompare(b[0], "it"));
+}
+
 const ORDINE_RUOLI = ["PRESIDENTE", "VICEPRESIDENTE", "FORMAZIONE", "EVENTI"];
 
 /**
@@ -94,7 +109,7 @@ export default function MembriBniPage() {
   const [q, setQ] = useState("");
   const [cerca, setCerca] = useState("");
   const [risultato, setRisultato] = useState<{ per: string; membri: Membro[]; totale: number } | null>(null);
-  const [capitoli, setCapitoli] = useState<Record<string, string>>({});
+  const [capitoli, setCapitoli] = useState<Record<string, InfoCapitolo>>({});
   const membri = risultato?.membri ?? [];
   const totale = risultato?.totale ?? 0;
   const loading = risultato?.per !== cerca;
@@ -112,7 +127,7 @@ export default function MembriBniPage() {
       .then((d) => {
         if (!vivo) return;
         setRisultato({ per: cerca, membri: d.membri ?? [], totale: d.totale ?? 0 });
-        if (d.capitoli) setCapitoli(Object.fromEntries((d.capitoli as { id: string; name: string }[]).map((c) => [c.name.toLowerCase(), c.id])));
+        if (d.capitoli) setCapitoli(Object.fromEntries((d.capitoli as ({ name: string } & InfoCapitolo)[]).map((c) => [c.name.toLowerCase(), { id: c.id, regione: c.regione, isMine: c.isMine }])));
       });
     return () => {
       vivo = false;
@@ -137,15 +152,18 @@ export default function MembriBniPage() {
       ) : cerca ? (
         <div className="space-y-2">{membri.map((m) => <RigaMembro key={m.id} m={m} conCapitolo dettaglio />)}</div>
       ) : (
-        <div className="space-y-2">
-          {perCapitolo(membri).map(([capitolo, lista]) => {
+        <div className="space-y-6">
+          {perRegione(membri, capitoli).map(([regione, caps]) => (
+          <section key={regione} className="space-y-2">
+            <h2 className="font-semibold">{regione} <span className="text-xs font-normal text-muted-foreground">· {caps.length} {caps.length === 1 ? "capitolo" : "capitoli"}, {caps.reduce((n, [, l]) => n + l.length, 0)} membri</span></h2>
+          {caps.map(([capitolo, lista]) => {
             const conosciuti = lista.filter((m) => statoDi(m) === "CONOSCIUTO").length;
             const fissati = lista.filter((m) => statoDi(m) === "FISSATO").length;
             return (
               <details key={capitolo} className="rounded-xl border bg-card group">
                 <summary className="cursor-pointer list-none p-4 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-semibold">{capitolo}</span>
+                    <span className="font-semibold">{capitolo}{capitoli[capitolo.toLowerCase()]?.isMine && <span className="ml-2 text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 bg-primary/15 text-primary">il tuo</span>}</span>
                     <span className="text-xs">
                       <span className="text-green-600 dark:text-green-400 font-medium">{conosciuti} conosciuti</span>
                       {fissati > 0 && <span className="text-blue-600 dark:text-blue-400 font-medium"> · {fissati} fissati</span>}
@@ -160,7 +178,7 @@ export default function MembriBniPage() {
                 </summary>
                 <div className="px-3 pb-3 space-y-1.5">
                   {capitoli[capitolo.toLowerCase()] && (
-                    <Link href={`/bni/capitoli/${capitoli[capitolo.toLowerCase()]}`} className="inline-block text-xs text-primary hover:underline mb-1">Scheda del capitolo: giorno, sede, ordine degli incontri →</Link>
+                    <Link href={`/bni/capitoli/${capitoli[capitolo.toLowerCase()].id}`} className="inline-block text-xs text-primary hover:underline mb-1">Scheda del capitolo: giorno, sede, ordine degli incontri →</Link>
                   )}
                   {sezioniCapitolo(lista).map((sez) => (
                     <div key={sez.titolo} className="pt-2 space-y-1.5">
@@ -172,6 +190,8 @@ export default function MembriBniPage() {
               </details>
             );
           })}
+          </section>
+          ))}
         </div>
       )}
     </div>

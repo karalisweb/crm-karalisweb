@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
-import { norm } from "@/lib/agents/bni-regole";
+import { eSardo, norm } from "@/lib/agents/bni-regole";
 import { punteggioBisogno } from "@/lib/ricerca/regole";
 
 /**
@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
   const righe = membri.map((m) => ({ ...m, conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer }));
   if (!q) {
     righe.sort((a, b) => norm(a.chapter).localeCompare(norm(b.chapter)) || a.name.localeCompare(b.name, "it"));
-    const capitoli = await db.bniChapter.findMany({ select: { id: true, name: true, region: true } });
+    // v3.73 (Alessio: "sono mischiati Lazio e Sardegna"): ogni capitolo con la sua regione, per separarli.
+    const capitoli = (await db.bniChapter.findMany({ select: { id: true, name: true, region: true, regioneItaliana: true, isMine: true } }))
+      .map((c) => ({ id: c.id, name: c.name, isMine: c.isMine, regione: eSardo(c) ? "Sardegna" : c.regioneItaliana?.trim() || null }));
     return NextResponse.json({ membri: righe.slice(0, 1000), totale: righe.length, capitoli });
   }
   const trovati = righe
