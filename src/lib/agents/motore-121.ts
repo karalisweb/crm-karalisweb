@@ -112,6 +112,9 @@ export function bloccoLinkedin(errore: string | null | undefined): boolean {
   // L'avviso "limite mensile di ricerche di profili ... Premium" non è un blocco: LinkedIn nasconde
   // solo una parte dei risultati, profili e pagine si aprono lo stesso.
   if (/limite mensile|premium/i.test(errore ?? "")) return false;
+  // Un permesso di Chrome senza risposta non è un blocco di LinkedIn, anche se l'errore dice "nessun blocco"
+  // (v3.75: quella frase fermava LinkedIn per 48 ore e il Percorso restava fermo).
+  if (/nessun blocco|non (è|e') un blocco|permess|approvazion/i.test(errore ?? "")) return false;
   return /captcha|bloccat|blocco|verifica (di sicurezza|dell.identit|dell.account)|security (check|verification)|unusual activity|attivit. insolita|limite (di ricerca|di ricerche|commercial|di uso)|commercial use limit|restrict|sospes/i.test(errore ?? "");
 }
 

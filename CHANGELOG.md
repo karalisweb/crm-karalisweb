@@ -13,6 +13,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.75.0] - 2026-11-01
+
+### Fixed
+- **Percorso: le aziende non restano più ferme al passo 1.** Il controllo "chi decide" su LinkedIn partiva una volta sola, a fine analisi: se quel giorno LinkedIn era al limite o Chrome chiedeva un permesso, l'azienda restava "In analisi" per sempre (erano 35). Ora a ogni giro (alle 7 e alle 14) il CRM le riprende, dalle più vecchie, dopo quelle che hai già approfondito.
+- **Falso blocco LinkedIn.** Quando Chrome chiedeva il permesso, l'errore diceva "nessun blocco da LinkedIn": il CRM leggeva "blocco" e fermava tutto LinkedIn per 48 ore. Un permesso di Chrome non conta più come blocco.
+
+---
+
 ## [3.74.0] - 2026-11-01
 
 ### Fixed

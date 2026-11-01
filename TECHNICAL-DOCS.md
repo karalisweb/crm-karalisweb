@@ -1664,6 +1664,12 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   "Sardegna", altrimenti `regioneItaliana`) e `isMine`; la pagina raggruppa regione → capitolo (`perRegione`):
   Sardegna prima, poi le altre in ordine alfabetico, "Regione non indicata" in fondo; il capitolo `isMine` in cima.
 
+- v3.75 Percorso più veloce: `collegamentiDaVerificare()` (turno alle 7 e alle 14) accoda `decision_maker` anche per le
+  trovate senza FASCICOLO_BASE né lavorazione, con report `trova_sito` e senza report `decision_maker` (prima: un solo
+  tentativo in `giroVeloce`, poi "In analisi" per sempre). Ordine: approvate → trovate (più vecchie) → in attesa;
+  tetto 6 per turno e budget LinkedIn (15 letture non-BNI, 2 a controllo). `bloccoLinkedin()` ignora gli errori di
+  permesso di Chrome ("nessun blocco", "permess", "approvazion"), che fermavano LinkedIn per `ORE_STOP_LINKEDIN` (48h).
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

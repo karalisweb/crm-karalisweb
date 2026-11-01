@@ -409,11 +409,26 @@ export async function collegamentiDaVerificare(oggi = new Date(), limite = 6): P
   // Prima quelle già approfondite da Alessio: senza "chi decide" non entrano nel Percorso (un controllo
   // fallito per un permesso di Chrome non si rifaceva mai — 2026-10-28).
   const senzaChiDecide = { leadId: { not: null }, lead: { agentReports: { none: { agent: "decision_maker" } } } };
-  const [approvate, daDecidere] = await Promise.all([
+  const [approvate, trovate, daDecidere] = await Promise.all([
     db.approvalItem.findMany({ where: { kind: KIND_FASCICOLO_BASE, status: "APPROVATO", ...senzaChiDecide }, orderBy: { decidedAt: "asc" }, select: { leadId: true }, take: 30 }),
+    // v3.75 (Alessio: "nel Percorso le aziende si fermano troppo"): le trovate con il giro veloce finito ma senza
+    // controllo. Il giro veloce prova una volta sola: se LinkedIn quel giorno era al limite, o Chrome chiedeva un
+    // permesso, restavano "In analisi" per sempre (35 il 2026-11-01). Le più vecchie prima.
+    db.lead.findMany({
+      where: {
+        ritrovamenti: { some: {} },
+        lavorazione: null,
+        pipelineStage: { notIn: ["NON_TARGET", "ARCHIVIATO", "CLIENTE", "PERSO"] },
+        approvalItems: { none: { kind: KIND_FASCICOLO_BASE } },
+        agentReports: { none: { agent: "decision_maker" }, some: { agent: "trova_sito" } },
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+      take: 30,
+    }).then((ls) => ls.map((l) => ({ leadId: l.id as string | null }))),
     db.approvalItem.findMany({ where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", ...senzaChiDecide }, orderBy: { createdAt: "asc" }, select: { leadId: true }, take: 30 }),
   ]);
-  const inAttesa = [...approvate, ...daDecidere];
+  const inAttesa = [...approvate, ...trovate, ...daDecidere];
   for (const v of inAttesa) {
     if (accodati >= limite) break;
     const prima = await collegamentoAzienda(v.leadId!);

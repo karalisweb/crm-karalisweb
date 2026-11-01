@@ -60,6 +60,9 @@ describe("LinkedIn", () => {
     expect(bloccoLinkedin("Azienda non trovata")).toBe(false);
     expect(bloccoLinkedin("Sito non verificato, azienda incerta")).toBe(false);
     expect(bloccoLinkedin("Superato il limite di 3 ricerche per azienda")).toBe(false);
+    // v3.75: il permesso di Chrome senza risposta non è un blocco, anche se l'errore nomina "blocco".
+    expect(bloccoLinkedin("La richiesta di permesso del browser per aprire linkedin.com non ha avuto risposta in 5 minuti. Nessun blocco da LinkedIn: va solo autorizzato il sito in Claude in Chrome.")).toBe(false);
+    expect(bloccoLinkedin("Chrome raggiungibile ma la navigazione richiede un'approvazione manuale rimasta senza risposta")).toBe(false);
   });
 });
 
