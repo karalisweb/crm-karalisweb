@@ -1653,6 +1653,12 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   → DA_ANALIZZARE, `lavorazione` + `avanzaMappata`. Se fallisce, `POST /api/cassetta/[id]` rimette la voce IN_ATTESA.
   `avvisaSettori()` riscrive le voci IN_ATTESA (titolo e payload) e il tetto di 15 vale solo per le nuove; `GET /api/oggi`
   lo chiama al più ogni 15 minuti e ordina BNI → LinkedIn → eliminate, caso → caldo, Sardegna.
+- v3.73 (Alessio: "Fodde è nel mio capitolo e ho già fatto 121, Conti me l'hanno presentato"): niente avviso BNI per
+  chi conosci già: `conosciutoAt`, `oneToOneCount > 0`, `isCustomer`, capitolo con `isMine`, `bniStage` ≠ DA_AVVICINARE,
+  MESSAGGIO_BNI già IN_ATTESA, nome in `cerchia` (non rimosso) o in `bni_presentazioni` PRESENTATO (`stessaPersona`).
+  Anche l'azienda di un membro conosciuto non genera avvisi da LinkedIn/eliminate. `avvisaSettori()` chiude (SCARTATO,
+  `decidedBy: avvisi_settore`) le voci IN_ATTESA la cui chiave non esce più. In Oggi il pulsante è "Sì, scrivimi il
+  messaggio" e c'è "Lo conosco già" (`PATCH /api/ricerca/bni/membri/[id]` `{conosciuto:true}` + scarto della voce).
 
 ## Motore 121 (v3.52.0)
 

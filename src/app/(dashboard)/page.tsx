@@ -20,7 +20,7 @@ interface Oggi {
   daFare: { richiesteDaMandare: number; visiteDaMandare: number; fogli: number; aziendeDaDecidere: number; casiDaConfermare: number };
   incontri: { id: string; nome: string; azienda: string | null; capitolo: string | null; quando: string; daChiedere: number }[];
   call: { id: string; nome: string; quando: string }[];
-  avvisiSettore: { id: string; azienda: string; perche: string | null; righe: string[]; cosaFare: string; bottone: string; link: string }[];
+  avvisiSettore: { id: string; azienda: string; perche: string | null; righe: string[]; cosaFare: string; bottone: string; link: string; membroDaConoscere: string | null }[];
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
@@ -78,6 +78,15 @@ export default function HomePage() {
     setDecidendo(null);
   };
 
+  // "Lo conosco già" (v3.73): il membro diventa conosciuto (non lo si propone più per un 121) e l'avviso sparisce.
+  const conoscoGia = async (id: string, membroId: string) => {
+    setDecidendo(id);
+    const r = await fetch(`/api/ricerca/bni/membri/${membroId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ conosciuto: true }) }).catch(() => null);
+    setDecidendo(null);
+    if (!r?.ok) { alert("Non ci sono riuscito, riprova."); return; }
+    await decidiAvviso(id, "SCARTATO");
+  };
+
   if (!d) return <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>;
 
   const cose: { href: string; testo: string }[] = [];
@@ -121,6 +130,9 @@ export default function HomePage() {
               <div className="text-xs break-words">{a.cosaFare}</div>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" disabled={decidendo === a.id} onClick={() => decidiAvviso(a.id, "APPROVATO")}>{a.bottone}</Button>
+                {a.membroDaConoscere && (
+                  <Button size="sm" variant="outline" disabled={decidendo === a.id} onClick={() => conoscoGia(a.id, a.membroDaConoscere!)}>Lo conosco già</Button>
+                )}
                 <Button size="sm" variant="outline" disabled={decidendo === a.id} onClick={() => decidiAvviso(a.id, "SCARTATO")}>No, non mi interessa</Button>
               </div>
             </div>

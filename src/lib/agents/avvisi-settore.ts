@@ -67,23 +67,41 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
   const out: Avviso[] = [];
 
   // 1) Membri BNI la cui azienda è del settore.
-  const membri = await db.bniMembro.findMany({
-    where: { status: "ATTIVO" },
-    select: { id: true, name: true, company: true, profession: true, chapter: true, notes: true, conosciutoAt: true, oneToOneCount: true, lead: { select: { address: true } } },
-  });
+  const [membri, mieiCapitoli, cerchia, presentati, richiesteAperte] = await Promise.all([
+    db.bniMembro.findMany({
+      where: { status: "ATTIVO" },
+      select: { id: true, name: true, company: true, profession: true, chapter: true, notes: true, conosciutoAt: true, oneToOneCount: true, isCustomer: true, bniStage: true, lead: { select: { address: true } } },
+    }),
+    db.bniChapter.findMany({ where: { isMine: true }, select: { name: true } }),
+    db.cerchiaContatto.findMany({ where: { rimossoAt: null }, select: { nome: true } }),
+    db.bniPresentazione.findMany({ where: { stato: "PRESENTATO" }, select: { nome: true } }),
+    db.approvalItem.findMany({ where: { kind: "MESSAGGIO_BNI", status: "IN_ATTESA", bniMembroId: { not: null } }, select: { bniMembroId: true } }),
+  ]);
+  // v3.73 (Alessio: "Giorgio Fodde è nel mio capitolo e ho già fatto 121, Claudio Conti me lo hanno presentato"):
+  // a chi conosci già non si chiede un 121 da qui. Conosciuto = 121 fatto, segnato conosciuto, cliente, del tuo
+  // capitolo, già oltre "da avvicinare", nella cerchia, presentato da qualcuno, o con una richiesta già pronta.
+  const mio = new Set(mieiCapitoli.map((c) => c.name));
+  const nomiNoti = [...cerchia.map((c) => c.nome), ...presentati.map((x) => x.nome)];
+  const giaInviato = new Set(richiesteAperte.map((r) => r.bniMembroId));
+  const aziendeNote = new Set<string>();
   for (const m of membri) {
     // Colleghi e acceleratori si incontrano comunque (prima di tutti): qui solo chi lavora nei settori.
     const tipo = tipoPersona(m.profession, m.company, s);
     if (tipo !== "SETTORE_CASO" && tipo !== "SETTORE_INTERESSE") continue;
+    const conosciuto = !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer || (!!m.chapter && mio.has(m.chapter))
+      || m.bniStage !== "DA_AVVICINARE" || giaInviato.has(m.id) || nomiNoti.some((n) => stessaPersona(n, m.name));
+    if (conosciuto) {
+      if (m.company) aziendeNote.add(nomeConfrontabile(m.company).replace(/\bsrl\b/g, "").trim());
+      continue;
+    }
     const settore = tipo === "SETTORE_CASO" ? "CASO" : "INTERESSE";
     const z = zonaDa(m.lead?.address, m.notes?.match(/citt[aà]:\s*([^·\n]+)/i)?.[1]);
-    const conosciuto = !!m.conosciutoAt || m.oneToOneCount > 0;
     out.push({
       chiave: `bni:${m.id}`, dove: "BNI", righe: [], eliminataId: null, azienda: m.company ?? m.name, persona: m.name, settore, zona: z.citta ?? z.provincia,
       perche: perche(`${m.profession ?? ""} ${m.company ?? ""}`), azione: "121",
-      bottone: conosciuto ? `Chiedi un altro 121 a ${m.name}` : `Chiedi il 121 a ${m.name}`,
-      come: `${m.name} è membro BNI${m.chapter ? ` del capitolo ${m.chapter}` : ""}${m.profession ? ` (${m.profession.toLowerCase()})` : ""}${conosciuto ? ": lo conosci già" : ": non lo conosci ancora"}`,
-      cosaFare: "Sì = ti preparo il messaggio per il 121: lo trovi qui in Oggi, in \"BNI e casi studio\".",
+      bottone: "Sì, scrivimi il messaggio",
+      come: `${m.name} è membro BNI${m.chapter ? ` del capitolo ${m.chapter}` : ""}${m.profession ? ` (${m.profession.toLowerCase()})` : ""}: non vi conoscete ancora`,
+      cosaFare: `Sì = il CRM scrive il messaggio WhatsApp per chiedere a ${m.name} un incontro a due (il 121). Non parte niente da solo: lo trovi in Oggi, in "Manda le richieste di incontro BNI", e lo mandi tu. Se lo conosci già, premi "Lo conosco già".`,
       link: `/bni/membri/${m.id}`, leadId: null, membroId: m.id, sardegna: sarda(z.provincia),
     });
   }
@@ -140,6 +158,8 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
   const perAzienda = new Map<string, Avviso>();
   for (const a of out.sort((x, y) => ordine[x.dove] - ordine[y.dove])) {
     const k = nomeConfrontabile(a.azienda).replace(/\bsrl\b/g, "").trim() || a.chiave;
+    // L'azienda di un membro che conosci già: la relazione c'è, non serve l'avviso.
+    if (aziendeNote.has(k)) continue;
     const c = perAzienda.get(k);
     if (!c) {
       perAzienda.set(k, { ...a, chiave: `azienda:${k}`, righe: [a.come] });
@@ -162,9 +182,14 @@ const titolo = (a: Avviso) => `${a.azienda} · ${a.perche}`;
 /** Le voci nuove in Cassetta (una volta sola per chiave, anche se poi scartata). */
 export async function avvisaSettori(): Promise<number> {
   const avvisi = await cercaAvvisi();
-  if (!avvisi.length) return 0;
   const voci = await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE }, select: { id: true, status: true, payload: true } });
   const gia = new Map(voci.map((v) => [(v.payload as { chiave?: string } | null)?.chiave, v]));
+  // Quelle ancora da decidere che non valgono più (es. il membro ora lo conosci) si tolgono da Oggi.
+  const valide = new Set(avvisi.map((a) => a.chiave));
+  const superate = voci.filter((v) => v.status === "IN_ATTESA" && !valide.has((v.payload as { chiave?: string } | null)?.chiave ?? ""));
+  if (superate.length) {
+    await db.approvalItem.updateMany({ where: { id: { in: superate.map((v) => v.id) } }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: "avvisi_settore", note: "Non serve più: lo conosci già" } });
+  }
   let creati = 0;
   for (const a of avvisi) {
     const v = gia.get(a.chiave);

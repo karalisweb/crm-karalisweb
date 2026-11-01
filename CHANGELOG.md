@@ -13,6 +13,17 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.73.0] - 2026-11-01
+
+### Fixed
+- **Oggi non propone più un 121 con chi conosci già.** Fuori: chi è nel tuo capitolo (Atlantide), chi ha già fatto un 121, chi è segnato conosciuto o cliente, chi ha già una richiesta pronta o fissata, chi è nella tua cerchia o ti è stato presentato. Gli avvisi già in Oggi per queste persone spariscono da soli.
+
+### Changed
+- **Il pulsante dice cosa succede.** Non più "Chiedi il 121 a…", ma "Sì, scrivimi il messaggio": il CRM scrive il messaggio WhatsApp per chiedere l'incontro, non parte niente da solo, lo trovi in Oggi fra le richieste BNI e lo mandi tu.
+- **Nuovo pulsante "Lo conosco già"** sugli avvisi BNI: la persona viene segnata come conosciuta e non te la propone più.
+
+---
+
 ## [3.72.0] - 2026-10-31
 
 ### Changed

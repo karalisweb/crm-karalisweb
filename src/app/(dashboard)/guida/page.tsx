@@ -146,7 +146,7 @@ export default function GuidaPage() {
               <p>Dopo il 121: nella scheda del membro <strong>Registra il 121</strong> (trascrizione di Meet o vocale dettato). La scheda si compila da sola: cosa fa, referenze che cerca, referenze che può dare. Racconta anche <strong>chi conosce bene</strong> (clienti, fornitori): la volta dopo il CRM te li propone. Le aziende che ti segnala entrano subito nel CRM.</p>
             </Step>
             <Step n={4}>
-              <p><strong>Aziende dei tuoi settori trovate in BNI e su LinkedIn</strong>: stanno in cima a Oggi, e solo lì. Ogni scheda dice il settore (il caso studio per nome, o il settore caldo) e ha un pulsante che dice cosa fa: &quot;Chiedi il 121 a…&quot; per un membro BNI (il messaggio lo trovi poi in Oggi), &quot;Sì, contattala&quot; per un&apos;azienda (entra fra Le aziende di oggi). &quot;No&quot; la toglie per sempre.</p>
+              <p><strong>Aziende dei tuoi settori trovate in BNI e su LinkedIn</strong>: stanno in cima a Oggi, e solo lì. Ogni scheda dice il settore (il caso studio per nome, o il settore caldo) e ha un pulsante che dice cosa fa: &quot;Sì, scrivimi il messaggio&quot; per un membro BNI che non conosci ancora (il CRM scrive il messaggio WhatsApp per chiedere il 121, lo trovi in Oggi e lo mandi tu; &quot;Lo conosco già&quot; lo toglie e lo segna come conosciuto), &quot;Sì, contattala&quot; per un&apos;azienda (entra fra Le aziende di oggi). &quot;No&quot; la toglie per sempre.</p>
             </Step>
             <Step n={5}>
               <p>Qualcuno ti chiede una referenza? In <strong>Membri BNI</strong> scrivi il bisogno e trovi a chi girarla.</p>

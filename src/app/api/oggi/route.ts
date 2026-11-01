@@ -81,10 +81,10 @@ export async function GET() {
       }
     })(), await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, payload: true } }))
       .map((v) => {
-        const p = (v.payload ?? {}) as { azienda?: string; perche?: string; bottone?: string; righe?: string[]; cosaFare?: string; link?: string; dove?: string; settore?: string; sardegna?: boolean };
+        const p = (v.payload ?? {}) as { azienda?: string; perche?: string; bottone?: string; righe?: string[]; cosaFare?: string; link?: string; dove?: string; settore?: string; sardegna?: boolean; azione?: string; membroId?: string | null };
         // Prima le persone BNI, poi LinkedIn, poi le eliminate; dentro, i casi studio e la Sardegna.
         const ordine = ({ BNI: 0, LINKEDIN: 1, ELIMINATA: 2 } as Record<string, number>)[p.dove ?? ""] ?? 3;
-        return { ordine: ordine * 4 + (p.settore === "CASO" ? 0 : 2) + (p.sardegna ? 0 : 1), id: v.id, azienda: p.azienda ?? v.title, perche: p.perche ?? null, righe: p.righe ?? [], cosaFare: p.cosaFare ?? "", bottone: p.bottone ?? "Sì", link: p.link ?? "/" };
+        return { ordine: ordine * 4 + (p.settore === "CASO" ? 0 : 2) + (p.sardegna ? 0 : 1), id: v.id, azienda: p.azienda ?? v.title, perche: p.perche ?? null, righe: p.righe ?? [], cosaFare: p.cosaFare ?? "", bottone: p.bottone ?? "Sì", link: p.link ?? "/", membroDaConoscere: p.azione === "121" ? p.membroId ?? null : null };
       })
       .sort((a, b) => a.ordine - b.ordine)
       .map(({ ordine: _o, ...a }) => a),
