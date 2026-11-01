@@ -21,6 +21,7 @@ import { aziendaSegnalata, settoriAlessio, settoriConNome, trovaAzienda } from "
 import { qualeSettore, settoreDi, tipoPersona, zonaDa, type GruppoSettore } from "./presentazioni-regole";
 import { stessaPersona } from "./rete-regole";
 import { eSardo } from "./bni-regole";
+import { indirizzoSardo } from "./motore";
 import { nomeConfrontabile } from "@/lib/ricerca/regole";
 
 export const KIND_AVVISO_SETTORE = "AVVISO_SETTORE";
@@ -138,7 +139,7 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
   // 3) Aziende eliminate nel settore di un caso studio: forse non le hai tolte tu.
   const eliminate = await db.lead.findMany({
     where: { pipelineStage: "ARCHIVIATO", ritrovamenti: { some: {} } },
-    select: { id: true, name: true, category: true, address: true, approvalItems: { where: { kind: "FASCICOLO_BASE", status: "SCARTATO" }, select: { note: true }, take: 1 } },
+    select: { id: true, name: true, category: true, address: true, phone: true, approvalItems: { where: { kind: "FASCICOLO_BASE", status: "SCARTATO" }, select: { note: true }, take: 1 } },
   });
   // Se la stessa azienda c'è già attiva (un doppione), quella eliminata non va rimessa in gioco.
   const attive = new Set(
@@ -150,7 +151,8 @@ export async function cercaAvvisi(): Promise<Avviso[]> {
     if (attive.has(nomeConfrontabile(l.name).replace(/\bsrl\b/g, "").trim())) continue;
     const motivo = l.approvalItems[0]?.note;
     const z = zonaDa(l.address);
-    if (!inSardegna(z.provincia, l.address)) continue;
+    // Città da sola = spesso solo la zona della ricerca: serve una prova vera (v3.84).
+    if (!indirizzoSardo(l.address, { telefono: l.phone, nome: l.name })) continue;
     out.push({
       chiave: `eliminata:${l.id}`, dove: "ELIMINATA", righe: [], eliminataId: l.id, azienda: l.name, persona: null, settore: "CASO", zona: z.citta ?? z.provincia ?? l.address,
       perche: perche(`${l.category ?? ""} ${l.name}`), azione: "AZIENDA", bottone: "Sì, contattala",

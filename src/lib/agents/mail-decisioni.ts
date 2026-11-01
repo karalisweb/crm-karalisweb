@@ -7,8 +7,12 @@ import { db } from "@/lib/db";
 import { sendInternalHtmlEmail } from "@/lib/email";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import type { Leva } from "./tipi";
+import { linkedinFermoPerChrome } from "./motore";
 
 const MAX_IN_MAIL = 10;
+
+// v3.84: se il controllo su LinkedIn è fermo per il Chrome del Mac, la mail lo dice per prima (anche senza aziende).
+const AVVISO_CHROME = "Il CRM non riesce a cercare chi decide su LinkedIn: sul Mac Chrome chiede il permesso di aprire linkedin.com e nessuno risponde. Apri Chrome e, quando Claude lo chiede, scegli \"Consenti sempre\" (anche per facebook.com e instagram.com).";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -33,7 +37,12 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
       },
     },
   });
-  if (!voci.length) return { inviata: false, aziende: 0 };
+  const chromeFermo = await linkedinFermoPerChrome();
+  if (!voci.length) {
+    if (!chromeFermo) return { inviata: false, aziende: 0 };
+    const inviata = await sendInternalHtmlEmail("CRM: LinkedIn fermo, serve un clic su Chrome", `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#111"><p style="font-size:15px">${esc(AVVISO_CHROME)}</p></div>`, AVVISO_CHROME);
+    return { inviata, aziende: 0 };
+  }
   const totale = await db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", lead: { agentReports: { some: { agent: "decision_maker" } } } } });
   const base = indirizzoCrm();
   const ieri = oggi.getTime() - 26 * 3600_000;
@@ -60,10 +69,11 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
   const titolo = `${totale} ${totale === 1 ? "azienda da decidere" : "aziende da decidere"}`;
   const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#111">
 <p style="font-size:15px">Buongiorno Alessio. Queste aziende hanno un ponte verso di te (chi decide è collegato a te su LinkedIn): apri la scheda e scegli <b>Approfondisci</b> (parte l'analisi completa) o <b>Scarta</b>.</p>
+${chromeFermo ? `<p style="font-size:14px;background:#fff4e5;border:1px solid #f0b45b;border-radius:8px;padding:10px 12px">${esc(AVVISO_CHROME)}</p>` : ""}
 ${blocchi.map((b) => b.html).join("\n")}
 ${totale > voci.length ? `<p style="font-size:13px;color:#666">E altre ${totale - voci.length} in <a href="${base}/aziende-trovate">Aziende trovate</a>.</p>` : ""}
 </div>`;
-  const testo = `Buongiorno Alessio. ${titolo}:\n\n${blocchi.map((b) => b.testo).join("\n\n")}`;
+  const testo = `Buongiorno Alessio. ${chromeFermo ? `${AVVISO_CHROME}\n\n` : ""}${titolo}:\n\n${blocchi.map((b) => b.testo).join("\n\n")}`;
   const inviata = await sendInternalHtmlEmail(`CRM: ${titolo}`, html, testo);
   return { inviata, aziende: voci.length };
 }

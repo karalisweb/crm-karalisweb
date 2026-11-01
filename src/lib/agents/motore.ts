@@ -301,6 +301,8 @@ export async function aziendeDaCercareNellaRete(membroId: string): Promise<{ lea
 export type StatoCollegamento = "COLLEGATA" | "SENZA" | "IN_VERIFICA" | "DA_VERIFICARE";
 
 const NOTA_SENZA = "Senza collegamento";
+/** Controlli "chi decide" in coda insieme, al massimo (v3.84). */
+const CONTROLLI_IN_CODA_MAX = 3;
 /** Chi la manda a scaldare da sola (v3.83): non conta fra le decisioni di Alessio. */
 export const DECISO_DAL_CRM_SCALDARE = "crm_scalda";
 const NOTA_SCALDARE = "Da scaldare: chi decide non è collegato a te, la relazione parte dai commenti (deciso dal CRM)";
@@ -368,6 +370,18 @@ export function fallimentoTecnico(errore: string | null | undefined): boolean {
   return /permess|approva|chrome|browser|non raggiungibil|nessuna pagina|login|sessione|accesso a linkedin|timeout|scadut|interrott|limite di ricerche|limite mensile|premium/i.test(errore ?? "");
 }
 
+/**
+ * Il controllo "chi decide" è fermo per un problema del Chrome di Alessio (permesso senza risposta, sessione): l'ultimo
+ * fallimento tecnico è più recente dell'ultimo successo. Lo dicono Oggi e la mail delle 7 (v3.79, v3.84).
+ */
+export async function linkedinFermoPerChrome(): Promise<boolean> {
+  const [ok, ko] = await Promise.all([
+    db.agentRun.findFirst({ where: { agent: "decision_maker", status: "FATTO" }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true } }),
+    db.agentRun.findFirst({ where: { agent: "decision_maker", status: "FALLITO" }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true, error: true } }),
+  ]);
+  return !!ko?.finishedAt && fallimentoTecnico(ko.error) && (!ok?.finishedAt || ko.finishedAt > ok.finishedAt);
+}
+
 export function collegamentoDaFindings(findings: unknown): { collegata: boolean; inComune: number; diretto: boolean } {
   type C = { collegata?: boolean; inComune?: number; diretto?: boolean };
   const f = (findings ?? {}) as { persone?: unknown; collegamento?: C; importazione?: { collegamento?: C } };
@@ -395,6 +409,9 @@ export async function verificaCollegamento(leadId: string, oggi = new Date()): P
   }
   if (c.stato === "IN_VERIFICA") return c.stato;
   if (!(await linkedinPermette("decision_maker", null, oggi))) return "DA_VERIFICARE";
+  // v3.84: al massimo 3 controlli in coda alla volta, così le visite ai profili si spalmano sulla giornata (giro ogni
+  // 2 ore) invece di 10 di fila: LinkedIn nota le raffiche. Gli altri li riprende il giro dopo.
+  if ((await db.agentRun.count({ where: { agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } } })) >= CONTROLLI_IN_CODA_MAX) return "DA_VERIFICARE";
   await db.agentRun.create({ data: { leadId, agent: "decision_maker", status: "IN_CODA" } });
   return "IN_VERIFICA";
 }

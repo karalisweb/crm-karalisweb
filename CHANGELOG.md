@@ -13,6 +13,22 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.84.0] - 2026-11-01
+
+Le correzioni ai rischi del piano "5 contatti al giorno, 10 da scaldare".
+
+### Changed
+- **Contatto dopo 3 commenti** (prima 5): con 10 aziende da scaldare e un commento al giorno ne arrivano circa 3 al giorno al contatto, più quelle presentate da un ponte.
+- **La ricerca non salta più la provincia del cliente del caso studio:** le aziende dello stesso settore dei tuoi clienti sono proprio quelle a cui il caso studio parla.
+- **Visite LinkedIn spalmate nella giornata:** al massimo 3 controlli "chi decide" in coda alla volta (il giro è ogni 2 ore), invece di raffiche da 10.
+
+### Fixed
+- **Le pagine ferme non occupano più i posti:** se in 10 giorni il CRM ha letto la pagina 3 volte senza trovare un post da commentare, l'azienda va in pausa 45 giorni e il posto passa a un'altra.
+- **Se LinkedIn è fermo per il Chrome del Mac, te lo dice la mail delle 7** (anche se non ci sono aziende da decidere), oltre a Oggi.
+- **Avvisi:** un'azienda eliminata conta come sarda solo con una prova vera (sigla, CAP, prefisso o nome), non con la sola città della ricerca.
+
+---
+
 ## [3.83.0] - 2026-11-01
 
 Obiettivo di Alessio: **ogni giorno 5 aziende da contattare, e sempre 10 da scaldare**, con il minimo intervento suo.

@@ -182,10 +182,11 @@ export function testoPromemoria(ponte: string, decisore: string): string {
 
 /**
  * Si commenta la PAGINA dell'azienda (la leggono anche i concorrenti); il CRM propone Facebook, Instagram e
- * LinkedIn con quanto pubblicano, Alessio sceglie. Al 5° commento si contatta direttamente chi decide
- * (Alessio, 2026-10-28: prima 7, troppo tempo per scaldarle).
+ * LinkedIn con quanto pubblicano, Alessio sceglie. Al 3° commento si contatta direttamente chi decide
+ * (Alessio, 2026-10-28: prima 7, troppo tempo per scaldarle; poi 5. v3.84, 2026-11-01: 3, perché con 10 aziende da
+ * scaldare e un commento al giorno ne arrivino circa 3 al giorno al contatto, verso l'obiettivo di 5).
  */
-export const COMMENTI_PER_CONTATTO = 5;
+export const COMMENTI_PER_CONTATTO = 3;
 export const PIATTAFORME = ["facebook", "instagram", "linkedin"] as const;
 export type Piattaforma = (typeof PIATTAFORME)[number];
 export const NOMI_PIATTAFORMA: Record<Piattaforma, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };

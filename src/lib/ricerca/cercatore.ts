@@ -332,14 +332,9 @@ export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?:
     lavoriMeta: 0, lavoriLinkedin: 0, esploratoreClassico: false,
   };
   const chiavi = await db.chiaveRicerca.findMany({ where: { attiva: true } });
-  // La nicchia non si cerca nella provincia del cliente del caso: sarebbero suoi concorrenti diretti.
-  const province = new Map(
-    (await db.casoStudio.findMany({ where: { provincia: { not: null } }, select: { id: true, provincia: true } })).map((c) => [c.id, c.provincia!])
-  );
-  const escluseDi = (k: (typeof chiavi)[number]): string[] => {
-    const p = k.tipo === "AZIENDA" && k.casoStudioId ? province.get(k.casoStudioId) : undefined;
-    return p ? [p] : [];
-  };
+  // v3.84 (Alessio: "i miei clienti sono i miei casi studio, è una cazzata escludere quelle a cui hai un caso studio"):
+  // la nicchia si cerca anche nella provincia del cliente del caso. Prima si saltava (concorrenti diretti).
+  const escluseDi = (_k: (typeof chiavi)[number]): string[] => [];
   const passoDi = (k: (typeof chiavi)[number], indice = k.zonaIndice) => passoRicerca(terminiChiave(k), indice, escluseDi(k));
   const priorita = (k: (typeof chiavi)[number]) => prioritaChiave(k.tipo, passoDi(k)?.zona ?? null);
 

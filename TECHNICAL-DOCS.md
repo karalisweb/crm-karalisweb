@@ -1704,6 +1704,12 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   prime `ZONE_SARDEGNA`. Crontab VPS: arricchimento `45 6-20/2 * * *`, esploratore `30 6,14 * * *` (copie in
   `/root/crontab-backup-20261101*.txt`).
 
+- v3.84 Rischi del piano: `COMMENTI_PER_CONTATTO` 3; `escluseDi` della ricerca sempre `[]` (niente esclusione della
+  provincia del caso); `verificaCollegamento` non accoda oltre `CONTROLLI_IN_CODA_MAX` = 3 `decision_maker` in coda;
+  `liberaPagineFerme()` nel `turnoRete` mette in PAUSA 45 giorni le MAPPATA/SCALDARE lette ≥3 volte da "scalda" in 10
+  giorni senza COMMENTO; `linkedinFermoPerChrome()` (motore.ts) usato da `/api/oggi` e dalla mail delle 7; avvisi
+  "eliminata" con `indirizzoSardo`.
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

@@ -89,13 +89,14 @@ export interface RiepilogoRete {
   rientrate: number;
   scaldaAccodato: boolean;
   daScaldareAggiunte: number;
+  pagineFerme: number;
   attive: number;
   capienza: number;
 }
 
 /** Il turno della rete: rientri, nuove entrate fino alla capienza, il seguito, i commenti. */
 export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
-  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, daScaldareAggiunte: 0, attive: 0, capienza: capienzaLavorazione(oggi) };
+  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, daScaldareAggiunte: 0, pagineFerme: 0, attive: 0, capienza: capienzaLavorazione(oggi) };
   const cerchia = await cerchiaNomi();
 
   // 1) Il seguito e i rientri dalla pausa.
@@ -154,7 +155,9 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   }
   r.attive = attive;
 
-  // 2b) Sempre almeno 10 da scaldare (v3.83): se mancano, si riprendono le sarde scartate "senza collegamento".
+  // 2b) Sempre almeno 10 da scaldare (v3.83): prima escono le pagine ferme (v3.84), poi se mancano si riprendono
+  //     le sarde scartate "senza collegamento".
+  r.pagineFerme = await liberaPagineFerme(oggi);
   r.daScaldareAggiunte = await riempiScaldare(oggi);
 
   // 3) Le mappate: si sceglie il ponte e il messaggio va in Cassetta.
@@ -164,6 +167,38 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   // 4) Scaldare chi decide: un lavoro al giorno, nei feriali, dentro il budget LinkedIn.
   r.scaldaAccodato = await accodaScalda(oggi);
   return r;
+}
+
+/** Una pagina è ferma se in 10 giorni "scalda" l'ha letta almeno 3 volte senza trovare un post da commentare. */
+const GIORNI_PAGINA_FERMA = 10;
+const LETTURE_PAGINA_FERMA = 3;
+/** Quanto resta fuori una pagina ferma: poi riprova da sola (magari ha ripreso a pubblicare). */
+const GIORNI_PAUSA_PAGINA_FERMA = 45;
+
+/**
+ * v3.84 (rischio: "aziende con pagine morte restano a scaldare per sempre e occupano i 10 posti"; Metal Sulcis 0 post,
+ * Centro Piscine fermo da un mese): esce in pausa e il posto passa a un'altra.
+ */
+async function liberaPagineFerme(oggi: Date): Promise<number> {
+  const da = new Date(oggi.getTime() - GIORNI_PAGINA_FERMA * 86400_000);
+  const [lav, giri, commenti] = await Promise.all([
+    db.lavorazione.findMany({ where: { fase: "MAPPATA", strada: "SCALDARE" }, select: { id: true, leadId: true } }),
+    db.agentRun.findMany({ where: { agent: "scalda", status: "FATTO", finishedAt: { gte: da } }, select: { input: true } }),
+    db.approvalItem.findMany({ where: { kind: KIND_COMMENTO, createdAt: { gte: da } }, select: { leadId: true } }),
+  ]);
+  const lette = new Map<string, number>();
+  for (const g of giri) {
+    const aziende = ((g.input ?? {}) as { aziende?: { leadId?: string }[] }).aziende ?? [];
+    for (const a of aziende) if (a.leadId) lette.set(a.leadId, (lette.get(a.leadId) ?? 0) + 1);
+  }
+  const conCommento = new Set(commenti.map((c) => c.leadId));
+  let uscite = 0;
+  for (const l of lav) {
+    if ((lette.get(l.leadId) ?? 0) < LETTURE_PAGINA_FERMA || conCommento.has(l.leadId)) continue;
+    await mettiInPausa(l.id, `Pagina ferma: in ${GIORNI_PAGINA_FERMA} giorni nessun post da commentare`, GIORNI_PAUSA_PAGINA_FERMA);
+    uscite++;
+  }
+  return uscite;
 }
 
 /** Aziende da tenere sempre in riscaldamento (Alessio, 2026-11-01: "ci devono essere sempre 10 aziende in lista"). */
@@ -447,7 +482,7 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
     const tutte = await pagineAzienda(l.leadId);
     const pagine = linkedinOk ? tutte : tutte.filter((p) => p.piattaforma !== "linkedin");
     if (!pagine.length) continue;
-    // I 5 commenti vanno sulla stessa piattaforma: si resta dove si è già cominciato (se è LinkedIn fermo, si aspetta).
+    // I commenti vanno sulla stessa piattaforma: si resta dove si è già cominciato (se è LinkedIn fermo, si aspetta).
     if (giaFatti && !linkedinOk && giaFatti.piattaforma === "linkedin" && tutte.some((p) => p.piattaforma === "linkedin")) continue;
     const iniziata = giaFatti && pagine.some((p) => p.piattaforma === giaFatti.piattaforma) ? giaFatti.piattaforma : null;
     const piattaforma = iniziata ?? (await piattaformaScelta(l.leadId, pagine, oggi)) ?? pagine[0].piattaforma;

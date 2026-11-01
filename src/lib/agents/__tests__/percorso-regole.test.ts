@@ -32,8 +32,8 @@ describe("passo 2 — Chi me la presenta", () => {
 
 describe("passo 3 — In riscaldamento", () => {
   it("commento in Cassetta, con il conto sulla piattaforma", () =>
-    expect(passo({ lav: lav({ strada: "SCALDARE" }), commenti: { piattaforma: "facebook", fatti: 3 }, voci: [{ id: "c", kind: "COMMENTO_LINKEDIN", payload: { commento: "Bello!", post: "https://facebook.com/x/1" } }] }))
-      .toMatchObject({ passo: 3, tocca: "te", azione: "cassetta", cosa: "Commenta il post (3 di 5 su Facebook)" }));
+    expect(passo({ lav: lav({ strada: "SCALDARE" }), commenti: { piattaforma: "facebook", fatti: 2 }, voci: [{ id: "c", kind: "COMMENTO_LINKEDIN", payload: { commento: "Bello!", post: "https://facebook.com/x/1" } }] }))
+      .toMatchObject({ passo: 3, tocca: "te", azione: "cassetta", cosa: "Commenta il post (2 di 3 su Facebook)" }));
   it("nessun commento pronto: il CRM cerca il post", () => expect(passo({ lav: lav({ strada: "SCALDARE" }) })).toMatchObject({ passo: 3, tocca: "crm" }));
 });
 
@@ -76,7 +76,7 @@ describe("le 3 cose di oggi", () => {
   });
 });
 
-describe("i 5 commenti si contano sulla stessa piattaforma", () => {
+describe("i commenti si contano sulla stessa piattaforma", () => {
   it("non si sommano le piattaforme", () => {
     const c = [...Array(4)].map(() => ({ piattaforma: "facebook" })).concat([...Array(3)].map(() => ({ piattaforma: "instagram" })));
     expect(piattaformaPiuCommentata(c)).toEqual({ piattaforma: "facebook", fatti: 4 });
