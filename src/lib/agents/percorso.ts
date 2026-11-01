@@ -138,7 +138,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   const [vociFatte, incontri, validate, conosciuti] = await Promise.all([
     db.approvalItem.groupBy({ by: ["kind"], where: { kind: { in: Object.keys(COSA_DELLA_VOCE) }, status: "APPROVATO", decidedAt: { gte: mezzanotte } }, _count: true }),
     db.lavorazione.count({ where: { incontroAt: { gte: mezzanotte } } }),
-    db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: { in: ["APPROVATO", "SCARTATO"] }, decidedAt: { gte: mezzanotte }, OR: [{ decidedBy: null }, { decidedBy: { not: SCARTATA_DAL_CRM } }] } }),
+    db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: { in: ["APPROVATO", "SCARTATO"] }, decidedAt: { gte: mezzanotte }, OR: [{ decidedBy: null }, { decidedBy: { notIn: [SCARTATA_DAL_CRM, "crm_scalda"] } }] } }),
     db.cerchiaContatto.count({ where: { createdAt: { gte: mezzanotte } } }),
   ]);
   const fatte: Record<Cosa, number> = { contatta: incontri, scalda: 0, valida: validate + conosciuti };

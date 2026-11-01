@@ -13,6 +13,18 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 
 ---
 
+## [3.83.0] - 2026-11-01
+
+Obiettivo di Alessio: **ogni giorno 5 aziende da contattare, e sempre 10 da scaldare**, con il minimo intervento suo.
+
+### Changed
+- **Nessuna azienda sarda buttata.** Se chi decide non è collegato a te, prima l'azienda finiva "Senza collegamento" e usciva. Ora va da sola nel Percorso: con un ponte al passo 2, altrimenti al passo 3 a scaldare con i commenti. Non devi validarla tu.
+- **Sempre almeno 10 da scaldare.** Se in riscaldamento sono meno di 10, il CRM riprende le aziende sarde messe da parte "senza collegamento", prima le più vecchie.
+- **Più aziende in entrata:** la ricerca porta fino a 20 aziende nuove al giorno (prima 5), **solo in Sardegna**, tutti i giorni.
+- **Giro del server ogni 2 ore** (6:45–20:45, tutti i giorni) invece di 3 volte nei feriali.
+
+---
+
 ## [3.82.0] - 2026-11-01
 
 ### Changed

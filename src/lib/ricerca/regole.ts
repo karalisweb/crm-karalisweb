@@ -14,10 +14,10 @@ export const ETICHETTE_CHIAVE: Record<TipoChiave, string> = {
   RETE_MEMBRO: "Rete di un membro BNI",
 };
 
-/** Obiettivo del flusso clienti: aziende nuove al giorno. */
-export const AZIENDE_AL_GIORNO = 5;
+/** Obiettivo del flusso clienti: aziende nuove al giorno (v3.83: da 5 a 20, per arrivare a 5 contatti al giorno). */
+export const AZIENDE_AL_GIORNO = 20;
 /** Ricerche al massimo in un turno (due turni al giorno). */
-export const RICERCHE_PER_TURNO = 4;
+export const RICERCHE_PER_TURNO = 6;
 /** Lavori LinkedIn al giorno (circa 10 profili ciascuno): il profilo di Alessio non va stressato. */
 export const LAVORI_LINKEDIN_AL_GIORNO = 2;
 /** Un caso studio resta valido per la ricerca almeno 6 mesi. */
@@ -63,7 +63,8 @@ export function siglaIndirizzo(indirizzo: string | null | undefined): string | n
 
 /** Le zone in ordine, senza quelle delle province escluse (la provincia del cliente, per la nicchia). */
 export function zoneDisponibili(escluse: readonly string[] = []): string[] {
-  return ZONE.filter((z) => !escluse.includes(siglaZona(z) ?? ""));
+  // v3.83 (Alessio: "lo scopo è trovare aziende in Sardegna"): si cerca solo nelle zone sarde.
+  return ZONE.slice(0, ZONE_SARDEGNA).filter((z) => !escluse.includes(siglaZona(z) ?? ""));
 }
 
 /**

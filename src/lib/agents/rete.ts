@@ -14,7 +14,7 @@ import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { mezzanotteRoma } from "./bni-regole";
-import { linkedinPermette, verificaCollegamento } from "./motore";
+import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
   testoContattoDiretto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
@@ -88,13 +88,14 @@ export interface RiepilogoRete {
   inPausa: number;
   rientrate: number;
   scaldaAccodato: boolean;
+  daScaldareAggiunte: number;
   attive: number;
   capienza: number;
 }
 
 /** Il turno della rete: rientri, nuove entrate fino alla capienza, il seguito, i commenti. */
 export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
-  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, attive: 0, capienza: capienzaLavorazione(oggi) };
+  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, daScaldareAggiunte: 0, attive: 0, capienza: capienzaLavorazione(oggi) };
   const cerchia = await cerchiaNomi();
 
   // 1) Il seguito e i rientri dalla pausa.
@@ -153,6 +154,9 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   }
   r.attive = attive;
 
+  // 2b) Sempre almeno 10 da scaldare (v3.83): se mancano, si riprendono le sarde scartate "senza collegamento".
+  r.daScaldareAggiunte = await riempiScaldare(oggi);
+
   // 3) Le mappate: si sceglie il ponte e il messaggio va in Cassetta.
   const mappate = await db.lavorazione.findMany({ where: { fase: "MAPPATA" }, select: { id: true } });
   for (const l of mappate) if (await avanzaMappata(l.id, cerchia, oggi)) r.messaggi++;
@@ -160,6 +164,34 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   // 4) Scaldare chi decide: un lavoro al giorno, nei feriali, dentro il budget LinkedIn.
   r.scaldaAccodato = await accodaScalda(oggi);
   return r;
+}
+
+/** Aziende da tenere sempre in riscaldamento (Alessio, 2026-11-01: "ci devono essere sempre 10 aziende in lista"). */
+export const MINIMO_DA_SCALDARE = 10;
+
+/**
+ * Se in riscaldamento (passo 3) ce ne sono meno di 10, entrano le aziende sarde messe da parte "senza collegamento"
+ * con chi decide già cercato: le più vecchie prima. Ognuna passa da mandaAScaldare (approvata dal CRM, approfondita).
+ */
+async function riempiScaldare(oggi: Date): Promise<number> {
+  const daScaldare = () => db.lavorazione.count({ where: { fase: "MAPPATA", strada: "SCALDARE" } });
+  let mancano = MINIMO_DA_SCALDARE - (await daScaldare());
+  if (mancano <= 0) return 0;
+  const candidate = await db.approvalItem.findMany({
+    where: { kind: KIND_FASCICOLO_BASE, status: "SCARTATO", note: { startsWith: "Senza collegamento" }, lead: { lavorazione: null, agentReports: { some: { agent: "decision_maker" } } } },
+    orderBy: { createdAt: "asc" },
+    select: { leadId: true, lead: { select: { address: true } } },
+    take: 100,
+  });
+  let aggiunte = 0;
+  for (const c of candidate) {
+    if (mancano <= 0) break;
+    if (!c.leadId || !indirizzoSardo(c.lead?.address)) continue;
+    if (!(await mandaAScaldare(c.leadId, oggi))) continue;
+    aggiunte++;
+    mancano = MINIMO_DA_SCALDARE - (await daScaldare());
+  }
+  return aggiunte;
 }
 
 /** Chi la scarta da sola: si distingue dalle scelte di Alessio (non conta nelle sue "da validare" di oggi). */

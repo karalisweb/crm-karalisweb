@@ -22,7 +22,7 @@ import {
   lettureDisponibili, messaggioPresentazione, riservaScalda, type DecisoreLetto,
 } from "./motore-121";
 import { FASI_ATTIVE } from "./rete-regole";
-import { siglaIndirizzo } from "@/lib/ricerca/regole";
+import { ZONE, ZONE_SARDEGNA, siglaIndirizzo } from "@/lib/ricerca/regole";
 
 export const KIND_DOPO_121 = "DOPO_121";
 export const KIND_PRESENTAZIONE_BNI = "PRESENTAZIONE_BNI";
@@ -301,6 +301,41 @@ export async function aziendeDaCercareNellaRete(membroId: string): Promise<{ lea
 export type StatoCollegamento = "COLLEGATA" | "SENZA" | "IN_VERIFICA" | "DA_VERIFICARE";
 
 const NOTA_SENZA = "Senza collegamento";
+/** Chi la manda a scaldare da sola (v3.83): non conta fra le decisioni di Alessio. */
+export const DECISO_DAL_CRM_SCALDARE = "crm_scalda";
+const NOTA_SCALDARE = "Da scaldare: chi decide non è collegato a te, la relazione parte dai commenti (deciso dal CRM)";
+
+/** L'indirizzo è in Sardegna (sigla di provincia sarda, o una città sarda nel testo). */
+export function indirizzoSardo(indirizzo: string | null | undefined): boolean {
+  const sigla = siglaIndirizzo(indirizzo);
+  if (sigla) return ["CA", "SU", "SS", "NU", "OR"].includes(sigla);
+  const t = norm(indirizzo);
+  return /sardegna/.test(t) || ZONE.slice(0, ZONE_SARDEGNA).some((z) => t.includes(norm(z)));
+}
+
+/**
+ * v3.83 (Alessio, 2026-11-01: "5 aziende al giorno da contattare, sempre 10 da scaldare"; il suo metodo: "o le persone mi
+ * presentano, o commento per scaldare la relazione"). Un'azienda sarda senza collegamento non si scarta più: si approva da
+ * sola, parte l'approfondimento ed entra nel Percorso, dove senza ponte va a scaldare (passo 3).
+ */
+export async function mandaAScaldare(leadId: string, oggi = new Date()): Promise<boolean> {
+  const l = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, website: true, address: true, pipelineStage: true } });
+  if (!l || !indirizzoSardo(l.address) || ["NON_TARGET", "CLIENTE", "PERSO", "ARCHIVIATO"].includes(l.pipelineStage)) return false;
+  const voce = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" }, select: { id: true, status: true, decidedBy: true } });
+  // Una scelta di Alessio (o "scartata da sola" senza strade) non si tocca.
+  if (voce?.status === "APPROVATO") return false;
+  if (voce?.status === "SCARTATO" && voce.decidedBy && voce.decidedBy !== DECISO_DAL_CRM_SCALDARE) {
+    const n = await db.approvalItem.findUnique({ where: { id: voce.id }, select: { note: true } });
+    if (!n?.note?.startsWith(NOTA_SENZA)) return false;
+  }
+  const dati = { status: "APPROVATO" as const, decidedAt: oggi, decidedBy: DECISO_DAL_CRM_SCALDARE, note: NOTA_SCALDARE };
+  if (voce) await db.approvalItem.update({ where: { id: voce.id }, data: dati });
+  else await db.approvalItem.create({ data: { leadId, kind: KIND_FASCICOLO_BASE, agent: "giro_veloce", title: `${l.name}: da scaldare`, payload: { sito: l.website } as Prisma.InputJsonValue, ...dati } });
+  const [{ approfondisci }, { entraSubito }] = await Promise.all([import("./arricchimento"), import("./rete")]);
+  void approfondisci(leadId, oggi).catch((e) => console.error("[scaldare] approfondimento fallito:", e));
+  await entraSubito(leadId, oggi).catch((e) => console.error("[scaldare] ingresso nel percorso fallito:", e));
+  return true;
+}
 
 /** Il collegamento secondo l'ultimo referto di "chi decide" (se c'è). */
 export async function collegamentoAzienda(leadId: string): Promise<{ stato: StatoCollegamento; inComune: number; diretto: boolean; verificatoAt: Date | null }> {
@@ -389,6 +424,8 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
     }
     return;
   }
+  // Sarda: si scalda con i commenti invece di scartarla (v3.83).
+  if (c.stato === "SENZA" && giroVeloceFinito && (!voce || voce.status === "IN_ATTESA") && (await mandaAScaldare(leadId))) return;
   if (c.stato === "SENZA" && !voce && giroVeloceFinito) {
     // Mai entrata in "Da decidere": si mette da parte lo stesso, così esce dalla verifica e dal giro veloce.
     const l = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, website: true } });

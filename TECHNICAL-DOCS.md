@@ -1696,6 +1696,14 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.82 Limiti alzati: `LETTURE_LINKEDIN_GIORNO` 35, `LETTURE_NON_BNI` 25, `collegamentiDaVerificare(limite = 10)`,
   `GIRI_SCALDA_AL_GIORNO` 3.
 
+- v3.83 5 contatti al giorno, 10 da scaldare: `mandaAScaldare()` (motore.ts) approva da sola un'azienda sarda
+  (`indirizzoSardo`) senza collegamento (`decidedBy: "crm_scalda"`, esclusa dalle "validate" del giorno), lancia
+  `approfondisci` ed `entraSubito`; la chiama `dopoCollegamento` invece di scartare. `riempiScaldare()` nel `turnoRete`
+  porta le lavorazioni MAPPATA/SCALDARE ad almeno `MINIMO_DA_SCALDARE` = 10 riprendendo le SCARTATO "Senza collegamento"
+  con report `decision_maker`. Ricerca: `AZIENDE_AL_GIORNO` 20, `RICERCHE_PER_TURNO` 6, `zoneDisponibili()` solo le
+  prime `ZONE_SARDEGNA`. Crontab VPS: arricchimento `45 6-20/2 * * *`, esploratore `30 6,14 * * *` (copie in
+  `/root/crontab-backup-20261101*.txt`).
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema
