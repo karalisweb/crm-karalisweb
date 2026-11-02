@@ -14,6 +14,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.91.0] - 2026-11-02
+
+### Changed
+- Contatto: i messaggi a chi decide (WhatsApp, email, LinkedIn, pagina social) non chiedono più "20 minuti": partono dal problema che aveva un'azienda come la loro (gancio scritto dall'AI dal caso studio, senza nominare il cliente), offrono il caso studio e chiedono il permesso di mandarlo ("Posso mandarglielo?").
+- I messaggi ancora da mandare si riscrivono da soli al turno della rete.
+- Ricerca dei contatti più a fondo: oltre a home e contatti si guardano chi siamo/team; prima l'email della persona (nome.cognome@) poi quella dell'azienda; WhatsApp anche dai cellulari scritti sul sito o dal telefono BNI di chi decide.
+
+### Added
+- Pulsante "Caso studio (PDF)" nella scheda di Contatto, da mandare quando dicono sì; oggetto email "Un caso studio per …".
+
 ## [3.90.0] - 2026-11-02
 
 ### Changed

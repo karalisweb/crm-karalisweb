@@ -19,7 +19,8 @@ const BAD_DOMAIN = /(sentry\.io|wix\.com|wixpress\.com|example\.(com|org|net)|go
 // Caselle preferite (più probabili come contatto commerciale/diretto).
 const PREFERRED_LOCAL = /^(info|contatti?|amministrazione|commerciale|segreteria|ufficio|mail|posta|preventivi)@/i;
 
-export function extractContactEmail(html: string, siteDomain?: string): string | null {
+/** Tutte le email affidabili scritte nella pagina (mailto e testo), già ripulite. */
+export function extractEmails(html: string): string[] {
   const candidates = new Set<string>();
 
   let m: RegExpExecArray | null;
@@ -43,6 +44,11 @@ export function extractContactEmail(html: string, siteDomain?: string): string |
     return true;
   });
 
+  return clean;
+}
+
+export function extractContactEmail(html: string, siteDomain?: string): string | null {
+  const clean = extractEmails(html);
   if (clean.length === 0) return null;
 
   // Preferenza 1: stesso dominio del sito (è quasi certo l'indirizzo dell'azienda).

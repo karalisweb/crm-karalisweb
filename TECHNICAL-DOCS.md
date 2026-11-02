@@ -1729,6 +1729,16 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   persona) nel payload (`telefono`, `email`, `linkedin`, `inComune`). `daCassetta` porta i canali nella scheda del
   Percorso (pulsanti WhatsApp/Email/LinkedIn). Nel `turnoRete` le PONTE_SCELTO con RETE_PONTE IN_ATTESA tornano MAPPATA.
 
+- v3.91 Testi di Contatto: `casoPerMessaggio()` (rete.ts) restituisce `{ gancio, casoId }` (gancio = 2 frasi AI,
+  problema dell'azienda simile + cosa è cambiato; null senza budget/AI, il caso resta). I testi (`testoDirettoConPonte`,
+  `testoContattoDiretto`, `testoContattoDopoCommenti`, `testoMessaggioPagina`) usano `offertaCaso()`: gancio, offerta
+  del caso studio, permesso di mandarlo; senza caso studio non lo promettono. Payload: `casoId`, `emailPersonale`,
+  `versioneTesto` (= `VERSIONE_TESTO`, 2). `aggiornaTestiContatto()` nel `turnoRete` riscrive le voci RETE_DIRETTO/
+  CONTATTO/PAGINA IN_ATTESA con versione vecchia (max 20 per turno). `canaleDiretto(leadId, decisore|null)`: telefono/
+  email del membro BNI omonimo, fino a 5 pagine del sito (home, contatti, link chi-siamo/team/about), email della persona
+  (nome o cognome nella parte locale) prima di quella aziendale, WhatsApp da wa.me o da cellulare 3xx (tel: o testo con
+  separatori). Scheda Percorso: pulsante "Caso studio (PDF)" → `/api/ricerca/casi-studio/[id]/pdf`.
+
 - v3.88 Autonomia: `scalda` pubblica (istruzioni in `registro.ts`; `importaScalda` crea il COMMENTO già APPROVATO,
   `decidedBy: "crm_auto"`, e chiama `dopoCommento` se `pubblicato`). Nuovo agente di browser `contatta_persona` (R5,
   1 lettura LinkedIn): `accodaContatti()` nel `turnoRete` lo accoda per le RETE_DIRETTO/RETE_CONTATTO IN_ATTESA con

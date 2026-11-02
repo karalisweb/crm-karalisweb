@@ -25,7 +25,7 @@ export type Tocca = "te" | "crm" | "attesa";
 
 export type Azione =
   | { tipo: "decidi" } // approfondisci / scarta
-  | { tipo: "cassetta"; voceId: string; si: string; no: string; testo: string | null; link: string | null; whatsapp?: string | null; email?: string | null; linkedin?: string | null }
+  | { tipo: "cassetta"; voceId: string; si: string; no: string; testo: string | null; link: string | null; whatsapp?: string | null; email?: string | null; linkedin?: string | null; casoId?: string | null }
   | { tipo: "conosco"; nomi: string[] }
   | { tipo: "presentato" } // il ponte me l'ha presentata
   | { tipo: "incontro" }; // incontro fissato: esce dal percorso
@@ -92,7 +92,7 @@ const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null
 function daCassetta(v: Voce, si: string, no: string): Azione {
   const p = v.payload ?? {};
   // I canali per scrivere subito (v3.87): WhatsApp, mail e LinkedIn di chi decide o del ponte.
-  return { tipo: "cassetta", voceId: v.id, si, no, testo: str(p.messaggio) ?? str(p.commento), link: str(p.post), whatsapp: str(p.telefono), email: str(p.email), linkedin: str(p.linkedin) };
+  return { tipo: "cassetta", voceId: v.id, si, no, testo: str(p.messaggio) ?? str(p.commento), link: str(p.post), whatsapp: str(p.telefono), email: str(p.email), linkedin: str(p.linkedin), casoId: str(p.casoId) };
 }
 
 const giorniDa = (d: Date, oggi: Date) => Math.max(0, Math.floor((oggi.getTime() - d.getTime()) / 86400_000));

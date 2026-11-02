@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { testoDirettoConPonte } from "../rete-regole";
+import { testoContattoDiretto, testoDirettoConPonte } from "../rete-regole";
 
 // v3.87: si scrive a chi decide, citando chi avete in comune solo se è vero.
 describe("messaggio diretto a chi decide", () => {
@@ -8,6 +8,15 @@ describe("messaggio diretto a chi decide", () => {
     expect(t).toContain("Buongiorno Giacomo");
     expect(t).toContain("Abbiamo in comune Dario Piu.");
     expect(t).toContain("Ho aiutato un'azienda di piscine");
+  });
+  it("offre il caso studio e chiede il permesso, senza chiedere una call (v3.90)", () => {
+    const t = testoDirettoConPonte("Giacomo Giordo", "Sorgente Solare", null, "Un'azienda come la vostra aveva il marketing a strappi.");
+    expect(t).toContain("breve caso studio");
+    expect(t).toContain("Posso mandarglielo?");
+    expect(t).not.toMatch(/20 minuti/);
+    expect(testoContattoDiretto("Mario Rossi", "Piscine Blu", null, true)).toMatch(/^Ciao Mario[\s\S]*Te lo mando\?/);
+    // Senza un caso studio non si promette un caso studio.
+    expect(testoContattoDiretto("Mario Rossi", "Piscine Blu", null, false)).not.toContain("caso studio");
   });
   it("senza persona in comune non la inventa", () => {
     expect(testoDirettoConPonte("Pietro Deiana", "Centro Piscine", null, null)).not.toContain("in comune");

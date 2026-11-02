@@ -24,7 +24,7 @@ import {
 import { noteDaReferti } from "./impressioni-sezioni";
 import { scaricaPagina } from "./pagina";
 import { extractWhatsAppNumber, normalizePhoneForWhatsApp } from "@/lib/audit/whatsapp-extractor";
-import { extractContactEmail } from "@/lib/audit/email-finder";
+import { extractContactEmail, extractEmails } from "@/lib/audit/email-finder";
 import { pontiInZona } from "./presentazioni";
 import { NOTA_PAGINA_FERMA } from "./presentazioni-regole";
 
@@ -169,6 +169,8 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     if (v.leadId && ponte) await mandaAScaldare(v.leadId, oggi, `Va avanti da sola: ${ponte} (deciso dal CRM)`);
   }
   r.daScaldareAggiunte = await riempiScaldare(oggi);
+  // 2b) v3.90: i messaggi di contatto ancora da mandare si riscrivono col caso studio e i canali trovati meglio.
+  await aggiornaTestiContatto(oggi).catch(() => 0);
 
   // 2c) v3.87: la richiesta al ponte non ancora mandata diventa il messaggio diretto a chi decide (si riparte da
   //     "mappata": avanzaMappata sceglie lo stesso ponte e scrive a chi decide, citandolo se lo conosce davvero).
@@ -412,44 +414,55 @@ async function chiudiVociAperte(leadId: string, nota: string) {
 // ─── I messaggi ─────────────────────────────────────────────────────────────
 
 interface RispostaMotivo {
-  motivo: string;
+  gancio: string;
 }
 const SCHEMA_MOTIVO: Schema = {
   type: "object",
   properties: {
-    motivo: { type: "string", description: "Una o due frasi in PRIMA PERSONA (parla Alessio: \"Ho aiutato…\"), dal caso studio, SENZA nominare il cliente del caso" },
+    gancio: { type: "string", description: "Due frasi in PRIMA PERSONA (parla Alessio): il problema che aveva un'azienda come la sua, poi cosa è cambiato. SENZA nominare il cliente del caso" },
   },
-  required: ["motivo"],
+  required: ["gancio"],
 };
 
-/** Il motivo nel messaggio, dal caso studio dell'azienda. Il cliente del caso non si cita per iscritto. */
-async function motivoDalCaso(leadId: string, oggi: Date): Promise<string | null> {
+/** Il caso studio per il messaggio: il gancio scritto dall'AI (null se non c'è budget o l'AI non risponde) e il PDF da mandare. */
+export interface CasoPerMessaggio {
+  gancio: string | null;
+  casoId: string;
+}
+
+/** Il caso studio dell'azienda e il gancio per il messaggio. Il cliente del caso non si cita per iscritto. */
+async function casoPerMessaggio(leadId: string, oggi: Date): Promise<CasoPerMessaggio | null> {
   const l = await db.lead.findUnique({
     where: { id: leadId },
-    select: { name: true, category: true, ritrovamenti: { take: 5, orderBy: { createdAt: "asc" }, select: { chiave: { select: { casoStudio: { select: { storia: true, settore: true, aziendaNome: true } } } } } } },
+    select: { name: true, category: true, ritrovamenti: { take: 5, orderBy: { createdAt: "asc" }, select: { chiave: { select: { casoStudio: { select: { id: true, storia: true, settore: true, aziendaNome: true } } } } } } },
   });
   // Il caso della ricerca che l'ha trovata; se arriva da altre strade (rete di un membro, LinkedIn), il caso attivo
   // dello stesso settore (v3.87: Centro Piscine e Macciocco partivano senza caso studio nel messaggio).
   let caso = l?.ritrovamenti.map((r) => r.chiave.casoStudio).find((c) => c?.storia) ?? null;
   if (l && !caso) {
     const testo = norm(`${l.category ?? ""} ${l.name}`);
-    const casi = await db.casoStudio.findMany({ where: { stato: "ATTIVO", storia: { not: null } }, select: { storia: true, settore: true, aziendaNome: true } });
+    const casi = await db.casoStudio.findMany({ where: { stato: "ATTIVO", storia: { not: null } }, select: { id: true, storia: true, settore: true, aziendaNome: true } });
     caso = casi.find((c) => norm(c.settore).split(/\s+/).some((w) => w.length >= 5 && testo.includes(w.slice(0, -1)))) ?? null;
   }
-  if (!l || !caso?.storia || !(await budgetDisponibile(oggi)).ok) return null;
+  if (!l || !caso?.storia) return null;
+  if (!(await budgetDisponibile(oggi)).ok) return { gancio: null, casoId: caso.id };
   try {
     const ai = await chiediJSON<RispostaMotivo>({
-      sistema: `${REGOLE_COMUNI}\n\nScrivi il motivo concreto per cui un'azienda dovrebbe ascoltare Alessio Loi (Karalisweb, web e marketing digitale), partendo dal caso studio. REGOLA: il cliente del caso NON si nomina mai per iscritto (lo racconta Alessio a voce): descrivilo come "un'azienda che …" con il mestiere e la zona. Una o due frasi, tono semplice, niente promesse vaghe, nessun numero che non sia nel caso. Scrivi in PRIMA PERSONA, perché il messaggio lo firma Alessio: "Ho aiutato un'azienda che…", mai "Alessio Loi ha aiutato" né "Karalisweb ha aiutato".`,
+      sistema: `${REGOLE_COMUNI}\n\nScrivi il gancio di un messaggio WhatsApp/email che Alessio Loi (Karalisweb, strategia, siti e marketing digitale) manda al titolare di un'azienda per offrirgli il caso studio di un'azienda simile. Deve far pensare al titolare "questo è proprio il mio problema".
+DUE frasi, in PRIMA PERSONA (firma Alessio):
+1) il problema concreto che aveva l'azienda del caso, raccontato in modo che il titolare ci si riconosca ("Un'azienda di piscine come la vostra era cresciuta in fretta, ma il marketing andava a strappi e il sito non raccontava chi erano davvero.");
+2) cosa è cambiato dopo il lavoro con Alessio, concreto ("Ci ho lavorato insieme e oggi sanno a chi parlare, come, e cosa fare ogni mese.").
+REGOLE: il cliente del caso NON si nomina mai (lo racconta Alessio a voce), si descrive con il mestiere; niente numeri che non siano nel caso; niente promesse vaghe ("aumentare la visibilità", "crescere online"); niente gergo (DDSC, piano operativo, documento strategico: di' cosa fanno, non come si chiamano); mai "Alessio ha" o "Karalisweb ha"; non chiedere niente, non offrire il caso studio (lo fa il resto del messaggio).`,
       testo: `AZIENDA DA CONTATTARE: ${l.name}${l.category ? ` (${l.category})` : ""}\nCLIENTE DEL CASO (da NON nominare): ${caso.aziendaNome ?? ""}\nSETTORE DEL CASO: ${caso.settore ?? ""}\nSTORIA DEL CASO:\n${caso.storia}`,
       schema: SCHEMA_MOTIVO,
     });
     // Rete di sicurezza: il messaggio lo firma Alessio, quindi niente terza persona (v3.87).
-    let motivo = ai.dati.motivo.trim().replace(/^(Alessio Loi|Alessio|Karalisweb|karalisweb)\s+ha\s+/i, "Ho ");
-    // Rete di sicurezza: se il nome del cliente scappa comunque, si toglie il motivo.
-    if (caso.aziendaNome && motivo.toLowerCase().includes(caso.aziendaNome.toLowerCase().split(" ")[0])) motivo = "";
-    return motivo || null;
+    let gancio = ai.dati.gancio.trim().replace(/^(Alessio Loi|Alessio|Karalisweb|karalisweb)\s+ha\s+/i, "Ho ");
+    // Rete di sicurezza: se il nome del cliente scappa comunque, si toglie il gancio (il caso studio resta).
+    if (caso.aziendaNome && gancio.toLowerCase().includes(caso.aziendaNome.toLowerCase().split(" ")[0])) gancio = "";
+    return { gancio: gancio || null, casoId: caso.id };
   } catch {
-    return null;
+    return { gancio: null, casoId: caso.id };
   }
 }
 
@@ -460,35 +473,127 @@ async function cosaDare(membroId: string | null): Promise<string | null> {
   return s ? `Prima dai: segnalagli ${s.nome}${s.motivo ? ` (${s.motivo})` : ""}.` : null;
 }
 
+/** v3.90: i testi delle voci di contatto. Le voci ancora aperte con una versione più vecchia si riscrivono al turno. */
+export const VERSIONE_TESTO = 2;
+
+const CELLULARE = /(?<![\d])(?:\+?39[\s./-]?)?3\d{2}[\s./-]?\d{3}[\s./-]?\d{3,4}(?![\d])/g;
+const PAGINE_UTILI = /contatt|chi-?siamo|about|team|staff|azienda|dove-?siamo|titolare|fondator/i;
+
+/** Un cellulare italiano (3…) scritto sul sito: nei link tel: o nel testo, purché separato come un numero di telefono. */
+function cellulareDa(html: string): string | null {
+  const tel = [...html.matchAll(/href=["']tel:([^"']+)["']/gi)].map((m) => m[1]);
+  const testo = html.replace(/<[^>]+>/g, " ").match(CELLULARE) ?? [];
+  for (const n of [...tel, ...testo.filter((t) => /[\s./-]|\+?39/.test(t))]) {
+    const cifre = n.replace(/\D/g, "").replace(/^0039/, "39");
+    const locale = cifre.startsWith("39") && cifre.length > 10 ? cifre.slice(2) : cifre;
+    if (/^3\d{8,9}$/.test(locale)) return `39${locale}`;
+  }
+  return null;
+}
+
+/** L'email della persona fra quelle del sito: nome o cognome di chi decide nella parte prima della chiocciola. */
+function emailDellaPersona(email: string[], decisore: string): string | null {
+  const parti = norm(decisore.replace(/\([^)]*\)/g, "")).split(/\s+/).filter((p) => p.length >= 3);
+  if (!parti.length) return null;
+  return email.find((e) => {
+    const locale = norm(e.split("@")[0].replace(/[._-]+/g, " "));
+    return parti.some((p) => locale.includes(p));
+  }) ?? null;
+}
+
 /**
- * Come scrivere direttamente a chi decide (v3.87): il suo LinkedIn se l'abbiamo, e dal sito dell'azienda il WhatsApp
- * (link wa.me) e la mail; il telefono dell'azienda per chiamare. Senza sito, solo quello che c'è già nel CRM.
+ * Come scrivere direttamente a chi decide (v3.87, più a fondo dalla v3.90): il suo LinkedIn se l'abbiamo; il suo
+ * telefono e la sua email se è un membro BNI; dal sito (home, contatti, chi siamo, team) la sua email personale
+ * (nome.cognome@…) prima di quella dell'azienda, il WhatsApp (link wa.me) o un cellulare scritto. Il telefono
+ * dell'azienda resta per chiamare.
  */
-export async function canaleDiretto(leadId: string, decisore: string): Promise<{ whatsapp: string | null; email: string | null; telefono: string | null; linkedin: string | null }> {
-  const [lead, persona, contatto] = await Promise.all([
+export async function canaleDiretto(leadId: string, decisore: string | null): Promise<{ whatsapp: string | null; email: string | null; emailPersonale: boolean; telefono: string | null; linkedin: string | null }> {
+  const [lead, persona, contatto, membro] = await Promise.all([
     db.lead.findUnique({ where: { id: leadId }, select: { website: true, phone: true, email: true } }),
-    db.persona.findFirst({ where: { leadId, nome: decisore }, select: { linkedinUrl: true } }),
+    decisore ? db.persona.findFirst({ where: { leadId, nome: decisore }, select: { linkedinUrl: true } }) : null,
     db.agentReport.findFirst({ where: { leadId, agent: "contatto" }, orderBy: { collectedAt: "desc" }, select: { findings: true } }),
+    decisore ? db.bniMembro.findFirst({ where: { name: { equals: decisore, mode: "insensitive" } }, select: { phone: true, email: true } }) : null,
   ]);
-  let whatsapp: string | null = null;
-  let email = lead?.email ?? null;
+  let whatsapp = membro?.phone ? normalizePhoneForWhatsApp(membro.phone) : null;
+  let emailPersona = membro?.email ?? null;
+  let emailAzienda = lead?.email ?? null;
   if (lead?.website) {
-    const pagine = [lead.website, (contatto?.findings as { paginaContatti?: string } | null)?.paginaContatti].filter((u): u is string => !!u);
-    for (const url of pagine) {
-      if (whatsapp && email) break;
+    const home = lead.website.startsWith("http") ? lead.website : `https://${lead.website}`;
+    const dominio = (() => { try { return new URL(home).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+    const daVedere = [home, (contatto?.findings as { paginaContatti?: string } | null)?.paginaContatti].filter((u): u is string => !!u);
+    const viste = new Set<string>();
+    while (daVedere.length && viste.size < 5 && !(whatsapp && emailPersona)) {
+      const url = daVedere.shift()!;
+      if (viste.has(url)) continue;
+      viste.add(url);
       try {
         const html = (await scaricaPagina(url)).html;
-        whatsapp ??= extractWhatsAppNumber(html);
-        email ??= extractContactEmail(html, new URL(url.startsWith("http") ? url : `https://${url}`).hostname.replace(/^www\./, ""));
+        whatsapp ??= extractWhatsAppNumber(html) ?? cellulareDa(html);
+        const email = extractEmails(html);
+        if (decisore) emailPersona ??= emailDellaPersona(email, decisore);
+        emailAzienda ??= extractContactEmail(html, dominio);
+        // Dalla home, le pagine dove di solito c'è chi decide (contatti, chi siamo, team).
+        if (url === home) {
+          for (const m of html.matchAll(/href=["']([^"'#]+)["']/gi)) {
+            if (!PAGINE_UTILI.test(m[1])) continue;
+            try {
+              const u = new URL(m[1], home);
+              if (u.hostname.replace(/^www\./, "") === dominio && !daVedere.includes(u.href)) daVedere.push(u.href);
+            } catch {
+              // Link rotto: si salta.
+            }
+          }
+        }
       } catch {
-        // Sito che non risponde: si va con quello che c'è.
+        // Pagina che non risponde: si va con quello che c'è.
       }
     }
   }
   // Un cellulare dell'azienda (3…) vale anche per WhatsApp.
   const tel = lead?.phone ?? null;
   if (!whatsapp && tel && /^(\+?39)?\s*3/.test(tel.replace(/[^\d+]/g, ""))) whatsapp = normalizePhoneForWhatsApp(tel);
-  return { whatsapp, email, telefono: tel, linkedin: persona?.linkedinUrl ?? null };
+  return { whatsapp, email: emailPersona ?? emailAzienda, emailPersonale: !!emailPersona, telefono: tel, linkedin: persona?.linkedinUrl ?? null };
+}
+
+/**
+ * v3.90: le voci di contatto ancora da mandare scritte coi testi vecchi ("ti va di sentirci 20 minuti?") si
+ * riscrivono: gancio dal caso studio, offerta del caso studio, permesso di mandarlo; e i canali si cercano di nuovo.
+ */
+export async function aggiornaTestiContatto(oggi = new Date(), massimo = 20): Promise<number> {
+  const voci = await db.approvalItem.findMany({
+    where: { kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA] }, status: "IN_ATTESA", leadId: { not: null } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, kind: true, leadId: true, payload: true, lead: { select: { name: true } } },
+  });
+  let fatte = 0;
+  for (const v of voci) {
+    const p = (v.payload ?? {}) as Record<string, unknown>;
+    if (fatte >= massimo) break;
+    if (!v.leadId || !v.lead || (typeof p.versioneTesto === "number" && p.versioneTesto >= VERSIONE_TESTO)) continue;
+    const azienda = v.lead.name;
+    const decisore = typeof p.decisore === "string" && p.decisore !== "chi decide" ? p.decisore : null;
+    const caso = await casoPerMessaggio(v.leadId, oggi);
+    const gancio = caso?.gancio ?? null;
+    let nuovo: Record<string, unknown>;
+    if (v.kind === KIND_RETE_PAGINA) {
+      nuovo = { messaggio: testoMessaggioPagina(azienda, gancio, !!caso) };
+    } else {
+      const canale = await canaleDiretto(v.leadId, decisore);
+      const canali = { telefono: canale.whatsapp ?? (p.telefono as string | null) ?? null, email: canale.email ?? (p.email as string | null) ?? null, emailPersonale: canale.emailPersonale, chiamare: canale.telefono, linkedin: (p.linkedin as string | null) ?? canale.linkedin };
+      if (v.kind === KIND_RETE_CONTATTO) {
+        const piattaforma = piattaformaPiuCommentata(await commentiDi(v.leadId))?.piattaforma ?? null;
+        nuovo = { ...canali, messaggio: testoContattoDopoCommenti(decisore, azienda, piattaforma, gancio, !!caso) };
+      } else if ("inComune" in p) {
+        nuovo = { ...canali, messaggio: testoDirettoConPonte(decisore ?? "", azienda, (p.inComune as string | null) ?? null, gancio, !!caso) };
+      } else {
+        // Lo conosce Alessio: si resta sul tu, i canali sono quelli che c'erano.
+        nuovo = { messaggio: testoContattoDiretto(decisore ?? "", azienda, gancio, !!caso) };
+      }
+    }
+    await db.approvalItem.update({ where: { id: v.id }, data: { payload: { ...p, ...nuovo, motivoDalCaso: !!gancio, casoId: caso?.casoId ?? null, versioneTesto: VERSIONE_TESTO } as Prisma.InputJsonValue } });
+    fatte++;
+  }
+  return fatte;
 }
 
 /** Il messaggio in Cassetta per una lavorazione: al ponte, a chi decide, o il promemoria. Una volta sola per tipo e ponte. */
@@ -502,14 +607,15 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
   // Contatto diretto: il profilo LinkedIn di chi decide, se l'abbiamo.
   const profiloDecisore = !membro && l.decisore ? (await db.persona.findFirst({ where: { leadId: l.leadId, nome: l.decisore }, select: { linkedinUrl: true } }))?.linkedinUrl ?? null : null;
   const decisore = l.decisore ?? "chi decide";
-  const motivo = tipo === "PROMEMORIA" ? null : await motivoDalCaso(l.leadId, oggi);
+  const caso = tipo === "PROMEMORIA" ? null : await casoPerMessaggio(l.leadId, oggi);
+  const motivo = caso?.gancio ?? null;
   // Contatto diretto via ponte (v3.87): a chi decide, con chi avete in comune, sui suoi canali.
   const viaPonte = tipo === "DIRETTO" && inComune !== undefined;
   const canale = viaPonte ? await canaleDiretto(l.leadId, decisore) : null;
   const messaggio =
     tipo === "PONTE" ? testoRichiestaPonte(l.ponteNome, decisore, l.lead.name, motivo)
-    : viaPonte ? testoDirettoConPonte(decisore, l.lead.name, inComune ?? null, motivo)
-    : tipo === "DIRETTO" ? testoContattoDiretto(decisore, l.lead.name, motivo)
+    : viaPonte ? testoDirettoConPonte(decisore, l.lead.name, inComune ?? null, motivo, !!caso)
+    : tipo === "DIRETTO" ? testoContattoDiretto(decisore, l.lead.name, motivo, !!caso)
     : testoPromemoria(l.ponteNome, decisore);
   const titolo =
     tipo === "PONTE" ? `Chiedi a ${l.ponteNome} di presentarti ${chiDecideTesto(decisore, l.lead.name)}`
@@ -529,10 +635,12 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
         strada: l.strada,
         messaggio,
         ...(canale
-          ? { canale: canale.whatsapp ? "whatsapp" : canale.email ? "email" : "linkedin", telefono: canale.whatsapp, email: canale.email, chiamare: canale.telefono, linkedin: canale.linkedin, inComune: inComune ?? null }
+          ? { canale: canale.whatsapp ? "whatsapp" : canale.email ? "email" : "linkedin", telefono: canale.whatsapp, email: canale.email, emailPersonale: canale.emailPersonale, chiamare: canale.telefono, linkedin: canale.linkedin, inComune: inComune ?? null }
           : { canale: membro?.phone ? "whatsapp" : "linkedin", telefono: membro?.phone ?? null, linkedin: membro?.linkedinUrl ?? profiloDecisore }),
         dare: tipo === "PONTE" ? await cosaDare(l.ponteMembroId) : null,
         motivoDalCaso: !!motivo,
+        casoId: caso?.casoId ?? null,
+        versioneTesto: VERSIONE_TESTO,
       } as Prisma.InputJsonValue,
     },
   });
@@ -803,7 +911,8 @@ export async function dopoCommento(leadId: string, oggi = new Date()): Promise<b
   const profili = await profiliDecisore(leadId);
   // La piattaforma dove Alessio ha commentato 7 volte: è lì che l'azienda l'ha visto.
   const piattaforma = piattaformaPiuCommentata(await commentiDi(leadId))?.piattaforma ?? (await piattaformaScelta(leadId, undefined, oggi));
-  const motivo = await motivoDalCaso(leadId, oggi);
+  const caso = await casoPerMessaggio(leadId, oggi);
+  const canale = await canaleDiretto(leadId, decisore);
   await db.approvalItem.create({
     data: {
       leadId,
@@ -813,13 +922,18 @@ export async function dopoCommento(leadId: string, oggi = new Date()): Promise<b
       payload: {
         decisore,
         azienda: lead.name,
-        messaggio: testoContattoDopoCommenti(decisore, lead.name, piattaforma, motivo),
-        telefono: lead.phone,
-        email: lead.email,
+        messaggio: testoContattoDopoCommenti(decisore, lead.name, piattaforma, caso?.gancio ?? null, !!caso),
+        piattaforma,
+        telefono: canale.whatsapp,
+        email: canale.email,
+        emailPersonale: canale.emailPersonale,
+        chiamare: canale.telefono,
         linkedin: profili.linkedin,
         facebook: profili.facebook,
         instagram: profili.instagram,
-        motivoDalCaso: !!motivo,
+        motivoDalCaso: !!caso?.gancio,
+        casoId: caso?.casoId ?? null,
+        versioneTesto: VERSIONE_TESTO,
       } as Prisma.InputJsonValue,
     },
   });
@@ -842,7 +956,10 @@ export async function messaggioAllaPagina(leadId: string, oggi = new Date()): Pr
       kind: KIND_RETE_PAGINA,
       agent: "rete",
       title: `Non si sa chi decide in ${lead.name}: scrivi alla pagina ${NOMI[pagina.piattaforma]}`,
-      payload: { azienda: lead.name, piattaforma: pagina.piattaforma, pagina: pagina.url, messaggio: testoMessaggioPagina(lead.name, await motivoDalCaso(leadId, oggi)) } as Prisma.InputJsonValue,
+      payload: await (async () => {
+        const caso = await casoPerMessaggio(leadId, oggi);
+        return { azienda: lead.name, piattaforma: pagina.piattaforma, pagina: pagina.url, messaggio: testoMessaggioPagina(lead.name, caso?.gancio ?? null, !!caso), casoId: caso?.casoId ?? null, versioneTesto: VERSIONE_TESTO };
+      })() as Prisma.InputJsonValue,
     },
   });
   return true;

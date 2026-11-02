@@ -110,8 +110,8 @@ describe("entrare in relazione: commenti sulle pagine", () => {
   });
   it("i messaggi: dopo i commenti e alla pagina", () => {
     expect(testoContattoDopoCommenti("Mario Rossi", "Piscine Blu", "instagram", null)).toMatch(/^Ciao Mario, .*Piscine Blu su Instagram/);
-    expect(testoContattoDopoCommenti(null, "Piscine Blu", null, null)).toMatch(/^Buongiorno.*sentire il titolare/);
-    expect(testoMessaggioPagina("Piscine Blu", "Abbiamo aiutato un'azienda simile.")).toContain("titolare: abbiamo aiutato");
+    expect(testoContattoDopoCommenti(null, "Piscine Blu", null, null)).toMatch(/^Buongiorno[\s\S]*titolare[\s\S]*Posso mandarglielo\?/);
+    expect(testoMessaggioPagina("Piscine Blu", "Ho aiutato un'azienda simile.")).toContain("Ho aiutato un'azienda simile. Ho raccolto tutto in un breve caso studio");
   });
 });
 

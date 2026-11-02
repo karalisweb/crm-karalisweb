@@ -172,16 +172,29 @@ export function testoRichiestaPonte(ponte: string, decisore: string, azienda: st
   return `Ciao ${nomeProprio(ponte)}, una domanda veloce: conosci ${chiDecideTesto(decisore, azienda)}? ${motivo ? `${motivo} ` : ""}Se ti va di presentarci con un messaggio a tre, poi ci penso io. Grazie! Alessio`;
 }
 
-export function testoContattoDiretto(decisore: string, azienda: string, motivo: string | null): string {
-  return `Ciao ${nomeProprio(decisore)}, ti scrivo perché ${motivo ?? `lavoro con aziende come ${azienda}`}. Ti va di sentirci 20 minuti? Ti racconto cosa abbiamo fatto. Alessio`;
+/**
+ * v3.90 (Alessio: "devono essere persuasivi e in pratica gli dobbiamo mandare il caso studio, chiedendo
+ * l'autorizzazione"): il messaggio a chi decide parte dal problema che un'azienda come la sua aveva (il gancio,
+ * scritto dall'AI dal caso studio), offre il caso studio e chiede solo il permesso di mandarlo. Niente call da
+ * fissare: un sì costa poco, e il caso studio fa il resto.
+ */
+export function offertaCaso(azienda: string, gancio: string | null, haCaso: boolean, tu: boolean): string {
+  const ti = tu ? "ti" : "le";
+  if (!haCaso) return `Lavoro con aziende come ${azienda} su strategia, sito e marketing. Posso mandar${ti} un esempio concreto di un lavoro fatto, così vede${tu ? "i" : ""} se può servire anche a voi?`;
+  const storia = gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore.";
+  return `${storia}\n\nHo raccolto tutto in un breve caso studio: com'era, cosa abbiamo fatto, cosa è cambiato. Credo che possa esser${ti} utile. ${tu ? "Te lo mando?" : "Posso mandarglielo?"}`;
+}
+
+export function testoContattoDiretto(decisore: string, azienda: string, gancio: string | null, haCaso = !!gancio): string {
+  return `Ciao${decisore.trim() ? ` ${nomeProprio(decisore)}` : ""}, sono Alessio.\n\n${offertaCaso(azienda, gancio, haCaso, true)}\n\nAlessio`;
 }
 
 /**
  * v3.87 (Alessio: "dobbiamo contattare le aziende, non trovare interlocutori"): il messaggio va a chi decide, subito,
  * citando la persona che avete in comune (se c'è davvero) e il caso studio. Il ponte non è più un passaggio obbligato.
  */
-export function testoDirettoConPonte(decisore: string, azienda: string, inComune: string | null, motivo: string | null): string {
-  return `Buongiorno ${nomeProprio(decisore)}, sono Alessio Loi di Karalisweb (Cagliari).${inComune ? ` Abbiamo in comune ${inComune}.` : ""} ${motivo ?? `Lavoro con aziende come ${azienda}.`} Le andrebbe di sentirci 20 minuti? Le racconto cosa abbiamo fatto. Grazie, Alessio`;
+export function testoDirettoConPonte(decisore: string, azienda: string, inComune: string | null, gancio: string | null, haCaso = !!gancio): string {
+  return `Buongiorno${decisore.trim() ? ` ${nomeProprio(decisore)}` : ""}, sono Alessio Loi di Karalisweb (Cagliari).${inComune ? ` Abbiamo in comune ${inComune}.` : ""}\n\n${offertaCaso(azienda, gancio, haCaso, false)}\n\nGrazie,\nAlessio`;
 }
 
 export function testoPromemoria(ponte: string, decisore: string): string {
@@ -259,14 +272,17 @@ export function piattaformaConsigliata(pagine: PaginaSocial[], oggi: Date): Piat
 }
 
 /** Al 5° commento: il primo messaggio diretto a chi decide (o all'azienda, se non si sa chi è). */
-export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, motivo: string | null): string {
-  const saluto = decisore ? `Ciao ${nomeProprio(decisore)}` : "Buongiorno";
+export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, gancio: string | null, haCaso = !!gancio): string {
   const dove = piattaforma ? ` su ${NOMI_PIATTAFORMA[piattaforma]}` : "";
-  const domanda = decisore ? "Ti va di sentirci 20 minuti? Ti racconto cosa abbiamo fatto, senza impegno." : "Potrei sentire il titolare per 20 minuti? Gli racconto cosa abbiamo fatto, senza impegno.";
-  return `${saluto}, sono Alessio Loi di Karalisweb: in queste settimane ho seguito e commentato i post di ${azienda}${dove}. ${motivo ?? "Lavoro con aziende come la vostra sul web e sul marketing."} ${domanda} Alessio`;
+  const intro = `sono Alessio Loi di Karalisweb: in queste settimane ho seguito e commentato i post di ${azienda}${dove}.`;
+  if (decisore) return `Ciao ${nomeProprio(decisore)}, ${intro}\n\n${offertaCaso(azienda, gancio, haCaso, true)}\n\nAlessio`;
+  // Senza chi decide si scrive all'azienda: il caso studio è per il titolare.
+  const storia = haCaso ? `${gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore."}\n\nHo raccolto tutto in un breve caso studio: com'era, cosa abbiamo fatto, cosa è cambiato. Credo che possa interessare al titolare.` : "Lavoro con aziende come la vostra su strategia, sito e marketing, e ho un esempio concreto che credo possa interessare al titolare.";
+  return `Buongiorno, ${intro}\n\n${storia} Posso mandarglielo? Ditemi voi a chi scriverlo.\n\nGrazie,\nAlessio`;
 }
 
 /** Senza chi decide: il messaggio privato alla pagina per arrivare a lui. */
-export function testoMessaggioPagina(azienda: string, motivo: string | null): string {
-  return `Buongiorno, sono Alessio Loi di Karalisweb (Cagliari). Seguo la pagina di ${azienda} e avrei un'idea da proporre al titolare${motivo ? `: ${motivo.charAt(0).toLowerCase()}${motivo.slice(1)}` : "."} Mi dite a chi posso scrivere, o il suo nome? Grazie, Alessio`;
+export function testoMessaggioPagina(azienda: string, gancio: string | null, haCaso = !!gancio): string {
+  const storia = haCaso ? `${gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore."} Ho raccolto tutto in un breve caso studio che credo possa interessare al titolare.` : "Ho un esempio concreto di un lavoro fatto per un'azienda come la vostra che credo possa interessare al titolare.";
+  return `Buongiorno, sono Alessio Loi di Karalisweb (Cagliari) e seguo la pagina di ${azienda}.\n\n${storia}\n\nPosso mandarglielo? Mi dite a chi scriverlo? Grazie,\nAlessio`;
 }
