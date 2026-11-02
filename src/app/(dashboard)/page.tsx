@@ -21,6 +21,7 @@ interface Oggi {
   incontri: { id: string; nome: string; azienda: string | null; capitolo: string | null; quando: string; daChiedere: number }[];
   call: { id: string; nome: string; quando: string }[];
   avvisiSettore: { id: string; azienda: string; perche: string | null; righe: string[]; cosaFare: string; bottone: string; link: string; membroDaConoscere: string | null }[];
+  messaggi121: { oggi: number; massimo: number };
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
@@ -83,7 +84,12 @@ export default function HomePage() {
       setD((x) => (x ? { ...x, avvisiSettore: x.avvisiSettore.filter((a) => a.id !== id) } : x));
       // Il sì prepara un messaggio o porta l'azienda fra quelle di oggi: si ricarica il resto della pagina.
       if (decisione === "APPROVATO") {
-        fetch("/api/oggi").then((r) => r.json()).then((n) => setD((x) => (x ? { ...n, avvisiSettore: x.avvisiSettore } : n)));
+        // Si tiene l'ordine di prima, ma si tolgono quelle che oggi non vanno più (es. i 5 messaggi 121 già fatti).
+        fetch("/api/oggi").then((r) => r.json()).then((n: Oggi) => setD((x) => {
+          if (!x) return n;
+          const restano = new Set(n.avvisiSettore.map((a) => a.id));
+          return { ...n, avvisiSettore: x.avvisiSettore.filter((a) => restano.has(a.id)) };
+        }));
         caricaPercorso();
       }
     }
@@ -126,6 +132,10 @@ export default function HomePage() {
             <span>Gli agenti che usano il tuo Chrome (BNI Connect, LinkedIn, Facebook) sono fermi da {Math.floor(d.agentiMac.oreFermi / 24)} giorni. Tieni il Mac acceso con Chrome aperto e controlla nell&apos;app Claude che l&apos;attività &quot;Squadra CRM — agenti di browser&quot; sia attiva.</span>
           )}
         </CardContent></Card>
+      )}
+
+      {d.messaggi121.oggi >= d.messaggi121.massimo && (
+        <p className="text-xs text-muted-foreground">Oggi hai già chiesto {d.messaggi121.oggi} incontri BNI dalle aziende dei tuoi settori: basta così, gli altri membri tornano domani.</p>
       )}
 
       {d.avvisiSettore.length > 0 && (

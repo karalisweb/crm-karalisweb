@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.90.0] - 2026-11-02
+
+### Changed
+- Oggi: dopo 5 "Sì, scrivimi il messaggio" nello stesso giorno le altre schede dei membri BNI spariscono e tornano domani (prima ne arrivavano di continuo).
+
 ## [3.89.0] - 2026-11-01
 
 ### Fixed

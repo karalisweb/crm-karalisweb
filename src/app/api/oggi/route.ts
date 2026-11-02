@@ -6,7 +6,7 @@ import { coperturaCapitolo, eSardo, mezzanotteRoma } from "@/lib/agents/bni-rego
 import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 import { AZIENDE_AL_GIORNO } from "@/lib/ricerca/regole";
 import { daChiedereA } from "@/lib/agents/presentazioni";
-import { KIND_AVVISO_SETTORE, avvisaSettori } from "@/lib/agents/avvisi-settore";
+import { KIND_AVVISO_SETTORE, MESSAGGI_121_AL_GIORNO, avvisaSettori } from "@/lib/agents/avvisi-settore";
 import { linkedinFermoPerChrome } from "@/lib/agents/motore";
 
 // Gli avvisi si riscrivono con le parole di oggi al più ogni 15 minuti (non solo ai turni delle 7 e delle 14).
@@ -50,6 +50,9 @@ export async function GET() {
     ]);
 
   const settimana = await statoSettimana(ora, tutti);
+  // v3.90: fatti i 5 "Sì, scrivimi il messaggio" di oggi, gli altri membri BNI tornano domani.
+  const messaggi121Oggi = await db.approvalItem.count({ where: { kind: KIND_AVVISO_SETTORE, status: "APPROVATO", decidedAt: { gte: oggi }, payload: { path: ["azione"], equals: "121" } } });
+  const basta121 = messaggi121Oggi >= MESSAGGI_121_AL_GIORNO;
   const sardi = tutti.filter((t) => eSardo(t.capitolo)).flatMap((t) => t.membri);
   const copertura = coperturaCapitolo(sardi);
 
@@ -85,10 +88,13 @@ export async function GET() {
         const p = (v.payload ?? {}) as { azienda?: string; perche?: string; bottone?: string; righe?: string[]; cosaFare?: string; link?: string; dove?: string; settore?: string; sardegna?: boolean; azione?: string; membroId?: string | null };
         // Prima le persone BNI, poi LinkedIn, poi le eliminate; dentro, i casi studio e la Sardegna.
         const ordine = ({ BNI: 0, LINKEDIN: 1, ELIMINATA: 2 } as Record<string, number>)[p.dove ?? ""] ?? 3;
+        if (basta121 && p.azione === "121") return null;
         return { ordine: ordine * 4 + (p.settore === "CASO" ? 0 : 2) + (p.sardegna ? 0 : 1), id: v.id, azienda: p.azienda ?? v.title, perche: p.perche ?? null, righe: p.righe ?? [], cosaFare: p.cosaFare ?? "", bottone: p.bottone ?? "Sì", link: p.link ?? "/", membroDaConoscere: p.azione === "121" ? p.membroId ?? null : null };
       })
+      .filter((a) => a !== null)
       .sort((a, b) => a.ordine - b.ordine)
       .map(({ ordine: _o, ...a }) => a),
+    messaggi121: { oggi: messaggi121Oggi, massimo: MESSAGGI_121_AL_GIORNO },
     settimana: { fatti: settimana.fatti, fissati: settimana.fissati, obiettivo: settimana.obiettivo, richiesteAperte: settimana.richiesteAperte },
     sardegna: { conosciuti: copertura.conosciuti, totale: copertura.totale },
     ricerca: { aziendeOggi, obiettivo: AZIENDE_AL_GIORNO, personeOggi, casiAttivi },

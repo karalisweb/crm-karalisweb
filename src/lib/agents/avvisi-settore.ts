@@ -28,6 +28,8 @@ export const KIND_AVVISO_SETTORE = "AVVISO_SETTORE";
 
 /** Voci nuove al massimo per turno: prima le persone BNI, poi LinkedIn, poi le eliminate; casi studio prima dei caldi. */
 const AVVISI_PER_TURNO = 15;
+/** v3.90 (Alessio: "una volta che ho cliccato 5 sì, scrivimi il messaggio non deve continuare"): richieste di 121 dagli avvisi al giorno. */
+export const MESSAGGI_121_AL_GIORNO = 5;
 const SIGLE_SARDEGNA = ["CA", "SU", "SS", "NU", "OR"];
 
 export type DoveAvviso = "BNI" | "LINKEDIN" | "ELIMINATA";
