@@ -1452,6 +1452,10 @@ model Trattativa {
   motivoUscita      String?   @map("motivo_uscita")
   ultimoNurturingAt DateTime? @map("ultimo_nurturing_at")
 
+  // v3.93: il passo della fila configurabile (Impostazioni → Vendita) e da quando ci sta.
+  passo    String?   @map("passo")
+  passoDal DateTime? @map("passo_dal")
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   chiusaAt  DateTime? @map("chiusa_at")
@@ -1467,6 +1471,7 @@ model Trattativa {
 }
 
 enum TrattativaStadio {
+  RICHIESTA_INFO
   CALL_FISSATA
   CALL_FATTA
   FOLLOW_UP
@@ -1475,6 +1480,16 @@ enum TrattativaStadio {
   INCARICO
   EXIT
   NURTURING
+}
+
+// La fila della vendita e le origini delle richieste, configurabili da Alessio (v3.93). Una riga sola.
+model VenditaConfig {
+  id        String   @id @default("default")
+  passi     Json
+  origini   Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("vendita_config")
 }
 
 // Il diario della trattativa: ogni cambio di stadio, nota o messaggio approvato.

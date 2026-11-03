@@ -1549,6 +1549,27 @@ Voci di cassetta: `PREPARAZIONE_CALL`, `DOPO_CALL` (approvare applica la raccoma
 `LETTERA_INVIATA`, follow-up, nurturing, exit), `RECALL` (approvare → `RECALL`, +7 giorni; scartare →
 rimanda di 7), `NURTURING_PROPOSTO`, `MESSAGGIO_NURTURING` (approvare → +45 giorni; scartare → salta il giro).
 
+### La fila configurabile (v3.93)
+
+- Migrazione `20261103090000_vendita_fila` (additiva, idempotente, via psql): valore `RICHIESTA_INFO` in
+  `TrattativaStadio` (prima di `CALL_FISSATA`), `trattative.passo` + `trattative.passo_dal`, tabella
+  `vendita_config` (una riga `default`, JSON `passi` e `origini`).
+- `fila.ts` (**puro**): `PASSI_DEFAULT` (richiesta → call_fissata → call_fatta → preventivo → accettato, ognuno con
+  il suo stadio), `ORIGINI_DEFAULT`, `normalizzaPassi` (i fissi restano, accesi e nel loro ordine; i mancanti
+  tornano dopo il fisso precedente), `passoAttuale` (senza `passo` vale lo stadio), `passoSuccessivo` (salta gli
+  spenti), `promemoria` (fermo da più di `giorni`; per la call si conta da `call_at`; niente per EXIT/NURTURING).
+- `config.ts`: `caricaConfigVendita`/`salvaConfigVendita`, `nomeOrigine`, `promemoriaVendita` (usata da
+  `/api/oggi` → "Da non dimenticare" e dal report del mattino).
+- `trattative.ts`: `creaTrattativa({ richiesta: true })` apre in `RICHIESTA_INFO`; `cambiaStadio` porta il
+  passo dello stadio nuovo (i rami RECALL/FOLLOW_UP/NURTURING/EXIT lo lasciano) e usa i giorni del passo
+  "preventivo" per il primo richiamo; `vaiAlPasso` (passo fisso → `cambiaStadio`, con `callAt` obbligatoria
+  per la call; passo aggiunto → solo `passo`/`passo_dal` + evento `PASSO`).
+- `ATTESA_GIORNI`: preventivo (`LETTERA_INVIATA`) 3, recall 4 (richiami a 3 e 7 giorni).
+- UI: `NuovaRichiestaDialog` (Oggi e Trattative), barra dei passi + pulsante "Avanti" nella scheda,
+  `PannelloVendita` (`@hello-pangea/dnd`) in Impostazioni → Vendita e `/trattative/configura`.
+- API: `GET/PUT /api/vendita/config`; `PATCH /api/trattative/[id]` accetta `passo` (+ `callAt`); `POST /api/trattative`
+  accetta `richiesta`, `nota` e qualsiasi `origine` (id della lista configurabile).
+
 ### API
 
 | Rotta | Auth | Cosa fa |
@@ -1729,6 +1750,7 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   persona) nel payload (`telefono`, `email`, `linkedin`, `inComune`). `daCassetta` porta i canali nella scheda del
   Percorso (pulsanti WhatsApp/Email/LinkedIn). Nel `turnoRete` le PONTE_SCELTO con RETE_PONTE IN_ATTESA tornano MAPPATA.
 
+- v3.93 Vendita: fila configurabile dalla richiesta di info (vedi "Pipeline di vendita" → "La fila configurabile").
 - v3.92 Report del mattino: `daily-report.ts` separa `raccogliDati()` (query) da `componiReport()` (puro, testato in `lib/__tests__/daily-report.test.ts`) e manda testo + HTML (`sendInternalEmail` ha il terzo argomento `html`). "Il CRM da solo" = approval_items con `decidedBy: "crm_auto"` (COMMENTO_LINKEDIN; RETE_DIRETTO/CONTATTO/PAGINA).
 - v3.91 Testi di Contatto: `casoPerMessaggio()` (rete.ts) restituisce `{ gancio, casoId }` (gancio = 2 frasi AI,
   problema dell'azienda simile + cosa è cambiato; null senza budget/AI, il caso resta). I testi (`testoDirettoConPonte`,

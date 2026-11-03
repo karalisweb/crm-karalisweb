@@ -3,6 +3,7 @@ import { sendInternalEmail } from "@/lib/email";
 import { TrattativaStadio } from "@prisma/client";
 import { mezzanotteRoma } from "@/lib/agents/bni-regole";
 import { KIND_AVVISO_SETTORE, MESSAGGI_121_AL_GIORNO } from "@/lib/agents/avvisi-settore";
+import { promemoriaVendita } from "@/lib/vendita/config";
 
 /**
  * Report del mattino (v3.92): tre blocchi, nell'ordine in cui servono ad Alessio.
@@ -23,6 +24,8 @@ export interface DatiReport {
   oggi: {
     incontri: { nome: string; ora: string }[];
     call: { nome: string; ora: string }[];
+    /** v3.93: le trattative ferme nel loro passo, con il testo del promemoria. */
+    vendita: string[];
     messaggiDaMandare: number;
     membriDaContattare: number;
     daPreparare: number;
@@ -56,6 +59,7 @@ function righe(d: DatiReport) {
   const oggi: string[] = [];
   for (const i of o.incontri) oggi.push(`121 alle ${i.ora} con ${i.nome}`);
   for (const c of o.call) oggi.push(`Call alle ${c.ora} con ${c.nome}`);
+  for (const v of o.vendita) oggi.push(`🔔 ${v}`);
   if (o.messaggiDaMandare) oggi.push(`${plur(o.messaggiDaMandare, "messaggio", "messaggi")} da mandare a chi decide (Contatto)`);
   if (o.membriDaContattare) oggi.push(`${plur(o.membriDaContattare, "membro BNI", "membri BNI")} a cui chiedere un 121`);
   if (o.daPreparare) oggi.push(`Fogli dei 121 da preparare: ${o.daPreparare}`);
@@ -146,12 +150,14 @@ export async function raccogliDati(adesso = new Date()): Promise<DatiReport> {
       db.bniSegnalazione.count({ where: { stato: "DA_DARE" } }),
       db.approvalItem.count({ where: { status: "IN_ATTESA" } }),
     ]);
+  const vendita = await promemoriaVendita(adesso).catch(() => []);
 
   return {
     giorno: adesso.toLocaleDateString("it-IT", { timeZone: "Europe/Rome", weekday: "long", day: "numeric", month: "long" }),
     oggi: {
       incontri: incontri.map((m) => ({ nome: m.name, ora: ora(m.next121At!) })),
       call: call.map((c) => ({ nome: c.nome, ora: ora(c.callAt!) })),
+      vendita: vendita.map((v) => v.testo),
       messaggiDaMandare,
       // Come in Oggi: al massimo 5 membri al giorno.
       membriDaContattare: Math.min(membri, MESSAGGI_121_AL_GIORNO),

@@ -18,7 +18,7 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 
 ---
 
-## Vendita: dalla richiesta di info all'incarico (avviata con Alessio il 2026-11-03, DA CONFERMARE)
+## Vendita: dalla richiesta di info all'incarico (confermata con Alessio il 2026-11-03: "una fila sola"; fila e promemoria costruiti in v3.93.0, preventivo/contratto da fare)
 
 Scelte di Alessio (2026-11-03): dopo la call **solo preventivo** (niente lettera strategica prima), prezzi
 da **listino fisso**, **firma online + Qonto** per preventivo e fattura. Il bisogno vero: **non dimenticarsi

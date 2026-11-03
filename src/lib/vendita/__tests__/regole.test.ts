@@ -23,7 +23,7 @@ describe("passaggi di stadio", () => {
     expect(puoPassare("CALL_FISSATA", "LETTERA_INVIATA")).toBe(false);
   });
   it("date di default", () => {
-    expect(prossimaDataDefault("LETTERA_INVIATA", oggi)?.toISOString()).toBe(giorni(7).toISOString());
+    expect(prossimaDataDefault("LETTERA_INVIATA", oggi)?.toISOString()).toBe(giorni(3).toISOString());
     expect(prossimaDataDefault("NURTURING", oggi)?.toISOString()).toBe(giorni(45).toISOString());
     expect(prossimaDataDefault("INCARICO", oggi)).toBeNull();
   });

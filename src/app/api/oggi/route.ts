@@ -8,6 +8,7 @@ import { AZIENDE_AL_GIORNO } from "@/lib/ricerca/regole";
 import { daChiedereA } from "@/lib/agents/presentazioni";
 import { KIND_AVVISO_SETTORE, MESSAGGI_121_AL_GIORNO, avvisaSettori } from "@/lib/agents/avvisi-settore";
 import { linkedinFermoPerChrome } from "@/lib/agents/motore";
+import { promemoriaVendita } from "@/lib/vendita/config";
 
 // Gli avvisi si riscrivono con le parole di oggi al più ogni 15 minuti (non solo ai turni delle 7 e delle 14).
 let avvisiAggiornatiAt = 0;
@@ -95,6 +96,8 @@ export async function GET() {
       .sort((a, b) => a.ordine - b.ordine)
       .map(({ ordine: _o, ...a }) => a),
     messaggi121: { oggi: messaggi121Oggi, massimo: MESSAGGI_121_AL_GIORNO },
+    // v3.93: le trattative ferme nel loro passo (fissare la call, mandare il preventivo, richiamare).
+    vendita: await promemoriaVendita(ora).catch(() => []),
     settimana: { fatti: settimana.fatti, fissati: settimana.fissati, obiettivo: settimana.obiettivo, richiesteAperte: settimana.richiesteAperte },
     sardegna: { conosciuti: copertura.conosciuti, totale: copertura.totale },
     ricerca: { aziendeOggi, obiettivo: AZIENDE_AL_GIORNO, personeOggi, casiAttivi },

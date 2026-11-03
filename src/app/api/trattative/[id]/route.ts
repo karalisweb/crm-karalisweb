@@ -3,7 +3,9 @@ import { z, ZodError } from "zod";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { ORDINE_STADI, TRANSIZIONI, inRitardo, type Stadio } from "@/lib/vendita/regole";
-import { aggiungiEvento, cambiaStadio, ErroreTrattativa } from "@/lib/vendita/trattative";
+import { aggiungiEvento, cambiaStadio, ErroreTrattativa, vaiAlPasso } from "@/lib/vendita/trattative";
+import { passoAttuale, passoSuccessivo, promemoria } from "@/lib/vendita/fila";
+import { caricaConfigVendita, nomeOrigine } from "@/lib/vendita/config";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,10 +26,24 @@ export async function GET(_req: Request, { params }: Params) {
     },
   });
   if (!t) return NextResponse.json({ error: "Trattativa non trovata" }, { status: 404 });
-  return NextResponse.json({ trattativa: { ...t, inRitardo: inRitardo(t, new Date()), transizioni: TRANSIZIONI[t.stadio] } });
+  const { passi, origini } = await caricaConfigVendita();
+  const oggi = new Date();
+  const attuale = passoAttuale(t, passi);
+  const p = promemoria(t, passi, oggi);
+  return NextResponse.json({
+    trattativa: { ...t, inRitardo: inRitardo(t, oggi) || !!p, transizioni: TRANSIZIONI[t.stadio], origineNome: nomeOrigine(t.origine, origini), promemoria: p?.testo ?? null },
+    // La fila, per la barra dei passi e il pulsante "Avanti".
+    fila: {
+      passi: passi.filter((x) => x.attivo).map((x) => ({ id: x.id, nome: x.nome })),
+      attuale: attuale?.id ?? null,
+      successivo: ["EXIT", "NURTURING"].includes(t.stadio) ? null : (() => { const s = passoSuccessivo(attuale, passi); return s ? { id: s.id, nome: s.nome, stadio: s.stadio ?? null, serveData: s.stadio === "CALL_FISSATA" } : null; })(),
+    },
+  });
 }
 
 const SchemaModifica = z.object({
+  /** v3.93: vai a questo passo della fila (con callAt se è "Call fissata"). */
+  passo: z.string().max(40).optional(),
   stadio: z.enum(ORDINE_STADI as [Stadio, ...Stadio[]]).optional(),
   motivo: z.string().max(300).optional().nullable(),
   nota: z.string().max(2000).optional().nullable(),
@@ -62,7 +78,9 @@ export async function PATCH(request: Request, { params }: Params) {
       await aggiungiEvento(id, "TRASCRIZIONE", `Trascrizione della call salvata (${d.trascrizione?.trim().length ?? 0} caratteri)`, gate.userId);
     }
     if (d.nota?.trim()) await aggiungiEvento(id, "NOTA", d.nota.trim(), gate.userId);
-    if (d.stadio) {
+    if (d.passo) {
+      await vaiAlPasso(id, d.passo, { callAt: d.callAt ? new Date(d.callAt) : null }, gate.userId);
+    } else if (d.stadio) {
       await cambiaStadio(id, { a: d.stadio, motivo: d.motivo, prossimoPasso: d.prossimoPasso, prossimaData: d.prossimaData ? new Date(d.prossimaData) : null }, gate.userId);
     }
     return NextResponse.json({ ok: true });

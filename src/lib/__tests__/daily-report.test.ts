@@ -3,7 +3,7 @@ import { componiReport, type DatiReport } from "@/lib/daily-report";
 
 const base: DatiReport = {
   giorno: "martedì 3 novembre",
-  oggi: { incontri: [{ nome: "Sergio Piras", ora: "10:20" }], call: [], messaggiDaMandare: 2, membriDaContattare: 5, daPreparare: 0, daRegistrare: 0, aziendeDaDecidere: 0 },
+  oggi: { incontri: [{ nome: "Sergio Piras", ora: "10:20" }], call: [], vendita: [], messaggiDaMandare: 2, membriDaContattare: 5, daPreparare: 0, daRegistrare: 0, aziendeDaDecidere: 0 },
   ieri: { approvateDaTe: 3, fatti121: 1, presentazioniChieste: 0, presentazioniOttenute: 0, commentiCrm: 4, messaggiCrm: 1, callFissate: 0 },
   soldi: { trattativeAperte: 2, valoreAperte: 8000, clientiMese: 1, valoreMese: 4000 },
   daSistemare: { presentazioniFerme: 0, segnalazioni: 0 },

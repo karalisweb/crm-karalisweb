@@ -20,9 +20,10 @@ import {
   RECALL_MASSIMI,
   STADI,
   type AgenteVendita,
-  type Origine,
   type Stadio,
 } from "./regole";
+import { passoAttuale, passoDiStadio } from "./fila";
+import { caricaConfigVendita } from "./config";
 import { conoscenzaDaReferti, dopoCall, preparaCall, preparaNurturing, preparaRecall, type ContestoVendita, type DopoCall } from "./agenti";
 
 export const KIND = {
@@ -53,7 +54,11 @@ const MOTIVO_A_LOST_REASON: Record<string, LostReason> = {
 
 export interface NuovaTrattativa {
   nome?: string;
-  origine: Origine;
+  /** Id di un'origine della lista configurabile (fila.ts). */
+  origine: string;
+  /** v3.93: è solo una richiesta di info, la call non è ancora fissata. */
+  richiesta?: boolean;
+  nota?: string | null;
   leadId?: string;
   bniMembroId?: string;
   opportunitaId?: string;
@@ -89,23 +94,34 @@ export async function creaTrattativa(n: NuovaTrattativa, userId?: string): Promi
   const nome = n.nome?.trim() || lead?.name || (membro ? membro.company || membro.name : null) || opp?.name;
   if (!nome) throw new ErroreTrattativa(400, "Serve un nome");
 
+  const richiesta = !!n.richiesta && !n.callAt;
+  const stadio: Stadio = richiesta ? "RICHIESTA_INFO" : "CALL_FISSATA";
+  const adesso = new Date();
   const t = await db.trattativa.create({
     data: {
       nome,
       origine: n.origine,
+      stadio,
+      passo: passoDiStadio(stadio),
+      passoDal: adesso,
       leadId: lead?.id,
       bniMembroId: membro?.id,
       opportunitaId: opp?.id,
       callAt: n.callAt ?? null,
       prossimaData: n.callAt ?? null,
-      prossimoPasso: n.callAt ? "Call di vendita" : null,
+      prossimoPasso: richiesta ? PASSO_DEFAULT.RICHIESTA_INFO : n.callAt ? "Call di vendita" : null,
       referente: n.referente ?? (membro ? membro.name : null),
       telefono: n.telefono ?? lead?.phone ?? membro?.phone ?? opp?.phone ?? null,
       email: n.email ?? lead?.email ?? membro?.email ?? opp?.email ?? null,
-      eventi: { create: { tipo: "STADIO", a: "CALL_FISSATA", testo: n.callAt ? `Call fissata per il ${n.callAt.toLocaleString("it-IT", { timeZone: "Europe/Rome" })}` : "Trattativa aperta", createdBy: userId } },
+      eventi: {
+        create: [
+          { tipo: "STADIO", a: stadio, testo: richiesta ? "Mi ha chiesto informazioni" : n.callAt ? `Call fissata per il ${n.callAt.toLocaleString("it-IT", { timeZone: "Europe/Rome" })}` : "Trattativa aperta", createdBy: userId },
+          ...(n.nota?.trim() ? [{ tipo: "NOTA", testo: n.nota.trim(), createdBy: userId }] : []),
+        ],
+      },
     },
   });
-  if (lead) {
+  if (lead && !richiesta) {
     await db.lead.update({ where: { id: lead.id }, data: { pipelineStage: "CALL_FISSATA", ...(n.callAt ? { appointmentAt: n.callAt } : {}) } });
   }
   return t;
@@ -127,7 +143,13 @@ export async function cambiaStadio(id: string, c: CambioStadio, userId?: string,
   if (c.a === "EXIT" && !c.motivo) throw new ErroreTrattativa(400, "Per l'exit serve il motivo");
 
   const chiusa = c.a === "INCARICO" || c.a === "EXIT";
-  const prossimaData = chiusa ? null : c.prossimaData ?? (c.a === "CALL_FISSATA" ? t.callAt : prossimaDataDefault(c.a, oggi));
+  // Il primo richiamo dopo il preventivo segue i giorni scelti in Impostazioni → Vendita.
+  const giorniPreventivo = c.a === "LETTERA_INVIATA" ? (await caricaConfigVendita()).passi.find((p) => p.id === "preventivo")?.giorni : null;
+  const prossimaData = chiusa
+    ? null
+    : c.prossimaData ?? (c.a === "CALL_FISSATA" ? t.callAt : giorniPreventivo ? new Date(oggi.getTime() + giorniPreventivo * 86400_000) : prossimaDataDefault(c.a, oggi));
+  // La fila: lo stadio nuovo porta al suo passo; i rami (recall, follow-up, nurturing, exit) lasciano il passo com'è.
+  const passoNuovo = passoDiStadio(c.a);
   const aggiornata = await db.trattativa.update({
     where: { id },
     data: {
@@ -138,6 +160,7 @@ export async function cambiaStadio(id: string, c: CambioStadio, userId?: string,
       chiusaAt: chiusa ? oggi : null,
       ...(c.a === "NURTURING" ? { ultimoNurturingAt: null } : {}),
       ...(c.a === "CALL_FISSATA" ? { recallFatti: 0 } : {}),
+      ...(passoNuovo ? { passo: passoNuovo, passoDal: oggi } : {}),
       eventi: {
         create: {
           tipo: "STADIO",
@@ -176,6 +199,36 @@ export async function cambiaStadio(id: string, c: CambioStadio, userId?: string,
     });
   }
   return aggiornata;
+}
+
+/**
+ * Sposta la trattativa al passo scelto della fila. Se il passo è fisso e cambia lo stadio,
+ * passa da cambiaStadio (con i suoi controlli); un passo aggiunto da Alessio segna solo dove sta.
+ */
+export async function vaiAlPasso(id: string, passoId: string, opz: { callAt?: Date | null } = {}, userId?: string, oggi = new Date()): Promise<void> {
+  const t = await db.trattativa.findUnique({ where: { id } });
+  if (!t) throw new ErroreTrattativa(404, "Trattativa non trovata");
+  const { passi } = await caricaConfigVendita();
+  const p = passi.find((x) => x.id === passoId);
+  if (!p) throw new ErroreTrattativa(400, "Passo sconosciuto");
+  if (passoAttuale(t, passi)?.id === p.id) throw new ErroreTrattativa(409, `È già in "${p.nome}"`);
+
+  if (p.stadio && p.stadio !== t.stadio) {
+    if (p.stadio === "CALL_FISSATA") {
+      const callAt = opz.callAt ?? t.callAt;
+      if (!callAt) throw new ErroreTrattativa(400, "Serve la data della call");
+      await db.trattativa.update({ where: { id }, data: { callAt } });
+    }
+    await cambiaStadio(id, { a: p.stadio }, userId, oggi);
+    if (p.stadio === "CALL_FISSATA" && t.leadId) {
+      await db.lead.update({ where: { id: t.leadId }, data: { pipelineStage: "CALL_FISSATA", appointmentAt: opz.callAt ?? t.callAt } });
+    }
+    return;
+  }
+  await db.trattativa.update({
+    where: { id },
+    data: { passo: p.id, passoDal: oggi, eventi: { create: { tipo: "PASSO", testo: `Passo: ${p.nome}`, createdBy: userId } } },
+  });
 }
 
 export async function aggiungiEvento(id: string, tipo: string, testo: string, userId?: string) {

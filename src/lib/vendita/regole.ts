@@ -1,17 +1,19 @@
 /**
  * Pipeline di vendita — le regole, in funzioni pure (niente DB, niente UI).
  *
- *   Call di vendita → follow-up o lettera strategica → recall o incarico → exit o nurturing.
+ *   Richiesta di info → call di vendita → preventivo → recall o incarico → exit o nurturing.
+ *   (v3.93: la fila e i promemoria si configurano in Impostazioni → Vendita, vedi fila.ts.)
  *
  * Il primo incarico che si propone è il Metodo SD (percorso strategico); sito e servizi
  * operativi vengono dopo, come conseguenza del Documento Strategico.
  */
 
 export const STADI = {
+  RICHIESTA_INFO: { label: "Richiesta di info", icona: "💬", aperto: true },
   CALL_FISSATA: { label: "Call fissata", icona: "📅", aperto: true },
   CALL_FATTA: { label: "Call fatta", icona: "🎙️", aperto: true },
   FOLLOW_UP: { label: "Follow-up", icona: "↩️", aperto: true },
-  LETTERA_INVIATA: { label: "Lettera inviata", icona: "✉️", aperto: true },
+  LETTERA_INVIATA: { label: "Preventivo mandato", icona: "✉️", aperto: true },
   RECALL: { label: "Recall", icona: "📞", aperto: true },
   INCARICO: { label: "Incarico", icona: "🏆", aperto: false },
   EXIT: { label: "Exit", icona: "🚪", aperto: false },
@@ -44,6 +46,7 @@ export const MOTIVI_USCITA = [
 
 /** Da dove si può andare dove. Incarico ed Exit sono la fine della trattativa. */
 export const TRANSIZIONI: Record<Stadio, Stadio[]> = {
+  RICHIESTA_INFO: ["CALL_FISSATA", "NURTURING", "EXIT"],
   CALL_FISSATA: ["CALL_FATTA", "EXIT"],
   CALL_FATTA: ["FOLLOW_UP", "LETTERA_INVIATA", "INCARICO", "NURTURING", "EXIT"],
   FOLLOW_UP: ["LETTERA_INVIATA", "RECALL", "INCARICO", "NURTURING", "EXIT"],
@@ -61,17 +64,19 @@ export function puoPassare(da: Stadio, a: Stadio): boolean {
 /** Giorni di attesa prima del passo successivo, per stadio. */
 export const ATTESA_GIORNI: Partial<Record<Stadio, number>> = {
   FOLLOW_UP: 3,
-  LETTERA_INVIATA: 7,
-  RECALL: 7,
+  // Richiami a 3 e 7 giorni dal preventivo (il primo si cambia in Impostazioni → Vendita).
+  LETTERA_INVIATA: 3,
+  RECALL: 4,
   NURTURING: 45,
 };
 
 /** Cosa si aspetta in ogni stadio, se non lo dice Alessio o un agente. */
 export const PASSO_DEFAULT: Partial<Record<Stadio, string>> = {
+  RICHIESTA_INFO: "Fissare la call",
   CALL_FISSATA: "Call di vendita",
-  CALL_FATTA: "Incollare la trascrizione e mandare la lettera",
+  CALL_FATTA: "Incollare la trascrizione e mandare il preventivo",
   FOLLOW_UP: "Risposta al follow-up",
-  LETTERA_INVIATA: "Risposta alla lettera strategica",
+  LETTERA_INVIATA: "Risposta al preventivo",
   RECALL: "Risposta al recall",
   NURTURING: "Prossimo messaggio di nurturing",
 };

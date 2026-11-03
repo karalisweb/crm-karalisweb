@@ -26,8 +26,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin, History, Mail, GitBranch } from "lucide-react";
+import { Users, Key, Settings, Plus, Trash2, Eye, EyeOff, Check, X, Search, Loader2, ShieldAlert, Target, Clock, BarChart3, Sparkles, Building2, MapPin, History, Mail, GitBranch, Handshake } from "lucide-react";
 import { SearchConfigTab } from "@/components/settings/search-config-tab";
+import { PannelloVendita } from "@/components/vendita/pannello-vendita";
 import { WorkflowConfigTab } from "@/components/settings/workflow-config-tab";
 import { CrmConfigTab } from "@/components/settings/crm-config-tab";
 import { ScheduledSearchesTab } from "@/components/settings/scheduled-searches-tab";
@@ -294,6 +295,10 @@ export default function SettingsPage() {
           <TabsTrigger value="ai" className="gap-2">
             <Sparkles className="h-4 w-4" />
             AI
+          </TabsTrigger>
+          <TabsTrigger value="vendita" className="gap-2">
+            <Handshake className="h-4 w-4" />
+            Vendita
           </TabsTrigger>
           <TabsTrigger value="crm" className="gap-2">
             <Target className="h-4 w-4" />
@@ -774,6 +779,10 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* TAB CRM */}
+        <TabsContent value="vendita" className="space-y-4 max-w-2xl">
+          <PannelloVendita />
+        </TabsContent>
+
         <TabsContent value="crm" className="space-y-4">
           <CrmConfigTab />
         </TabsContent>

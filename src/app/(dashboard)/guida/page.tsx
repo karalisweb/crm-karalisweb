@@ -152,6 +152,9 @@ export default function GuidaPage() {
               <p>Qualcuno ti chiede una referenza? In <strong>Membri BNI</strong> scrivi il bisogno e trovi a chi girarla.</p>
             </Step>
             <Step n={5}>
+              <p><strong>Ti chiedono informazioni?</strong> In Oggi (o in Trattative) premi <strong>Nuova richiesta</strong>: nome, da dove arriva (BNI in sede, 121, evento, LinkedIn…) e due righe. Da lì la trattativa segue la fila <strong>Richiesta di info → Call fissata → Call fatta → Preventivo mandato → Accettato</strong>: nella sua scheda il pulsante giallo la porta al passo dopo. Se resta ferma troppo (1 giorno senza call, 2 senza preventivo, 3 senza risposta) la trovi in cima a Oggi sotto <strong>Da non dimenticare</strong> e nel report del mattino. Passi, giorni, testi dei promemoria e origini si cambiano in <strong>Impostazioni → Vendita</strong> (o con l&apos;ingranaggio in Trattative): i passi si trascinano, se ne aggiungono di nuovi; quelli fissi si rinominano ma non si spengono.</p>
+            </Step>
+            <Step n={5}>
               <p><strong>Casi studio</strong>: carica il PDF di un cliente e conferma. Per 6 mesi la ricerca di aziende (5 al giorno, prima la Sardegna) parte da lì: stesso settore, aziende simili, persone simili al titolare su LinkedIn.</p>
             </Step>
           </div>

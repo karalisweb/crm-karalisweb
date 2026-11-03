@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Handshake, RefreshCw, AlertTriangle, Clock, Inbox } from "lucide-react";
+import { Handshake, RefreshCw, AlertTriangle, Clock, Inbox, Settings2, Bell } from "lucide-react";
 import { CallFissataDialog } from "@/components/vendita/call-fissata-dialog";
-import { ORDINE_STADI, ORIGINI, STADI, type Origine, type Stadio } from "@/lib/vendita/regole";
+import { NuovaRichiestaDialog } from "@/components/vendita/nuova-richiesta-dialog";
+import { ORDINE_STADI, STADI, type Stadio } from "@/lib/vendita/regole";
 
 interface TrattativaRiga {
   id: string;
@@ -22,6 +23,9 @@ interface TrattativaRiga {
   valoreEuro: number | null;
   inRitardo: boolean;
   daDecidere: number;
+  passoNome: string | null;
+  origineNome: string;
+  promemoria: string | null;
 }
 
 function quando(iso: string | null): string | null {
@@ -74,14 +78,18 @@ export default function TrattativePage() {
             Trattative
           </h1>
           <p className="text-sm text-muted-foreground">
-            Call di vendita → follow-up o lettera strategica → recall o incarico → exit o nurturing.
+            Richiesta di info → call → preventivo → accettato. Se una resta ferma, te la ricordo in Oggi.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} aria-label="Aggiorna">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <CallFissataDialog nuova />
+          <Button variant="outline" size="sm" asChild aria-label="Configura la fila">
+            <Link href="/trattative/configura"><Settings2 className="h-4 w-4" /></Link>
+          </Button>
+          <CallFissataDialog nuova variante="outline" />
+          <NuovaRichiestaDialog onCreata={fetchData} />
         </div>
       </div>
 
@@ -117,7 +125,7 @@ export default function TrattativePage() {
       ) : righe.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Nessuna trattativa qui. Si apre una trattativa quando fissi una call: dalla scheda pronta in Cassetta, dalla scheda di un&apos;azienda o con &quot;Nuova trattativa&quot;.
+            Nessuna trattativa qui. Quando qualcuno ti chiede informazioni premi &quot;Nuova richiesta&quot;; se la call è già fissata, &quot;Nuova trattativa&quot;.
           </CardContent>
         </Card>
       ) : (
@@ -132,8 +140,8 @@ export default function TrattativePage() {
                       <div className="min-w-0 flex-1">
                         <div className="font-medium flex flex-wrap items-center gap-2">
                           <span className="break-words">{t.nome}</span>
-                          <Badge variant="outline" className="text-[10px]">{STADI[t.stadio].icona} {STADI[t.stadio].label}</Badge>
-                          <Badge variant="secondary" className="text-[10px]">{ORIGINI[t.origine as Origine] ?? t.origine}</Badge>
+                          <Badge variant="outline" className="text-[10px]">{STADI[t.stadio].icona} {t.passoNome && !["RECALL", "FOLLOW_UP", "NURTURING", "EXIT"].includes(t.stadio) ? t.passoNome : STADI[t.stadio].label}</Badge>
+                          <Badge variant="secondary" className="text-[10px]">{t.origineNome}</Badge>
                           {t.daDecidere > 0 && (
                             <Badge className="text-[10px] gap-1 bg-amber-500/90 text-white"><Inbox className="h-3 w-3" /> in cassetta</Badge>
                           )}
@@ -147,6 +155,9 @@ export default function TrattativePage() {
                           )}
                           {t.valoreEuro ? <span>≈ {t.valoreEuro.toLocaleString("it-IT")} €</span> : null}
                         </div>
+                        {t.promemoria && (
+                          <div className="mt-1 text-xs font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1"><Bell className="h-3 w-3" /> {t.promemoria}</div>
+                        )}
                       </div>
                     </div>
                   </CardContent>

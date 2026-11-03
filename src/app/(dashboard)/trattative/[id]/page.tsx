@@ -9,11 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Bot, Loader2, Save, Inbox } from "lucide-react";
+import { ArrowLeft, Bot, Loader2, Save, Inbox, ArrowRight, Bell, Check } from "lucide-react";
 import { toast } from "sonner";
 import { CorpoDopoCall, CorpoNurturing, CorpoPreparazione, CorpoRecall } from "@/components/agents/voci-cassetta";
 import { localeAIso } from "@/components/vendita/call-fissata-dialog";
-import { MOTIVI_USCITA, ORIGINI, STADI, TRASCRIZIONE_MINIMA, type AgenteVendita, type Origine, type Stadio } from "@/lib/vendita/regole";
+import { MOTIVI_USCITA, STADI, TRASCRIZIONE_MINIMA, type AgenteVendita, type Stadio } from "@/lib/vendita/regole";
 
 interface Evento { id: string; tipo: string; testo: string | null; da: string | null; a: string | null; createdAt: string }
 interface Referto { id: string; agent: string; summary: string; findings: Record<string, unknown>; collectedAt: string }
@@ -22,10 +22,17 @@ interface Dettaglio {
   id: string; nome: string; origine: string; stadio: Stadio; referente: string | null; telefono: string | null; email: string | null;
   callAt: string | null; trascrizione: string | null; valoreEuro: number | null; prossimoPasso: string | null; prossimaData: string | null;
   recallFatti: number; motivoUscita: string | null; inRitardo: boolean; transizioni: Stadio[];
+  origineNome: string; promemoria: string | null;
   eventi: Evento[]; agentReports: Referto[]; approvalItems: Voce[];
   lead: { id: string; name: string; website: string | null } | null;
   bniMembro: { id: string; name: string; company: string | null; chapter: string | null } | null;
   opportunita: { id: string; name: string } | null;
+}
+
+interface Fila {
+  passi: { id: string; nome: string }[];
+  attuale: string | null;
+  successivo: { id: string; nome: string; stadio: Stadio | null; serveData: boolean } | null;
 }
 
 const NOMI_AGENTI: Record<string, string> = {
@@ -46,6 +53,8 @@ function isoALocale(iso: string | null): string {
 export default function TrattativaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [t, setT] = useState<Dettaglio | null>(null);
+  const [fila, setFila] = useState<Fila | null>(null);
+  const [dataCall, setDataCall] = useState("");
   const [errore, setErrore] = useState<string | null>(null);
   const [form, setForm] = useState({ callAt: "", referente: "", telefono: "", email: "", valoreEuro: "", prossimoPasso: "", prossimaData: "", trascrizione: "", nota: "" });
   const [occupato, setOccupato] = useState<string | null>(null);
@@ -58,6 +67,7 @@ export default function TrattativaPage({ params }: { params: Promise<{ id: strin
       if (!r.ok) throw new Error(d.error || "Errore");
       const x: Dettaglio = d.trattativa;
       setT(x);
+      setFila(d.fila ?? null);
       setForm((f) => ({
         ...f,
         callAt: isoALocale(x.callAt),
@@ -118,6 +128,16 @@ export default function TrattativaPage({ params }: { params: Promise<{ id: strin
     await patch({ stadio: a }, `stadio-${a}`, `Ora: ${STADI[a].label}`);
   }
 
+  async function avanti() {
+    const s = fila?.successivo;
+    if (!s) return;
+    if (s.serveData && !dataCall) {
+      toast.error("Metti data e ora della call");
+      return;
+    }
+    if (await patch({ passo: s.id, ...(s.serveData ? { callAt: localeAIso(dataCall) } : {}) }, "avanti", `Ora: ${s.nome}`)) setDataCall("");
+  }
+
   async function salvaDati() {
     await patch(
       {
@@ -156,7 +176,7 @@ export default function TrattativaPage({ params }: { params: Promise<{ id: strin
         <h1 className="text-2xl font-bold break-words">{t.nome}</h1>
         <div className="flex flex-wrap items-center gap-2 mt-1">
           <Badge variant="outline">{STADI[t.stadio].icona} {STADI[t.stadio].label}</Badge>
-          <Badge variant="secondary">{ORIGINI[t.origine as Origine] ?? t.origine}</Badge>
+          <Badge variant="secondary">{t.origineNome}</Badge>
           {t.inRitardo && <Badge className="bg-rose-500/90 text-white">in ritardo</Badge>}
           {t.lead && <Link href={`/leads/${t.lead.id}`} className="text-xs underline">scheda azienda</Link>}
           {t.bniMembro && <Link href="/rete-bni" className="text-xs underline">membro BNI · {t.bniMembro.chapter}</Link>}
@@ -171,12 +191,51 @@ export default function TrattativaPage({ params }: { params: Promise<{ id: strin
         </Link>
       )}
 
-      {aperta && t.transizioni.length > 0 && (
+      {t.promemoria && (
+        <Card className="border-rose-400 py-0"><CardContent className="p-3 text-sm font-medium text-rose-600 dark:text-rose-400 flex items-center gap-2"><Bell className="h-4 w-4 shrink-0" /> {t.promemoria}</CardContent></Card>
+      )}
+
+      {fila && fila.passi.length > 0 && (
+        <Card className="py-0">
+          <CardContent className="p-3 space-y-3">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              {fila.passi.map((p, i) => {
+                const iAtt = fila.passi.findIndex((x) => x.id === fila.attuale);
+                const fatto = iAtt >= 0 && i < iAtt;
+                const ora = p.id === fila.attuale;
+                return (
+                  <span key={p.id} className="flex items-center gap-1.5">
+                    {i > 0 && <span className="text-muted-foreground">›</span>}
+                    <span className={`px-2 py-1 rounded-md ${ora ? "bg-primary text-primary-foreground font-medium" : fatto ? "bg-muted text-muted-foreground" : "border text-muted-foreground"}`}>
+                      {fatto && <Check className="h-3 w-3 inline mr-0.5" />}{p.nome}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+            {fila.successivo && (
+              <div className="flex flex-wrap items-end gap-2">
+                {fila.successivo.serveData && (
+                  <div className="space-y-1">
+                    <Label htmlFor="data-call" className="text-xs">Data e ora della call</Label>
+                    <Input id="data-call" type="datetime-local" value={dataCall} onChange={(e) => setDataCall(e.target.value)} className="h-9" />
+                  </div>
+                )}
+                <Button onClick={avanti} disabled={!!occupato}>
+                  {occupato === "avanti" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-1" />} {fila.successivo.nome}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {aperta && t.transizioni.some((a) => a !== fila?.successivo?.stadio) && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Passa a</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Altre strade</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              {t.transizioni.map((a) => (
+              {t.transizioni.filter((a) => a !== fila?.successivo?.stadio).map((a) => (
                 <Button key={a} size="sm" variant={a === "EXIT" ? "outline" : "secondary"} onClick={() => vaiA(a)} disabled={!!occupato}>
                   {occupato === `stadio-${a}` && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}{STADI[a].icona} {STADI[a].label}
                 </Button>

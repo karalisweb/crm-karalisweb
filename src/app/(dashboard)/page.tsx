@@ -5,8 +5,9 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, CalendarClock, CheckCircle2 } from "lucide-react";
 import { dataOra } from "@/components/ricerca/etichette";
+import { NuovaRichiestaDialog } from "@/components/vendita/nuova-richiesta-dialog";
 import { type AziendaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
 
 // Le 3 cose di oggi (v3.64; dalla v3.67 tutte, senza tetto): ogni azienda con la sua cosa da fare.
@@ -22,6 +23,7 @@ interface Oggi {
   call: { id: string; nome: string; quando: string }[];
   avvisiSettore: { id: string; azienda: string; perche: string | null; righe: string[]; cosaFare: string; bottone: string; link: string; membroDaConoscere: string | null }[];
   messaggi121: { oggi: number; massimo: number };
+  vendita: { trattativaId: string; nome: string; testo: string; giorniDiRitardo: number }[];
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
@@ -69,10 +71,13 @@ export default function HomePage() {
   const caricaPercorso = useCallback(() => {
     fetch("/api/percorso").then((r) => (r.ok ? r.json() : null)).then(setP);
   }, []);
-  useEffect(() => {
+  const caricaOggi = useCallback(() => {
     fetch("/api/oggi").then((r) => r.json()).then(setD);
+  }, []);
+  useEffect(() => {
+    caricaOggi();
     caricaPercorso();
-  }, [caricaPercorso]);
+  }, [caricaOggi, caricaPercorso]);
 
   // Gli avvisi di settore si decidono qui (v3.71): deciso, sparisce.
   const [decidendo, setDecidendo] = useState<string | null>(null);
@@ -118,10 +123,27 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6 min-w-0">
-      <div>
-        <h1 className="text-2xl font-bold">Oggi</h1>
-        <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Oggi</h1>
+          <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</p>
+        </div>
+        <NuovaRichiestaDialog variante="outline" onCreata={caricaOggi} />
       </div>
+
+      {(d.vendita ?? []).length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold">Da non dimenticare</h2>
+          <div className="space-y-2">
+            {d.vendita.map((v) => (
+              <Link key={v.trattativaId} href={`/trattative/${v.trattativaId}`} className="flex items-center justify-between gap-3 rounded-lg border border-rose-300 dark:border-rose-800 p-3 hover:border-primary transition">
+                <span className="text-sm min-w-0 flex items-start gap-2"><Bell className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />{v.testo}</span>
+                <span className="text-xs text-muted-foreground shrink-0">{v.giorniDiRitardo > 0 ? `${v.giorniDiRitardo} ${v.giorniDiRitardo === 1 ? "giorno" : "giorni"} di ritardo` : "da fare oggi"}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {d.agentiMac.fermi && (
         <Card className="border-amber-400"><CardContent className="p-4 text-sm flex items-start gap-2">

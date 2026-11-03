@@ -14,6 +14,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.93.0] - 2026-11-03
+
+### Added
+- Vendita, la fila dalla richiesta di info: **Nuova richiesta** (in Oggi e in Trattative) segna chi ti ha chiesto informazioni e da dove arriva (BNI in sede, 121, evento, LinkedIn, WhatsApp, telefono, email, sito…). La trattativa segue la fila Richiesta di info → Call fissata → Call fatta → Preventivo mandato → Accettato, con il pulsante per il passo dopo nella sua scheda.
+- Promemoria: se una trattativa resta ferma nel suo passo (1 giorno senza call, la call passata senza esito, 2 giorni senza preventivo, 3 senza risposta) compare in cima a Oggi in **Da non dimenticare** e nel report del mattino.
+- **Impostazioni → Vendita** (anche dall'ingranaggio in Trattative): i passi si trascinano, si rinominano, se ne aggiungono; per ognuno i giorni e il testo del promemoria; la lista delle origini.
+
+### Changed
+- "Lettera inviata" si chiama "Preventivo mandato"; i richiami dopo il preventivo partono a 3 e 7 giorni (prima 7 e 14).
+
 ## [3.92.0] - 2026-11-03
 
 ### Changed
