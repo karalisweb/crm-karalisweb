@@ -18,23 +18,36 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 
 ---
 
-## Vendita: preventivo, firma, acconto (avviata con Alessio il 2026-11-03, DA CONFERMARE)
+## Vendita: dalla richiesta di info all'incarico (avviata con Alessio il 2026-11-03, DA CONFERMARE)
 
 Scelte di Alessio (2026-11-03): dopo la call **solo preventivo** (niente lettera strategica prima), prezzi
-da **listino fisso**, **firma online + Qonto** per preventivo e fattura.
+da **listino fisso**, **firma online + Qonto** per preventivo e fattura. Il bisogno vero: **non dimenticarsi
+nessun passo**, dalla richiesta di info in poi ("mi chiedono info e mi dimentico di fissare la call").
 
-### Il flusso proposto
-1. Call fatta → il CRM prepara il preventivo con i pacchetti del listino scelti dalla trascrizione;
-   Alessio controlla e lo manda (link personale al cliente).
-2. Il cliente apre il link: vede preventivo e condizioni (= contratto) e clicca "Accetto", scrivendo nome
-   e ruolo. Il CRM salva data, ora e IP (firma elettronica semplice) e manda a entrambi il PDF firmato.
-3. Accettato → la trattativa passa a Incarico e parte da Qonto la fattura d'acconto.
-4. Non risponde → richiamo a 3 e 7 giorni (gli agenti di recall già esistenti).
+### Il flusso (passi di partenza, modificabili dal pannello)
+| Passo | Cosa fa Alessio | Promemoria se fermo |
+|---|---|---|
+| Richiesta di info | la segna ("Nuova richiesta": nome, telefono, da dove) | 1 giorno senza call fissata |
+| Call fissata | mette la data | il giorno prima, con il foglio |
+| Call fatta | incolla trascrizione o appunti | 2 giorni senza preventivo |
+| Preventivo mandato | niente (link al cliente) | richiami a 3 e 7 giorni |
+| Accettato | niente | poi contratto, acconto, benvenuto, consegna, saldo, recensione + caso studio |
+
+Le richieste ferme compaiono in **Oggi** e nel **report del mattino** finché non si muovono.
+
+### Da dove arrivano le richieste (lista modificabile)
+BNI in sede, 121, eventi di persona, LinkedIn, WhatsApp, telefono, email, sito.
+
+### Il pannello di configurazione (Impostazioni → Vendita)
+- **Passi**: si riordinano trascinandoli, si rinominano, si accendono/spengono, si aggiungono.
+  Per ogni passo: dopo quanti giorni ricordarlo e cosa scrivere nel promemoria.
+- **Origini**: la lista sopra, modificabile.
+- Un percorso solo, in fila (non un editor di diagrammi con rami): i rami che servono
+  (non risponde → richiami → nurturing/exit) restano regole fisse del CRM.
 
 ### Da decidere con Alessio
 - Il listino: pacchetti, prezzi, cosa include ognuno (noto solo il Metodo SD: 2.000€ + IVA).
 - Le condizioni del contratto: acconto (quanto %), tempi, rinnovo, recesso.
-- Se il preventivo lo crea Qonto (suo PDF) o il CRM (nostro PDF, Qonto solo per le fatture).
 
 ## Entrare in relazione: commenti e contatto diretto (confermata da Alessio il 2026-10-25)
 
