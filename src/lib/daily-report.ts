@@ -1,108 +1,180 @@
 import { db } from "@/lib/db";
 import { sendInternalEmail } from "@/lib/email";
-import { KIND_FASCICOLO_BASE } from "@/lib/agents/turno";
 import { TrattativaStadio } from "@prisma/client";
+import { mezzanotteRoma } from "@/lib/agents/bni-regole";
+import { KIND_AVVISO_SETTORE, MESSAGGI_121_AL_GIORNO } from "@/lib/agents/avvisi-settore";
 
 /**
- * Report del mattino (v3.61): cosa è successo ieri nel Motore 121 e cosa aspetta Alessio.
- * In cima la Cassetta, perché se non la guarda si ferma tutto; poi i 121, le presentazioni
- * (quelle ferme da più di 7 giorni vanno richiamate), le segnalazioni da dare, le aziende nuove
- * con chi decide collegato, le trattative aperte. Il drip a freddo è uscito: è spento dal 2026-10-20.
- * Le aziende da decidere hanno la loro mail delle 7 (agents/mail-decisioni.ts).
+ * Report del mattino (v3.92): tre blocchi, nell'ordine in cui servono ad Alessio.
+ *   1. Oggi: cosa deve fare lui (121 e call in agenda, messaggi da mandare, membri BNI da contattare),
+ *      con gli stessi tetti della pagina Oggi, così il numero è quello che troverà aprendola.
+ *   2. Ieri: cosa ha fatto lui e cosa ha fatto il CRM da solo (commenti pubblicati, messaggi LinkedIn).
+ *   3. I soldi: trattative aperte e quanto valgono, clienti chiusi nel mese.
+ * Sotto, solo se ci sono, le cose ferme da sistemare. Il totale della Cassetta resta in fondo, piccolo:
+ * da solo non dice cosa fare.
  */
-
-/** Come si chiama ogni voce della Cassetta nella mail: corto, al plurale dove serve. */
-const VOCI_CASSETTA: Record<string, string> = {
-  FASCICOLO_BASE: "aziende da decidere",
-  SCHEDA_CONTATTO: "aziende pronte al contatto",
-  AZIONE_BNI: "azioni BNI",
-  MESSAGGIO_BNI: "richieste di 121",
-  VISITA_CAPITOLO: "visite a capitoli",
-  PREPARAZIONE_121: "121 da preparare",
-  DOPO_121: "121 da registrare",
-  PRESENTAZIONE_BNI: "presentazioni da chiedere",
-  RETE_PONTE: "\"me lo presenti?\"",
-  RETE_DIRETTO: "messaggi a chi decide",
-  RETE_PROMEMORIA: "promemoria ai ponti",
-  COMMENTO_LINKEDIN: "commenti alle pagine",
-  RETE_CONTATTO: "contatti dopo i commenti",
-  RETE_PAGINA: "messaggi alle pagine",
-  PROPOSTA_MSD: "proposte MSD",
-  MSD_FUORI_TARGET: "interessati fuori target",
-  RICHIAMO_MSD: "richiami dopo la proposta",
-  PREPARAZIONE_CALL: "call da preparare",
-  DOPO_CALL: "messaggi dopo la call",
-  RECALL: "recall",
-  NURTURING_PROPOSTO: "senza risposta",
-  MESSAGGIO_NURTURING: "messaggi di nurturing",
-};
 
 const CHIUSE: TrattativaStadio[] = [TrattativaStadio.INCARICO, TrattativaStadio.EXIT, TrattativaStadio.NURTURING];
 const SETTE_GIORNI = 7 * 24 * 3600_000;
+const KIND_MESSAGGI = ["RETE_DIRETTO", "RETE_CONTATTO", "RETE_PAGINA"];
 
-/** Scostamento ora di Roma ↔ UTC per l'istante dato (gestisce l'ora legale). */
-function romeOffsetMs(at: Date): number {
-  const asRome = new Date(at.toLocaleString("en-US", { timeZone: "Europe/Rome" }));
-  const asUtc = new Date(at.toLocaleString("en-US", { timeZone: "UTC" }));
-  return asRome.getTime() - asUtc.getTime();
+export interface DatiReport {
+  giorno: string;
+  oggi: {
+    incontri: { nome: string; ora: string }[];
+    call: { nome: string; ora: string }[];
+    messaggiDaMandare: number;
+    membriDaContattare: number;
+    daPreparare: number;
+    daRegistrare: number;
+    aziendeDaDecidere: number;
+  };
+  ieri: {
+    approvateDaTe: number;
+    fatti121: number;
+    presentazioniChieste: number;
+    presentazioniOttenute: number;
+    commentiCrm: number;
+    messaggiCrm: number;
+    callFissate: number;
+  };
+  soldi: { trattativeAperte: number; valoreAperte: number; clientiMese: number; valoreMese: number };
+  daSistemare: { presentazioniFerme: number; segnalazioni: number };
+  cassettaTotale: number;
+  url: string;
 }
 
-/** Mezzanotte di Roma (in UTC) del giorno che contiene `at`. */
-function romeDayStartUtc(at: Date): Date {
-  const offset = romeOffsetMs(at);
-  const wallClock = new Date(at.getTime() + offset);
-  wallClock.setUTCHours(0, 0, 0, 0);
-  return new Date(wallClock.getTime() - offset);
+// Il punto delle migliaia anche sotto 10.000 (l'italiano di Intl lo toglie: "8000").
+const euro = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".")} €`;
+const ora = (d: Date) => d.toLocaleTimeString("it-IT", { timeZone: "Europe/Rome", hour: "2-digit", minute: "2-digit" });
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const plur = (n: number, uno: string, tanti: string) => `${n} ${n === 1 ? uno : tanti}`;
+
+/** Le righe di ogni blocco, già in parole: le usano sia il testo semplice sia l'HTML. */
+function righe(d: DatiReport) {
+  const o = d.oggi;
+  const oggi: string[] = [];
+  for (const i of o.incontri) oggi.push(`121 alle ${i.ora} con ${i.nome}`);
+  for (const c of o.call) oggi.push(`Call alle ${c.ora} con ${c.nome}`);
+  if (o.messaggiDaMandare) oggi.push(`${plur(o.messaggiDaMandare, "messaggio", "messaggi")} da mandare a chi decide (Contatto)`);
+  if (o.membriDaContattare) oggi.push(`${plur(o.membriDaContattare, "membro BNI", "membri BNI")} a cui chiedere un 121`);
+  if (o.daPreparare) oggi.push(`Fogli dei 121 da preparare: ${o.daPreparare}`);
+  if (o.daRegistrare) oggi.push(`121 da registrare (com'è andato): ${o.daRegistrare}`);
+  if (o.aziendeDaDecidere) oggi.push(`${plur(o.aziendeDaDecidere, "azienda", "aziende")} da decidere`);
+
+  const i = d.ieri;
+  const ieri = [
+    `Tu: ${plur(i.approvateDaTe, "cosa approvata", "cose approvate")} · 121 fatti: ${i.fatti121}`,
+    `Presentazioni: ${i.presentazioniChieste} chieste, ${i.presentazioniOttenute} ottenute`,
+    `Il CRM da solo: ${plur(i.commentiCrm, "commento pubblicato", "commenti pubblicati")}, ${plur(i.messaggiCrm, "messaggio LinkedIn", "messaggi LinkedIn")} a chi decide`,
+  ];
+  if (i.callFissate) ieri.push(`Call fissate: ${i.callFissate}`);
+
+  const s = d.soldi;
+  const soldi = [
+    `Trattative aperte: ${s.trattativeAperte}${s.valoreAperte ? ` · ${euro(s.valoreAperte)} in ballo` : ""}`,
+    `Clienti chiusi questo mese: ${s.clientiMese}${s.valoreMese ? ` · ${euro(s.valoreMese)}` : ""}`,
+  ];
+
+  const sistemare: string[] = [];
+  if (d.daSistemare.presentazioniFerme) sistemare.push(`${d.daSistemare.presentazioniFerme} presentazioni chieste da più di 7 giorni senza risposta: richiamale`);
+  if (d.daSistemare.segnalazioni) sistemare.push(`${d.daSistemare.segnalazioni} segnalazioni da dare ai membri BNI`);
+
+  return { oggi, ieri, soldi, sistemare };
 }
 
-export async function sendDailyReport(): Promise<{ sent: boolean; stats: Record<string, number> }> {
-  // Finestra: il giorno solare precedente in ORA ITALIANA (non UTC, altrimenti le
-  // attività tra mezzanotte e le 02:00 finiscono nel giorno sbagliato).
-  const startToday = romeDayStartUtc(new Date());
-  const startYesterday = romeDayStartUtc(new Date(startToday.getTime() - 3_600_000));
-  const window = { gte: startYesterday, lt: startToday };
-  const conChiDecide = { agentReports: { some: { agent: "decision_maker" } } };
+export function componiReport(d: DatiReport): { oggetto: string; testo: string; html: string } {
+  const r = righe(d);
+  const n = r.oggi.length;
+  const oggetto = n ? `☀️ Oggi: ${plur(n, "cosa", "cose")} da fare` : "☀️ Oggi niente in agenda";
 
-  const [cassetta, fatti121, chieste, ottenute, ferme, segnalazioni, aziendeNuove, trattative, callFissate] =
+  const blocchi: [string, string[]][] = [
+    ["📌 OGGI", n ? r.oggi : ["Niente in agenda"]],
+    ["📅 IERI", r.ieri],
+    ["💰 SOLDI", r.soldi],
+  ];
+  if (r.sistemare.length) blocchi.push(["⚠️ DA SISTEMARE", r.sistemare]);
+
+  const testo =
+    `Buongiorno Alessio, ${d.giorno}\n\n` +
+    blocchi.map(([t, rr]) => `${t}\n${rr.map((x) => `• ${x}`).join("\n")}`).join("\n\n") +
+    `\n\nApri Oggi: ${d.url}/\n` +
+    `(In Cassetta in tutto: ${d.cassettaTotale})\n`;
+
+  const sezione = ([titolo, rr]: [string, string[]]) =>
+    `<tr><td style="padding:20px 0 6px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#6b7280">${esc(titolo)}</td></tr>` +
+    rr.map((x) => `<tr><td style="padding:8px 0;font-size:16px;line-height:1.4;border-bottom:1px solid #e5e7eb">${esc(x)}</td></tr>`).join("");
+
+  const html =
+    `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:520px;margin:0 auto;padding:8px 4px">` +
+    `<p style="font-size:19px;margin:0 0 2px"><b>Buongiorno Alessio</b></p>` +
+    `<p style="font-size:14px;color:#6b7280;margin:0">${esc(d.giorno)}</p>` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${blocchi.map(sezione).join("")}</table>` +
+    `<p style="margin:26px 0 8px"><a href="${d.url}/" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:8px">Apri Oggi</a></p>` +
+    `<p style="font-size:12px;color:#9ca3af;margin:12px 0 0">In Cassetta in tutto: ${d.cassettaTotale}</p>` +
+    `</div>`;
+
+  return { oggetto, testo, html };
+}
+
+export async function raccogliDati(adesso = new Date()): Promise<DatiReport> {
+  const oggi = mezzanotteRoma(adesso);
+  const domani = mezzanotteRoma(adesso, 1);
+  const finestra = { gte: mezzanotteRoma(adesso, -1), lt: oggi };
+  const giornoDelMese = Number(new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Rome", day: "numeric" }).format(adesso));
+  const inizioMese = mezzanotteRoma(adesso, 1 - giornoDelMese);
+
+  const [incontri, call, messaggiDaMandare, membri, daPreparare, daRegistrare, aziendeDaDecidere, approvateDaTe, fatti121, chieste, ottenute, commentiCrm, messaggiCrm, callFissate, aperte, chiuseMese, ferme, segnalazioni, cassettaTotale] =
     await Promise.all([
-      db.approvalItem.groupBy({ by: ["kind"], where: { status: "IN_ATTESA" }, _count: { _all: true } }),
-      db.oneToOne.count({ where: { date: window } }),
-      db.bniPresentazione.count({ where: { chiestaAt: window } }),
-      db.bniPresentazione.count({ where: { presentatoAt: window } }),
-      db.bniPresentazione.count({
-        where: { stato: "CHIESTA", chiestaAt: { lt: new Date(startToday.getTime() - SETTE_GIORNI) } },
-      }),
+      db.bniMembro.findMany({ where: { next121At: { gte: oggi, lt: domani } }, orderBy: { next121At: "asc" }, select: { name: true, next121At: true } }),
+      db.trattativa.findMany({ where: { stadio: "CALL_FISSATA", callAt: { gte: oggi, lt: domani } }, orderBy: { callAt: "asc" }, select: { nome: true, callAt: true } }),
+      db.approvalItem.count({ where: { status: "IN_ATTESA", kind: { in: KIND_MESSAGGI } } }),
+      db.approvalItem.count({ where: { status: "IN_ATTESA", kind: KIND_AVVISO_SETTORE, payload: { path: ["azione"], equals: "121" } } }),
+      db.approvalItem.count({ where: { status: "IN_ATTESA", kind: "PREPARAZIONE_121" } }),
+      db.approvalItem.count({ where: { status: "IN_ATTESA", kind: "DOPO_121" } }),
+      db.approvalItem.count({ where: { status: "IN_ATTESA", kind: "FASCICOLO_BASE" } }),
+      db.approvalItem.count({ where: { status: "APPROVATO", decidedAt: finestra, NOT: { decidedBy: "crm_auto" } } }),
+      db.oneToOne.count({ where: { date: finestra } }),
+      db.bniPresentazione.count({ where: { chiestaAt: finestra } }),
+      db.bniPresentazione.count({ where: { presentatoAt: finestra } }),
+      db.approvalItem.count({ where: { decidedBy: "crm_auto", decidedAt: finestra, kind: "COMMENTO_LINKEDIN" } }),
+      db.approvalItem.count({ where: { decidedBy: "crm_auto", decidedAt: finestra, kind: { in: KIND_MESSAGGI } } }),
+      db.trattativa.count({ where: { createdAt: finestra, callAt: { not: null } } }),
+      db.trattativa.aggregate({ where: { stadio: { notIn: CHIUSE } }, _count: { _all: true }, _sum: { valoreEuro: true } }),
+      db.trattativa.aggregate({ where: { stadio: TrattativaStadio.INCARICO, chiusaAt: { gte: inizioMese } }, _count: { _all: true }, _sum: { valoreEuro: true } }),
+      db.bniPresentazione.count({ where: { stato: "CHIESTA", chiestaAt: { lt: new Date(oggi.getTime() - SETTE_GIORNI) } } }),
       db.bniSegnalazione.count({ where: { stato: "DA_DARE" } }),
-      // Stesso filtro della mail delle 7: solo aziende con il collegamento verificato.
-      db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, createdAt: window, lead: conChiDecide } }),
-      db.trattativa.count({ where: { stadio: { notIn: CHIUSE } } }),
-      db.trattativa.count({ where: { stadio: TrattativaStadio.CALL_FISSATA } }),
+      db.approvalItem.count({ where: { status: "IN_ATTESA" } }),
     ]);
 
-  const voci = cassetta
-    .map((c) => ({ kind: c.kind, n: c._count._all }))
-    .sort((a, b) => b.n - a.n);
-  const cassettaTotale = voci.reduce((s, v) => s + v.n, 0);
-  const stats = { cassettaTotale, fatti121, chieste, ottenute, ferme, segnalazioni, aziendeNuove, trattative, callFissate };
+  return {
+    giorno: adesso.toLocaleDateString("it-IT", { timeZone: "Europe/Rome", weekday: "long", day: "numeric", month: "long" }),
+    oggi: {
+      incontri: incontri.map((m) => ({ nome: m.name, ora: ora(m.next121At!) })),
+      call: call.map((c) => ({ nome: c.nome, ora: ora(c.callAt!) })),
+      messaggiDaMandare,
+      // Come in Oggi: al massimo 5 membri al giorno.
+      membriDaContattare: Math.min(membri, MESSAGGI_121_AL_GIORNO),
+      daPreparare,
+      daRegistrare,
+      aziendeDaDecidere,
+    },
+    ieri: { approvateDaTe, fatti121, presentazioniChieste: chieste, presentazioniOttenute: ottenute, commentiCrm, messaggiCrm, callFissate },
+    soldi: {
+      trattativeAperte: aperte._count._all,
+      valoreAperte: aperte._sum.valoreEuro ?? 0,
+      clientiMese: chiuseMese._count._all,
+      valoreMese: chiuseMese._sum.valoreEuro ?? 0,
+    },
+    daSistemare: { presentazioniFerme: ferme, segnalazioni },
+    cassettaTotale,
+    url: (process.env.NEXTAUTH_URL || "https://crm.karalisdemo.it").replace(/\/$/, ""),
+  };
+}
 
-  const righeCassetta =
-    cassettaTotale === 0
-      ? `📥 Cassetta vuota: niente aspetta te\n`
-      : `📥 Cassetta: ${cassettaTotale} ${cassettaTotale === 1 ? "cosa aspetta" : "cose aspettano"} te\n` +
-        `   ${voci.map((v) => `${v.n} ${VOCI_CASSETTA[v.kind] ?? v.kind.toLowerCase()}`).join(" · ")}\n`;
-
-  const crmUrl = (process.env.NEXTAUTH_URL || "https://crm.karalisdemo.it").replace(/\/$/, "");
-  const text =
-    `Report di ieri — CRM\n\n` +
-    righeCassetta +
-    `\n🤝 121 fatti ieri: ${fatti121}\n` +
-    `🔗 Presentazioni ieri: ${chieste} chieste, ${ottenute} ottenute\n` +
-    (ferme > 0 ? `   ⏳ ${ferme} chieste da più di 7 giorni senza risposta: richiamale\n` : "") +
-    `🎁 Segnalazioni da dare ai membri: ${segnalazioni}\n` +
-    `🏢 Aziende nuove con chi decide collegato a te: ${aziendeNuove}\n` +
-    `💼 Trattative aperte: ${trattative}${callFissate > 0 ? ` (${callFissate} con la call fissata)` : ""}\n\n` +
-    `Apri la Cassetta: ${crmUrl}/cassetta\n`;
-
-  const sent = await sendInternalEmail("☀️ Report CRM — ieri", text);
-  return { sent, stats };
+export async function sendDailyReport(): Promise<{ sent: boolean; stats: Record<string, unknown> }> {
+  const dati = await raccogliDati();
+  const { oggetto, testo, html } = componiReport(dati);
+  const sent = await sendInternalEmail(oggetto, testo, html);
+  return { sent, stats: { oggi: dati.oggi, ieri: dati.ieri, soldi: dati.soldi } };
 }

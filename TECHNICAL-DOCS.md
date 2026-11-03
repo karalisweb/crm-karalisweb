@@ -1729,6 +1729,7 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   persona) nel payload (`telefono`, `email`, `linkedin`, `inComune`). `daCassetta` porta i canali nella scheda del
   Percorso (pulsanti WhatsApp/Email/LinkedIn). Nel `turnoRete` le PONTE_SCELTO con RETE_PONTE IN_ATTESA tornano MAPPATA.
 
+- v3.92 Report del mattino: `daily-report.ts` separa `raccogliDati()` (query) da `componiReport()` (puro, testato in `lib/__tests__/daily-report.test.ts`) e manda testo + HTML (`sendInternalEmail` ha il terzo argomento `html`). "Il CRM da solo" = approval_items con `decidedBy: "crm_auto"` (COMMENTO_LINKEDIN; RETE_DIRETTO/CONTATTO/PAGINA).
 - v3.91 Testi di Contatto: `casoPerMessaggio()` (rete.ts) restituisce `{ gancio, casoId }` (gancio = 2 frasi AI,
   problema dell'azienda simile + cosa è cambiato; null senza budget/AI, il caso resta). I testi (`testoDirettoConPonte`,
   `testoContattoDiretto`, `testoContattoDopoCommenti`, `testoMessaggioPagina`) usano `offertaCaso()`: gancio, offerta

@@ -342,7 +342,7 @@ export async function sendOutreachEmail(
 
 // Invia una notifica interna al team (es. report giornaliero) agli indirizzi
 // configurati in Settings.notificationEmails (fallback SMTP_USER).
-export async function sendInternalEmail(subject: string, text: string): Promise<boolean> {
+export async function sendInternalEmail(subject: string, text: string, html?: string): Promise<boolean> {
   let recipients: string[] = [];
   try {
     const settings = await db.settings.findUnique({
@@ -368,6 +368,7 @@ export async function sendInternalEmail(subject: string, text: string): Promise<
       to: recipients.join(', '),
       subject,
       text,
+      ...(html ? { html } : {}),
     });
     console.log(`[EMAIL] Notifica interna inviata, messageId: ${info.messageId}`);
     return true;

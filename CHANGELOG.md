@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.92.0] - 2026-11-03
+
+### Changed
+- Report del mattino (06:00): riscritto in HTML leggibile da telefono, in tre blocchi. **Oggi** (121 e call con orario, messaggi da mandare, membri BNI da contattare con il tetto di 5, fogli dei 121, aziende da decidere: gli stessi numeri della pagina Oggi), **Ieri** (cosa hai approvato, 121 fatti, presentazioni, e cosa ha fatto il CRM da solo: commenti pubblicati e messaggi LinkedIn), **Soldi** (trattative aperte con il valore in euro, clienti chiusi nel mese). "Da sistemare" compare solo se serve. L'oggetto dice quante cose ci sono da fare oggi; il totale della Cassetta scende in fondo, piccolo.
+
 ## [3.91.0] - 2026-11-02
 
 ### Changed
