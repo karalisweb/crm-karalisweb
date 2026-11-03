@@ -18,6 +18,24 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 
 ---
 
+## Vendita: preventivo, firma, acconto (avviata con Alessio il 2026-11-03, DA CONFERMARE)
+
+Scelte di Alessio (2026-11-03): dopo la call **solo preventivo** (niente lettera strategica prima), prezzi
+da **listino fisso**, **firma online + Qonto** per preventivo e fattura.
+
+### Il flusso proposto
+1. Call fatta → il CRM prepara il preventivo con i pacchetti del listino scelti dalla trascrizione;
+   Alessio controlla e lo manda (link personale al cliente).
+2. Il cliente apre il link: vede preventivo e condizioni (= contratto) e clicca "Accetto", scrivendo nome
+   e ruolo. Il CRM salva data, ora e IP (firma elettronica semplice) e manda a entrambi il PDF firmato.
+3. Accettato → la trattativa passa a Incarico e parte da Qonto la fattura d'acconto.
+4. Non risponde → richiamo a 3 e 7 giorni (gli agenti di recall già esistenti).
+
+### Da decidere con Alessio
+- Il listino: pacchetti, prezzi, cosa include ognuno (noto solo il Metodo SD: 2.000€ + IVA).
+- Le condizioni del contratto: acconto (quanto %), tempi, rinnovo, recesso.
+- Se il preventivo lo crea Qonto (suo PDF) o il CRM (nostro PDF, Qonto solo per le fatture).
+
 ## Entrare in relazione: commenti e contatto diretto (confermata da Alessio il 2026-10-25)
 
 Da dove arrivano i clienti (dato di Alessio): da maggio 2026 BNI ne ha portati 5 (ticket medio ~4k), tutti
