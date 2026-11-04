@@ -20,6 +20,80 @@ function indirizzoCrm(): string {
   return (process.env.NEXTAUTH_URL || process.env.AUTH_URL || "https://crm.karalisdemo.it").replace(/\/$/, "");
 }
 
+const CANALI: Record<string, string> = { google: "Google", maps: "Google Maps", linkedin: "LinkedIn", facebook: "Facebook", instagram: "Instagram" };
+
+const riga = (etichetta: string, valore: string) =>
+  `<tr><td style="vertical-align:top;padding:2px 10px 2px 0;color:#666;white-space:nowrap">${etichetta}</td><td style="vertical-align:top;padding:2px 0">${valore}</td></tr>`;
+
+/** Le prime frasi di un testo, senza superare `max` caratteri (taglia su una frase intera quando può). */
+function corto(t: string, max = 260): string {
+  const pulito = t.replace(/\s+/g, " ").trim();
+  if (pulito.length <= max) return pulito;
+  const frasi = pulito.match(/[^.!?]+[.!?]+/g) ?? [];
+  let out = "";
+  for (const f of frasi) {
+    if ((out + f).length > max) break;
+    out += f;
+  }
+  return out.trim() || `${pulito.slice(0, max - 1).trim()}…`;
+}
+
+type LeadMail = {
+  name: string; category: string | null;
+  ritrovamenti: { canale: string; chiave: { tipo: string; valore: string; casoStudio: { titolo: string; aziendaNome: string | null; settore: string | null; personaNome: string | null } | null; bniMembro: { name: string } | null } }[];
+  agentReports: { agent: string; summary: string; findings: unknown }[];
+};
+
+/**
+ * v3.94 (richiesta di Alessio, 2026-11-04): per ogni azienda la mail dice da dove arriva (Google, Maps, LinkedIn…
+ * e cercando cosa), cosa fa, perché sentirla e a chi chiedere il contatto. Tutto da dati già raccolti: niente costi.
+ */
+export function schedaAzienda(l: LeadMail): {
+  origine: string; cosaFanno: string; perche: string; chiDecide: { testo: string; profilo: string | null } | null; chiedereA: string | null;
+} {
+  const r = l.ritrovamenti[0];
+  const k = r?.chiave;
+  const canale = r ? CANALI[r.canale] ?? r.canale : null;
+  const cliente = k?.casoStudio?.aziendaNome ?? k?.casoStudio?.titolo.split(":")[0] ?? null;
+  let origine: string;
+  if (!k) origine = "trovata dalla ricerca";
+  else if (k.tipo === "MANUALE") origine = `l'hai aggiunta tu${canale ? ` (scheda ${canale})` : ""}`;
+  else if (k.tipo === "RETE_MEMBRO") origine = `${canale ?? "LinkedIn"}: tra i contatti di ${k.bniMembro?.name ?? k.valore} (BNI)`;
+  else if (k.tipo === "PERSONA") origine = `${canale ?? "LinkedIn"}: cercando titolari come ${k.casoStudio?.personaNome ?? k.valore}${cliente ? ` di ${cliente}` : ""}`;
+  else if (k.tipo === "SETTORE") origine = `${canale ?? "ricerca"}: cercando "${k.valore}"`;
+  else origine = `${canale ?? "ricerca"}: cercando aziende come ${cliente ?? k.valore}`;
+
+  const rep = (a: string) => l.agentReports.find((x) => x.agent === a);
+  const sintesi = (rep("lettore")?.findings as { sintesi?: string } | null)?.sintesi;
+  const descrGoogle = (rep("scheda_google")?.findings as { descrizione?: string } | null)?.descrizione;
+  const li = rep("linkedin_azienda");
+  const cosaFanno = sintesi ? corto(sintesi)
+    : descrGoogle ? `${corto(descrGoogle, 200)} (dalla scheda Google)`
+    : li && (li.findings as { esiste?: boolean } | null)?.esiste ? corto(li.summary, 200)
+    : l.category ? `${l.category}: il sito non l'abbiamo letto, apri la scheda per saperne di più` : "Non si sa ancora: apri la scheda";
+
+  const perche = k?.tipo === "RETE_MEMBRO"
+    ? `È nella rete di ${k.bniMembro?.name ?? k.valore}, che può presentarti: un contatto caldo invece di uno a freddo`
+    : cliente
+      ? `Fa lo stesso lavoro di ${cliente}${k?.casoStudio?.settore ? ` (${k.casoStudio.settore})` : ""}, tuo cliente: hai già il caso da raccontargli`
+      : "Chi decide è collegato a te: il contatto passa da una persona che conosci";
+
+  const persone = (rep("decision_maker")?.findings as { persone?: { nome?: string; ruolo?: string; profilo?: string; grado?: number | string; contattiInComune?: unknown[] }[] } | null)?.persone ?? [];
+  const p = persone.find((x) => x?.nome);
+  let chiDecide: { testo: string; profilo: string | null } | null = null;
+  let chiedereA: string | null = null;
+  if (p?.nome) {
+    const grado = typeof p.grado === "string" ? parseInt(p.grado, 10) : p.grado;
+    chiDecide = { testo: `${p.nome}${p.ruolo ? `, ${p.ruolo}` : ""}${grado === 1 ? " (è già un tuo contatto)" : ""}`, profilo: typeof p.profilo === "string" ? p.profilo : null };
+    const comuni = (Array.isArray(p.contattiInComune) ? p.contattiInComune : [])
+      .map((x) => (typeof x === "string" ? x : (x as { nome?: string })?.nome ?? null))
+      .filter((x): x is string => !!x);
+    if (grado === 1) chiedereA = "nessuno: scrivigli direttamente";
+    else if (comuni.length) chiedereA = comuni.slice(0, 3).join(", ") + (comuni.length > 3 ? ` (e altri ${comuni.length - 3})` : "");
+  }
+  return { origine, cosaFanno, perche, chiDecide, chiedereA };
+}
+
 export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: boolean; aziende: number }> {
   const voci = await db.approvalItem.findMany({
     // Motore 121: in mail solo le aziende con il collegamento verificato (chi decide è collegato).
@@ -32,7 +106,15 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
       lead: {
         select: {
           id: true, name: true, address: true, category: true, website: true,
-          ritrovamenti: { take: 1, orderBy: { createdAt: "asc" }, select: { chiave: { select: { tipo: true, casoStudio: { select: { titolo: true } } } } } },
+          ritrovamenti: {
+            take: 1, orderBy: { createdAt: "asc" },
+            select: { canale: true, chiave: { select: { tipo: true, valore: true, casoStudio: { select: { titolo: true, aziendaNome: true, settore: true, personaNome: true } }, bniMembro: { select: { name: true } } } } },
+          },
+          agentReports: {
+            where: { agent: { in: ["lettore", "scheda_google", "linkedin_azienda", "decision_maker"] } },
+            orderBy: { collectedAt: "desc" },
+            select: { agent: true, summary: true, findings: true },
+          },
         },
       },
     },
@@ -51,6 +133,7 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
     const l = v.lead!;
     const k = l.ritrovamenti[0]?.chiave;
     const perche = k?.tipo === "MANUALE" ? "l'hai aggiunta tu" : k?.casoStudio ? `simile a ${k.casoStudio.titolo}` : "trovata dalla ricerca";
+    const scheda = schedaAzienda(l);
     const leve = ((v.payload as { leve?: Leva[] })?.leve ?? []).slice(0, 3);
     const ponte = (v.payload as { collegamento?: string })?.collegamento ?? null;
     const nuova = v.createdAt.getTime() >= ieri;
@@ -59,10 +142,18 @@ export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: 
   <div style="font-size:16px;font-weight:600">${esc(l.name)}${nuova ? ' <span style="font-size:11px;color:#0b6e4f">nuova</span>' : ""}</div>
   <div style="font-size:13px;color:#666">${esc([l.category, l.address].filter(Boolean).join(" · "))} — ${esc(perche)}</div>
   ${ponte ? `<div style="font-size:13px;color:#0b6e4f;margin-top:4px">Ponte: ${esc(ponte)}</div>` : ""}
+  <table style="font-size:14px;margin:10px 0 4px;border-collapse:collapse">
+    ${riga("Da dove arriva", esc(scheda.origine))}
+    ${riga("Cosa fanno", esc(scheda.cosaFanno))}
+    ${riga("Perché sentirli", esc(scheda.perche))}
+    ${scheda.chiDecide ? riga("Chi decide", scheda.chiDecide.profilo ? `<a href="${esc(scheda.chiDecide.profilo)}" style="color:#0a66c2">${esc(scheda.chiDecide.testo)}</a>` : esc(scheda.chiDecide.testo)) : ""}
+    ${scheda.chiedereA ? riga("Chiedi il contatto a", esc(scheda.chiedereA)) : ""}
+  </table>
+  ${leve.length ? '<div style="font-size:13px;color:#666;margin-top:8px">Cosa ha visto il CRM:</div>' : ""}
   ${leve.length ? `<ul style="font-size:14px;padding-left:18px;margin:8px 0">${leve.map((x) => `<li>${esc(x.testo)}</li>`).join("")}</ul>` : '<div style="font-size:14px;margin:8px 0">L’analisi veloce non ha trovato niente di forte.</div>'}
   <a href="${base}/aziende-trovate/${l.id}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:14px">Apri e decidi</a>
 </div>`,
-      testo: `• ${l.name} (${perche})\n${leve.map((x) => `  - ${x.testo}`).join("\n")}\n  ${base}/aziende-trovate/${l.id}`,
+      testo: `• ${l.name} (${perche})\n  Da dove arriva: ${scheda.origine}\n  Cosa fanno: ${scheda.cosaFanno}\n  Perché sentirli: ${scheda.perche}\n${scheda.chiDecide ? `  Chi decide: ${scheda.chiDecide.testo}${scheda.chiDecide.profilo ? ` (${scheda.chiDecide.profilo})` : ""}\n` : ""}${scheda.chiedereA ? `  Chiedi il contatto a: ${scheda.chiedereA}\n` : ""}${leve.map((x) => `  - ${x.testo}`).join("\n")}\n  ${base}/aziende-trovate/${l.id}`,
     };
   });
 

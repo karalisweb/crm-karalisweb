@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.94.0] - 2026-11-04
+
+### Changed
+- Mail delle 7 (aziende da decidere): per ogni azienda ora dice **Da dove arriva** (Google, Google Maps, LinkedIn, Facebook, Instagram, e cercando cosa: aziende come un tuo cliente, titolari simili, la rete di un membro BNI), **Cosa fanno** (la sintesi letta dal sito; senza sito la descrizione della scheda Google o la pagina LinkedIn), **Perché sentirli** (fanno lo stesso lavoro di un tuo cliente, o sono nella rete di un membro BNI), **Chi decide** con il link al profilo LinkedIn e **Chiedi il contatto a** (i primi contatti in comune). Sotto restano le cose viste dal CRM.
+
 ## [3.93.0] - 2026-11-03
 
 ### Added

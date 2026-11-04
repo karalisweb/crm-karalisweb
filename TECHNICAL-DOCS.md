@@ -1738,6 +1738,11 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   giorni senza COMMENTO; `linkedinFermoPerChrome()` (motore.ts) usato da `/api/oggi` e dalla mail delle 7; avvisi
   "eliminata" con `indirizzoSardo`.
 
+- v3.94 Mail delle 7 (`mail-decisioni.ts`): `schedaAzienda(lead)` ricava origine (`Ritrovamento.canale` + `ChiaveRicerca.tipo/valore`,
+  caso studio, membro BNI), cosa fanno (`lettore.findings.sintesi` → `scheda_google.findings.descrizione` →
+  `linkedin_azienda.summary` → categoria), perché e chi decide (`decision_maker.findings.persone[0]`: profilo, contatti in
+  comune). Nessun costo: solo referti già salvati.
+
 - v3.85 Ricerca a turno: `prioritaChiave()` guarda solo la Sardegna (non più nicchia prima del settore), quindi conta
   `ultimoUsoAt`; `AZIENDE_PER_RICERCA` = 4 limita le nuove di una ricerca (Maps + Google).
 
