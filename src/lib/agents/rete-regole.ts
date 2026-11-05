@@ -197,6 +197,15 @@ export function testoDirettoConPonte(decisore: string, azienda: string, inComune
   return `Buongiorno${decisore.trim() ? ` ${nomeProprio(decisore)}` : ""}, sono Alessio Loi di Karalisweb (Cagliari).${inComune ? ` Abbiamo in comune ${inComune}.` : ""}\n\n${offertaCaso(azienda, gancio, haCaso, false)}\n\nGrazie,\nAlessio`;
 }
 
+/**
+ * v3.103 (Alessio, 2026-11-05: "in da contattare manca il follow up"): chi decide non ha risposto al contatto. Un solo
+ * promemoria, breve e da collega, sullo stesso canale.
+ */
+export function testoFollowupContatto(decisore: string | null): string {
+  const nome = decisore && decisore.trim() && decisore !== "chi decide" ? ` ${nomeProprio(decisore)}` : "";
+  return `Ciao${nome}, ti riscrivo per il messaggio di qualche giorno fa: se ti va ti mando il caso studio, ci metti due minuti a capire se può servire anche a voi. Mi basta un sì. Alessio`;
+}
+
 export function testoPromemoria(ponte: string, decisore: string): string {
   return `Ciao ${nomeProprio(ponte)}, ti riscrivo solo per sapere se sei riuscito a sentire ${decisore}. Nessuna fretta, e se non è il momento va benissimo. Alessio`;
 }

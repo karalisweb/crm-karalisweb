@@ -127,3 +127,12 @@ describe("strade dalla zona (v3.68)", () => {
     expect(strade({ ...conZona, decisori: [] }, ["Maria Laura Uleri"])).toEqual([]);
   });
 });
+
+describe("v3.103 follow-up al contatto", () => {
+  it("breve, col nome proprio, senza chi decide generico", async () => {
+    const { testoFollowupContatto } = await import("../rete-regole");
+    expect(testoFollowupContatto("Mario Rossi")).toMatch(/^Ciao Mario, ti riscrivo/);
+    expect(testoFollowupContatto("chi decide")).toMatch(/^Ciao, ti riscrivo/);
+    expect(testoFollowupContatto(null).length).toBeLessThan(220);
+  });
+});

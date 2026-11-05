@@ -39,6 +39,9 @@ describe("passo 3 — In riscaldamento", () => {
 });
 
 describe("passo 4 — Contatto", () => {
+  it("v3.103: nessuna risposta, il follow-up tocca ad Alessio", () =>
+    expect(passo({ lav: lav({ fase: "CHIESTA", strada: "SCALDATO", decisore: "Mario Rossi" }), voci: [{ id: "f", kind: "RETE_FOLLOWUP", payload: { messaggio: "Ciao Mario" } }] }))
+      .toMatchObject({ passo: 4, tocca: "te", azione: "cassetta", cosa: "Non ha risposto: manda il follow-up a Mario Rossi" }));
   it("al 5° commento: scrivi a chi decide", () =>
     expect(passo({ lav: lav({ strada: "SCALDARE" }), voci: [{ id: "k", kind: "RETE_CONTATTO", payload: { messaggio: "Ciao" } }] })).toMatchObject({ passo: 4, tocca: "te", azione: "cassetta" }));
   it("lo conosci tu: si salta dal 1 al 4", () =>

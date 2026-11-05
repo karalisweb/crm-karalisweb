@@ -17,7 +17,7 @@ import { mezzanotteRoma, norm } from "./bni-regole";
 import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento } from "./motore";
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
-  testoContattoDiretto, testoDirettoConPonte, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
+  testoContattoDiretto, testoDirettoConPonte, testoFollowupContatto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
   COMMENTI_PER_CONTATTO, PIATTAFORME, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
   type PaginaSocial, type Piattaforma,
 } from "./rete-regole";
@@ -37,7 +37,9 @@ export const KIND_COMMENTO = "COMMENTO_LINKEDIN";
 export const KIND_RETE_CONTATTO = "RETE_CONTATTO";
 /** Chi decide non si trova: il messaggio privato alla pagina per arrivare a lui. */
 export const KIND_RETE_PAGINA = "RETE_PAGINA";
-export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA];
+/** v3.103: il follow-up a chi decide che non ha risposto al contatto. */
+export const KIND_RETE_FOLLOWUP = "RETE_FOLLOWUP";
+export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP];
 
 /** Decisori al giorno da scaldare con i commenti (letture LinkedIn). */
 /** Aziende lette dal lavoro "scalda": un po' più dei commenti, perché chi non ha post recenti si salta. */
@@ -112,7 +114,14 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
       await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", tentativi: 0, pausaFino: null, ponteNome: null, ponteMembroId: null, strada: null, chiestaAt: null, promemoriaAt: null } });
       r.rientrate++;
     } else if (azione === "PROMEMORIA") {
-      if (await creaMessaggio(l.id, "PROMEMORIA", oggi)) r.promemoria++;
+      // v3.103: senza ponte (contatto diretto a chi decide) il promemoria è il follow-up a lui.
+      if (await (contattoDiretto(l) ? creaFollowup(l.id) : creaMessaggio(l.id, "PROMEMORIA", oggi))) r.promemoria++;
+    } else if (azione === "CAMBIA_PONTE" && contattoDiretto(l)) {
+      // Nessun ponte da cambiare: senza risposta nemmeno al follow-up, l'azienda va in pausa (torna fra 3 mesi).
+      if (l.promemoriaAt) {
+        await mettiInPausa(l.id, "Nessuna risposta al contatto né al follow-up");
+        r.inPausa++;
+      } else if (await creaFollowup(l.id)) r.promemoria++;
     } else if (azione === "CAMBIA_PONTE") {
       await cambiaPonte(l.id, "Nessuna risposta in 10 giorni");
       r.cambiPonte++;
@@ -443,6 +452,44 @@ export async function cambiaPonte(lavorazioneId: string, motivo: string): Promis
   await chiudiVociAperte(l.leadId, "Superata: si passa al ponte successivo");
 }
 
+const contattoDiretto = (l: { strada: string | null }) => l.strada !== "BNI" && l.strada !== "CERCHIA";
+
+/**
+ * v3.103 (Alessio: "in da contattare manca il follow up"): chi decide non ha risposto al contatto. Un follow-up solo,
+ * sugli stessi canali del primo messaggio (WhatsApp, email, LinkedIn), in Da contattare.
+ */
+export async function creaFollowup(lavorazioneId: string): Promise<boolean> {
+  const l = await db.lavorazione.findUnique({ where: { id: lavorazioneId }, include: { lead: { select: { name: true } } } });
+  if (!l || l.fase !== "CHIESTA" || !l.chiestaAt || l.promemoriaAt) return false;
+  if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_RETE_FOLLOWUP, createdAt: { gte: l.chiestaAt } }, select: { id: true } })) return false;
+  const primo = await db.approvalItem.findFirst({
+    where: { leadId: l.leadId, kind: { in: [KIND_RETE_CONTATTO, KIND_RETE_DIRETTO] }, status: "APPROVATO" },
+    orderBy: { decidedAt: "desc" },
+    select: { payload: true },
+  });
+  const p = (primo?.payload ?? {}) as Record<string, unknown>;
+  const decisore = l.decisore ?? (typeof p.decisore === "string" ? p.decisore : null);
+  await db.approvalItem.create({
+    data: {
+      leadId: l.leadId,
+      kind: KIND_RETE_FOLLOWUP,
+      agent: "rete",
+      title: `Follow-up a ${decisore ? chiDecideTesto(decisore, l.lead.name) : l.lead.name}`,
+      payload: {
+        lavorazioneId: l.id,
+        decisore,
+        azienda: l.lead.name,
+        messaggio: testoFollowupContatto(decisore),
+        canale: p.canale ?? null,
+        telefono: p.telefono ?? null,
+        email: p.email ?? null,
+        linkedin: p.linkedin ?? null,
+      } as Prisma.InputJsonValue,
+    },
+  });
+  return true;
+}
+
 export async function mettiInPausa(lavorazioneId: string, motivo: string, giorni = GIORNI_PAUSA): Promise<void> {
   const l = await db.lavorazione.update({ where: { id: lavorazioneId }, data: { fase: "PAUSA", pausaFino: new Date(Date.now() + giorni * 86400_000), note: motivo } });
   await chiudiVociAperte(l.leadId, "Superata: azienda in pausa");
@@ -707,9 +754,13 @@ export async function decisioneRete(voceId: string, decisione: "APPROVATO" | "SC
   }
   const id = (v.payload as { lavorazioneId?: string } | null)?.lavorazioneId;
   if (!id) return;
+  // "Non serve" sul follow-up: conta come fatto, così a 10 giorni l'azienda va in pausa invece di restare ferma.
+  if (decisione === "SCARTATO" && v.kind === KIND_RETE_FOLLOWUP) await db.lavorazione.updateMany({ where: { id }, data: { promemoriaAt: new Date() } });
   if (decisione === "APPROVATO") {
-    if (v.kind === KIND_RETE_PROMEMORIA) await db.lavorazione.updateMany({ where: { id }, data: { promemoriaAt: new Date() } });
-    if (v.kind === KIND_RETE_PONTE || v.kind === KIND_RETE_DIRETTO) await db.lavorazione.updateMany({ where: { id, fase: "PONTE_SCELTO" }, data: { fase: "CHIESTA", chiestaAt: new Date() } });
+    if (v.kind === KIND_RETE_PROMEMORIA || v.kind === KIND_RETE_FOLLOWUP) await db.lavorazione.updateMany({ where: { id }, data: { promemoriaAt: new Date() } });
+    if (v.kind === KIND_RETE_PONTE) await db.lavorazione.updateMany({ where: { id, fase: "PONTE_SCELTO" }, data: { fase: "CHIESTA", chiestaAt: new Date() } });
+    // v3.103: anche "lo conosci tu" (lavorazione ancora MAPPATA) passa ad "aspetti la risposta", e da lì al follow-up.
+    if (v.kind === KIND_RETE_DIRETTO) await db.lavorazione.updateMany({ where: { id, fase: { in: ["MAPPATA", "PONTE_SCELTO"] } }, data: { fase: "CHIESTA", chiestaAt: new Date() } });
   } else if (v.kind === KIND_RETE_PONTE || v.kind === KIND_RETE_DIRETTO) {
     await cambiaPonte(id, "Ponte scartato da Alessio");
   }

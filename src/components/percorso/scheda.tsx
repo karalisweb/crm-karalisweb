@@ -60,6 +60,22 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
       {inCorso === chiave && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}{etichetta}
     </Button>
   );
+  // v3.103: WhatsApp e LinkedIn si registrano al tocco; l'email parte dal CRM. Tutto finisce nelle attività dell'azienda.
+  const traccia = (canale: "whatsapp" | "linkedin") => {
+    if (x?.tipo !== "cassetta") return;
+    void fetch("/api/percorso/invio", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ voceId: x.voceId, canale }) })
+      .then((r) => { if (r.ok) { toast.success(`Segnato: mandato via ${canale === "whatsapp" ? "WhatsApp" : "LinkedIn"}`); onCambio(); } });
+  };
+  const mandaEmail = async () => {
+    if (x?.tipo !== "cassetta" || !x.email) return;
+    if (!confirm(`Mando l'email a ${x.email} dal CRM? Resta registrata nell'azienda.`)) return;
+    setInCorso("email");
+    const r = await fetch("/api/percorso/invio", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ voceId: x.voceId, canale: "email" }) }).catch(() => null);
+    setInCorso(null);
+    if (!r?.ok) return toast.error((await r?.json().catch(() => null))?.error ?? "L'email non è partita");
+    toast.success("Email mandata e registrata");
+    onCambio();
+  };
   const x = a.azione;
   const lav = a.lavorazioneId ? `/api/rete/lavorazioni/${a.lavorazioneId}` : null;
   return (
@@ -102,11 +118,11 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
           {x.testo && bottone("copia", "Copia il testo", () => { void navigator.clipboard.writeText(x.testo!).then(() => toast.success("Copiato")); })}
           {x.link && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Apri il post</a></Button>}
           {/* Scrivere subito, col testo già dentro (v3.87). */}
-          {x.whatsapp && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer">WhatsApp</a></Button>}
-          {x.email && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`mailto:${x.email}?subject=${encodeURIComponent(x.casoId ? `Un caso studio per ${a.nome}` : `Per ${a.nome}`)}&body=${encodeURIComponent(x.testo ?? "")}`}>Email</a></Button>}
+          {x.whatsapp && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer" onClick={() => traccia("whatsapp")}>WhatsApp</a></Button>}
+          {x.email && x.testo && bottone("email", `Manda email a ${x.email}`, () => { void mandaEmail(); })}
           {/* v3.90: il caso studio da mandare appena dice sì. */}
           {x.casoId && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`/api/ricerca/casi-studio/${x.casoId}/pdf`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Caso studio (PDF)</a></Button>}
-          {x.linkedin && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></Button>}
+          {x.linkedin && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre il profilo e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("linkedin"); }}>Copia e apri LinkedIn</a></Button>}
           {bottone("si", x.si, () => fai("si", `/api/cassetta/${x.voceId}`, "POST", { decisione: "APPROVATO" }, "Fatto: un passo avanti"), "default")}
           {bottone("no", x.no, () => fai("no", `/api/cassetta/${x.voceId}`, "POST", { decisione: "SCARTATO" }, "Segnato"), "ghost")}
         </>}

@@ -78,6 +78,7 @@ export const STATI = {
   scrivi: "Da contattare",
   incontro: "Incontro da fissare",
   risposta: "Aspetti la risposta",
+  followup: "Follow-up da mandare",
   prepara_contatto: "Il CRM prepara il messaggio",
 } as const;
 export type StatoNelPasso = keyof typeof STATI;
@@ -126,6 +127,9 @@ export function passoDi(s: Stato, oggi: Date): Esito {
     const cosa = inComune ? `Scrivi a ${nomeDi(s)}: avete in comune ${inComune}` : viaPonte ? `Scrivi a ${nomeDi(s)}, chi decide` : `Scrivi a ${nomeDi(s)}: lo conosci tu`;
     return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa, azione: daCassetta(diretto, "Mandato", "Non ora") };
   }
+  // v3.103: nessuna risposta al contatto: il follow-up, sullo stesso canale.
+  const followup = voce("RETE_FOLLOWUP");
+  if (followup) return { dentro: true, passo: 4, tocca: "te", stato: "followup", cosa: `Non ha risposto: manda il follow-up a ${nomeDi(s)}`, azione: daCassetta(followup, "Mandato", "Non serve") };
   const conPonte = l.strada === "BNI" || l.strada === "CERCHIA";
   if (l.fase === "CHIESTA" && conPonte && l.presentatoAt) return { dentro: true, passo: 4, tocca: "te", stato: "incontro", cosa: `${l.ponte ?? "Il ponte"} te l'ha presentata: fissa l'incontro con ${nomeDi(s)}`, azione: { tipo: "incontro" } };
   if (l.fase === "CHIESTA" && !conPonte) return { dentro: true, passo: 4, tocca: "attesa", stato: "risposta", cosa: `Hai scritto a ${nomeDi(s)}: aspetti la risposta`, azione: { tipo: "incontro" } };

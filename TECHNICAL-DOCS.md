@@ -1801,6 +1801,14 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   `PATCH /api/ricerca/bni/membri/[id]` `{ telefono }` dove `linkWhatsApp` non trova un numero valido.
 - v3.101 `MODELLO_MESSAGGIO = 3` (nuovo `ESEMPIO_MESSAGGIO`, tono confidenziale, max 300 caratteri): le MESSAGGIO_BNI
   IN_ATTESA col modello 2 le riscrive `riscriviRichiesteVecchie()`.
+- v3.103 Follow-up e tracciamento: `KIND_RETE_FOLLOWUP` ("RETE_FOLLOWUP", in `KINDS_RETE`); `turnoRete` su
+  PROMEMORIA con contatto diretto (strada ≠ BNI/CERCHIA) chiama `creaFollowup()` (canali copiati dall'ultimo
+  RETE_CONTATTO/RETE_DIRETTO approvato, testo `testoFollowupContatto()`); su CAMBIA_PONTE diretto → pausa se il
+  follow-up c'è stato. Approvato o "Non serve" → `promemoriaAt`. `passoDi`: voce RETE_FOLLOWUP → passo 4, stato
+  "followup", tocca a te. `registraInvio()` (invio-tracciato.ts, `POST /api/percorso/invio {voceId, canale}`): email
+  via `sendOutreachEmail`, WhatsApp/LinkedIn solo registrati; voce APPROVATO + `decisioneRete`, attività
+  WHATSAPP_SENT/LINKEDIN_SENT/EMAIL_OUTREACH, `lead.lastContactedAt`. Fix: RETE_DIRETTO approvato porta anche
+  MAPPATA → CHIESTA.
 
 ## Motore 121 (v3.52.0)
 

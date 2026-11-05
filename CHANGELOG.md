@@ -14,6 +14,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.103.0] - 2026-11-05
+
+### Added
+- **Follow-up in Da contattare**: se chi decide non risponde in 5 giorni, il CRM prepara il follow-up ("Ciao …, ti riscrivo per il messaggio di qualche giorno fa…") sugli stessi canali del primo messaggio. Dopo altri 5 giorni senza risposta l'azienda va in pausa (torna fra 3 mesi).
+- **Messaggi tracciati**: l'email parte dal CRM (pulsante "Manda email a …"), non più dal client di posta; WhatsApp e "Copia e apri LinkedIn" si segnano come mandati al tocco. Ogni invio resta nelle attività dell'azienda (canale, data) e fa avanzare il percorso.
+
+### Fixed
+- "Lo conosci tu": dopo "Mandato" l'azienda restava al passo prima; ora passa ad "aspetti la risposta" (e quindi al follow-up).
+
 ## [3.102.0] - 2026-11-05
 
 ### Changed

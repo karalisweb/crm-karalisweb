@@ -41,7 +41,7 @@ export interface Percorso {
 /** Quale voce della Cassetta, approvata, conta come cosa fatta. */
 const COSA_DELLA_VOCE: Record<string, Cosa> = {
   RETE_CONTATTO: "contatta", RETE_DIRETTO: "contatta", RETE_PONTE: "contatta", RETE_PROMEMORIA: "contatta",
-  [KIND_COMMENTO]: "scalda", RETE_PAGINA: "contatta",
+  [KIND_COMMENTO]: "scalda", RETE_PAGINA: "contatta", RETE_FOLLOWUP: "contatta",
 };
 
 export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
