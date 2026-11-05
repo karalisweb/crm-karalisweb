@@ -3,6 +3,7 @@
  * Alessio. Per ognuna chi è, perché è lì e le 3 cose più forti trovate; il pulsante apre la scheda,
  * dove si decide con un tocco (Approfondisci / Scarta).
  */
+import { togliConcorrenti } from "@/lib/concorrenti";
 import { db } from "@/lib/db";
 import { sendInternalHtmlEmail } from "@/lib/email";
 import { KIND_FASCICOLO_BASE } from "./turno";
@@ -95,6 +96,8 @@ export function schedaAzienda(l: LeadMail): {
 }
 
 export async function inviaMailDecisioni(oggi = new Date()): Promise<{ inviata: boolean; aziende: number }> {
+  // v3.97: i concorrenti (marketing, siti, social, LinkedIn) non arrivano in mail.
+  await togliConcorrenti().catch((e) => console.warn("[mail-decisioni] pulizia concorrenti:", e instanceof Error ? e.message : e));
   const voci = await db.approvalItem.findMany({
     // Motore 121: in mail solo le aziende con il collegamento verificato (chi decide è collegato).
     where: { kind: KIND_FASCICOLO_BASE, status: "IN_ATTESA", leadId: { not: null }, lead: { agentReports: { some: { agent: "decision_maker" } } } },

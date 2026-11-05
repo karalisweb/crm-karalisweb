@@ -12,6 +12,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { detectFranchise } from "@/lib/franchise-brands";
+import { NOTA_CONCORRENTE, rilevaConcorrente, togliConcorrenti } from "@/lib/concorrenti";
 import { detectSegment } from "@/lib/segments";
 import { isRealWebsite } from "@/lib/url-utils";
 import { budgetDisponibile } from "@/lib/agents/costi";
@@ -79,6 +80,7 @@ export async function salvaAzienda(a: AziendaTrovata, chiaveId: string | null, c
   let esito: EsitoAzienda["esito"] = "esistente";
   if (!leadId) {
     const catena = detectFranchise(nome, sito);
+    const concorrente = catena ? null : rilevaConcorrente({ nome, categoria: a.categoria, sito });
     const lead = await db.lead.create({
       data: {
         name: nome,
@@ -94,10 +96,11 @@ export async function salvaAzienda(a: AziendaTrovata, chiaveId: string | null, c
         socialUrl: a.social ?? null,
         source: fonte,
         ...(catena && { pipelineStage: "NON_TARGET", notes: `Franchising rilevato (${catena}) — fuori target, scartato in automatico.` }),
+        ...(concorrente && { pipelineStage: "NON_TARGET", notes: NOTA_CONCORRENTE(concorrente) }),
       },
     });
     leadId = lead.id;
-    esito = catena ? "scartata" : "nuova";
+    esito = catena || concorrente ? "scartata" : "nuova";
   }
   if (chiaveId) {
     const gia = await db.ritrovamento.findFirst({ where: { chiaveId, leadId }, select: { id: true } });
@@ -326,6 +329,7 @@ async function nuoveDiOggi(oggi: Date): Promise<number> {
 }
 
 export async function eseguiTurnoRicerca(oggi = new Date(), opzioni: { manuale?: boolean } = {}): Promise<RiepilogoRicerca> {
+  await togliConcorrenti().catch((e) => console.warn("[ricerca] pulizia concorrenti:", e instanceof Error ? e.message : e));
   const r: RiepilogoRicerca = {
     // Lanciata da Alessio: fino a 5 aziende nuove in più, anche se la quota del giorno è già piena.
     casiScaduti: await scadenzeCasi(oggi), nuoveOggiPrima: opzioni.manuale ? 0 : await nuoveDiOggi(oggi), passi: [], nuove: 0, costCents: 0,

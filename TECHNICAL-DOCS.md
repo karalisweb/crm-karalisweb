@@ -1781,6 +1781,11 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.96 Senza nota: istruzioni di `contatta_persona` (registro.ts, ISTRUZIONI.md e compito pianificato): note gratuite
   finite → invito senza nota, findings `senzaNota: true`. Contano solo i fallimenti da `FALLIMENTI_CONTANO_DAL`
   (2026-11-05); `ridaiPossibilita()` rimette IN_ATTESA le voci archiviate con meno di 2 fallimenti da quella data.
+- v3.97 Concorrenti: `src/lib/concorrenti.ts` → `rilevaConcorrente({nome, categoria, sito})` (regex a parole intere sui
+  mestieri di Karalisweb; non usa il ruolo delle persone). `salvaAzienda()` crea il lead già NON_TARGET;
+  `togliConcorrenti()` (idempotente) all'inizio di `eseguiTurnoRicerca()` e `inviaMailDecisioni()` porta in NON_TARGET
+  i lead ancora in gioco e chiude le loro voci IN_ATTESA con `decidedBy: "crm_concorrente"`. `filtraSimili()` ha la
+  regola nel prompt. Compito pianificato degli agenti di browser: `0 8-20/2 * * *`.
 
 ## Motore 121 (v3.52.0)
 

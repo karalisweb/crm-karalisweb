@@ -14,6 +14,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.97.0] - 2026-11-05
+
+### Fixed
+- I **concorrenti** non arrivano più fra le aziende da decidere: chi fa marketing, siti web, social, SEO/campagne, comunicazione o insegna LinkedIn viene riconosciuto da nome, categoria e sito. All'ingresso entra già fuori target; quelli già dentro (es. Carlo Piras, Maria Letizia Russo) vanno in Non target e le loro voci in attesa si chiudono, prima della ricerca e prima della mail delle 7. Anche il filtro AI dei "simili a un tuo cliente" li scarta sempre.
+
+### Changed
+- Gli agenti di browser girano ogni 2 ore (8-20) invece che ogni mezz'ora.
+
 ## [3.96.0] - 2026-11-05
 
 ### Changed
