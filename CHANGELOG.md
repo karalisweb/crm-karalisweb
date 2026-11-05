@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.100.0] - 2026-11-05
+
+### Added
+- Richieste di 121 mandate: dove manca il cellulare del membro c'è **Aggiungi il numero** (anche fra quelle da mandare). Salvato una volta, compare il pulsante WhatsApp.
+- **Follow-up del 121**: a chi non ha ancora risposto il pulsante (prima "Riscrivi") ora si chiama **Manda il follow-up** e apre WhatsApp con un promemoria breve e il link per scegliere giorno e ora, non con la stessa richiesta di prima.
+
 ## [3.99.0] - 2026-11-05
 
 ### Added

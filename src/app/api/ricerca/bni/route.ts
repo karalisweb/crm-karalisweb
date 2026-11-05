@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { db } from "@/lib/db";
-import { caricaCapitoli, statoSettimana, scegliProssimi } from "@/lib/agents/bni";
+import { caricaCapitoli, statoSettimana, scegliProssimi, testoFollowup121 } from "@/lib/agents/bni";
 import { coperturaCapitolo, dirigenzaNota, eSardo, formatoDa, mezzanotteRoma, prossimiDelCapitolo, settimanaDi, visitaDaProporre, CAPITOLI_IN_CORSO, GIORNI_SENZA_RISPOSTA } from "@/lib/agents/bni-regole";
 import { invitiDisponibili, RICHIESTE_SETTIMANA, TETTO_121_SETTIMANA } from "@/lib/agents/motore-121";
 import { statoLinkedinOggi } from "@/lib/agents/motore";
@@ -66,6 +66,7 @@ export async function GET() {
         telefono: p.telefono ?? m.phone,
         perche: p.perche ?? null,
         messaggio: p.messaggio ?? "",
+        followup: testoFollowup121(m.name),
         formato: p.formato ?? null,
         mandataIl: r.status === "APPROVATO" ? (r.decidedAt ?? r.createdAt) : null,
         conosciuto: m.conosciuto,

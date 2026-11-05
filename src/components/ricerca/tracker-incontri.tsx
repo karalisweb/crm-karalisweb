@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CalendarClock, Check, Copy, MessageCircle, Pencil, X } from "lucide-react";
+import { CalendarClock, Check, Copy, MessageCircle, Pencil, Phone, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { localeAIso } from "@/components/vendita/call-fissata-dialog";
@@ -21,6 +21,8 @@ export interface RigaRichiesta {
   telefono: string | null;
   perche: string | null;
   messaggio: string;
+  /** v3.100: il promemoria per chi non ha ancora risposto. */
+  followup?: string;
   formato: string | null;
   mandataIl: string | null;
 }
@@ -76,6 +78,34 @@ function FissaData({ membroId, onFatto }: { membroId: string; onFatto: () => voi
   );
 }
 
+/**
+ * v3.100 (Alessio: "perché a volte c'è il riscrivi e a volte no?"): WhatsApp si apre solo col cellulare del membro.
+ * Dove manca, lo si scrive qui una volta e da lì compaiono "Manda su WhatsApp" e "Riscrivi".
+ */
+function AggiungiNumero({ membroId, onFatto }: { membroId: string; onFatto: () => void }) {
+  const [aperto, setAperto] = useState(false);
+  const [numero, setNumero] = useState("");
+  const [occupato, setOccupato] = useState(false);
+  async function salva() {
+    if (!linkWhatsApp(numero, "")) return toast.error("Scrivi un cellulare valido, es. 347 1234567");
+    setOccupato(true);
+    const res = await fetch(`/api/ricerca/bni/membri/${membroId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ telefono: numero.trim() }) });
+    setOccupato(false);
+    if (!res.ok) return toast.error("Non sono riuscito a salvare il numero");
+    toast.success("Numero salvato");
+    setAperto(false);
+    onFatto();
+  }
+  if (!aperto) return <Button size="sm" variant="ghost" onClick={() => setAperto(true)}><Phone className="h-3.5 w-3.5 mr-1" /> Aggiungi il numero</Button>;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input type="tel" inputMode="tel" placeholder="Cellulare" value={numero} onChange={(e) => setNumero(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void salva(); }} className="h-8 w-40" autoFocus />
+      <Button size="sm" onClick={salva} disabled={occupato}>Salva</Button>
+      <Button size="sm" variant="ghost" onClick={() => setAperto(false)}>Annulla</Button>
+    </div>
+  );
+}
+
 export function DaMandare({ r, onFatto }: { r: RigaRichiesta; onFatto: () => void }) {
   const [occupato, setOccupato] = useState(false);
   const [testo, setTesto] = useState(r.messaggio);
@@ -122,7 +152,10 @@ export function DaMandare({ r, onFatto }: { r: RigaRichiesta; onFatto: () => voi
         {wa ? (
           <a href={wa} target="_blank" rel="noopener noreferrer"><Button size="sm"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Manda su WhatsApp</Button></a>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(testo).then(() => toast.success("Copiato"))}><Copy className="h-3.5 w-3.5 mr-1" /> Copia (manca il telefono)</Button>
+          <>
+            <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(testo).then(() => toast.success("Copiato"))}><Copy className="h-3.5 w-3.5 mr-1" /> Copia (manca il telefono)</Button>
+            <AggiungiNumero membroId={r.membroId} onFatto={onFatto} />
+          </>
         )}
         <Button size="sm" variant="outline" onClick={() => decidi("APPROVATO")} disabled={occupato}><Check className="h-3.5 w-3.5 mr-1" /> Mandato</Button>
         <Button size="sm" variant="ghost" onClick={() => decidi("SCARTATO")} disabled={occupato}><X className="h-3.5 w-3.5 mr-1" /> Non ora</Button>
@@ -132,7 +165,8 @@ export function DaMandare({ r, onFatto }: { r: RigaRichiesta; onFatto: () => voi
 }
 
 function RigaSemplice({ r, nota, onFatto }: { r: RigaRichiesta; nota: string; onFatto: () => void }) {
-  const wa = linkWhatsApp(r.telefono, r.messaggio);
+  // v3.100: a chi non ha risposto si manda il promemoria, non la stessa richiesta.
+  const wa = linkWhatsApp(r.telefono, r.followup ?? r.messaggio);
   return (
     <Card><CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
       <div className="min-w-0">
@@ -140,7 +174,7 @@ function RigaSemplice({ r, nota, onFatto }: { r: RigaRichiesta; nota: string; on
         <div className="text-xs text-muted-foreground">{r.capitolo} · {nota}</div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {wa && <a href={wa} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="ghost"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Riscrivi</Button></a>}
+        {wa ? <a href={wa} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="ghost"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Manda il follow-up</Button></a> : <AggiungiNumero membroId={r.membroId} onFatto={onFatto} />}
         <FissaData membroId={r.membroId} onFatto={onFatto} />
       </div>
     </CardContent></Card>

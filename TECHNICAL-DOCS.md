@@ -1796,6 +1796,9 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   lavorazione MAPPATA/PONTE_SCELTO, chiude le voci RETE_*/COMMENTO (`crm_bni`) e i lavori contatta_persona/scalda;
   `accodaContatti`/`accodaScalda` saltano i lead con un membro BNI ATTIVO. Oggi: componente `Sezione` (`<details>`,
   stato in localStorage `oggi:<id>`); `togliConcorrenti()` anche in `/api/oggi` (ogni 15 minuti).
+- v3.100 121 BNI: `testoFollowup121(nome)` (bni.ts) → campo `followup` delle righe di `GET /api/ricerca/bni`;
+  `RigaSemplice` (tracker-incontri.tsx) apre WhatsApp col follow-up; `AggiungiNumero` salva il cellulare con
+  `PATCH /api/ricerca/bni/membri/[id]` `{ telefono }` dove `linkWhatsApp` non trova un numero valido.
 
 ## Motore 121 (v3.52.0)
 

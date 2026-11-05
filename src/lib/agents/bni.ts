@@ -623,6 +623,16 @@ const NOTE_MOTIVO: Record<Motivo, string> = {
 
 /** Il link alle disponibilità di Alessio (Google Calendar), messo in ogni richiesta di 121. */
 export const LINK_DISPONIBILITA = process.env.BNI_LINK_DISPONIBILITA || "https://calendar.app.google/XUssH72ZnzNSB6fy6";
+
+/**
+ * v3.100 (Alessio, 2026-11-05: "devi mettere un messaggio di followup"): "Riscrivi" non rimanda la stessa richiesta,
+ * manda un promemoria breve e gentile, con il link per scegliere la data.
+ */
+export function testoFollowup121(nome: string): string {
+  const primo = nome.trim().split(/\s+/)[0] ?? "";
+  const ciao = primo ? `Ciao ${primo.charAt(0).toUpperCase()}${primo.slice(1).toLowerCase()}` : "Ciao";
+  return `${ciao}, ti riscrivo per il 121 che ti avevo proposto qualche giorno fa: mi farebbe piacere conoscerti e capire chi posso presentarti. Se ti va, scegli tu giorno e ora qui: ${LINK_DISPONIBILITA}\nAlessio Loi (Karalisweb)`;
+}
 /** Versione del modello di messaggio: le richieste in attesa scritte col modello vecchio si riscrivono. */
 const MODELLO_MESSAGGIO = 2;
 
