@@ -11,23 +11,20 @@ const base: DatiReport = {
   url: "https://crm.example",
 };
 
-describe("report del mattino", () => {
-  it("mette prima le cose di oggi e conta solo quelle nell'oggetto", () => {
+describe("report del mattino (v3.98: solo ieri)", () => {
+  it("dice solo com'è andata ieri e i soldi, niente cose da fare", () => {
     const r = componiReport(base);
-    expect(r.oggetto).toBe("☀️ Oggi: 3 cose da fare");
-    expect(r.testo.indexOf("OGGI")).toBeLessThan(r.testo.indexOf("IERI"));
-    expect(r.testo).toContain("121 alle 10:20 con Sergio Piras");
+    expect(r.oggetto).toBe("📅 Com'è andata ieri");
+    expect(r.testo).toContain("IERI");
+    expect(r.testo).not.toContain("OGGI");
+    expect(r.testo).not.toContain("121 alle 10:20 con Sergio Piras");
+    expect(r.testo).not.toContain("DA SISTEMARE");
+    expect(r.testo).not.toContain("Cassetta");
     expect(r.testo).toContain("Il CRM da solo: 4 commenti pubblicati, 1 messaggio LinkedIn a chi decide");
     expect(r.testo).toContain("8.000 € in ballo");
   });
 
-  it("nasconde il blocco da sistemare se non c'è niente", () => {
-    expect(componiReport(base).testo).not.toContain("DA SISTEMARE");
-    expect(componiReport({ ...base, daSistemare: { presentazioniFerme: 2, segnalazioni: 0 } }).testo).toContain("DA SISTEMARE");
-  });
-
-  it("scappa i nomi nell'HTML", () => {
-    const r = componiReport({ ...base, oggi: { ...base.oggi, incontri: [{ nome: "A <b>", ora: "9:00" }] } });
-    expect(r.html).toContain("A &lt;b&gt;");
+  it("ha il pulsante per aprire Oggi", () => {
+    expect(componiReport(base).html).toContain("apri Oggi");
   });
 });

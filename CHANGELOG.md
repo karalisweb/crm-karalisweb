@@ -19,6 +19,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ### Changed
 - Il **Cartografo BNI** mappa solo la **Sardegna** (ogni 30 giorni): non mette più in coda Lazio, Lombardia e le altre regioni, nemmeno se ci sono capitoli di fuori senza membri. Deciso da Alessio.
 
+## [3.98.0] - 2026-11-05
+
+### Changed
+- Le cose da fare stanno solo in **Oggi**. La mail delle 6 dice solo com'è andata ieri (e i soldi), con il pulsante per aprire Oggi. La mail delle 7 con le aziende da decidere non parte più: le aziende sono in Oggi. Alle 7 il CRM toglie comunque i concorrenti.
+
 ## [3.97.0] - 2026-11-05
 
 ### Fixed

@@ -1786,6 +1786,8 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   `togliConcorrenti()` (idempotente) all'inizio di `eseguiTurnoRicerca()` e `inviaMailDecisioni()` porta in NON_TARGET
   i lead ancora in gioco e chiude le loro voci IN_ATTESA con `decidedBy: "crm_concorrente"`. `filtraSimili()` ha la
   regola nel prompt. Compito pianificato degli agenti di browser: `0 8-20/2 * * *`.
+- v3.98 Mail: `componiReport()` solo IERI + SOLDI (oggetto "Com'è andata ieri"); `/api/cron/mail-decisioni` non manda
+  più la mail (`inviaMailDecisioni` resta nel codice, non chiamata) e fa solo `togliConcorrenti()`.
 
 ## Motore 121 (v3.52.0)
 

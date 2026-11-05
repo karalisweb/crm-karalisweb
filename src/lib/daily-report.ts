@@ -87,23 +87,23 @@ function righe(d: DatiReport) {
   return { oggi, ieri, soldi, sistemare };
 }
 
+/**
+ * v3.98 (Alessio, 2026-11-05: "via mail lascerei solo un recap del giorno prima"): la mail delle 6 dice solo com'è
+ * andata ieri (e i soldi). Le cose da fare stanno in Oggi, nell'app: qui c'è solo il pulsante per aprirla.
+ */
 export function componiReport(d: DatiReport): { oggetto: string; testo: string; html: string } {
   const r = righe(d);
-  const n = r.oggi.length;
-  const oggetto = n ? `☀️ Oggi: ${plur(n, "cosa", "cose")} da fare` : "☀️ Oggi niente in agenda";
+  const oggetto = "📅 Com'è andata ieri";
 
   const blocchi: [string, string[]][] = [
-    ["📌 OGGI", n ? r.oggi : ["Niente in agenda"]],
     ["📅 IERI", r.ieri],
     ["💰 SOLDI", r.soldi],
   ];
-  if (r.sistemare.length) blocchi.push(["⚠️ DA SISTEMARE", r.sistemare]);
 
   const testo =
     `Buongiorno Alessio, ${d.giorno}\n\n` +
     blocchi.map(([t, rr]) => `${t}\n${rr.map((x) => `• ${x}`).join("\n")}`).join("\n\n") +
-    `\n\nApri Oggi: ${d.url}/\n` +
-    `(In Cassetta in tutto: ${d.cassettaTotale})\n`;
+    `\n\nLe cose da fare oggi sono in Oggi: ${d.url}/\n`;
 
   const sezione = ([titolo, rr]: [string, string[]]) =>
     `<tr><td style="padding:20px 0 6px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#6b7280">${esc(titolo)}</td></tr>` +
@@ -114,8 +114,7 @@ export function componiReport(d: DatiReport): { oggetto: string; testo: string; 
     `<p style="font-size:19px;margin:0 0 2px"><b>Buongiorno Alessio</b></p>` +
     `<p style="font-size:14px;color:#6b7280;margin:0">${esc(d.giorno)}</p>` +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${blocchi.map(sezione).join("")}</table>` +
-    `<p style="margin:26px 0 8px"><a href="${d.url}/" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:8px">Apri Oggi</a></p>` +
-    `<p style="font-size:12px;color:#9ca3af;margin:12px 0 0">In Cassetta in tutto: ${d.cassettaTotale}</p>` +
+    `<p style="margin:26px 0 8px"><a href="${d.url}/" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:8px">Le cose da fare: apri Oggi</a></p>` +
     `</div>`;
 
   return { oggetto, testo, html };
