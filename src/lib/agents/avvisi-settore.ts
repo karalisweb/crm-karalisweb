@@ -30,6 +30,8 @@ export const KIND_AVVISO_SETTORE = "AVVISO_SETTORE";
 const AVVISI_PER_TURNO = 15;
 /** v3.90 (Alessio: "una volta che ho cliccato 5 sì, scrivimi il messaggio non deve continuare"): richieste di 121 dagli avvisi al giorno. */
 export const MESSAGGI_121_AL_GIORNO = 5;
+/** v3.104 (Alessio, 2026-11-05: "anziché farmi cliccare solo 5 al giorno lui continua all'infinito"): 5 avvisi al giorno in tutto, qualunque risposta. */
+export const AVVISI_AL_GIORNO = 5;
 const SIGLE_SARDEGNA = ["CA", "SU", "SS", "NU", "OR"];
 
 export type DoveAvviso = "BNI" | "LINKEDIN" | "ELIMINATA";

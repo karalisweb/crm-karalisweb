@@ -23,6 +23,7 @@ interface Oggi {
   call: { id: string; nome: string; quando: string }[];
   avvisiSettore: { id: string; azienda: string; perche: string | null; righe: string[]; cosaFare: string; bottone: string; link: string; membroDaConoscere: string | null }[];
   messaggi121: { oggi: number; massimo: number };
+  avvisiOggi: { decisi: number; massimo: number };
   vendita: { trattativaId: string; nome: string; testo: string; giorniDiRitardo: number }[];
   settimana: { fatti: number; fissati: number; obiettivo: number; richiesteAperte: number };
   sardegna: { conosciuti: number; totale: number };
@@ -111,7 +112,8 @@ export default function HomePage() {
     if (r && (r.ok || r.status === 409)) {
       setD((x) => (x ? { ...x, avvisiSettore: x.avvisiSettore.filter((a) => a.id !== id) } : x));
       // Il sì prepara un messaggio o porta l'azienda fra quelle di oggi: si ricarica il resto della pagina.
-      if (decisione === "APPROVATO") {
+      // v3.104: anche il no, perché conta nei 5 di oggi.
+      {
         // Si tiene l'ordine di prima, ma si tolgono quelle che oggi non vanno più (es. i 5 messaggi 121 già fatti).
         fetch("/api/oggi").then((r) => r.json()).then((n: Oggi) => setD((x) => {
           if (!x) return n;
@@ -186,13 +188,13 @@ export default function HomePage() {
         </CardContent></Card>
       )}
 
-      {d.messaggi121.oggi >= d.messaggi121.massimo && (
-        <p className="text-xs text-muted-foreground">Oggi hai già chiesto {d.messaggi121.oggi} incontri BNI dalle aziende dei tuoi settori: basta così, gli altri membri tornano domani.</p>
-      )}
-
-      {d.avvisiSettore.length > 0 && (
-        <Sezione id="settori" titolo="Aziende sarde dei tuoi settori, trovate in BNI e su LinkedIn" conteggio={d.avvisiSettore.length}>
-          <p className="text-xs text-muted-foreground">Per ognuna: sì o no. Deciso, sparisce.{d.avvisiSettore.length > AVVISI_VISIBILI && ` Ne vedi ${AVVISI_VISIBILI} alla volta: ne restano altre ${d.avvisiSettore.length - AVVISI_VISIBILI}.`}</p>
+      {(d.avvisiSettore.length > 0 || d.avvisiOggi.decisi > 0) && (
+        <Sezione id="settori" titolo="Aziende sarde dei tuoi settori, trovate in BNI e su LinkedIn" conteggio={`${Math.min(d.avvisiOggi.decisi, d.avvisiOggi.massimo)} di ${d.avvisiOggi.massimo} oggi`}>
+          {d.avvisiSettore.length === 0 ? (
+            <div className="flex items-center gap-2 rounded-lg border p-3 text-sm text-green-600 dark:text-green-400"><CheckCircle2 className="h-4 w-4" />Per oggi hai finito: domani altre {d.avvisiOggi.massimo}.</div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Per ognuna: sì o no. Deciso, sparisce. {d.avvisiOggi.massimo} al giorno: domani le prossime.</p>
+          )}
           {d.avvisiSettore.slice(0, AVVISI_VISIBILI).map((a) => (
             <div key={a.id} className="rounded-lg border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
               <div>

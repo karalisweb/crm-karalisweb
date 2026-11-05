@@ -1809,6 +1809,8 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   via `sendOutreachEmail`, WhatsApp/LinkedIn solo registrati; voce APPROVATO + `decisioneRete`, attività
   WHATSAPP_SENT/LINKEDIN_SENT/EMAIL_OUTREACH, `lead.lastContactedAt`. Fix: RETE_DIRETTO approvato porta anche
   MAPPATA → CHIESTA.
+- v3.104 `AVVISI_AL_GIORNO = 5` (avvisi-settore.ts): `/api/oggi` conta gli AVVISO_SETTORE decisi oggi da Alessio
+  (`decidedBy = userId`) e restituisce solo i rimanenti + `avvisiOggi { decisi, massimo }`.
 
 ## Motore 121 (v3.52.0)
 

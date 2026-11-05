@@ -6,7 +6,7 @@ import { coperturaCapitolo, eSardo, mezzanotteRoma } from "@/lib/agents/bni-rego
 import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 import { AZIENDE_AL_GIORNO } from "@/lib/ricerca/regole";
 import { daChiedereA } from "@/lib/agents/presentazioni";
-import { KIND_AVVISO_SETTORE, MESSAGGI_121_AL_GIORNO, avvisaSettori } from "@/lib/agents/avvisi-settore";
+import { AVVISI_AL_GIORNO, KIND_AVVISO_SETTORE, MESSAGGI_121_AL_GIORNO, avvisaSettori } from "@/lib/agents/avvisi-settore";
 import { linkedinFermoPerChrome } from "@/lib/agents/motore";
 import { promemoriaVendita } from "@/lib/vendita/config";
 import { togliConcorrenti } from "@/lib/concorrenti";
@@ -55,6 +55,9 @@ export async function GET() {
   // v3.90: fatti i 5 "Sì, scrivimi il messaggio" di oggi, gli altri membri BNI tornano domani.
   const messaggi121Oggi = await db.approvalItem.count({ where: { kind: KIND_AVVISO_SETTORE, status: "APPROVATO", decidedAt: { gte: oggi }, payload: { path: ["azione"], equals: "121" } } });
   const basta121 = messaggi121Oggi >= MESSAGGI_121_AL_GIORNO;
+  // v3.104: 5 avvisi al giorno in tutto (sì, no o "lo conosco già"): decisi i 5, gli altri tornano domani.
+  const avvisiDecisiOggi = await db.approvalItem.count({ where: { kind: KIND_AVVISO_SETTORE, status: { in: ["APPROVATO", "SCARTATO"] }, decidedAt: { gte: oggi }, decidedBy: gate.userId } });
+  const avvisiRimasti = Math.max(0, AVVISI_AL_GIORNO - avvisiDecisiOggi);
   const sardi = tutti.filter((t) => eSardo(t.capitolo)).flatMap((t) => t.membri);
   const copertura = coperturaCapitolo(sardi);
 
@@ -97,7 +100,9 @@ export async function GET() {
       })
       .filter((a) => a !== null)
       .sort((a, b) => a.ordine - b.ordine)
+      .slice(0, avvisiRimasti)
       .map(({ ordine: _o, ...a }) => a),
+    avvisiOggi: { decisi: avvisiDecisiOggi, massimo: AVVISI_AL_GIORNO },
     messaggi121: { oggi: messaggi121Oggi, massimo: MESSAGGI_121_AL_GIORNO },
     // v3.93: le trattative ferme nel loro passo (fissare la call, mandare il preventivo, richiamare).
     vendita: await promemoriaVendita(ora).catch(() => []),

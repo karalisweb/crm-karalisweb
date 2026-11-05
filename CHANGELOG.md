@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.104.0] - 2026-11-05
+
+### Changed
+- Oggi, "Aziende sarde dei tuoi settori": **5 al giorno in tutto**, qualunque risposta (sì, no, lo conosco già). Prima ogni scelta faceva entrare la successiva all'infinito. Fatte le 5 compare "Per oggi hai finito: domani altre 5"; il titolo dice quante ne hai fatte (es. "2 di 5 oggi").
+
 ## [3.103.0] - 2026-11-05
 
 ### Added
