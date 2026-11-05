@@ -263,12 +263,11 @@ export function settimanaDi(oggi: Date): { inizio: Date; fine: Date } {
   return { inizio, fine: new Date(inizio.getTime() + 7 * 86400_000) };
 }
 
-/** Le regioni da mappare, nell'ordine: prima la Sardegna. */
-export const REGIONI_ITALIA = [
-  "Sardegna", "Lazio", "Lombardia", "Toscana", "Emilia-Romagna", "Veneto", "Piemonte", "Campania", "Sicilia",
-  "Puglia", "Liguria", "Marche", "Umbria", "Abruzzo", "Friuli-Venezia Giulia", "Trentino-Alto Adige",
-  "Calabria", "Basilicata", "Molise", "Valle d'Aosta",
-] as const;
+/**
+ * Le regioni da mappare. Solo la Sardegna (Alessio, 2026-11-05: "Solo Sardegna"): le altre
+ * regioni non si mappano più, anche se ci sono capitoli già importati (es. Lazio).
+ */
+export const REGIONI_ITALIA = ["Sardegna"] as const;
 
 /** Ogni quanto si rilegge una regione su BNI Connect (i ruoli cambiano). */
 export function giorniTraMappe(regione: string): number {

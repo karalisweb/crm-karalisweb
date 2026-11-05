@@ -477,8 +477,11 @@ async function accodaMappa(tutti: CapitoloCaricato[], oggi: Date): Promise<numbe
   });
   const ultimaVolta = (regione: string) =>
     Math.max(0, ...recenti.filter((x) => norm((x.input as { regione?: string } | null)?.regione) === norm(regione)).map((x) => x.queuedAt.getTime()));
-  // Prima le regioni dei capitoli senza membri, poi l'ordine fisso (Sardegna per prima).
-  const senzaMembri = tutti.filter((t) => !t.membri.length && t.capitolo.regioneItaliana).map((t) => t.capitolo.regioneItaliana!);
+  // Solo le regioni ammesse (oggi la sola Sardegna): prima quelle con capitoli senza membri.
+  const ammesse = new Set(REGIONI_ITALIA.map((g) => norm(g)));
+  const senzaMembri = tutti
+    .filter((t) => !t.membri.length && t.capitolo.regioneItaliana && ammesse.has(norm(t.capitolo.regioneItaliana)))
+    .map((t) => t.capitolo.regioneItaliana!);
   const regione = [...senzaMembri, ...REGIONI_ITALIA].find((g) => oggi.getTime() - ultimaVolta(g) > giorniTraMappe(g) * 86400_000);
   if (!regione) return 0;
   await db.agentRun.create({ data: { agent: "cartografo_bni", status: "IN_CODA", input: { regione } } });

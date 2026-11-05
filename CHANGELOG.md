@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.98.0] - 2026-11-05
+
+### Changed
+- Il **Cartografo BNI** mappa solo la **Sardegna** (ogni 30 giorni): non mette più in coda Lazio, Lombardia e le altre regioni, nemmeno se ci sono capitoli di fuori senza membri. Deciso da Alessio.
+
 ## [3.97.0] - 2026-11-05
 
 ### Fixed
