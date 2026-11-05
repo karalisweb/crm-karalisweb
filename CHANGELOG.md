@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.102.0] - 2026-11-05
+
+### Changed
+- Oggi: il titolo di ogni blocco ora si vede che si apre e si chiude (sfondo, freccia a sinistra, numero a destra). Anche "Le aziende di oggi" si chiude tutta.
+
 ## [3.101.0] - 2026-11-05
 
 ### Changed

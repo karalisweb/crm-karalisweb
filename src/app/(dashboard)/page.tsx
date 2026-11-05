@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ArrowRight, Bell, CalendarClock, CheckCircle2, ChevronDown, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, CalendarClock, CheckCircle2, ChevronRight, Trash2 } from "lucide-react";
 import { dataOra } from "@/components/ricerca/etichette";
 import { NuovaRichiestaDialog } from "@/components/vendita/nuova-richiesta-dialog";
 import { type AziendaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
@@ -41,12 +41,15 @@ function Sezione({ id, titolo, conteggio, children }: { id: string; titolo: Reac
     if (ref.current && localStorage.getItem(`oggi:${id}`) === "0") ref.current.open = false;
   }, [id]);
   return (
-    <details ref={ref} open className="group rounded-lg border" onToggle={(e) => localStorage.setItem(`oggi:${id}`, e.currentTarget.open ? "1" : "0")}>
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 [&::-webkit-details-marker]:hidden">
-        <span className="font-semibold min-w-0">{titolo}</span>
-        <span className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">{conteggio}<ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" /></span>
+    <details ref={ref} open className="group rounded-lg border overflow-hidden" onToggle={(e) => localStorage.setItem(`oggi:${id}`, e.currentTarget.open ? "1" : "0")}>
+      <summary className="flex cursor-pointer select-none list-none items-center justify-between gap-3 bg-muted/50 hover:bg-muted p-3 transition [&::-webkit-details-marker]:hidden" title="Tocca per chiudere o aprire">
+        <span className="flex items-center gap-2 font-semibold min-w-0">
+          <ChevronRight className="h-5 w-5 shrink-0 text-primary transition-transform group-open:rotate-90" />
+          <span className="min-w-0">{titolo}</span>
+        </span>
+        {conteggio != null && <span className="rounded-full bg-background px-2.5 py-0.5 text-sm text-muted-foreground shrink-0">{conteggio}</span>}
       </summary>
-      <div className="space-y-2 px-3 pb-3">{children}</div>
+      <div className="space-y-2 p-3">{children}</div>
     </details>
   );
 }
@@ -211,9 +214,8 @@ export default function HomePage() {
       )}
 
       {p && (
-        <section className="space-y-4">
+        <Sezione id="aziende" titolo="Le aziende di oggi" conteggio={`${COSE.reduce((n, c) => n + p.oggi[c.k].length, 0)} da fare`}>
           <div>
-            <h2 className="font-semibold">Le aziende di oggi</h2>
             <p className="text-xs text-muted-foreground">Il riassunto del <Link href="/percorso" className="underline">Percorso</Link>: tocca un&apos;azienda e la apri lì, dove decidi.</p>
           </div>
           {COSE.map(({ k, titolo, spiega }) => {
@@ -277,7 +279,7 @@ export default function HomePage() {
               </Sezione>
             );
           })}
-        </section>
+        </Sezione>
       )}
 
       {cose.length > 0 && (
