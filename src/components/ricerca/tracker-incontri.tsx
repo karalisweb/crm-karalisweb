@@ -25,6 +25,8 @@ export interface RigaRichiesta {
   followup?: string;
   formato: string | null;
   mandataIl: string | null;
+  /** v3.105: quando è partito il follow-up (null = non ancora). */
+  followupAt?: string | null;
 }
 export interface Tracker {
   daMandare: RigaRichiesta[];
@@ -167,14 +169,20 @@ export function DaMandare({ r, onFatto }: { r: RigaRichiesta; onFatto: () => voi
 function RigaSemplice({ r, nota, onFatto }: { r: RigaRichiesta; nota: string; onFatto: () => void }) {
   // v3.100: a chi non ha risposto si manda il promemoria, non la stessa richiesta.
   const wa = linkWhatsApp(r.telefono, r.followup ?? r.messaggio);
+  // v3.105: il tocco registra il follow-up: la richiesta torna in "Aspetto risposta" per altre 72 ore.
+  const registraFollowup = () => {
+    void fetch(`/api/ricerca/bni/richieste/${r.voceId}`, { method: "PATCH", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ followup: true }) })
+      .then((res) => { if (res.ok) { toast.success("Follow-up segnato: torna in Aspetto risposta"); onFatto(); } else toast.error("Non sono riuscito a segnare il follow-up"); });
+  };
   return (
     <Card><CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
       <div className="min-w-0">
         <Link href={`/bni/membri/${r.membroId}`} className="font-medium hover:underline">{r.nome}</Link>
         <div className="text-xs text-muted-foreground">{r.capitolo} · {nota}</div>
+        {r.followupAt && <div className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Follow-up già mandato {giorniFa(r.followupAt)}</div>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {wa ? <a href={wa} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="ghost"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Manda il follow-up</Button></a> : <AggiungiNumero membroId={r.membroId} onFatto={onFatto} />}
+        {r.followupAt ? null : wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={registraFollowup}><Button size="sm" variant="ghost"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Manda il follow-up</Button></a> : <AggiungiNumero membroId={r.membroId} onFatto={onFatto} />}
         <FissaData membroId={r.membroId} onFatto={onFatto} />
       </div>
     </CardContent></Card>
@@ -207,8 +215,8 @@ export function TrackerIncontri({ tracker, fissati, visite = [], onCambio }: { t
   ];
   const vuoto: Record<Scheda, string> = {
     daMandare: "Nessun messaggio da mandare. Ogni mattina alle 7 arrivano i prossimi (o premi \"Prepara le richieste adesso\").",
-    inAttesa: "Nessuno: chi ha ricevuto il messaggio negli ultimi 7 giorni compare qui.",
-    senzaRisposta: "Nessuno: chi non risponde da più di 7 giorni compare qui.",
+    inAttesa: "Nessuno: chi ha ricevuto il messaggio (o il follow-up) nelle ultime 72 ore compare qui.",
+    senzaRisposta: "Nessuno: chi non risponde da più di 72 ore compare qui.",
     fissati: "Nessun incontro in calendario.",
     fatti: "Nessun incontro registrato nelle ultime due settimane.",
   };

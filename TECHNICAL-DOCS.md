@@ -1811,6 +1811,9 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   MAPPATA → CHIESTA.
 - v3.104 `AVVISI_AL_GIORNO = 5` (avvisi-settore.ts): `/api/oggi` conta gli AVVISO_SETTORE decisi oggi da Alessio
   (`decidedBy = userId`) e restituisce solo i rimanenti + `avvisiOggi { decisi, massimo }`.
+- v3.105 121 BNI: `PATCH /api/ricerca/bni/richieste/[id] { followup: true }` salva `payload.followupAt` sulla MESSAGGIO_BNI
+  APPROVATO; `GET /api/ricerca/bni` usa `ORE_SENZA_RISPOSTA = 72` contando da `followupAt ?? mandataIl` (solo per le
+  schede; `GIORNI_SENZA_RISPOSTA = 7` resta per le altre regole).
 
 ## Motore 121 (v3.52.0)
 

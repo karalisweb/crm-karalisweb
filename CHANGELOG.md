@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.105.0] - 2026-11-05
+
+### Changed
+- Richieste di 121: **"Manda il follow-up" si registra al tocco**. La richiesta torna in "Aspetto risposta" e la riga dice "Follow-up già mandato …" (il pulsante non c'è più, così non lo mandi due volte).
+- **72 ore** per passare in "Non hanno risposto" (prima 7 giorni), contate dall'ultimo messaggio: la richiesta o il follow-up.
+
 ## [3.104.0] - 2026-11-05
 
 ### Changed

@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { caricaCapitoli, statoSettimana, scegliProssimi, testoFollowup121 } from "@/lib/agents/bni";
 import { coperturaCapitolo, dirigenzaNota, eSardo, formatoDa, mezzanotteRoma, prossimiDelCapitolo, settimanaDi, visitaDaProporre, CAPITOLI_IN_CORSO, GIORNI_SENZA_RISPOSTA } from "@/lib/agents/bni-regole";
 import { invitiDisponibili, RICHIESTE_SETTIMANA, TETTO_121_SETTIMANA } from "@/lib/agents/motore-121";
+
+/** v3.105: dopo 72 ore senza risposta (alla richiesta o al follow-up) la richiesta passa in "Non hanno risposto". */
+const ORE_SENZA_RISPOSTA = 72;
 import { statoLinkedinOggi } from "@/lib/agents/motore";
 
 /**
@@ -22,7 +25,10 @@ export async function GET() {
   const inCorso = new Set(ordineInCorso.slice(0, CAPITOLI_IN_CORSO));
 
   const membriPerId = new Map(tutti.flatMap((t) => t.membri.map((m) => [m.id, { ...m, capitolo: t.capitolo.name }] as const)));
-  const limiteRisposta = oggi.getTime() - GIORNI_SENZA_RISPOSTA * 86400_000;
+  // v3.105 (Alessio, 2026-11-05): "se dopo 72 ore non risponde" passa in "Non hanno risposto". Si conta dall'ultimo
+  // messaggio: la richiesta, o il follow-up se l'ha mandato. (GIORNI_SENZA_RISPOSTA resta per le altre regole BNI.)
+  void GIORNI_SENZA_RISPOSTA;
+  const limiteRisposta = oggi.getTime() - ORE_SENZA_RISPOSTA * 3600_000;
   const [calendario, richieste, fattiRecenti, voci] = await Promise.all([
     db.bniMembro.findMany({
       where: { next121At: { gte: new Date(oggi.getTime() - 86400_000) } },
@@ -57,7 +63,7 @@ export async function GET() {
     .filter((r) => r.bniMembroId && membriPerId.has(r.bniMembroId) && !viste.has(r.bniMembroId) && viste.add(r.bniMembroId))
     .map((r) => {
       const m = membriPerId.get(r.bniMembroId!)!;
-      const p = r.payload as { perche?: string; messaggio?: string; telefono?: string | null; formato?: string };
+      const p = r.payload as { perche?: string; messaggio?: string; telefono?: string | null; formato?: string; followupAt?: string };
       return {
         voceId: r.id,
         membroId: m.id,
@@ -69,14 +75,16 @@ export async function GET() {
         followup: testoFollowup121(m.name),
         formato: p.formato ?? null,
         mandataIl: r.status === "APPROVATO" ? (r.decidedAt ?? r.createdAt) : null,
+        followupAt: r.status === "APPROVATO" && p.followupAt ? new Date(p.followupAt) : null,
         conosciuto: m.conosciuto,
         fissato: !!m.fissato121At,
       };
     })
     .filter((r) => !r.conosciuto && !r.fissato);
   const daMandare = righe.filter((r) => !r.mandataIl);
-  const inAttesa = righe.filter((r) => r.mandataIl && r.mandataIl.getTime() > limiteRisposta);
-  const senzaRisposta = righe.filter((r) => r.mandataIl && r.mandataIl.getTime() <= limiteRisposta);
+  const ultimo = (r: (typeof righe)[number]) => (r.followupAt ?? r.mandataIl)!.getTime();
+  const inAttesa = righe.filter((r) => r.mandataIl && ultimo(r) > limiteRisposta);
+  const senzaRisposta = righe.filter((r) => r.mandataIl && ultimo(r) <= limiteRisposta);
   const richiesteAperte = [...daMandare, ...inAttesa];
 
   const capitoli = tutti.map(({ capitolo: c, membri }) => {
