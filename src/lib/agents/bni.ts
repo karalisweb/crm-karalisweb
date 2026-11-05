@@ -631,19 +631,20 @@ export const LINK_DISPONIBILITA = process.env.BNI_LINK_DISPONIBILITA || "https:/
 export function testoFollowup121(nome: string): string {
   const primo = nome.trim().split(/\s+/)[0] ?? "";
   const ciao = primo ? `Ciao ${primo.charAt(0).toUpperCase()}${primo.slice(1).toLowerCase()}` : "Ciao";
-  return `${ciao}, ti riscrivo per il 121 che ti avevo proposto qualche giorno fa: mi farebbe piacere conoscerti e capire chi posso presentarti. Se ti va, scegli tu giorno e ora qui: ${LINK_DISPONIBILITA}\nAlessio Loi (Karalisweb)`;
+  return `${ciao}, ti riscrivo per quel 121: un caffè o una videochiamata, come preferisci. Scegli tu quando: ${LINK_DISPONIBILITA} A presto, Alessio`;
 }
 /** Versione del modello di messaggio: le richieste in attesa scritte col modello vecchio si riscrivono. */
-const MODELLO_MESSAGGIO = 2;
+// v3.101 (Alessio, 2026-11-05: "meno lungo e più confidenziale"): modello 3, da collega a collega.
+const MODELLO_MESSAGGIO = 3;
 
-const ESEMPIO_MESSAGGIO = `Ciao Cosima, sono Alessio Loi di Karalisweb, web e marketing digitale, Capitolo Atlantide di Cagliari. Ho visto che sei nel Saint Remy come geologa: collabori con studi tecnici e imprese che spesso hanno bisogno di farsi trovare online, e potremmo passarci referenze. Ti va di fare un 121, con un caffè o in videochiamata? Qui vedi le mie disponibilità: ${LINK_DISPONIBILITA} , scegli tu il momento che ti è comodo. Alessio`;
+const ESEMPIO_MESSAGGIO = `Ciao Cosima! Sono Alessio di Karalisweb (siti e marketing), Capitolo Atlantide. Tu lavori con studi tecnici e imprese: secondo me possiamo passarci un bel po' di contatti. Ci facciamo un 121, caffè o videochiamata? Scegli tu quando: ${LINK_DISPONIBILITA} A presto, Alessio`;
 
 type Capitolo121 = { name: string; city: string | null; isMine: boolean };
 
 /** Scrive la richiesta di 121 con il modello di Alessio. */
 async function scriviRichiesta(membro: { name: string; company: string | null; profession: string | null; indicatoDa: string | null }, capitolo: Capitolo121, motivo: Motivo) {
   return chiediJSON<RispostaMessaggio>({
-    sistema: `${REGOLE_COMUNI}\n\nSei il Preparatore 121 della squadra BNI di Alessio Loi. Scrivi il messaggio WhatsApp con cui Alessio chiede un 121 a un membro BNI. Segui ESATTAMENTE la struttura di questo esempio, cambiando solo nome, capitolo, mestiere e la frase sul perché ha senso conoscersi:\n\n"${ESEMPIO_MESSAGGIO}"\n\nRegole: presentazione sempre "Alessio Loi di Karalisweb, web e marketing digitale, Capitolo Atlantide di Cagliari" (se il membro è anche lui dell'Atlantide scrivi "anche io nel Capitolo Atlantide"). La frase sul perché deve essere concreta per il suo mestiere: con chi lavora lui che potrebbe aver bisogno di Alessio, e viceversa; niente frasi generiche, niente vendita. Il link alle disponibilità va sempre, identico. Firma "Alessio". Un solo paragrafo, niente a capo.`,
+    sistema: `${REGOLE_COMUNI}\n\nSei il Preparatore 121 della squadra BNI di Alessio Loi. Scrivi il messaggio WhatsApp con cui Alessio chiede un 121 a un membro BNI. Segui ESATTAMENTE la struttura di questo esempio, cambiando solo nome, capitolo, mestiere e la frase sul perché ha senso conoscersi:\n\n"${ESEMPIO_MESSAGGIO}"\n\nRegole: tono da collega BNI, confidenziale e diretto, come un messaggio scritto a mano sul telefono; niente formalità. Presentazione sempre "Alessio di Karalisweb (siti e marketing), Capitolo Atlantide" (se il membro è anche lui dell'Atlantide scrivi "anche io dell'Atlantide"). Una sola frase sul perché, concreta per il suo mestiere (con chi lavora lui), niente vendita. Il link alle disponibilità va sempre, identico. Chiudi con "A presto, Alessio". Un solo paragrafo, niente a capo, al massimo 300 caratteri link escluso.`,
     testo: [
       `MOTIVO DEL CONTATTO: ${SCOPI[motivo]}`,
       `MEMBRO: ${membro.name}${membro.company ? `, azienda ${membro.company}` : ""}${membro.profession ? `, mestiere: ${membro.profession}` : ""}`,

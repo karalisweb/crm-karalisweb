@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.101.0] - 2026-11-05
+
+### Changed
+- **Richiesta di 121 più corta e confidenziale**, da collega a collega: "Ciao …! Sono Alessio di Karalisweb (siti e marketing), Capitolo Atlantide…", una frase sul perché, il link, "A presto, Alessio". Massimo 300 caratteri. Le richieste ancora da mandare si riscrivono da sole col nuovo stile.
+- **Follow-up più corto**: "Ciao …, ti riscrivo per quel 121: un caffè o una videochiamata, come preferisci. Scegli tu quando: link. A presto, Alessio".
+
 ## [3.100.0] - 2026-11-05
 
 ### Added

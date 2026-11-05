@@ -1799,6 +1799,8 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.100 121 BNI: `testoFollowup121(nome)` (bni.ts) → campo `followup` delle righe di `GET /api/ricerca/bni`;
   `RigaSemplice` (tracker-incontri.tsx) apre WhatsApp col follow-up; `AggiungiNumero` salva il cellulare con
   `PATCH /api/ricerca/bni/membri/[id]` `{ telefono }` dove `linkWhatsApp` non trova un numero valido.
+- v3.101 `MODELLO_MESSAGGIO = 3` (nuovo `ESEMPIO_MESSAGGIO`, tono confidenziale, max 300 caratteri): le MESSAGGIO_BNI
+  IN_ATTESA col modello 2 le riscrive `riscriviRichiesteVecchie()`.
 
 ## Motore 121 (v3.52.0)
 
