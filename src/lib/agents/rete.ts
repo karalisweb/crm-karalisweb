@@ -321,6 +321,8 @@ async function accodaContatti(oggi: Date): Promise<number> {
     if (!v.leadId || !p.linkedin || !/linkedin\.com\/in\//i.test(p.linkedin) || !p.messaggio) continue;
     if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", status: { in: ["IN_CODA", "IN_CORSO", "FATTO"] } }, select: { id: true } })) continue;
     if (await archiviaSeNonRiuscito(v.id, v.leadId)) continue;
+    // v3.99: l'azienda di un membro BNI passa dal 121, non da LinkedIn.
+    if (await db.bniMembro.findFirst({ where: { leadId: v.leadId, status: "ATTIVO" }, select: { id: true } })) continue;
     if (!(await linkedinPermette("contatta_persona", null, oggi))) break;
     const decisore = p.decisore && p.decisore !== "chi decide" ? p.decisore : null;
     await db.agentRun.create({
@@ -737,8 +739,10 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
   const aziende = [];
   for (const l of lav) {
     if (aziende.length >= DECISORI_DA_SCALDARE) break;
-    // Un commento al giorno per azienda: se quello di ieri aspetta ancora Alessio, non se ne aggiunge un altro.
-    if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_COMMENTO, status: "IN_ATTESA" }, select: { id: true } })) continue;
+    // v3.99: i commenti rimasti ad Alessio (prima della v3.99) si chiudono: li pubblica il CRM.
+    await db.approvalItem.updateMany({ where: { leadId: l.leadId, kind: KIND_COMMENTO, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: "crm_scalda", note: "Lo pubblica il CRM" } });
+    // v3.99: l'azienda di un membro BNI passa dal 121: niente commenti.
+    if (await db.bniMembro.findFirst({ where: { leadId: l.leadId, status: "ATTIVO" }, select: { id: true } })) continue;
     // E uno solo al giorno per azienda, anche con due giri: non deve sembrare spam.
     if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_COMMENTO, createdAt: { gte: mezzanotte } }, select: { id: true } })) continue;
     const fattiQui = await commentiDi(l.leadId);
@@ -783,6 +787,8 @@ export async function importaScalda(findings: Record<string, unknown>): Promise<
     const fatti = await commentiFatti(leadId, piattaforma);
     // v3.88: il commento l'ha già pubblicato l'agente (autonomia): conta subito, e al 3° parte il contatto.
     const pubblicato = c.pubblicato === true;
+    // v3.99: un commento non pubblicato non diventa un compito di Alessio: il CRM riprova al giro dopo.
+    if (!pubblicato) continue;
     await db.approvalItem.create({
       data: {
         leadId,

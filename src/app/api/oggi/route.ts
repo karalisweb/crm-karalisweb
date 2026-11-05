@@ -9,6 +9,7 @@ import { daChiedereA } from "@/lib/agents/presentazioni";
 import { KIND_AVVISO_SETTORE, MESSAGGI_121_AL_GIORNO, avvisaSettori } from "@/lib/agents/avvisi-settore";
 import { linkedinFermoPerChrome } from "@/lib/agents/motore";
 import { promemoriaVendita } from "@/lib/vendita/config";
+import { togliConcorrenti } from "@/lib/concorrenti";
 
 // Gli avvisi si riscrivono con le parole di oggi al più ogni 15 minuti (non solo ai turni delle 7 e delle 14).
 let avvisiAggiornatiAt = 0;
@@ -82,6 +83,8 @@ export async function GET() {
     avvisiSettore: (await (async () => {
       if (Date.now() - avvisiAggiornatiAt > 15 * 60_000) {
         avvisiAggiornatiAt = Date.now();
+        // v3.99: i concorrenti escono anche quando apri Oggi, non solo alle 7.
+        await togliConcorrenti().catch(() => 0);
         await avvisaSettori().catch(() => 0);
       }
     })(), await db.approvalItem.findMany({ where: { kind: KIND_AVVISO_SETTORE, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true, title: true, payload: true } }))

@@ -41,7 +41,7 @@ export interface Percorso {
 /** Quale voce della Cassetta, approvata, conta come cosa fatta. */
 const COSA_DELLA_VOCE: Record<string, Cosa> = {
   RETE_CONTATTO: "contatta", RETE_DIRETTO: "contatta", RETE_PONTE: "contatta", RETE_PROMEMORIA: "contatta",
-  [KIND_COMMENTO]: "scalda", RETE_PAGINA: "scalda",
+  [KIND_COMMENTO]: "scalda", RETE_PAGINA: "contatta",
 };
 
 export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
@@ -138,7 +138,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   const [vociFatte, incontri, validate, conosciuti] = await Promise.all([
     db.approvalItem.groupBy({ by: ["kind"], where: { kind: { in: Object.keys(COSA_DELLA_VOCE) }, status: "APPROVATO", decidedAt: { gte: mezzanotte } }, _count: true }),
     db.lavorazione.count({ where: { incontroAt: { gte: mezzanotte } } }),
-    db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: { in: ["APPROVATO", "SCARTATO"] }, decidedAt: { gte: mezzanotte }, OR: [{ decidedBy: null }, { decidedBy: { notIn: [SCARTATA_DAL_CRM, "crm_scalda"] } }] } }),
+    db.approvalItem.count({ where: { kind: KIND_FASCICOLO_BASE, status: { in: ["APPROVATO", "SCARTATO"] }, decidedAt: { gte: mezzanotte }, OR: [{ decidedBy: null }, { decidedBy: { notIn: [SCARTATA_DAL_CRM, "crm_scalda", "crm_concorrente"] } }] } }),
     db.cerchiaContatto.count({ where: { createdAt: { gte: mezzanotte } } }),
   ]);
   const fatte: Record<Cosa, number> = { contatta: incontri, scalda: 0, valida: validate + conosciuti };
@@ -159,4 +159,24 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
     dopo,
     inPausa,
   };
+}
+
+/**
+ * v3.99 (Alessio, 2026-11-05: "devo essere in grado di eliminare la richiesta di Contatto, Scaldare e approfondire"):
+ * Elimina toglie l'azienda dal percorso per sempre, a qualunque passo. L'azienda va in Non target con il motivo, le
+ * voci in attesa si chiudono e i lavori in coda per lei (messaggi LinkedIn, commenti, analisi) non partono.
+ */
+export const ELIMINATA_DA_ALESSIO = "alessio_elimina";
+
+export async function eliminaDalPercorso(leadId: string): Promise<boolean> {
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { id: true, notes: true } });
+  if (!lead) return false;
+  const nota = `Eliminata da Alessio dal Percorso il ${new Date().toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })}.`;
+  await db.$transaction([
+    db.lavorazione.updateMany({ where: { leadId }, data: { fase: "ELIMINATA" } }),
+    db.lead.update({ where: { id: leadId }, data: { pipelineStage: "NON_TARGET", notes: lead.notes ? `${lead.notes}\n${nota}` : nota } }),
+    db.approvalItem.updateMany({ where: { leadId, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: ELIMINATA_DA_ALESSIO, note: nota } }),
+    db.agentRun.deleteMany({ where: { leadId, status: "IN_CODA" } }),
+  ]);
+  return true;
 }

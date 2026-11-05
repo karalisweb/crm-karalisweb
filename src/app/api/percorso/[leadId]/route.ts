@@ -6,6 +6,7 @@ import { voce } from "@/lib/agents/catalogo";
 import { datiAzienda } from "@/lib/agents/rete";
 import { commentiDaLeggere } from "@/lib/agents/commenti";
 import { noteDaReferti, SEZIONI_IMPRESSIONI, type SezioneImpressione } from "@/lib/agents/impressioni-sezioni";
+import { eliminaDalPercorso } from "@/lib/agents/percorso";
 
 /**
  * Il foglio "Cosa dirgli" (v3.65, Alessio 2026-10-28: "quando le ho scaldate non so che dire, devo essere più
@@ -46,4 +47,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ lea
     note: Object.entries(note.impressioni).map(([k, t]) => ({ titolo: SEZIONI_IMPRESSIONI[k as SezioneImpressione]?.titolo ?? k, testo: t })),
     commenti,
   });
+}
+
+/** DELETE /api/percorso/[leadId] — il pulsante Elimina (v3.99): l'azienda esce dal percorso per sempre. */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ leadId: string }> }) {
+  const gate = await requireSession();
+  if (!gate.ok) return gate.response;
+  const { leadId } = await params;
+  if (!(await eliminaDalPercorso(leadId))) return NextResponse.json({ error: "Azienda non trovata" }, { status: 404 });
+  return NextResponse.json({ ok: true });
 }

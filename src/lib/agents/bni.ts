@@ -703,7 +703,7 @@ async function preparaRichiesta(p: ProssimoMembro & { capitolo: CapitoloCaricato
  * L'invito scritto al volo quando Alessio apre un membro e vuole invitarlo di sua iniziativa.
  * Se c'è già una richiesta da mandare per lui, si riusa quella.
  */
-export async function invitoManuale(membroId: string, oggi = new Date()): Promise<string> {
+export async function invitoManuale(membroId: string, oggi = new Date(), azienda: string | null = null): Promise<string> {
   const gia = await db.approvalItem.findFirst({ where: { bniMembroId: membroId, kind: KIND_MESSAGGIO_BNI, status: "IN_ATTESA" }, select: { id: true } });
   if (gia) return gia.id;
   const membro = await db.bniMembro.findUnique({ where: { id: membroId } });
@@ -719,7 +719,8 @@ export async function invitoManuale(membroId: string, oggi = new Date()): Promis
       bniChapterId: capitolo.id,
       kind: KIND_MESSAGGIO_BNI,
       agent: "alessio",
-      title: `121 con ${membro.name}`,
+      // v3.99: con l'azienda del membro, così si vede a chi è legata la richiesta.
+      title: `121 con ${membro.name}${azienda ?? membro.company ? ` (${azienda ?? membro.company})` : ""}`,
       payload: {
         ...ai.dati,
         tipo: motivo,
@@ -729,6 +730,7 @@ export async function invitoManuale(membroId: string, oggi = new Date()): Promis
         capitolo: capitolo.name,
         modello: MODELLO_MESSAGGIO,
         manuale: true,
+        azienda: azienda ?? membro.company ?? null,
       } as Prisma.InputJsonValue,
     },
   });

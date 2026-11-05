@@ -113,6 +113,8 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
         {x?.tipo === "presentato" && lav && bottone("presentato", "Me l'ha presentata", () => fai("presentato", lav, "PATCH", { azione: "presentato" }, "Presentata: ora al passo 4"))}
         {x?.tipo === "incontro" && lav && bottone("incontro", "Incontro fissato", () => fai("incontro", lav, "PATCH", { azione: "incontro" }, "Incontro fissato: va in Trattative"), a.tocca === "te" ? "default" : "outline")}
         {lav && x?.tipo !== "cassetta" && bottone("pausa", "Pausa 3 mesi", () => fai("pausa", lav, "PATCH", { azione: "pausa" }, "In pausa: torna fra 3 mesi"), "ghost")}
+        {/* v3.99: Elimina a qualunque passo (contatto, scaldare, approfondire): esce dal percorso per sempre. */}
+        {bottone("elimina", "Elimina", () => { if (confirm(`Elimino ${a.nome}? Esce dal percorso e il CRM non la propone più.`)) void fai("elimina", `/api/percorso/${a.leadId}`, "DELETE", undefined, "Eliminata"); }, "ghost")}
       </div>
     </CardContent></Card>
   );

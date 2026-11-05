@@ -111,6 +111,8 @@ export function passoDi(s: Stato, oggi: Date): Esito {
     return { dentro: true, passo: 1, tocca: "crm", stato: "analisi", cosa: "Il CRM la sta analizzando", azione: null };
   }
 
+  // v3.99: eliminata da Alessio (pulsante Elimina): fuori dal percorso per sempre.
+  if (l.fase === "ELIMINATA") return { dentro: false, perche: "fuori" };
   if (["INCONTRO", "PROPOSTA", "CLIENTE"].includes(l.fase)) return { dentro: false, perche: "dopo" };
   if (l.fase === "PAUSA") return { dentro: false, perche: "pausa" };
 
@@ -136,7 +138,8 @@ export function passoDi(s: Stato, oggi: Date): Esito {
     const c = s.commenti;
     const conto = c ? `${c.fatti} di ${COMMENTI_PER_CONTATTO} su ${NOMI_PIATTAFORMA[c.piattaforma]}` : `0 di ${COMMENTI_PER_CONTATTO}`;
     const commento = voce("COMMENTO_LINKEDIN");
-    if (commento) return { dentro: true, passo: 3, tocca: "te", stato: "commenta", cosa: `Commenta il post (${conto})`, azione: daCassetta(commento, "Commentato", "Salta") };
+    // v3.99 (Alessio: "chi scalda? preferisco il CRM in automatico"): i commenti li pubblica solo il CRM.
+    if (commento) return { dentro: true, passo: 3, tocca: "crm", stato: "cerca_post", cosa: `Commenti: ${conto}. Il CRM pubblica il prossimo`, azione: null };
     return { dentro: true, passo: 3, tocca: "crm", stato: "cerca_post", cosa: `Commenti: ${conto}. Il CRM cerca il prossimo post`, azione: null };
   }
 
@@ -169,7 +172,8 @@ export const COSE: Cosa[] = ["contatta", "scalda", "valida"];
 export function cosaDi(e: Esito): Cosa | null {
   if (!e.dentro || e.tocca !== "te") return null;
   if (e.passo === 4) return "contatta";
-  if (e.passo === 3) return "scalda";
+  // v3.99: scaldare lo fa il CRM; "scrivi alla pagina" è un messaggio, quindi sta fra i contatti.
+  if (e.passo === 3) return e.stato === "pagina" ? "contatta" : "scalda";
   if (e.passo === 2) return e.azione?.tipo === "conosco" ? "valida" : "contatta";
   return "valida";
 }

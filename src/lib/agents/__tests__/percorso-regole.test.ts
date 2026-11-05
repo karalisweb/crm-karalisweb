@@ -31,9 +31,10 @@ describe("passo 2 — Chi me la presenta", () => {
 });
 
 describe("passo 3 — In riscaldamento", () => {
-  it("commento in Cassetta, con il conto sulla piattaforma", () =>
+  it("v3.99: un commento rimasto in Cassetta non tocca ad Alessio, lo pubblica il CRM", () =>
     expect(passo({ lav: lav({ strada: "SCALDARE" }), commenti: { piattaforma: "facebook", fatti: 2 }, voci: [{ id: "c", kind: "COMMENTO_LINKEDIN", payload: { commento: "Bello!", post: "https://facebook.com/x/1" } }] }))
-      .toMatchObject({ passo: 3, tocca: "te", azione: "cassetta", cosa: "Commenta il post (2 di 3 su Facebook)" }));
+      .toMatchObject({ passo: 3, tocca: "crm", cosa: "Commenti: 2 di 3 su Facebook. Il CRM pubblica il prossimo" }));
+  it("v3.99: eliminata da Alessio, fuori dal percorso", () => expect(passoDi({ ...base, lav: lav({ fase: "ELIMINATA" }) }, oggi)).toEqual({ dentro: false, perche: "fuori" }));
   it("nessun commento pronto: il CRM cerca il post", () => expect(passo({ lav: lav({ strada: "SCALDARE" }) })).toMatchObject({ passo: 3, tocca: "crm" }));
 });
 
@@ -55,6 +56,7 @@ describe("fuori dal percorso", () => {
 describe("le 3 cose di oggi", () => {
   const a = (id: string, s: Partial<Stato>, da: number) => ({ id, esito: passoDi({ ...base, ...s }, oggi), da });
   const commento = (id: string, da: number) => a(id, { lav: lav({ strada: "SCALDARE" }), voci: [{ id, kind: "COMMENTO_LINKEDIN", payload: {} }] }, da);
+  const pagina = (id: string, da: number) => a(id, { lav: lav({ strada: "SCALDARE" }), voci: [{ id, kind: "RETE_PAGINA", payload: {} }] }, da);
   const ids = (r: Record<string, { id: string }[]>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.map((x) => x.id)]));
 
   it("ogni azienda nella sua cosa, solo dove tocca a te, prima le più vicine al contatto", () => {
@@ -66,13 +68,15 @@ describe("le 3 cose di oggi", () => {
       a("ponte", { lav: lav({ fase: "PONTE_SCELTO", strada: "BNI" }), voci: [{ id: "p", kind: "RETE_PONTE", payload: {} }] }, 3),
       a("conosco", { lav: lav({ strada: "DA_CONFERMARE" }), daConfermare: ["Mario"] }, 4),
       commento("commento", 6),
+      pagina("pagina", 7),
     ]);
-    expect(ids(r)).toEqual({ contatta: ["contatto-vecchio", "contatto-nuovo", "ponte"], scalda: ["commento"], valida: ["conosco", "decidi"] });
+    // v3.99: i commenti li fa il CRM (non sono di nessuna lista); scrivere alla pagina è un contatto.
+    expect(ids(r)).toEqual({ contatta: ["contatto-vecchio", "contatto-nuovo", "pagina", "ponte"], scalda: [], valida: ["conosco", "decidi"] });
   });
 
   it("nessun tetto al giorno: si vedono tutte, le più vecchie prima", () => {
-    const tanti = [...Array(6)].map((_, i) => commento(`c${i}`, 5 - i));
-    expect(coseDiOggi(tanti).scalda.map((x) => x.id)).toEqual(["c5", "c4", "c3", "c2", "c1", "c0"]);
+    const tanti = [...Array(6)].map((_, i) => a(`c${i}`, { lav: lav({ strada: "SCALDARE" }), voci: [{ id: `k${i}`, kind: "RETE_CONTATTO", payload: {} }] }, 5 - i));
+    expect(coseDiOggi(tanti).contatta.map((x) => x.id)).toEqual(["c5", "c4", "c3", "c2", "c1", "c0"]);
   });
 });
 

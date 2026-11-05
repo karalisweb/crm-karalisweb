@@ -1,19 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ArrowRight, Bell, CalendarClock, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, CalendarClock, CheckCircle2, ChevronDown, Trash2 } from "lucide-react";
 import { dataOra } from "@/components/ricerca/etichette";
 import { NuovaRichiestaDialog } from "@/components/vendita/nuova-richiesta-dialog";
 import { type AziendaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
 
 // Le 3 cose di oggi (v3.64; dalla v3.67 tutte, senza tetto): ogni azienda con la sua cosa da fare.
 const COSE: { k: CosaDiOggi; titolo: string; spiega: string }[] = [
-  { k: "contatta", titolo: "Da contattare", spiega: "Passo 4: scrivi a chi decide. Passo 2: scrivi a chi te la presenta." },
-  { k: "scalda", titolo: "Da scaldare", spiega: "Passo 3: nessuno te la presenta, commenta un post della loro pagina." },
+  { k: "contatta", titolo: "Da contattare", spiega: "Passo 4: scrivi a chi decide (o alla loro pagina, se chi decide non si sa). Passo 2: scrivi a chi te la presenta." },
+  { k: "scalda", titolo: "Da scaldare", spiega: "Lo fa il CRM da solo: commenta i post della loro pagina. Tu non devi fare niente." },
   { k: "valida", titolo: "Da validare", spiega: "Basta un sì o un no." },
 ];
 
@@ -29,6 +29,26 @@ interface Oggi {
   ricerca: { aziendeOggi: number; obiettivo: number; personeOggi: number; casiAttivi: number };
   agentiMac: { fermi: boolean; falliscono: boolean; oreFermi: number };
   linkedinFermo: boolean;
+}
+
+/**
+ * v3.99 (Alessio: "essendo molto lunga deve lavorare con gli accordion"): ogni blocco di Oggi si chiude e si riapre
+ * con un tocco sul titolo, e resta come l'hai lasciato (salvato nel browser).
+ */
+function Sezione({ id, titolo, conteggio, children }: { id: string; titolo: ReactNode; conteggio?: ReactNode; children: ReactNode }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (ref.current && localStorage.getItem(`oggi:${id}`) === "0") ref.current.open = false;
+  }, [id]);
+  return (
+    <details ref={ref} open className="group rounded-lg border" onToggle={(e) => localStorage.setItem(`oggi:${id}`, e.currentTarget.open ? "1" : "0")}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 [&::-webkit-details-marker]:hidden">
+        <span className="font-semibold min-w-0">{titolo}</span>
+        <span className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">{conteggio}<ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" /></span>
+      </summary>
+      <div className="space-y-2 px-3 pb-3">{children}</div>
+    </details>
+  );
 }
 
 function Riga({ href, testo }: { href: string; testo: string }) {
@@ -101,6 +121,14 @@ export default function HomePage() {
     setDecidendo(null);
   };
 
+  // v3.99: Elimina toglie l'azienda dal percorso per sempre (contatto, scaldare o approfondire).
+  const elimina = async (leadId: string, nome: string) => {
+    if (!confirm(`Elimino ${nome}? Esce dal percorso e il CRM non la propone più.`)) return;
+    const r = await fetch(`/api/percorso/${leadId}`, { method: "DELETE" }).catch(() => null);
+    if (!r?.ok) { alert("Non ci sono riuscito, riprova."); return; }
+    caricaPercorso();
+  };
+
   // "Lo conosco già" (v3.73): il membro diventa conosciuto (non lo si propone più per un 121) e l'avviso sparisce.
   const conoscoGia = async (id: string, membroId: string) => {
     setDecidendo(id);
@@ -132,8 +160,7 @@ export default function HomePage() {
       </div>
 
       {(d.vendita ?? []).length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-semibold">Da non dimenticare</h2>
+        <Sezione id="vendita" titolo="Da non dimenticare" conteggio={d.vendita.length}>
           <div className="space-y-2">
             {d.vendita.map((v) => (
               <Link key={v.trattativaId} href={`/trattative/${v.trattativaId}`} className="flex items-center justify-between gap-3 rounded-lg border border-rose-300 dark:border-rose-800 p-3 hover:border-primary transition">
@@ -142,14 +169,14 @@ export default function HomePage() {
               </Link>
             ))}
           </div>
-        </section>
+        </Sezione>
       )}
 
       {d.agentiMac.fermi && (
         <Card className="border-amber-400"><CardContent className="p-4 text-sm flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
           {d.agentiMac.falliscono ? (
-            <span>Gli agenti che usano il tuo Chrome (BNI Connect, LinkedIn, Facebook) girano ma non portano risultati da {Math.max(1, Math.floor(d.agentiMac.oreFermi / 24))} giorni: di solito Chrome chiede il permesso di aprire una pagina e nessuno risponde. Nell&apos;estensione Claude in Chrome autorizza sempre LinkedIn, Facebook, Instagram e BNI Connect.</span>
+            <span>Gli agenti che usano il tuo Chrome (BNI Connect, LinkedIn, Facebook) girano ma non portano risultati da {Math.max(1, Math.floor(d.agentiMac.oreFermi / 24))} giorni. Il motivo di ogni lavoro fallito è in Agenti.</span>
           ) : (
             <span>Gli agenti che usano il tuo Chrome (BNI Connect, LinkedIn, Facebook) sono fermi da {Math.floor(d.agentiMac.oreFermi / 24)} giorni. Tieni il Mac acceso con Chrome aperto e controlla nell&apos;app Claude che l&apos;attività &quot;Squadra CRM — agenti di browser&quot; sia attiva.</span>
           )}
@@ -161,8 +188,7 @@ export default function HomePage() {
       )}
 
       {d.avvisiSettore.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-semibold">Aziende sarde dei tuoi settori, trovate in BNI e su LinkedIn</h2>
+        <Sezione id="settori" titolo="Aziende sarde dei tuoi settori, trovate in BNI e su LinkedIn" conteggio={d.avvisiSettore.length}>
           <p className="text-xs text-muted-foreground">Per ognuna: sì o no. Deciso, sparisce.{d.avvisiSettore.length > AVVISI_VISIBILI && ` Ne vedi ${AVVISI_VISIBILI} alla volta: ne restano altre ${d.avvisiSettore.length - AVVISI_VISIBILI}.`}</p>
           {d.avvisiSettore.slice(0, AVVISI_VISIBILI).map((a) => (
             <div key={a.id} className="rounded-lg border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
@@ -181,7 +207,7 @@ export default function HomePage() {
               </div>
             </div>
           ))}
-        </section>
+        </Sezione>
       )}
 
       {p && (
@@ -202,13 +228,11 @@ export default function HomePage() {
               ].filter((g) => g.aziende.length)
               : [{ titolo: null, aziende: tutte }];
             return (
-              <div key={k} className="space-y-2">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="text-sm font-semibold">{titolo}</h3>
-                  <span className={`text-sm flex items-center gap-1 ${finite ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                    {finite && <CheckCircle2 className="h-4 w-4" />}{tutte.length} da fare{fatte ? ` · ${fatte} fatte oggi` : ""}
-                  </span>
-                </div>
+              <Sezione key={k} id={k} titolo={titolo} conteggio={
+                <span className={`flex items-center gap-1 ${finite ? "text-green-600 dark:text-green-400" : ""}`}>
+                  {finite && <CheckCircle2 className="h-4 w-4" />}{tutte.length} da fare{fatte ? ` · ${fatte} fatte oggi` : ""}
+                </span>
+              }>
                 <p className="text-xs text-muted-foreground">{spiega}</p>
                 {(() => {
                   const attesa = p.aziende.filter((a) => a.tocca !== "te" && cosaInAttesa(a) === k);
@@ -224,7 +248,7 @@ export default function HomePage() {
                     <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-0.5">
                       <div className="font-medium">{attesa.length} {attesa.length === 1 ? "azienda in attesa" : "aziende in attesa"} (non tocca a te):</div>
                       {perStato.map((x) => <div key={x.stato}>· {x.n} {x.nome.toLowerCase()}</div>)}
-                      {chromeFermo && <div className="text-amber-600 dark:text-amber-400 pt-1">Ferme perché Chrome chiede il permesso di aprire LinkedIn e nessuno risponde: autorizzalo &quot;sempre&quot; in Claude in Chrome.</div>}
+                      {chromeFermo && <div className="text-amber-600 dark:text-amber-400 pt-1">Ferme: gli agenti su Chrome non portano risultati. Il motivo dei lavori falliti è in Agenti.</div>}
                     </div>
                   );
                 })()}
@@ -232,35 +256,38 @@ export default function HomePage() {
                   <div key={i} className="space-y-1.5">
                     {g.titolo && <div className="text-xs font-semibold text-muted-foreground pt-1">{g.titolo} ({g.aziende.length})</div>}
                     {g.aziende.map((a) => (
-                      <Link key={a.leadId} href={`/percorso?passo=${a.passo}&azienda=${a.leadId}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:border-primary transition">
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium break-words">{a.nome}</div>
-                          <div className="text-xs text-muted-foreground break-words">Passo {a.passo} · {p.passi.find((x) => x.n === a.passo)?.nome}{a.zona ? ` · ${a.zona}` : ""}</div>
-                          <div className="text-xs break-words mt-0.5">{a.cosa}</div>
-                        </div>
-                        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      </Link>
+                      <div key={a.leadId} className="flex items-stretch gap-2">
+                        <Link href={`/percorso?passo=${a.passo}&azienda=${a.leadId}`} className="flex flex-1 min-w-0 items-center justify-between gap-3 rounded-lg border p-3 hover:border-primary transition">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium break-words">{a.nome}</div>
+                            <div className="text-xs text-muted-foreground break-words">Passo {a.passo} · {p.passi.find((x) => x.n === a.passo)?.nome}{a.zona ? ` · ${a.zona}` : ""}</div>
+                            <div className="text-xs break-words mt-0.5">{a.cosa}</div>
+                          </div>
+                          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </Link>
+                        <Button variant="outline" size="sm" className="h-auto px-3 text-muted-foreground hover:text-destructive" title="Elimina: esce dal percorso" aria-label={`Elimina ${a.nome}`} onClick={() => elimina(a.leadId, a.nome)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 )) : p.aziende.some((a) => a.tocca !== "te" && cosaInAttesa(a) === k) ? null : (
-                  <div className="rounded-lg border p-3 text-sm text-muted-foreground">{finite ? "Fatte tutte. Le prossime le prepara il CRM." : "Per ora nessuna: le prepara il CRM."}</div>
+                  <div className="rounded-lg border p-3 text-sm text-muted-foreground">{k === "scalda" ? "Niente da fare per te: commenta il CRM." : finite ? "Fatte tutte. Le prossime le prepara il CRM." : "Per ora nessuna: le prepara il CRM."}</div>
                 )}
-              </div>
+              </Sezione>
             );
           })}
         </section>
       )}
 
       {cose.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-semibold">BNI e casi studio</h2>
+        <Sezione id="bni" titolo="BNI e casi studio" conteggio={cose.length}>
           <div className="space-y-2">{cose.map((c, i) => <Riga key={i} {...c} />)}</div>
-        </section>
+        </Sezione>
       )}
 
       {(d.incontri.length > 0 || d.call.length > 0) && (
-        <section className="space-y-2">
-          <h2 className="font-semibold">Oggi e domani</h2>
+        <Sezione id="agenda" titolo="Oggi e domani" conteggio={d.incontri.length + d.call.length}>
           <div className="space-y-2">
             {d.incontri.map((m) => (
               <Link key={m.id} href={`/bni/121/${m.id}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:border-primary transition">
@@ -278,11 +305,10 @@ export default function HomePage() {
               </Link>
             ))}
           </div>
-        </section>
+        </Sezione>
       )}
 
-      <section className="space-y-2">
-        <h2 className="font-semibold">I numeri</h2>
+      <Sezione id="numeri" titolo="I numeri">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Numero valore={incontriSettimana} di={s.obiettivo} etichetta="Incontri BNI questa settimana" href="/bni" />
           <Numero valore={d.ricerca.aziendeOggi} di={d.ricerca.obiettivo} etichetta="Aziende nuove trovate oggi" href="/percorso" />
@@ -291,7 +317,7 @@ export default function HomePage() {
         <p className="text-xs text-muted-foreground">
           {s.richiesteAperte} richieste di incontro aspettano risposta · {d.ricerca.personeOggi} persone trovate oggi su LinkedIn · {d.ricerca.casiAttivi} {d.ricerca.casiAttivi === 1 ? "caso studio guida" : "casi studio guidano"} la ricerca
         </p>
-      </section>
+      </Sezione>
     </div>
   );
 }

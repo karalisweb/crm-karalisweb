@@ -229,13 +229,38 @@ export async function avvisaSettori(): Promise<number> {
  *   - "AZIENDA": l'azienda (trovata o creata) torna in gioco se era eliminata ed entra in lavorazione:
  *     il CRM sceglie chi te la presenta e prepara il messaggio, come per le altre aziende di oggi.
  */
+/**
+ * v3.99 (Alessio, 2026-11-05: "la persona trovata sulla lista membri BNI deve essere associata all'azienda trovata"):
+ * al sì per il 121 il membro si lega alla sua azienda nel CRM. Da lì l'azienda passa dal 121, non da LinkedIn: se era
+ * nel percorso prima del contatto va in pausa, e i messaggi e i commenti in coda per lei si fermano. Un'azienda sola,
+ * una strada sola. Restituisce il nome dell'azienda (per il messaggio del 121).
+ */
+export const PASSA_DAL_121 = "crm_bni";
+
+export async function collegaMembroAzienda(membroId: string, aziendaAvviso: string | null): Promise<string | null> {
+  const m = await db.bniMembro.findUnique({ where: { id: membroId }, select: { name: true, company: true, leadId: true } });
+  if (!m) return null;
+  const nomeAzienda = m.company ?? aziendaAvviso;
+  const leadId = m.leadId ?? (nomeAzienda ? (await trovaAzienda(nomeAzienda))?.id : null) ?? null;
+  if (!leadId) return nomeAzienda;
+  if (!m.leadId) await db.bniMembro.update({ where: { id: membroId }, data: { leadId } });
+  const nota = `Passa dal 121 BNI con ${m.name}: niente messaggi LinkedIn né commenti.`;
+  await db.$transaction([
+    db.lavorazione.updateMany({ where: { leadId, fase: { in: ["MAPPATA", "PONTE_SCELTO"] } }, data: { fase: "PAUSA", note: nota } }),
+    db.approvalItem.updateMany({ where: { leadId, status: "IN_ATTESA", kind: { in: ["RETE_PONTE", "RETE_DIRETTO", "RETE_PROMEMORIA", "RETE_CONTATTO", "RETE_PAGINA", "COMMENTO_LINKEDIN"] } }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: PASSA_DAL_121, note: nota } }),
+    db.agentRun.deleteMany({ where: { leadId, status: "IN_CODA", agent: { in: ["contatta_persona", "scalda"] } } }),
+  ]);
+  return (await db.lead.findUnique({ where: { id: leadId }, select: { name: true } }))?.name ?? nomeAzienda;
+}
+
 export async function decisioneAvviso(voceId: string, oggi = new Date()): Promise<void> {
   const v = await db.approvalItem.findUnique({ where: { id: voceId }, select: { payload: true } });
   const p = (v?.payload ?? {}) as Partial<Avviso>;
   const azione: AzioneAvviso = p.azione ?? (p.dove === "BNI" ? "121" : "AZIENDA");
   if (azione === "121" && p.membroId) {
+    const azienda = await collegaMembroAzienda(p.membroId, p.azienda ?? null);
     const { invitoManuale } = await import("./bni");
-    await invitoManuale(p.membroId, oggi);
+    await invitoManuale(p.membroId, oggi, azienda);
     return;
   }
   let leadId = p.leadId ?? p.eliminataId ?? (p.azienda ? (await trovaAzienda(p.azienda))?.id : null) ?? null;
