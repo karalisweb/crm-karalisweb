@@ -1788,6 +1788,14 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   regola nel prompt. Compito pianificato degli agenti di browser: `0 8-20/2 * * *`.
 - v3.98 Mail: `componiReport()` solo IERI + SOLDI (oggetto "Com'è andata ieri"); `/api/cron/mail-decisioni` non manda
   più la mail (`inviaMailDecisioni` resta nel codice, non chiamata) e fa solo `togliConcorrenti()`.
+- v3.99 Oggi e Percorso: `eliminaDalPercorso(leadId)` (percorso.ts, `DELETE /api/percorso/[leadId]`): lavorazione
+  `fase: "ELIMINATA"` (passoDi → fuori), lead NON_TARGET, voci IN_ATTESA SCARTATO `decidedBy: "alessio_elimina"`,
+  agentRun IN_CODA cancellati. Scaldare: `importaScalda` ignora i commenti non pubblicati, `accodaScalda` chiude i
+  COMMENTO IN_ATTESA (`crm_scalda`), `passoDi` non dà più commenti ad Alessio; `cosaDi`: stato "pagina" → contatta.
+  BNI: `collegaMembroAzienda()` (avvisi-settore.ts) al sì "121" lega `bniMembro.leadId`, mette in PAUSA la
+  lavorazione MAPPATA/PONTE_SCELTO, chiude le voci RETE_*/COMMENTO (`crm_bni`) e i lavori contatta_persona/scalda;
+  `accodaContatti`/`accodaScalda` saltano i lead con un membro BNI ATTIVO. Oggi: componente `Sezione` (`<details>`,
+  stato in localStorage `oggi:<id>`); `togliConcorrenti()` anche in `/api/oggi` (ogni 15 minuti).
 
 ## Motore 121 (v3.52.0)
 

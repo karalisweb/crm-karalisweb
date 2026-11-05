@@ -14,6 +14,17 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.99.0] - 2026-11-05
+
+### Added
+- **Elimina**: il cestino accanto a ogni azienda in Oggi (e il pulsante Elimina nel Percorso) la toglie per sempre, a qualunque passo (contattare, scaldare, approfondire). L'azienda va in Non target, le voci in attesa si chiudono e i lavori in coda per lei non partono.
+- **Oggi a fisarmonica**: ogni blocco si chiude toccando il titolo e resta come l'hai lasciato.
+
+### Changed
+- **Scaldare lo fa solo il CRM**: i commenti li pubblica l'agente; se non ci riesce riprova al giro dopo, non diventano un tuo compito. "Scrivi alla pagina" (quando chi decide non si sa) è un messaggio, quindi sta in Da contattare.
+- **Membro BNI e azienda legati**: al "Sì, scrivimi il messaggio" il membro si collega alla sua azienda nel CRM; l'azienda passa dal 121 (pausa nel percorso, niente messaggi LinkedIn né commenti). La richiesta di 121 mostra l'azienda.
+- I concorrenti escono anche quando apri Oggi. Tolti gli avvisi "autorizza Chrome": il motivo dei lavori falliti è in Agenti.
+
 ## [3.98.0] - 2026-11-05
 
 ### Changed
