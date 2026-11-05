@@ -37,7 +37,18 @@ const TABS = [
   { key: "ARCHIVIATO", label: "Archiviati", description: "Lead archiviati (ricontattare dopo)" },
   { key: "NON_TARGET", label: "Non Target", description: "Nessun segnale commerciale" },
   { key: "SENZA_SITO", label: "Senza Sito", description: "Niente da analizzare" },
+  { key: "NON_RIUSCITI", label: "Non riusciti", description: "Messaggi LinkedIn che il CRM ha provato 2 volte senza riuscirci" },
 ] as const;
+
+interface NonRiuscito {
+  id: string;
+  azienda: string | null;
+  leadId: string | null;
+  persona: string | null;
+  linkedin: string | null;
+  motivo: string | null;
+  quando: string | null;
+}
 
 function LeadArchiveCard({
   lead,
@@ -114,19 +125,22 @@ export default function ArchivioPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [nonRiusciti, setNonRiusciti] = useState<NonRiuscito[]>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch leads per il tab attivo
-      const res = await fetch(
-        `/api/leads?stage=${activeTab}&pageSize=100`
-      );
-      const json = await res.json();
-      setLeads(json.leads || []);
+      // v3.95: i messaggi LinkedIn non riusciti stanno in una loro scheda
+      const nr = await fetch("/api/archivio/non-riusciti").then((r) => r.json()).catch(() => ({ voci: [] }));
+      setNonRiusciti(nr.voci || []);
+      if (activeTab !== "NON_RIUSCITI") {
+        const res = await fetch(`/api/leads?stage=${activeTab}&pageSize=100`);
+        const json = await res.json();
+        setLeads(json.leads || []);
+      }
 
       // Fetch conteggi per tutti i tab
-      const countPromises = TABS.map(async (tab) => {
+      const countPromises = TABS.filter((tab) => tab.key !== "NON_RIUSCITI").map(async (tab) => {
         const r = await fetch(`/api/leads?stage=${tab.key}&pageSize=1`);
         const j = await r.json();
         return { key: tab.key, count: j.total || 0 };
@@ -136,6 +150,7 @@ export default function ArchivioPage() {
       for (const c of countResults) {
         newCounts[c.key] = c.count;
       }
+      newCounts.NON_RIUSCITI = (nr.voci || []).length;
       setCounts(newCounts);
     } catch {
       toast.error("Errore nel caricamento");
@@ -191,9 +206,13 @@ export default function ArchivioPage() {
       {/* Descrizione tab */}
       <p className="text-xs text-muted-foreground">
         {TABS.find((t) => t.key === activeTab)?.description}
-        {" · "}
-        Clicca <ArrowUp className="h-3 w-3 inline text-green-500" /> per
-        ripristinare un lead in Da Analizzare
+        {activeTab !== "NON_RIUSCITI" && (
+          <>
+            {" · "}
+            Clicca <ArrowUp className="h-3 w-3 inline text-green-500" /> per
+            ripristinare un lead in Da Analizzare
+          </>
+        )}
       </p>
 
       {/* Lista */}
@@ -203,6 +222,38 @@ export default function ArchivioPage() {
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
+      ) : activeTab === "NON_RIUSCITI" ? (
+        nonRiusciti.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground">Nessun messaggio non riuscito.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {nonRiusciti.map((v) => (
+              <Card key={v.id}>
+                <CardContent className="p-3">
+                  <p className="font-medium text-sm">
+                    {v.leadId ? <a href={`/leads/${v.leadId}`} className="hover:underline">{v.azienda ?? "Azienda"}</a> : v.azienda ?? "Azienda"}
+                    {v.persona && <span className="text-muted-foreground font-normal"> · {v.persona}</span>}
+                  </p>
+                  {v.motivo && <p className="text-xs text-muted-foreground mt-1">{v.motivo}</p>}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {v.quando && new Date(v.quando).toLocaleDateString("it-IT")}
+                    {v.linkedin && (
+                      <>
+                        {" · "}
+                        <a href={v.linkedin} target="_blank" rel="noreferrer" className="underline">Profilo LinkedIn</a>
+                      </>
+                    )}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )
       ) : leads.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">

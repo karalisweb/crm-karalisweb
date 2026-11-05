@@ -270,6 +270,29 @@ export function notaInvito(decisore: string | null, testo: string): string {
   return base.length <= LUNGHEZZA_NOTA ? base : `${base.slice(0, LUNGHEZZA_NOTA - 1)}…`;
 }
 
+/**
+ * v3.95 (Alessio, 2026-11-05: "dopo due fallimenti, senza segnalarlo, archivialo in un posto"): un messaggio LinkedIn
+ * che non è partito per 2 volte non torna più in coda. La voce si chiude in silenzio e finisce in Archivio → Non riusciti,
+ * con il motivo dell'ultimo tentativo. Niente avvisi in Oggi né nel report.
+ */
+export const TENTATIVI_MAX_CONTATTO = 2;
+export const ARCHIVIATA_NON_RIUSCITA = "crm_non_riuscito";
+
+async function archiviaSeNonRiuscito(voceId: string, leadId: string): Promise<boolean> {
+  const falliti = await db.agentRun.findMany({
+    where: { leadId, agent: "contatta_persona", status: "FALLITO" },
+    orderBy: { finishedAt: "desc" },
+    select: { error: true },
+  });
+  if (falliti.length < TENTATIVI_MAX_CONTATTO) return false;
+  const motivo = (falliti[0]?.error ?? "motivo non indicato").slice(0, 300);
+  await db.approvalItem.update({
+    where: { id: voceId },
+    data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: ARCHIVIATA_NON_RIUSCITA, note: `Non riuscito dopo ${falliti.length} tentativi. Ultimo motivo: ${motivo}` },
+  });
+  return true;
+}
+
 async function accodaContatti(oggi: Date): Promise<number> {
   const voci = await db.approvalItem.findMany({
     where: { kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA", leadId: { not: null } },
@@ -282,6 +305,7 @@ async function accodaContatti(oggi: Date): Promise<number> {
     const p = (v.payload ?? {}) as { linkedin?: string; messaggio?: string; decisore?: string };
     if (!v.leadId || !p.linkedin || !/linkedin\.com\/in\//i.test(p.linkedin) || !p.messaggio) continue;
     if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", status: { in: ["IN_CODA", "IN_CORSO", "FATTO"] } }, select: { id: true } })) continue;
+    if (await archiviaSeNonRiuscito(v.id, v.leadId)) continue;
     if (!(await linkedinPermette("contatta_persona", null, oggi))) break;
     const decisore = p.decisore && p.decisore !== "chi decide" ? p.decisore : null;
     await db.agentRun.create({

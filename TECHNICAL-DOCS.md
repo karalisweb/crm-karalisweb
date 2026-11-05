@@ -1774,6 +1774,11 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   MESSAGGIO/INVITO approva la voce (`decisioneRete` → CHIESTA) e registra un'attività LINKEDIN_SENT.
   `agenti-browser/ISTRUZIONI.md`: "solo lettura" tranne questi due lavori.
 
+- v3.95 Tentativi: `archiviaSeNonRiuscito()` in `accodaContatti()`: con 2 `contatta_persona` FALLITO per lo stesso lead
+  la voce RETE_DIRETTO/RETE_CONTATTO passa a SCARTATO con `decidedBy: "crm_non_riuscito"` e nota con l'ultimo motivo,
+  e non torna più in coda. Nessun avviso in Oggi o nel report: si vede solo in Archivio → "Non riusciti"
+  (`GET /api/archivio/non-riusciti`).
+
 ## Motore 121 (v3.52.0)
 
 Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, riprogettato") e lo schema

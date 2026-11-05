@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.95.0] - 2026-11-05
+
+### Fixed
+- Messaggi LinkedIn a chi decide: il CRM li rimetteva in coda all'infinito dopo ogni fallimento (ieri le stesse 3 persone, ogni mezz'ora). Ora dopo **2 tentativi falliti** la voce si chiude da sola, senza avvisi in Oggi né nel report, e finisce in **Archivio → Non riusciti** con il motivo dell'ultimo tentativo.
+
 ## [3.94.0] - 2026-11-04
 
 ### Changed
