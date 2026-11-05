@@ -174,15 +174,18 @@ function RigaSemplice({ r, nota, onFatto }: { r: RigaRichiesta; nota: string; on
     void fetch(`/api/ricerca/bni/richieste/${r.voceId}`, { method: "PATCH", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ followup: true }) })
       .then((res) => { if (res.ok) { toast.success("Follow-up segnato: torna in Aspetto risposta"); onFatto(); } else toast.error("Non sono riuscito a segnare il follow-up"); });
   };
+  // v3.106: il follow-up mandato fuori dal pulsante (prima di oggi o da WhatsApp): si segna senza mandare niente.
+  const giaFatto = () => { if (confirm(`Segno che a ${r.nome} il follow-up l'hai già mandato?`)) registraFollowup(); };
   return (
     <Card><CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
       <div className="min-w-0">
         <Link href={`/bni/membri/${r.membroId}`} className="font-medium hover:underline">{r.nome}</Link>
         <div className="text-xs text-muted-foreground">{r.capitolo} · {nota}</div>
-        {r.followupAt && <div className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Follow-up già mandato {giorniFa(r.followupAt)}</div>}
+        {r.followupAt && <Badge className="mt-1 bg-green-600 hover:bg-green-600 text-white text-[11px]"><Check className="h-3 w-3 mr-1" />Follow-up fatto {giorniFa(r.followupAt)}</Badge>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {r.followupAt ? null : wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={registraFollowup}><Button size="sm" variant="ghost"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Manda il follow-up</Button></a> : <AggiungiNumero membroId={r.membroId} onFatto={onFatto} />}
+        {!r.followupAt && (wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={registraFollowup}><Button size="sm" variant="ghost"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Manda il follow-up</Button></a> : <AggiungiNumero membroId={r.membroId} onFatto={onFatto} />)}
+        {!r.followupAt && <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={giaFatto}><Check className="h-3.5 w-3.5 mr-1" /> Follow-up già fatto</Button>}
         <FissaData membroId={r.membroId} onFatto={onFatto} />
       </div>
     </CardContent></Card>

@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.106.0] - 2026-11-05
+
+### Added
+- Richieste di 121: **"Follow-up già fatto"** per segnare chi l'ha già ricevuto fuori dal pulsante (prima di oggi o scritto da WhatsApp), senza mandare niente. Chi ha avuto il follow-up ha l'etichetta verde **"Follow-up fatto …"**.
+
 ## [3.105.0] - 2026-11-05
 
 ### Changed
