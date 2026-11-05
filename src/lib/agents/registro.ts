@@ -129,9 +129,9 @@ Findings: { commenti: [{ leadId, piattaforma, post (link al post), estratto (una
     istruzioni: `Usa Chrome di Alessio su LinkedIn (è già entrato). Il lavoro ha: leadId, persona (nome di chi decide), azienda, profilo (link al suo profilo LinkedIn), messaggio (il testo completo), nota (la versione corta, massimo 280 caratteri).
 1. Apri il profilo. Controlla che sia la persona giusta (nome e azienda). Se non lo è o il profilo non c'è, non scrivere: esito NON_TROVATO.
 2. Se sul profilo c'è il pulsante "Messaggio" (siete già collegati): apri la chat e manda il testo di "messaggio" esattamente com'è. Esito MESSAGGIO.
-3. Se c'è "Collegati" (a volte è dentro "Altro"): premi Collegati, scegli "Aggiungi una nota", incolla "nota" esattamente com'è e invia. Esito INVITO.
+3. Se c'è "Collegati" (a volte è dentro "Altro"): premi Collegati, scegli "Aggiungi una nota", incolla "nota" esattamente com'è e invia. Esito INVITO. Se LinkedIn dice che hai finito le note personalizzate gratuite (o chiede Premium per la nota), chiudi quell'avviso SENZA comprare niente e manda la richiesta senza nota ("Invia senza nota"): va bene così, deciso da Alessio il 2026-11-05. Esito INVITO, con "senzaNota": true nei findings.
 4. Se c'è "In sospeso": la richiesta è già partita, non fare nulla. Esito GIA_IN_SOSPESO.
-Un solo profilo, nessun'altra azione. Findings: { leadId, esito: "MESSAGGIO" | "INVITO" | "GIA_IN_SOSPESO" | "NON_TROVATO", profilo }. Per questo lavoro NON vale la regola "solo lettura": manda il messaggio o la richiesta. ${REGOLE_BROWSER}`,
+Un solo profilo, nessun'altra azione. Findings: { leadId, esito: "MESSAGGIO" | "INVITO" | "GIA_IN_SOSPESO" | "NON_TROVATO", profilo, senzaNota? }. Per questo lavoro NON vale la regola "solo lettura": manda il messaggio o la richiesta. ${REGOLE_BROWSER}`,
   },
   { chiave: "dopo_121", numero: "B6", nome: "Dopo-121", compito: "Dalla trascrizione di Meet o dal vocale compila la scheda del membro", famiglia: "sintesi", squadra: "bni", stato: "attivo" },
   { chiave: "preparazione_call", numero: "V1", nome: "Preparatore call", compito: "La pagina da avere davanti durante la call di vendita", famiglia: "sintesi", squadra: "vendita", stato: "attivo" },

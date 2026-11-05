@@ -31,7 +31,8 @@ LinkedIn: la persona del caso studio o il membro BNI, la zona). Un lavoro preso 
   una persona: una pagina alla volta.
 - **Solo lettura**, tranne due lavori: `scalda` (pubblica il commento sotto il post della pagina e mette
   "mi piace" a quel post) e `contatta_persona` (manda su LinkedIn il messaggio a chi decide, o la richiesta di
-  collegamento con la nota). Testi e destinatari arrivano già pronti nel lavoro: usali esattamente come sono.
+  collegamento con la nota; se LinkedIn dice che le note gratuite sono finite, la richiesta parte senza nota, senza comprare
+  Premium). Testi e destinatari arrivano già pronti nel lavoro: usali esattamente come sono.
   Per tutti gli altri lavori: non scrivere a nessuno, non mettere like, non seguire, non accettare inviti.
 - Cookie: rifiuta quelli facoltativi.
 - **LinkedIn: al massimo 20 aziende al giorno** in tutto (conta i lavori `linkedin_azienda` e

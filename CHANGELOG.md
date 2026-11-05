@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.96.0] - 2026-11-05
+
+### Changed
+- Messaggi LinkedIn a chi decide: se LinkedIn dice che le note personalizzate gratuite sono finite, la richiesta di collegamento parte **senza nota** (niente Premium). Nella scheda dell'azienda l'attività lo dice.
+- I fallimenti di prima di oggi non contano più per l'archivio: chi era finito in "Non riusciti" per le note finite torna in coda e riprova senza nota.
+
 ## [3.95.0] - 2026-11-05
 
 ### Fixed

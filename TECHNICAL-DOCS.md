@@ -1778,6 +1778,9 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   la voce RETE_DIRETTO/RETE_CONTATTO passa a SCARTATO con `decidedBy: "crm_non_riuscito"` e nota con l'ultimo motivo,
   e non torna più in coda. Nessun avviso in Oggi o nel report: si vede solo in Archivio → "Non riusciti"
   (`GET /api/archivio/non-riusciti`).
+- v3.96 Senza nota: istruzioni di `contatta_persona` (registro.ts, ISTRUZIONI.md e compito pianificato): note gratuite
+  finite → invito senza nota, findings `senzaNota: true`. Contano solo i fallimenti da `FALLIMENTI_CONTANO_DAL`
+  (2026-11-05); `ridaiPossibilita()` rimette IN_ATTESA le voci archiviate con meno di 2 fallimenti da quella data.
 
 ## Motore 121 (v3.52.0)
 

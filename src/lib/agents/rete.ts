@@ -277,10 +277,24 @@ export function notaInvito(decisore: string | null, testo: string): string {
  */
 export const TENTATIVI_MAX_CONTATTO = 2;
 export const ARCHIVIATA_NON_RIUSCITA = "crm_non_riuscito";
+/**
+ * v3.96 (Alessio, 2026-11-05: "manda senza nota"): i fallimenti di prima non contano. Erano quasi tutti "note
+ * personalizzate gratuite finite", e ora l'invito parte senza nota: chi era stato archiviato per quello torna in coda.
+ */
+const FALLIMENTI_CONTANO_DAL = new Date("2026-11-05T06:30:00Z");
+
+async function ridaiPossibilita(): Promise<void> {
+  const archiviate = await db.approvalItem.findMany({ where: { decidedBy: ARCHIVIATA_NON_RIUSCITA, status: "SCARTATO", leadId: { not: null } }, select: { id: true, leadId: true } });
+  for (const a of archiviate) {
+    const falliti = await db.agentRun.count({ where: { leadId: a.leadId!, agent: "contatta_persona", status: "FALLITO", finishedAt: { gte: FALLIMENTI_CONTANO_DAL } } });
+    if (falliti >= TENTATIVI_MAX_CONTATTO) continue;
+    await db.approvalItem.update({ where: { id: a.id }, data: { status: "IN_ATTESA", decidedAt: null, decidedBy: null, note: null } });
+  }
+}
 
 async function archiviaSeNonRiuscito(voceId: string, leadId: string): Promise<boolean> {
   const falliti = await db.agentRun.findMany({
-    where: { leadId, agent: "contatta_persona", status: "FALLITO" },
+    where: { leadId, agent: "contatta_persona", status: "FALLITO", finishedAt: { gte: FALLIMENTI_CONTANO_DAL } },
     orderBy: { finishedAt: "desc" },
     select: { error: true },
   });
@@ -294,6 +308,7 @@ async function archiviaSeNonRiuscito(voceId: string, leadId: string): Promise<bo
 }
 
 async function accodaContatti(oggi: Date): Promise<number> {
+  await ridaiPossibilita();
   const voci = await db.approvalItem.findMany({
     where: { kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA", leadId: { not: null } },
     orderBy: { createdAt: "asc" },
@@ -323,9 +338,9 @@ export async function importaContattoPersona(findings: Record<string, unknown>):
   if (!leadId || (esito !== "MESSAGGIO" && esito !== "INVITO")) return;
   const voce = await db.approvalItem.findFirst({ where: { leadId, kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true } });
   if (!voce) return;
-  await db.approvalItem.update({ where: { id: voce.id }, data: { status: "APPROVATO", decidedAt: new Date(), decidedBy: "crm_auto", note: esito === "MESSAGGIO" ? "Messaggio mandato su LinkedIn dal CRM" : "Richiesta di collegamento con nota mandata su LinkedIn dal CRM" } });
+  await db.approvalItem.update({ where: { id: voce.id }, data: { status: "APPROVATO", decidedAt: new Date(), decidedBy: "crm_auto", note: esito === "MESSAGGIO" ? "Messaggio mandato su LinkedIn dal CRM" : findings.senzaNota === true ? "Richiesta di collegamento senza nota mandata su LinkedIn dal CRM" : "Richiesta di collegamento con nota mandata su LinkedIn dal CRM" } });
   await decisioneRete(voce.id, "APPROVATO");
-  await db.activity.create({ data: { leadId, type: "LINKEDIN_SENT", notes: `[Contatto-auto] ${esito === "MESSAGGIO" ? "messaggio LinkedIn a chi decide" : "invito LinkedIn con nota a chi decide"}` } }).catch(() => null);
+  await db.activity.create({ data: { leadId, type: "LINKEDIN_SENT", notes: `[Contatto-auto] ${esito === "MESSAGGIO" ? "messaggio LinkedIn a chi decide" : findings.senzaNota === true ? "invito LinkedIn senza nota a chi decide" : "invito LinkedIn con nota a chi decide"}` } }).catch(() => null);
 }
 
 /** Chi la scarta da sola: si distingue dalle scelte di Alessio (non conta nelle sue "da validare" di oggi). */
