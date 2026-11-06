@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   capienzaLavorazione, forzaAzienda, nomiDaConfermare, prossimaAzione, settimanaConPosto, stessaPersona, strade, testoRichiestaPonte,
   type DatiAzienda,
-  frequenzaTesto, canaliInOrdine, paginaPreferita, piattaformaConsigliata, piattaformaDi, testoContattoDopoCommenti, testoMessaggioPagina,
+  frequenzaTesto, canaliInOrdine, paginaPreferita, piattaformaConsigliata, piattaformaDi, testoContattoDopoCommenti, testoMessaggioPagina, piattaformaPersona,
 } from "../rete-regole";
 
 const accadueo: DatiAzienda = {
@@ -109,7 +109,9 @@ describe("entrare in relazione: commenti sulle pagine", () => {
     expect(piattaformaConsigliata([], oggi)).toBeNull();
   });
   it("i messaggi: dopo i commenti e alla pagina", () => {
-    expect(testoContattoDopoCommenti("Mario Rossi", "Piscine Blu", "instagram", null)).toMatch(/^Ciao Mario, .*Piscine Blu su Instagram/);
+    expect(testoContattoDopoCommenti("Mario Rossi", "Piscine Blu", "instagram", null)).toMatch(/^Ciao Mario, .*seguito i tuoi post su Instagram/);
+    // v3.117: chi decide non pubblica: si scrive dopo il collegamento, senza parlare di commenti.
+    expect(testoContattoDopoCommenti("Mario Rossi", "Piscine Blu", null, null, false, false)).toMatch(/^Ciao Mario, sono Alessio Loi di Karalisweb, ci siamo collegati da poco\./);
     expect(testoContattoDopoCommenti(null, "Piscine Blu", null, null)).toMatch(/^Buongiorno[\s\S]*titolare[\s\S]*Posso mandarglielo\?/);
     expect(testoMessaggioPagina("Piscine Blu", "Ho aiutato un'azienda simile.")).toContain("Ho aiutato un'azienda simile. Ho raccolto tutto in un breve caso studio");
   });
@@ -149,5 +151,15 @@ describe("punti di contatto in ordine (v3.115)", () => {
   });
   it("il testo per l'azienda va bene anche su WhatsApp", () => {
     expect(testoMessaggioPagina("Piscine Blu", null)).not.toContain("seguo la pagina");
+  });
+});
+
+describe("v3.117: dove commentare chi decide", () => {
+  it("prima Instagram, poi LinkedIn; resta dove ha cominciato; mai Facebook", () => {
+    expect(piattaformaPersona({ instagram: "https://instagram.com/mario", linkedin: "https://linkedin.com/in/mario" }, null)).toBe("instagram");
+    expect(piattaformaPersona({ instagram: "https://instagram.com/mario", linkedin: "https://linkedin.com/in/mario" }, "linkedin")).toBe("linkedin");
+    expect(piattaformaPersona({ instagram: null, linkedin: "https://linkedin.com/in/mario" }, "facebook")).toBe("linkedin");
+    expect(piattaformaPersona({ instagram: null, linkedin: "https://linkedin.com/in/mario" }, null, false)).toBeNull();
+    expect(piattaformaPersona({ instagram: null, linkedin: null }, null)).toBeNull();
   });
 });

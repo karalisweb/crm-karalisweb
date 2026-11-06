@@ -280,10 +280,29 @@ export function piattaformaConsigliata(pagine: PaginaSocial[], oggi: Date): Piat
   return [...(vive.length ? vive : pagine)].sort((a, b) => voto(b) - voto(a))[0]?.piattaforma ?? null;
 }
 
-/** Al 5° commento: il primo messaggio diretto a chi decide (o all'azienda, se non si sa chi è). */
-export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, gancio: string | null, haCaso = !!gancio): string {
+/**
+ * v3.117 (Alessio, 2026-11-06): la relazione si fa con la PERSONA, non con la pagina. Chi decide si cerca su LinkedIn e
+ * Instagram, il CRM gli chiede il collegamento (LinkedIn) e lo segue (Instagram), commenta i suoi post e poi gli scrive
+ * su WhatsApp o mail col caso studio. Facebook è fuori. Niente contatti in comune né presentazioni.
+ */
+export const STRADA_COLLEGARE = "COLLEGARE";
+export const STRADA_SCALDARE = "SCALDARE";
+/** Dove si commentano i post di chi decide: Instagram prima (i titolari ci stanno ogni giorno), poi LinkedIn. */
+export const PIATTAFORME_PERSONA: Piattaforma[] = ["instagram", "linkedin"];
+
+/** La piattaforma su cui commentare chi decide: quella già cominciata, altrimenti la prima che ha. */
+export function piattaformaPersona(profili: { instagram: string | null; linkedin: string | null }, iniziata: Piattaforma | null, linkedinOk = true): Piattaforma | null {
+  const ha = (p: Piattaforma) => !!profili[p as "instagram" | "linkedin"] && (p !== "linkedin" || linkedinOk);
+  if (iniziata && PIATTAFORME_PERSONA.includes(iniziata) && ha(iniziata)) return iniziata;
+  return PIATTAFORME_PERSONA.find(ha) ?? null;
+}
+
+/** Dopo i commenti ai suoi post (o subito, se non pubblica): il primo messaggio diretto a chi decide. */
+export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, gancio: string | null, haCaso = !!gancio, commentati = true): string {
   const dove = piattaforma ? ` su ${NOMI_PIATTAFORMA[piattaforma]}` : "";
-  const intro = `sono Alessio Loi di Karalisweb: in queste settimane ho seguito e commentato i post di ${azienda}${dove}.`;
+  const intro = decisore
+    ? commentati ? `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i tuoi post${dove}.` : "sono Alessio Loi di Karalisweb, ci siamo collegati da poco."
+    : `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i post di ${azienda}${dove}.`;
   if (decisore) return `Ciao ${nomeProprio(decisore)}, ${intro}\n\n${offertaCaso(azienda, gancio, haCaso, true)}\n\nAlessio`;
   // Senza chi decide si scrive all'azienda: il caso studio è per il titolare.
   const storia = haCaso ? `${gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore."}\n\nHo raccolto tutto in un breve caso studio: com'era, cosa abbiamo fatto, cosa è cambiato. Credo che possa interessare al titolare.` : "Lavoro con aziende come la vostra su strategia, sito e marketing, e ho un esempio concreto che credo possa interessare al titolare.";

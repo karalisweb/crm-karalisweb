@@ -316,7 +316,7 @@ const NOTA_SENZA = "Senza collegamento";
 const CONTROLLI_IN_CODA_MAX = 3;
 /** Chi la manda a scaldare da sola (v3.83): non conta fra le decisioni di Alessio. */
 export const DECISO_DAL_CRM_SCALDARE = "crm_scalda";
-const NOTA_SCALDARE = "Da scaldare: chi decide non è collegato a te, la relazione parte dai commenti (deciso dal CRM)";
+const NOTA_SCALDARE = "Va avanti da sola: chi decide è stato trovato, il CRM chiede il collegamento e commenta i suoi post (deciso dal CRM)";
 
 /**
  * L'azienda è in Sardegna? Sigla di provincia sarda o CAP sardo (07…, 08…, 09…) nell'indirizzo, prefisso fisso sardo
@@ -396,13 +396,17 @@ export async function linkedinFermoPerChrome(): Promise<boolean> {
 export function collegamentoDaFindings(findings: unknown): { collegata: boolean; inComune: number; diretto: boolean } {
   type C = { collegata?: boolean; inComune?: number; diretto?: boolean };
   const f = (findings ?? {}) as { persone?: unknown; collegamento?: C; importazione?: { collegamento?: C } };
+  // v3.117: si ricalcola sempre dalle persone (la regola è cambiata: conta chi decide, non i contatti in comune);
+  // il valore salvato vale solo per i referti vecchi senza l'elenco delle persone.
+  if (Array.isArray(f.persone)) return collegamentoDa(decisoriDa(f.persone));
   const c = f.importazione?.collegamento ?? f.collegamento;
   if (c && typeof c.collegata === "boolean") return { collegata: c.collegata, inComune: c.inComune ?? 0, diretto: !!c.diretto };
-  return collegamentoDa(decisoriDa(f.persone));
+  return collegamentoDa([]);
 }
 
 export function decisoriDa(persone: unknown): DecisoreLetto[] {
   return (Array.isArray(persone) ? persone : []).slice(0, 2).map((p: Record<string, unknown>) => ({
+    nome: typeof p?.nome === "string" ? p.nome : null,
     grado: typeof p?.grado === "number" ? p.grado : typeof p?.grado === "string" ? parseInt(p.grado, 10) || null : null,
     contattiInComune: (Array.isArray(p?.contattiInComune) ? p.contattiInComune : [])
       .map((x: unknown) => (typeof x === "string" ? x : typeof (x as { nome?: unknown })?.nome === "string" ? (x as { nome: string }).nome : null))
@@ -436,7 +440,8 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
   const c = await collegamentoAzienda(leadId);
   const voce = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE }, orderBy: { createdAt: "desc" } });
   if (c.stato === "COLLEGATA") {
-    const ponte = c.diretto ? "chi decide è un tuo contatto diretto" : `chi decide ha ${c.inComune} ${c.inComune === 1 ? "contatto" : "contatti"} in comune con te`;
+    // v3.117: conta solo che chi decide si sappia (poi collegamento, commenti ai suoi post, caso studio).
+    const ponte = c.diretto ? "chi decide è già un tuo contatto" : "chi decide è stato trovato";
     if (!voce && giroVeloceFinito) {
       const l = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, website: true } });
       if (!l) return;
@@ -461,8 +466,7 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
     if (giroVeloceFinito) await mandaAScaldare(leadId, new Date(), `Va avanti da sola: ${ponte} (deciso dal CRM)`);
     return;
   }
-  // Sarda: si scalda con i commenti invece di scartarla (v3.83).
-  if (c.stato === "SENZA" && giroVeloceFinito && (!voce || voce.status === "IN_ATTESA") && (await mandaAScaldare(leadId))) return;
+  // v3.117: senza chi decide non si va avanti (niente più messaggi alla pagina): si mette da parte, e si ricontrolla.
   if (c.stato === "SENZA" && !voce && giroVeloceFinito) {
     // Mai entrata in "Da decidere": si mette da parte lo stesso, così esce dalla verifica e dal giro veloce.
     const l = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, website: true } });
@@ -470,13 +474,13 @@ export async function dopoCollegamento(leadId: string, giroVeloceFinito = true):
     await db.approvalItem.create({
       data: {
         leadId, kind: KIND_FASCICOLO_BASE, agent: "giro_veloce", title: `${l.name}: senza collegamento`, status: "SCARTATO", decidedAt: new Date(),
-        note: `${NOTA_SENZA}: chi decide non è collegato a te, o non si è trovato (controllo automatico)`, payload: { sito: l.website } as Prisma.InputJsonValue,
+        note: `${NOTA_SENZA}: chi decide non si è trovato (controllo automatico)`, payload: { sito: l.website } as Prisma.InputJsonValue,
       },
     });
     return;
   }
   if (c.stato === "SENZA" && voce?.status === "IN_ATTESA") {
-    await db.approvalItem.update({ where: { id: voce.id }, data: { status: "SCARTATO", decidedAt: new Date(), note: `${NOTA_SENZA}: chi decide non è collegato a te (controllo automatico)` } });
+    await db.approvalItem.update({ where: { id: voce.id }, data: { status: "SCARTATO", decidedAt: new Date(), note: `${NOTA_SENZA}: chi decide non si è trovato (controllo automatico)` } });
   }
 }
 

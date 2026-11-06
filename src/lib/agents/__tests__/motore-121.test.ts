@@ -77,11 +77,11 @@ describe("punti di contatto", () => {
 });
 
 describe("collegamento di un'azienda", () => {
-  it("collegata con un contatto diretto o almeno uno in comune", () => {
-    expect(collegamentoDa([{ grado: 1, contattiInComune: [] }]).collegata).toBe(true);
-    expect(collegamentoDa([{ grado: 2, contattiInComune: ["Mario Rossi"] }])).toEqual({ collegata: true, inComune: 1, diretto: false });
-    expect(collegamentoDa([{ grado: 2, contattiInComune: [], numeroInComune: 12 }]).inComune).toBe(12);
-    expect(collegamentoDa([{ grado: 3, contattiInComune: [] }]).collegata).toBe(false);
+  it("v3.117: va avanti se si sa chi decide, i contatti in comune non contano", () => {
+    expect(collegamentoDa([{ nome: "Mario Rossi", grado: 3, contattiInComune: [] }]).collegata).toBe(true);
+    expect(collegamentoDa([{ nome: "Mario Rossi", grado: 2, contattiInComune: ["Luca Bianchi"] }])).toEqual({ collegata: true, inComune: 1, diretto: false });
+    expect(collegamentoDa([{ grado: 2, contattiInComune: [], numeroInComune: 12 }])).toEqual({ collegata: false, inComune: 12, diretto: false });
+    expect(collegamentoDa([{ nome: "", grado: 1, contattiInComune: [] }])).toEqual({ collegata: false, inComune: 0, diretto: true });
     expect(collegamentoDa([]).collegata).toBe(false);
   });
 });

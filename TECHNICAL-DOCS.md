@@ -1884,6 +1884,37 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 - Le newsletter le scrive Orchestra: il CRM segna solo chi è stato invitato.
 - "Inviti LinkedIn accettati" nel cruscotto è cumulativo (non per settimana).
 
+## Relazione diretta (v3.117.0)
+
+Decisione di Alessio del 2026-11-06: niente contatti in comune né presentazioni; la relazione si fa con chi decide.
+Nessuna migrazione, niente colonne nuove: valori nuovi di `lavorazioni.strada` e un lavoro di browser nuovo.
+- **Collegata = chi decide trovato**: `collegamentoDa()` (motore-121.ts) guarda il `nome` dei decisori, non più grado e
+  contatti in comune; `collegamentoDaFindings()` ricalcola sempre dalle `persone` (il valore salvato nei referti vecchi
+  seguiva la regola di prima). `dopoCollegamento()`: senza chi decide l'azienda non va più a scaldare.
+- **Strade** (`rete-regole.ts`): `COLLEGARE` (passo 2) → `SCALDARE` (passo 3) → voce `RETE_CONTATTO` (passo 4).
+  `avanzaMappata()`: chi decide nella cerchia → `RETE_DIRETTO` come prima; chi decide noto → `COLLEGARE`; nessuno → pausa
+  90 giorni con nota `Chi decide non trovato` (al rientro `ricercaChiDecide()` riaccoda `decision_maker`). Le strade
+  BNI/CERCHIA/DA_CONFERMARE/IN_ATTESA_PONTE non si creano più (il codice che le legge resta per sicurezza).
+- **Lavoro `collega`** (R6, registro.ts): input `{ leadId, persona, ruolo, azienda, linkedin, instagram }`; invito LinkedIn
+  senza nota + "Segui" su Instagram; findings `{ linkedin: INVITO|GIA_COLLEGATI|GIA_IN_SOSPESO|NON_TROVATO|SALTATO,
+  instagram: SEGUITO|GIA_SEGUITO|NON_TROVATO|SALTATO }`. `accodaCollega()` nel turno (max `COLLEGAMENTI_AL_GIORNO` = 10,
+  LinkedIn dentro il budget, 1 lettura); `importaCollega()` porta a `SCALDARE`. Senza profili: un nuovo `decision_maker`
+  con `input.relazioneDiretta = true`, e se nemmeno così il contatto parte subito.
+- **Commenti alla persona** (`scalda`): input per azienda `{ profilo, altroProfilo, piattaforma }` (profili personali da
+  `profiliDecisore()`, piattaforma da `piattaformaPersona()`: Instagram, poi LinkedIn). I commenti nuovi hanno
+  `payload.persona = true` e solo quelli contano (`commentiDi`). `senzaPost` nel referto o 3 letture in 10 giorni senza
+  post (`liberaPagineFerme`) → `dopoCommento(leadId, oggi, true)`: contatto subito, testo "ci siamo collegati da poco".
+- **Contatto**: `accodaContatti()` manda su LinkedIn un `RETE_CONTATTO` solo se non ci sono WhatsApp né mail. Le voci
+  nuove hanno `payload.relazioneDiretta = true`.
+- **Riallineamento** `riallineaRelazioneDiretta()` (inizio di `turnoRete`, idempotente): chiude le voci in attesa
+  PONTE/PROMEMORIA/DIRETTO/CONTATTO/PAGINA senza `relazioneDiretta` (tranne il diretto a chi decide della cerchia), riporta
+  a `MAPPATA` senza strada le lavorazioni su ponte o sui commenti alla pagina senza collegamento chiesto, annulla i lavori
+  `scalda`/`contatta_persona` in coda col formato vecchio. Prova sulla copia del 2026-11-06 07:06: 9 aziende riallineate
+  (6 al collegamento, 2 in pausa senza chi decide), rifatto subito → 0.
+- `decision_maker`: istruzioni nuove (niente liste dei collegamenti in comune; profilo Instagram personale e date
+  dell'ultimo post su LinkedIn e Instagram). Il prompt dell'attività programmata del Mac autorizza `collega` e i commenti
+  ai post personali di chi decide (LinkedIn e Instagram).
+
 ## Il Percorso (v3.62.0)
 
 Decisione di Alessio del 2026-10-27 ("ogni giorno un passo avanti"). Nessuna migrazione, niente colonne nuove.

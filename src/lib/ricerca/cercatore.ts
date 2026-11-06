@@ -601,6 +601,7 @@ export async function importaDecisionMaker(leadId: string | null, findings: Reco
   const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
   const persone = Array.isArray(findings.persone) ? (findings.persone as Record<string, unknown>[]) : [];
   const decisori = persone.slice(0, 2).map((p) => ({
+    nome: str(p.nome, 120),
     grado: typeof p.grado === "number" ? p.grado : typeof p.grado === "string" ? parseInt(p.grado, 10) || null : null,
     contattiInComune: (Array.isArray(p.contattiInComune) ? p.contattiInComune : []).map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome, 120))).filter((x): x is string => !!x),
     numeroInComune: typeof p.numeroInComune === "number" ? p.numeroInComune : null,

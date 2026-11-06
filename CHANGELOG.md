@@ -14,6 +14,19 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.117.0] - 2026-11-06
+
+### Changed
+- **Relazione diretta con chi decide** (decisione di Alessio: "chi me la presenta di fatto non serve"). I 4 passi del Percorso ora sono **Trovate → Collegamento → In riscaldamento → Contatto**:
+  1. il CRM trova **chi decide**, con il suo LinkedIn e il suo Instagram personali e se pubblica. I contatti in comune non si cercano più e non decidono più niente: un'azienda va avanti se si sa chi decide;
+  2. il CRM gli **chiede il collegamento su LinkedIn** (senza nota) e **lo segue su Instagram** (nuovo lavoro del Mac "Collegamento con chi decide", massimo 10 al giorno);
+  3. il CRM **commenta i suoi post** (prima Instagram, poi LinkedIn; Facebook no), 3 sulla stessa piattaforma. Non più la pagina dell'azienda. Se chi decide non pubblica, si passa subito al contatto;
+  4. **WhatsApp o mail col caso studio**; LinkedIn solo se non c'è altro. Poi il follow-up come prima.
+- Chi decide introvabile: l'azienda va **in pausa per 3 mesi** e poi il CRM lo ricerca. Non si scrive più all'azienda o alla sua pagina.
+- **Le aziende già nel Percorso sono state riallineate**: messaggi al ponte, promemoria, "scrivi all'azienda" e contatti non ancora mandati sono stati chiusi; le aziende ferme sul ponte o sui commenti alla pagina ripartono dal collegamento; quelle senza chi decide vanno in pausa. Quelle già contattate (si aspetta la risposta, follow-up, caso studio) restano come sono. Chi decide cercato con le istruzioni vecchie, senza link ai profili, viene ricercato una volta.
+- Se conosci tu chi decide (cerchia), il messaggio diretto resta e si salta al Contatto.
+- Oggi: il collegamento (passo 2) sta insieme ai commenti in "Da scaldare": lo fa il CRM.
+
 ## [3.116.0] - 2026-11-06
 
 ### Added

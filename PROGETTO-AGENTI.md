@@ -18,6 +18,21 @@ Regola di lavoro: **niente si costruisce finché una fase non è definita e conf
 
 ---
 
+## Relazione diretta con chi decide (confermata da Alessio il 2026-11-06, v3.117.0)
+
+Detto da Alessio: **"scrivere di avere un contatto in comune non ha senso"; "chi me la presenta di fatto non serve, meglio
+chiedere il contatto su LinkedIn e Instagram, commentare i suoi post, e poi dopo un po' mandare mail o WhatsApp per il caso
+studio"**. Facebook fuori. Sostituisce "chi me la presenta" e i commenti alla pagina dell'azienda delle sezioni sotto.
+
+1. **Trovate**: il CRM analizza l'azienda e trova chi decide (LinkedIn e Instagram personali, se pubblica).
+2. **Collegamento**: il CRM chiede il collegamento su LinkedIn (senza nota) e lo segue su Instagram.
+3. **In riscaldamento**: il CRM commenta i suoi post (prima Instagram, poi LinkedIn), 3 sulla stessa piattaforma. Se non
+   pubblica, si passa subito al 4.
+4. **Contatto**: WhatsApp o mail col caso studio, poi il follow-up dopo 5 giorni, pausa dopo altri 5.
+
+Chi decide introvabile: pausa 3 mesi, poi si ricerca (non si scrive all'azienda). Se Alessio conosce chi decide si salta
+al 4. I 121 BNI con i membri vanno avanti a parte.
+
 ## Vendita: dalla richiesta di info all'incarico (confermata con Alessio il 2026-11-03: "una fila sola"; fila e promemoria costruiti in v3.93.0, preventivo/contratto da fare)
 
 Scelte di Alessio (2026-11-03): dopo la call **solo preventivo** (niente lettera strategica prima), prezzi

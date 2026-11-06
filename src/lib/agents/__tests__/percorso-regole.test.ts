@@ -31,9 +31,11 @@ describe("passo 2 — Chi me la presenta", () => {
 });
 
 describe("passo 3 — In riscaldamento", () => {
-  it("v3.99: un commento rimasto in Cassetta non tocca ad Alessio, lo pubblica il CRM", () =>
-    expect(passo({ lav: lav({ strada: "SCALDARE" }), commenti: { piattaforma: "facebook", fatti: 2 }, voci: [{ id: "c", kind: "COMMENTO_LINKEDIN", payload: { commento: "Bello!", post: "https://facebook.com/x/1" } }] }))
-      .toMatchObject({ passo: 3, tocca: "crm", cosa: "Commenti: 2 di 3 su Facebook. Il CRM pubblica il prossimo" }));
+  it("v3.117: i commenti ai post di chi decide li pubblica il CRM", () =>
+    expect(passo({ lav: lav({ strada: "SCALDARE", decisore: "Mario Rossi" }), commenti: { piattaforma: "instagram", fatti: 2 }, voci: [{ id: "c", kind: "COMMENTO_LINKEDIN", payload: { commento: "Bello!", post: "https://instagram.com/p/1" } }] }))
+      .toMatchObject({ passo: 3, tocca: "crm", cosa: "Commenti ai post di Mario Rossi: 2 di 3 su Instagram. Li pubblica il CRM" }));
+  it("v3.117: collegamento con chi decide, passo 2, lo fa il CRM", () =>
+    expect(passoDi({ ...base, lav: lav({ strada: "COLLEGARE" }) }, oggi)).toMatchObject({ passo: 2, tocca: "crm", stato: "collega" }));
   it("v3.99: eliminata da Alessio, fuori dal percorso", () => expect(passoDi({ ...base, lav: lav({ fase: "ELIMINATA" }) }, oggi)).toEqual({ dentro: false, perche: "fuori" }));
   it("nessun commento pronto: il CRM cerca il post", () => expect(passo({ lav: lav({ strada: "SCALDARE" }) })).toMatchObject({ passo: 3, tocca: "crm" }));
 });

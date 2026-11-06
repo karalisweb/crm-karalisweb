@@ -14,7 +14,7 @@ import { type AziendaPercorso, type CosaDiOggi, type DatiPercorso } from "@/comp
 // Le 3 cose di oggi (v3.64; dalla v3.67 tutte, senza tetto): ogni azienda con la sua cosa da fare.
 const COSE: { k: CosaDiOggi; titolo: string; spiega: string }[] = [
   { k: "contatta", titolo: "Da contattare", spiega: "Passo 4: scrivi a chi decide (o all'azienda, se chi decide non si sa). Passo 2: scrivi a chi te la presenta." },
-  { k: "scalda", titolo: "Da scaldare", spiega: "Lo fa il CRM da solo: commenta i post della loro pagina. Tu non devi fare niente." },
+  { k: "scalda", titolo: "Da scaldare", spiega: "Lo fa il CRM da solo: chiede il collegamento a chi decide e commenta i suoi post. Tu non devi fare niente." },
   { k: "valida", titolo: "Da validare", spiega: "Basta un sì o un no." },
 ];
 
@@ -68,7 +68,8 @@ function Numero({ valore, di, etichetta, href }: { valore: number; di?: number; 
  * Le aziende del Percorso dove non tocca a te, divise come le tre liste (v3.79, Alessio: il Percorso dice 49 e Oggi 0,
  * "c'è qualcosa che mi confonde"): così i numeri tornano e si vede perché una lista è vuota.
  */
-const cosaInAttesa = (a: AziendaPercorso): CosaDiOggi => (a.passo === 1 ? "valida" : a.passo === 3 ? "scalda" : "contatta");
+// v3.117: il collegamento (passo 2) e i commenti (passo 3) li fa il CRM: stanno insieme in "Da scaldare".
+const cosaInAttesa = (a: AziendaPercorso): CosaDiOggi => (a.passo === 1 ? "valida" : a.passo === 2 || a.passo === 3 ? "scalda" : "contatta");
 /** Gli stati che aspettano gli agenti nel tuo Chrome (LinkedIn, Facebook): fermi se Chrome è fermo. */
 const STATI_CHROME = ["analisi", "collegamento", "chi_decide", "cerca_post"];
 
@@ -215,7 +216,7 @@ export default function HomePage() {
             const gruppi = k === "valida"
               ? [
                 { titolo: "Decidi se approfondirle (passo 1 · Trovate)", aziende: tutte.filter((a) => a.passo === 1) },
-                { titolo: "Dimmi se conosci queste persone (passo 2 · Chi me la presenta)", aziende: tutte.filter((a) => a.passo === 2) },
+                { titolo: "Altre da validare", aziende: tutte.filter((a) => a.passo !== 1) },
               ].filter((g) => g.aziende.length)
               : [{ titolo: null, aziende: tutte }];
             return (

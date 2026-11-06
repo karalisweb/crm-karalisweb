@@ -93,6 +93,7 @@ export function lettureDi(agente: string, input?: unknown): number {
     case "cerca_linkedin":
       return 6;
     case "contatta_persona":
+    case "collega":
       return 1;
     case "scalda": {
       const d = (input as { decisori?: unknown[] } | null)?.decisori;
@@ -109,7 +110,7 @@ export function riservaScalda(daScaldare: number, scaldaGiaOggi: boolean): numbe
   return !scaldaGiaOggi ? Math.min(RISERVA_SCALDA, daScaldare) : 0;
 }
 
-export const AGENTI_LINKEDIN = ["linkedin_membri", "rete_membro", "decision_maker", "linkedin_azienda", "cerca_linkedin", "scalda", "contatta_persona"];
+export const AGENTI_LINKEDIN = ["linkedin_membri", "rete_membro", "decision_maker", "linkedin_azienda", "cerca_linkedin", "scalda", "contatta_persona", "collega"];
 
 /** Un errore di un lavoro LinkedIn che vuol dire "LinkedIn ci ha notato": si ferma tutto per 48 ore. */
 export function bloccoLinkedin(errore: string | null | undefined): boolean {
@@ -191,19 +192,24 @@ export function etichettePunti(punti: unknown): string[] {
 // ─── Il collegamento di un'azienda ──────────────────────────────────────────
 
 export interface DecisoreLetto {
+  /** v3.117: chi decide, per nome. Senza nome non conta (è un dipendente o non si è trovato). */
+  nome?: string | null;
   grado?: number | null;
   contattiInComune: string[];
   numeroInComune?: number | null;
 }
 
 /**
- * Un'azienda è collegata se chi decide è un contatto diretto di Alessio o ha almeno un contatto in
- * comune con lui. Un dipendente collegato non basta: l'agente riporta solo chi decide.
+ * v3.117 (Alessio, 2026-11-06: "scrivere di avere un contatto in comune non ha senso"): un'azienda va avanti se si sa
+ * CHI DECIDE, non se ha contatti in comune con Alessio. Poi il CRM chiede il collegamento, commenta i suoi post e
+ * scrive col caso studio. Un dipendente non basta: l'agente riporta solo chi decide. `inComune` e `diretto` restano
+ * come informazione (non decidono più niente).
  */
 export function collegamentoDa(decisori: DecisoreLetto[]): { collegata: boolean; inComune: number; diretto: boolean } {
   const diretto = decisori.some((d) => d.grado === 1);
   const inComune = Math.max(0, ...decisori.map((d) => Math.max(d.contattiInComune.length, d.numeroInComune ?? 0)));
-  return { collegata: diretto || inComune > 0, inComune, diretto };
+  const trovato = decisori.some((d) => typeof d.nome === "string" && d.nome.trim().length > 1);
+  return { collegata: trovato, inComune, diretto };
 }
 
 /** Aziende in attesa (giro veloce o controllo del collegamento) oltre le quali Maps si ferma. */

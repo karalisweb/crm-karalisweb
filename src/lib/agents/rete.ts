@@ -16,17 +16,16 @@ import { KIND_FASCICOLO_BASE } from "./turno";
 import { mezzanotteRoma, norm } from "./bni-regole";
 import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento } from "./motore";
 import {
-  FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
+  FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, prossimaAzione,
   testoContattoDiretto, testoDirettoConPonte, testoFollowupContatto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
   COMMENTI_PER_CONTATTO, PIATTAFORME, paginaPreferita, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
-  type PaginaSocial, type Piattaforma,
+  type PaginaSocial, type Piattaforma, STRADA_COLLEGARE, STRADA_SCALDARE, nellaCerchia, piattaformaPersona, stessaPersona,
 } from "./rete-regole";
 import { noteDaReferti } from "./impressioni-sezioni";
 import { scaricaPagina } from "./pagina";
 import { extractWhatsAppNumber, normalizePhoneForWhatsApp } from "@/lib/audit/whatsapp-extractor";
 import { extractContactEmail, extractEmails } from "@/lib/audit/email-finder";
 import { pontiInZona } from "./presentazioni";
-import { NOTA_PAGINA_FERMA } from "./presentazioni-regole";
 
 export const KIND_RETE_PONTE = "RETE_PONTE";
 export const KIND_RETE_DIRETTO = "RETE_DIRETTO";
@@ -99,14 +98,18 @@ export interface RiepilogoRete {
   daScaldareAggiunte: number;
   pagineFerme: number;
   contattiAccodati: number;
+  collegamentiAccodati: number;
+  riallineate: number;
   attive: number;
   capienza: number;
 }
 
 /** Il turno della rete: rientri, nuove entrate fino alla capienza, il seguito, i commenti. */
 export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
-  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, daScaldareAggiunte: 0, pagineFerme: 0, contattiAccodati: 0, attive: 0, capienza: capienzaLavorazione(oggi) };
+  const r: RiepilogoRete = { entrate: 0, scartate: 0, messaggi: 0, promemoria: 0, cambiPonte: 0, inPausa: 0, rientrate: 0, scaldaAccodato: false, daScaldareAggiunte: 0, pagineFerme: 0, contattiAccodati: 0, collegamentiAccodati: 0, riallineate: 0, attive: 0, capienza: capienzaLavorazione(oggi) };
   const cerchia = await cerchiaNomi();
+  // 0) v3.117: le aziende rimaste sulla strada vecchia (ponti, pagine) passano alla relazione diretta.
+  r.riallineate = await riallineaRelazioneDiretta(cerchia);
 
   // 1) Il seguito e i rientri dalla pausa.
   const tutte = await db.lavorazione.findMany({ where: { fase: { in: [...FASI_ATTIVE, "PAUSA"] } } });
@@ -114,6 +117,8 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     const azione = prossimaAzione(l, oggi);
     if (azione === "RIENTRA") {
       await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", tentativi: 0, pausaFino: null, ponteNome: null, ponteMembroId: null, strada: null, chiestaAt: null, promemoriaAt: null } });
+      // v3.117: era in pausa perché chi decide non si trovava: si ricerca adesso.
+      if (l.note?.startsWith(NOTA_SENZA_CHI_DECIDE)) await ricercaChiDecide(l.leadId, oggi);
       r.rientrate++;
     } else if (azione === "PROMEMORIA") {
       // v3.103: senza ponte (contatto diretto a chi decide) il promemoria è il follow-up a lui.
@@ -158,8 +163,8 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     const conForza = [];
     for (const c of candidate) {
       const d = await datiAzienda(c.id);
-      // Senza chi decide si lavora dalla pagina (Alessio, 2026-10-25); senza nemmeno quella si scarta (1b).
-      if (!d.decisori.length && !d.pontiBni.length && !(await raggiungibile(c.id))) continue;
+      // v3.117: senza chi decide non entra (la mette in pausa il punto 1b).
+      if (!d.decisori.length) continue;
       conForza.push({ id: c.id, forza: forzaAzienda(d, cerchia), creata: c.createdAt.getTime() });
     }
     conForza.sort((a, b) => b.forza - a.forza || a.creata - b.creata);
@@ -199,6 +204,8 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   const mappate = await db.lavorazione.findMany({ where: { fase: "MAPPATA" }, select: { id: true } });
   for (const l of mappate) if (await avanzaMappata(l.id, cerchia, oggi)) r.messaggi++;
 
+  // 3b) v3.117: il collegamento con chi decide (LinkedIn + Instagram), lo manda il Mac.
+  r.collegamentiAccodati = await accodaCollega(oggi);
   // 4) Scaldare chi decide: fino a 3 lavori al giorno, dentro il budget LinkedIn.
   r.scaldaAccodato = await accodaScalda(oggi);
   // 5) I messaggi a chi decide li manda il Mac su LinkedIn (v3.88).
@@ -206,15 +213,82 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   return r;
 }
 
-/** Una pagina è ferma se in 10 giorni "scalda" l'ha letta almeno 3 volte senza trovare un post da commentare. */
-const GIORNI_PAGINA_FERMA = 10;
-const LETTURE_PAGINA_FERMA = 3;
-/** Quanto resta fuori una pagina ferma: poi riprova da sola (magari ha ripreso a pubblicare). */
-const GIORNI_PAUSA_PAGINA_FERMA = 45;
+/** Nota sulle voci chiuse dal riallineamento del 2026-11-06. */
+const NOTA_RIALLINEAMENTO = "Superata: dal 2026-11-06 niente presentazioni né contatti in comune, prima il collegamento e i commenti ai post di chi decide (v3.117)";
+const STRADE_PONTE = ["BNI", "CERCHIA", "DIRETTO", "DA_CONFERMARE", "IN_ATTESA_PONTE"];
 
 /**
- * v3.84 (rischio: "aziende con pagine morte restano a scaldare per sempre e occupano i 10 posti"; Metal Sulcis 0 post,
- * Centro Piscine fermo da un mese): esce in pausa e il posto passa a un'altra.
+ * v3.117 (Alessio, 2026-11-06: "prendi tutte le aziende del Percorso e allinea a questa nuova procedura"). Idempotente:
+ * tocca solo quello che è rimasto sulla strada vecchia, quindi si può rifare a ogni giro.
+ *   - messaggi non ancora mandati (al ponte, promemoria, contatto dopo i commenti alla pagina, "scrivi all'azienda"):
+ *     si chiudono, tranne quelli a chi decide che Alessio conosce (cerchia);
+ *   - le aziende ferme su un ponte o sui commenti alla pagina tornano "mappate": il giro le porta al collegamento con chi
+ *     decide (o in pausa se chi decide non si sa);
+ *   - i lavori del Mac ancora in coda col formato vecchio (commenti alle pagine, messaggi chiusi) si tolgono.
+ * Restano come sono le aziende già contattate (si aspetta la risposta, follow-up, caso studio).
+ */
+export async function riallineaRelazioneDiretta(cerchia: string[]): Promise<number> {
+  const ora = new Date();
+  const chiudi = (where: Prisma.ApprovalItemWhereInput) => db.approvalItem.updateMany({ where: { ...where, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: ora, decidedBy: "rete", note: NOTA_RIALLINEAMENTO } });
+  const daRiportare = new Set<string>();
+
+  // Messaggi vecchi non ancora mandati.
+  const voci = await db.approvalItem.findMany({ where: { kind: { in: [KIND_RETE_PONTE, KIND_RETE_PROMEMORIA, KIND_RETE_DIRETTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA] }, status: "IN_ATTESA", leadId: { not: null } }, select: { id: true, kind: true, leadId: true, payload: true } });
+  for (const v of voci) {
+    const p = (v.payload ?? {}) as { relazioneDiretta?: unknown; decisore?: unknown };
+    if (p.relazioneDiretta === true) continue;
+    const decisore = typeof p.decisore === "string" ? p.decisore : null;
+    // Lo conosce Alessio: il messaggio diretto resta.
+    if (v.kind === KIND_RETE_DIRETTO && decisore && nellaCerchia(decisore, cerchia) && !("inComune" in (v.payload as object ?? {}))) continue;
+    await chiudi({ id: v.id });
+    daRiportare.add(v.leadId!);
+  }
+
+  // Lavorazioni sulla strada vecchia.
+  const lav = await db.lavorazione.findMany({ where: { fase: { in: ["MAPPATA", "PONTE_SCELTO", "CHIESTA"] } }, select: { id: true, leadId: true, fase: true, strada: true, decisore: true, presentatoAt: true } });
+  for (const l of lav) {
+    const conPonte = l.strada === "BNI" || l.strada === "CERCHIA";
+    // Già contattate (aspetti la risposta / follow-up / caso studio) o presentate: restano.
+    if (l.fase === "CHIESTA" && !(conPonte && !l.presentatoAt)) continue;
+    let riporta = daRiportare.has(l.leadId);
+    if (l.fase === "PONTE_SCELTO" || (l.fase === "CHIESTA" && conPonte)) riporta = true;
+    if (l.fase === "MAPPATA" && (l.strada === null || STRADE_PONTE.includes(l.strada))) riporta = true;
+    // Ai commenti senza aver mai chiesto il collegamento (la strada vecchia, commenti alla pagina): si riparte da lì.
+    if (l.fase === "MAPPATA" && l.strada === STRADA_SCALDARE && !(await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: "collega" }, select: { id: true } }))) {
+      const [nuovi, contatto] = await Promise.all([
+        db.approvalItem.count({ where: { leadId: l.leadId, kind: KIND_COMMENTO, status: "APPROVATO", payload: { path: ["persona"], equals: true } } }),
+        db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_RETE_CONTATTO, status: { in: ["IN_ATTESA", "APPROVATO"] } }, select: { id: true } }),
+      ]);
+      if (!nuovi && !contatto) riporta = true;
+    }
+    // Chi decide conosciuto da Alessio con il messaggio diretto ancora da mandare: resta.
+    if (l.strada === "DIRETTO" && l.decisore && nellaCerchia(l.decisore, cerchia) && (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_RETE_DIRETTO, status: "IN_ATTESA" }, select: { id: true } }))) riporta = false;
+    if (!riporta) continue;
+    if (l.fase === "MAPPATA" && l.strada === null) continue; // già pronta per il giro
+    await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", strada: null, ponteNome: null, ponteMembroId: null, chiestaAt: null, promemoriaAt: null, note: "Riallineata alla relazione diretta (v3.117)" } });
+    await chiudi({ leadId: l.leadId, kind: { in: [KIND_RETE_PONTE, KIND_RETE_PROMEMORIA] } });
+    daRiportare.add(l.leadId);
+  }
+
+  // Lavori del Mac in coda col formato vecchio: commenti alle pagine e messaggi delle voci chiuse.
+  const inCoda = await db.agentRun.findMany({ where: { status: "IN_CODA", agent: { in: ["scalda", "contatta_persona"] } }, select: { id: true, agent: true, input: true, leadId: true } });
+  for (const r of inCoda) {
+    const input = (r.input ?? {}) as { aziende?: { pagina?: unknown }[]; voceId?: string };
+    const vecchio = r.agent === "scalda"
+      ? (input.aziende ?? []).some((a) => a && "pagina" in a)
+      : !!input.voceId && !!(await db.approvalItem.findFirst({ where: { id: input.voceId, status: "SCARTATO", note: NOTA_RIALLINEAMENTO }, select: { id: true } }));
+    if (vecchio) await db.agentRun.update({ where: { id: r.id }, data: { status: "FALLITO", finishedAt: ora, error: "Annullato dal CRM: interrotto per il riallineamento alla relazione diretta (v3.117)" } });
+  }
+  return daRiportare.size;
+}
+
+/** Chi decide è fermo se in 10 giorni "scalda" ha letto i suoi profili almeno 3 volte senza un post da commentare. */
+const GIORNI_PAGINA_FERMA = 10;
+const LETTURE_PAGINA_FERMA = 3;
+
+/**
+ * v3.84: chi non pubblica non resta a scaldare per sempre. v3.117: non va più in pausa: gli si scrive col caso studio
+ * (passo 4) con quello che c'è, senza aspettare i commenti.
  */
 async function liberaPagineFerme(oggi: Date): Promise<number> {
   const da = new Date(oggi.getTime() - GIORNI_PAGINA_FERMA * 86400_000);
@@ -232,9 +306,8 @@ async function liberaPagineFerme(oggi: Date): Promise<number> {
   let uscite = 0;
   for (const l of lav) {
     if ((lette.get(l.leadId) ?? 0) < LETTURE_PAGINA_FERMA || conCommento.has(l.leadId)) continue;
-    // v3.87: in pausa esce dai commenti ma entra fra le aziende da chiedere ai membri BNI della zona (presentazioni.ts).
-    await mettiInPausa(l.id, `${NOTA_PAGINA_FERMA}: in ${GIORNI_PAGINA_FERMA} giorni nessun post da commentare, si cerca chi la presenta`, GIORNI_PAUSA_PAGINA_FERMA);
-    uscite++;
+    // v3.117: chi decide non pubblica: non si aspetta, gli si scrive (passo 4) con quello che c'è.
+    if (await dopoCommento(l.leadId, oggi, true)) uscite++;
   }
   return uscite;
 }
@@ -247,7 +320,8 @@ export const MINIMO_DA_SCALDARE = 10;
  * con chi decide già cercato: le più vecchie prima. Ognuna passa da mandaAScaldare (approvata dal CRM, approfondita).
  */
 async function riempiScaldare(oggi: Date): Promise<number> {
-  const daScaldare = () => db.lavorazione.count({ where: { fase: "MAPPATA", strada: "SCALDARE" } });
+  // v3.117: contano anche quelle al collegamento (passo 2): sono la stessa fila verso il contatto.
+  const daScaldare = () => db.lavorazione.count({ where: { fase: "MAPPATA", strada: { in: [STRADA_COLLEGARE, STRADA_SCALDARE] } } });
   let mancano = MINIMO_DA_SCALDARE - (await daScaldare());
   if (mancano <= 0) return 0;
   const candidate = await db.approvalItem.findMany({
@@ -260,6 +334,8 @@ async function riempiScaldare(oggi: Date): Promise<number> {
   for (const c of candidate) {
     if (mancano <= 0) break;
     if (!c.leadId || !indirizzoSardo(c.lead?.address, { telefono: c.lead?.phone, nome: c.lead?.name })) continue;
+    // v3.117: rientrano solo quelle dove chi decide si sa (prima "senza collegamento" voleva dire senza contatti in comune).
+    if (!(await datiAzienda(c.leadId)).decisori.length) continue;
     if (!(await mandaAScaldare(c.leadId, oggi))) continue;
     aggiunte++;
     mancano = MINIMO_DA_SCALDARE - (await daScaldare());
@@ -324,13 +400,16 @@ async function accodaContatti(oggi: Date): Promise<number> {
   const voci = await db.approvalItem.findMany({
     where: { kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA", leadId: { not: null } },
     orderBy: { createdAt: "asc" },
-    select: { id: true, leadId: true, payload: true, lead: { select: { name: true } } },
+    select: { id: true, kind: true, leadId: true, payload: true, lead: { select: { name: true } } },
     take: 20,
   });
   let accodati = 0;
   for (const v of voci) {
-    const p = (v.payload ?? {}) as { linkedin?: string; messaggio?: string; decisore?: string };
+    const p = (v.payload ?? {}) as { linkedin?: string; messaggio?: string; decisore?: string; telefono?: string | null; email?: string | null };
     if (!v.leadId || !p.linkedin || !/linkedin\.com\/in\//i.test(p.linkedin) || !p.messaggio) continue;
+    // v3.117 (Alessio: "poi mail o WhatsApp per il caso studio"): con WhatsApp o mail scrive Alessio da lì; LinkedIn
+    // solo se non c'è altro (ormai siete collegati: il messaggio, non l'invito).
+    if (v.kind === KIND_RETE_CONTATTO && (p.telefono || p.email)) continue;
     if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", status: { in: ["IN_CODA", "IN_CORSO", "FATTO"] } }, select: { id: true } })) continue;
     if (await archiviaSeNonRiuscito(v.id, v.leadId)) continue;
     // v3.99: l'azienda di un membro BNI passa dal 121, non da LinkedIn.
@@ -377,11 +456,11 @@ export async function scartaSenzaStrade(leadId: string, oggi = new Date()): Prom
   const scaduta = !!voce.decidedAt && oggi.getTime() - voce.decidedAt.getTime() > ORE_MASSIME_FERMA * 3600_000;
   if (!fatti.has("social") && !scaduta) return false;
   const d = await datiAzienda(leadId);
-  if (d.decisori.length || d.pontiBni.length || (await raggiungibile(leadId))) return false;
-  await db.approvalItem.update({
-    where: { id: voce.id },
-    data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: SCARTATA_DAL_CRM, note: "Scartata da sola: niente chi decide, nessuno che te la presenta, né WhatsApp, né mail, né pagine social" },
-  });
+  if (d.decisori.length) return false;
+  // v3.117 (Alessio, 2026-11-06): chi decide non si trova: pausa 3 mesi, poi si ricerca (non si scrive all'azienda).
+  if (await db.lavorazione.findUnique({ where: { leadId }, select: { id: true } })) return false;
+  const l = await db.lavorazione.create({ data: { leadId } });
+  await mettiInPausa(l.id, `${NOTA_SENZA_CHI_DECIDE}: si ricerca fra 3 mesi`);
   return true;
 }
 
@@ -400,46 +479,110 @@ export async function entraSubito(leadId: string, oggi = new Date()): Promise<"e
   }
   if (await scartaSenzaStrade(leadId)) return "no";
   const d = await datiAzienda(leadId);
-  if (!d.decisori.length && !d.pontiBni.length && !(await pagineAzienda(leadId)).length) return "no";
+  if (!d.decisori.length) return "no";
   if ((await db.lavorazione.count({ where: { fase: { in: [...FASI_ATTIVE] } } })) >= capienzaLavorazione(oggi)) return "no";
   const l = await db.lavorazione.create({ data: { leadId } });
   await avanzaMappata(l.id, undefined, oggi);
   return "entrata";
 }
 
+/** v3.117: chi decide non si trova da nessuna parte: l'azienda va in pausa 3 mesi (poi si ricerca chi decide). */
+export const NOTA_SENZA_CHI_DECIDE = "Chi decide non trovato";
+
 /**
- * Un'azienda mappata: se c'è una strada si sceglie il ponte e il messaggio va in Cassetta; altrimenti si
- * segna cosa manca ("lo conosci?" sui nomi visti, oppure da scaldare con i commenti).
+ * Un'azienda mappata (v3.117, Alessio 2026-11-06: "chi me la presenta di fatto non serve"):
+ *   - chi decide lo conosci tu (cerchia): il messaggio diretto, subito (passo 4);
+ *   - chi decide si sa: il CRM chiede il collegamento su LinkedIn e lo segue su Instagram (passo 2), poi i commenti;
+ *   - chi decide non si sa: pausa 3 mesi (niente più messaggi alla pagina).
  */
 export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], oggi = new Date()): Promise<boolean> {
   const l = await db.lavorazione.findUnique({ where: { id: lavorazioneId } });
   if (!l || l.fase !== "MAPPATA") return false;
   const c = cerchia ?? (await cerchiaNomi());
   const d = await datiAzienda(l.leadId, !!l.scaldataAt);
-  // I ponti già al lavoro per un'altra azienda (messaggio da mandare o presentazione in attesa).
-  const occupati = (await db.lavorazione.findMany({ where: { id: { not: l.id }, fase: { in: ["PONTE_SCELTO", "CHIESTA"] }, presentatoAt: null, strada: { in: ["BNI", "CERCHIA"] } }, select: { ponteNome: true } }))
-    .map((x) => x.ponteNome).filter((x): x is string => !!x);
-  const s = strade(d, c, provatiDi(l.pontiProvati), occupati);
-  if (s.length) {
-    await scegliPonte(l.id, s[0]);
-    // v3.87: con chi decide noto si scrive subito a lui, citando chi avete in comune (non il membro "di zona",
-    // che non è detto lo conosca). Il ponte resta come aiuto, non come passaggio obbligato.
-    if ((s[0].strada === "BNI" || s[0].strada === "CERCHIA") && s[0].decisore) {
-      await db.lavorazione.update({ where: { id: l.id }, data: { strada: "DIRETTO" } });
-      return creaMessaggio(l.id, "DIRETTO", oggi, s[0].zona ? null : s[0].nome);
-    }
-    return creaMessaggio(l.id, s[0].strada === "BNI" || s[0].strada === "CERCHIA" ? "PONTE" : "DIRETTO", oggi);
-  }
-  // C'è un ponte valido ma è occupato: si aspetta che si liberi.
-  if (strade(d, c, provatiDi(l.pontiProvati)).length) {
-    if (l.strada !== "IN_ATTESA_PONTE") await db.lavorazione.update({ where: { id: l.id }, data: { strada: "IN_ATTESA_PONTE" } });
+  const decisore = d.decisori[0]?.nome ?? null;
+  if (!decisore) {
+    // Si sta ricercando chi decide (rientro dalla pausa): si aspetta il referto.
+    if (await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } })) return false;
+    await mettiInPausa(l.id, `${NOTA_SENZA_CHI_DECIDE}: si ricerca fra 3 mesi`);
     return false;
   }
-  const strada = nomiDaConfermare(d, c, provatiDi(l.pontiProvati)).length ? "DA_CONFERMARE" : "SCALDARE";
-  if (l.strada !== strada || !l.decisore) await db.lavorazione.update({ where: { id: l.id }, data: { strada, decisore: l.decisore ?? d.decisori[0]?.nome ?? null } });
-  // Chi decide non si sa: si scrive alla pagina per arrivare a lui (e intanto si commenta).
-  if (!d.decisori.length) return messaggioAllaPagina(l.leadId, oggi);
+  const conosciuto = d.decisori.find((x) => nellaCerchia(x.nome, c) && !provatiDi(l.pontiProvati).some((p) => stessaPersona(p, x.nome)));
+  if (conosciuto) {
+    await scegliPonte(l.id, { strada: "DIRETTO", nome: conosciuto.nome, decisore: conosciuto.nome });
+    return creaMessaggio(l.id, "DIRETTO", oggi);
+  }
+  // Già al lavoro (collegamento chiesto o commenti in corso): resta dov'è.
+  if (l.strada === STRADA_COLLEGARE || l.strada === STRADA_SCALDARE) {
+    if (!l.decisore) await db.lavorazione.update({ where: { id: l.id }, data: { decisore } });
+    return false;
+  }
+  await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_COLLEGARE, decisore, ponteNome: null, ponteMembroId: null } });
   return false;
+}
+
+/** v3.117: rientrata dalla pausa senza chi decide: si rifà la ricerca (se LinkedIn lo permette oggi). */
+async function ricercaChiDecide(leadId: string, oggi: Date): Promise<void> {
+  if (await db.agentRun.findFirst({ where: { leadId, agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } })) return;
+  if (!(await linkedinPermette("decision_maker", null, oggi))) return;
+  await db.agentRun.create({ data: { leadId, agent: "decision_maker", status: "IN_CODA", input: { ricontrollo: true } } });
+}
+
+/** Collegamenti (LinkedIn + Instagram) accodati al giorno: inviti con calma, come una persona. */
+export const COLLEGAMENTI_AL_GIORNO = 10;
+
+/**
+ * v3.117 (passo 2): per chi decide, il Mac chiede il collegamento su LinkedIn (senza nota) e lo segue su Instagram.
+ * Fatto (o se non c'è nessun profilo) l'azienda passa ai commenti ai suoi post (passo 3).
+ */
+async function accodaCollega(oggi: Date): Promise<number> {
+  const lav = await db.lavorazione.findMany({ where: { fase: "MAPPATA", strada: STRADA_COLLEGARE }, orderBy: { updatedAt: "asc" }, select: { id: true, leadId: true, decisore: true, lead: { select: { name: true } } }, take: 40 });
+  const mezzanotte = mezzanotteRoma(oggi);
+  let fatti = await db.agentRun.count({ where: { agent: "collega", queuedAt: { gte: mezzanotte } } });
+  let accodati = 0;
+  for (const l of lav) {
+    if (await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: "collega", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } })) continue;
+    // Già fatto una volta (anche fallito due volte): si va avanti con quello che c'è.
+    const giri = await db.agentRun.findMany({ where: { leadId: l.leadId, agent: "collega" }, select: { status: true } });
+    const p = await profiliDecisore(l.leadId);
+    if (!p.linkedin && !p.instagram) {
+      // Nessun profilo personale. Se chi decide è stato cercato con le istruzioni vecchie (senza Instagram, a volte senza
+      // link) si ricerca una volta; se nemmeno così: niente da collegare né da commentare, si scrive col caso studio.
+      const ricerca = await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: "decision_maker", input: { path: ["relazioneDiretta"], equals: true } }, orderBy: { queuedAt: "desc" }, select: { status: true } });
+      if (ricerca?.status === "IN_CODA" || ricerca?.status === "IN_CORSO") continue;
+      if (!ricerca) {
+        if (await linkedinPermette("decision_maker", null, oggi)) await db.agentRun.create({ data: { leadId: l.leadId, agent: "decision_maker", status: "IN_CODA", input: { ricontrollo: true, relazioneDiretta: true } } });
+        continue;
+      }
+      await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_SCALDARE } });
+      await dopoCommento(l.leadId, oggi, true);
+      continue;
+    }
+    if (giri.some((g) => g.status === "FATTO") || giri.filter((g) => g.status === "FALLITO").length >= 2) {
+      await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_SCALDARE } });
+      continue;
+    }
+    if (fatti >= COLLEGAMENTI_AL_GIORNO) continue;
+    // Solo Instagram (LinkedIn fermo o profilo assente) va bene lo stesso.
+    const linkedinOk = !!p.linkedin && (await linkedinPermette("collega", null, oggi));
+    if (!linkedinOk && !p.instagram) continue;
+    await db.agentRun.create({
+      data: { agent: "collega", status: "IN_CODA", leadId: l.leadId, input: { leadId: l.leadId, persona: l.decisore ?? p.nome, ruolo: p.ruolo, azienda: l.lead.name, linkedin: linkedinOk ? p.linkedin : null, instagram: p.instagram } },
+    });
+    fatti++;
+    accodati++;
+  }
+  return accodati;
+}
+
+/** Il referto del Mac per il collegamento: l'azienda passa ai commenti ai post di chi decide. */
+export async function importaCollega(leadId: string | null, findings: Record<string, unknown>): Promise<void> {
+  if (!leadId) return;
+  const li = str(findings.linkedin);
+  const ig = str(findings.instagram);
+  await db.lavorazione.updateMany({ where: { leadId, fase: "MAPPATA", strada: STRADA_COLLEGARE }, data: { strada: STRADA_SCALDARE } });
+  const fatto = [li === "INVITO" ? "richiesta di collegamento su LinkedIn" : li === "GIA_COLLEGATI" ? "già collegati su LinkedIn" : null, ig === "SEGUITO" ? "seguito su Instagram" : null].filter(Boolean).join(", ");
+  if (fatto) await db.activity.create({ data: { leadId, type: "LINKEDIN_SENT", notes: `[Collegamento-auto] ${fatto}` } }).catch(() => null);
 }
 
 async function scegliPonte(lavorazioneId: string, p: Ponte): Promise<void> {
@@ -727,7 +870,7 @@ export async function aggiornaTestiContatto(oggi = new Date(), massimo = 20): Pr
       const canali = { telefono: canale.whatsapp ?? (p.telefono as string | null) ?? null, email: canale.email ?? (p.email as string | null) ?? null, emailPersonale: canale.emailPersonale, chiamare: canale.telefono, linkedin: (p.linkedin as string | null) ?? canale.linkedin };
       if (v.kind === KIND_RETE_CONTATTO) {
         const piattaforma = piattaformaPiuCommentata(await commentiDi(v.leadId))?.piattaforma ?? null;
-        nuovo = { ...canali, messaggio: testoContattoDopoCommenti(decisore, azienda, piattaforma, gancio, !!caso) };
+        nuovo = { ...canali, messaggio: testoContattoDopoCommenti(decisore, azienda, piattaforma, gancio, !!caso, !!piattaforma) };
       } else if ("inComune" in p) {
         nuovo = { ...canali, messaggio: testoDirettoConPonte(decisore ?? "", azienda, (p.inComune as string | null) ?? null, gancio, !!caso) };
       } else {
@@ -786,6 +929,7 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
         motivoDalCaso: !!motivo,
         casoId: caso?.casoId ?? null,
         versioneTesto: VERSIONE_TESTO,
+        relazioneDiretta: true,
       } as Prisma.InputJsonValue,
     },
   });
@@ -839,43 +983,39 @@ async function accodaScalda(oggi: Date): Promise<boolean> {
   const mezzanotte = mezzanotteRoma(oggi);
   if (await db.agentRun.findFirst({ where: { agent: "scalda", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } })) return false;
   if ((await db.agentRun.count({ where: { agent: "scalda", queuedAt: { gte: mezzanotte } } })) >= GIRI_SCALDA_AL_GIORNO) return false;
+  // v3.117: si scaldano solo le aziende al passo 3, e si commentano i post di CHI DECIDE (Instagram o LinkedIn).
   const lav = await db.lavorazione.findMany({
-    where: { fase: { in: [...FASI_ATTIVE] }, scaldataAt: null },
+    where: { fase: "MAPPATA", strada: STRADA_SCALDARE },
     orderBy: { updatedAt: "asc" },
     include: { lead: { select: { id: true, name: true, address: true } } },
     take: 40,
   });
-  // Prima chi non ha altre strade (da scaldare), poi chi aspetta la presentazione.
-  lav.sort((a, b) => Number(b.strada === "SCALDARE") - Number(a.strada === "SCALDARE"));
-  // LinkedIn fermo (budget o stop di 48 ore): si commenta su Facebook e Instagram, non si ferma tutto
-  // (2026-10-29: una sola azienda con la sola pagina LinkedIn bloccava il lavoro di tutte).
+  // LinkedIn fermo (budget o stop di 48 ore): si commenta su Instagram, non si ferma tutto.
   const linkedinOk = await linkedinPermette("scalda", { aziende: [] }, oggi);
   const aziende = [];
   for (const l of lav) {
     if (aziende.length >= DECISORI_DA_SCALDARE) break;
-    // v3.99: i commenti rimasti ad Alessio (prima della v3.99) si chiudono: li pubblica il CRM.
     await db.approvalItem.updateMany({ where: { leadId: l.leadId, kind: KIND_COMMENTO, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: "crm_scalda", note: "Lo pubblica il CRM" } });
-    // v3.99: l'azienda di un membro BNI passa dal 121: niente commenti.
+    // L'azienda di un membro BNI passa dal 121: niente commenti.
     if (await db.bniMembro.findFirst({ where: { leadId: l.leadId, status: "ATTIVO" }, select: { id: true } })) continue;
-    // E uno solo al giorno per azienda, anche con due giri: non deve sembrare spam.
+    // Uno solo al giorno per azienda, anche con più giri: non deve sembrare spam.
     if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_COMMENTO, createdAt: { gte: mezzanotte } }, select: { id: true } })) continue;
     const fattiQui = await commentiDi(l.leadId);
     const giaFatti = piattaformaPiuCommentata(fattiQui);
     if ((giaFatti?.fatti ?? 0) >= COMMENTI_PER_CONTATTO) {
-      // Commenti già bastanti (anche perché da 7 sono scesi a 5): il contatto va in Cassetta, se non c'è.
       await dopoCommento(l.leadId, oggi);
       continue;
     }
-    const tutte = await pagineAzienda(l.leadId);
-    const pagine = linkedinOk ? tutte : tutte.filter((p) => p.piattaforma !== "linkedin");
-    if (!pagine.length) continue;
-    // I commenti vanno sulla stessa piattaforma: si resta dove si è già cominciato (se è LinkedIn fermo, si aspetta).
-    if (giaFatti && !linkedinOk && giaFatti.piattaforma === "linkedin" && tutte.some((p) => p.piattaforma === "linkedin")) continue;
-    const iniziata = giaFatti && pagine.some((p) => p.piattaforma === giaFatti.piattaforma) ? giaFatti.piattaforma : null;
-    const piattaforma = iniziata ?? (await piattaformaScelta(l.leadId, pagine, oggi)) ?? pagine[0].piattaforma;
-    const pagina = pagine.find((p) => p.piattaforma === piattaforma) ?? pagine[0];
+    const p = await profiliDecisore(l.leadId);
+    const piattaforma = piattaformaPersona({ instagram: p.instagram, linkedin: p.linkedin }, giaFatti?.piattaforma ?? null, linkedinOk);
+    if (!piattaforma) {
+      // Nessun profilo dove commentare (o solo LinkedIn, fermo oggi): senza profili si scrive subito.
+      if (!p.instagram && !p.linkedin) await dopoCommento(l.leadId, oggi, true);
+      continue;
+    }
+    const altra = piattaforma === "instagram" ? (linkedinOk ? p.linkedin : null) : p.instagram;
     const giaCommentati = fattiQui.map((c) => c.post).filter((x): x is string => typeof x === "string");
-    aziende.push({ leadId: l.leadId, azienda: l.lead.name, citta: l.lead.address, decisore: l.decisore, piattaforma: pagina.piattaforma, pagina: pagina.url, giaCommentati });
+    aziende.push({ leadId: l.leadId, azienda: l.lead.name, citta: l.lead.address, decisore: l.decisore ?? p.nome, piattaforma, profilo: piattaforma === "instagram" ? p.instagram : p.linkedin, altroProfilo: altra, giaCommentati });
   }
   if (!aziende.length) return false;
   const input = { aziende };
@@ -908,13 +1048,20 @@ export async function importaScalda(findings: Record<string, unknown>): Promise<
         leadId,
         kind: KIND_COMMENTO,
         agent: "scalda",
-        title: `${pubblicato ? "Commentato" : "Commenta"} il post di ${lead.name} su ${NOMI[piattaforma]} (${fatti + 1}° di ${COMMENTI_PER_CONTATTO})`,
-        payload: { post, piattaforma, estratto: str(c.estratto)?.slice(0, 400) ?? null, commento: commento.slice(0, 600), decisore: str(c.decisore), pubblicato } as Prisma.InputJsonValue,
+        title: `${pubblicato ? "Commentato" : "Commenta"} il post di ${str(c.decisore) ?? "chi decide"} (${lead.name}) su ${NOMI[piattaforma]} (${fatti + 1}° di ${COMMENTI_PER_CONTATTO})`,
+        // v3.117: persona = commento al post di chi decide (contano solo questi per il contatto).
+        payload: { post, piattaforma, estratto: str(c.estratto)?.slice(0, 400) ?? null, commento: commento.slice(0, 600), decisore: str(c.decisore), pubblicato, persona: true } as Prisma.InputJsonValue,
         ...(pubblicato ? { status: "APPROVATO" as const, decidedAt: new Date(), decidedBy: "crm_auto", note: "Pubblicato dal CRM" } : {}),
       },
     });
     if (pubblicato) await dopoCommento(leadId);
     e.commenti++;
+  }
+  // v3.117: chi decide non pubblica (nessun post negli ultimi 90 giorni sui suoi profili): gli si scrive subito.
+  const senzaPost = Array.isArray(findings.senzaPost) ? (findings.senzaPost as unknown[]) : [];
+  for (const x of senzaPost) {
+    const leadId = typeof x === "string" ? x : str((x as { leadId?: unknown })?.leadId);
+    if (leadId && (await db.lavorazione.findFirst({ where: { leadId, fase: "MAPPATA", strada: STRADA_SCALDARE }, select: { id: true } }))) await dopoCommento(leadId, new Date(), true);
   }
   const segnali = Array.isArray(findings.segnali) ? (findings.segnali as Record<string, unknown>[]) : [];
   for (const s of segnali) {
@@ -1025,7 +1172,8 @@ export async function piattaformaScelta(leadId: string, pagine?: PaginaSocial[],
 /** I commenti fatti da Alessio sulle pagine di quest'azienda (proposti e segnati "Commentato", o segnati da lui). */
 async function commentiDi(leadId: string): Promise<{ piattaforma?: unknown; post?: unknown }[]> {
   const fatti = await db.approvalItem.findMany({ where: { leadId, kind: KIND_COMMENTO, status: "APPROVATO" }, select: { payload: true } });
-  return fatti.map((f) => (f.payload ?? {}) as { piattaforma?: unknown; post?: unknown });
+  // v3.117: contano solo i commenti ai post di chi decide; quelli di prima alla pagina dell'azienda no.
+  return fatti.map((f) => (f.payload ?? {}) as { piattaforma?: unknown; post?: unknown; persona?: unknown }).filter((p) => p.persona === true);
 }
 
 /**
@@ -1051,25 +1199,30 @@ export async function segnaCommento(leadId: string, piattaforma: Piattaforma): P
       status: "APPROVATO",
       decidedAt: new Date(),
       note: "Segnato dalla scheda",
-      payload: { piattaforma, manuale: true } as Prisma.InputJsonValue,
+      payload: { piattaforma, manuale: true, persona: true } as Prisma.InputJsonValue,
     },
   });
   const contatto = await dopoCommento(leadId);
   return { fatti: await commentiFatti(leadId), contatto };
 }
 
-/** Dopo ogni commento: al 5° il contatto diretto va in Cassetta (una volta sola). */
-export async function dopoCommento(leadId: string, oggi = new Date()): Promise<boolean> {
-  if ((await commentiFatti(leadId)) < COMMENTI_PER_CONTATTO) return false;
-  const gia = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_RETE_CONTATTO }, select: { id: true } });
+/**
+ * Dopo ogni commento: al 3° il contatto diretto (WhatsApp o mail col caso studio) va in Cassetta, una volta sola.
+ * v3.117: `subito` = chi decide non pubblica (o non ha profili): si scrive senza aspettare i commenti.
+ */
+export async function dopoCommento(leadId: string, oggi = new Date(), subito = false): Promise<boolean> {
+  const commentati = await commentiFatti(leadId);
+  if (!subito && commentati < COMMENTI_PER_CONTATTO) return false;
+  // Le voci chiuse col riallineamento del 2026-11-06 (scartate) non contano.
+  const gia = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_RETE_CONTATTO, status: { in: ["IN_ATTESA", "APPROVATO"] } }, select: { id: true } });
   if (gia) return false;
   const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true, phone: true, email: true } });
   if (!lead) return false;
   const d = await datiAzienda(leadId);
   const decisore = d.decisori[0]?.nome ?? null;
   const profili = await profiliDecisore(leadId);
-  // La piattaforma dove Alessio ha commentato 7 volte: è lì che l'azienda l'ha visto.
-  const piattaforma = piattaformaPiuCommentata(await commentiDi(leadId))?.piattaforma ?? (await piattaformaScelta(leadId, undefined, oggi));
+  // La piattaforma dove il CRM ha commentato i suoi post: è lì che chi decide ha visto Alessio.
+  const piattaforma = piattaformaPiuCommentata(await commentiDi(leadId))?.piattaforma ?? null;
   const caso = await casoPerMessaggio(leadId, oggi);
   const canale = await canaleDiretto(leadId, decisore);
   await db.approvalItem.create({
@@ -1077,11 +1230,11 @@ export async function dopoCommento(leadId: string, oggi = new Date()): Promise<b
       leadId,
       kind: KIND_RETE_CONTATTO,
       agent: "rete",
-      title: `${COMMENTI_PER_CONTATTO} commenti fatti: scrivi a ${decisore ? chiDecideTesto(decisore, lead.name) : lead.name}`,
+      title: `${commentati ? `${commentati} commenti fatti: ` : ""}scrivi a ${decisore ? chiDecideTesto(decisore, lead.name) : lead.name} col caso studio`,
       payload: {
         decisore,
         azienda: lead.name,
-        messaggio: testoContattoDopoCommenti(decisore, lead.name, piattaforma, caso?.gancio ?? null, !!caso),
+        messaggio: testoContattoDopoCommenti(decisore, lead.name, commentati ? piattaforma : null, caso?.gancio ?? null, !!caso, commentati > 0),
         piattaforma,
         telefono: canale.whatsapp,
         email: canale.email,
@@ -1093,16 +1246,11 @@ export async function dopoCommento(leadId: string, oggi = new Date()): Promise<b
         motivoDalCaso: !!caso?.gancio,
         casoId: caso?.casoId ?? null,
         versioneTesto: VERSIONE_TESTO,
+        relazioneDiretta: true,
       } as Prisma.InputJsonValue,
     },
   });
   return true;
-}
-
-/** v3.115: l'azienda si può raggiungere anche senza chi decide: WhatsApp, mail o una pagina. */
-async function raggiungibile(leadId: string): Promise<boolean> {
-  const c = await canaliAzienda(leadId);
-  return !!(c.telefono || c.email || c.pagina);
 }
 
 /** Chi decide non si sa: il messaggio all'azienda (WhatsApp, mail o pagina), una volta sola. */

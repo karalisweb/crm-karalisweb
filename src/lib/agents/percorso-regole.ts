@@ -1,23 +1,25 @@
 /**
  * Il percorso (v3.62, Alessio 2026-10-27): ogni azienda sta in UNO dei 4 passi e mostra UNA cosa da fare.
  *
- *   1. Trovate             il CRM la analizza, controlla se chi decide è collegato, tu decidi se approfondire
- *   2. Chi me la presenta  la conosci tu / un ponte forte della cerchia te la presenta
- *   3. In riscaldamento    nessun ponte: commenti sulla pagina dell'azienda, 7 sulla stessa piattaforma
- *   4. Contatto            scrivi a chi decide, o alla pagina se non si sa chi è (o fissi l'incontro se te l'hanno presentata)
+ * v3.117 (Alessio, 2026-11-06: "chi me la presenta di fatto non serve"): la relazione si fa direttamente con chi decide.
  *
- * Se conosci tu la proprietà si salta dal passo 1 al 4. Dopo il contatto l'azienda esce dal percorso
+ *   1. Trovate           il CRM la analizza e cerca chi decide (LinkedIn e Instagram personali)
+ *   2. Collegamento      il CRM gli chiede il collegamento su LinkedIn e lo segue su Instagram
+ *   3. In riscaldamento  il CRM commenta i suoi post (3 sulla stessa piattaforma); se non pubblica si passa al 4
+ *   4. Contatto          WhatsApp o mail col caso studio, poi il follow-up
+ *
+ * Se conosci tu chi decide si salta dal passo 1 al 4. Chi decide introvabile: l'azienda va in pausa 3 mesi. Dopo il contatto l'azienda esce dal percorso
  * (incontro, proposta, cliente: vanno in Trattative). Funzione pura: si prova con i test.
  */
-import { COMMENTI_PER_CONTATTO, GIORNI_PROMEMORIA, NOMI_PIATTAFORMA, type Piattaforma } from "./rete-regole";
+import { COMMENTI_PER_CONTATTO, GIORNI_PROMEMORIA, NOMI_PIATTAFORMA, STRADA_COLLEGARE, type Piattaforma } from "./rete-regole";
 
 export type Passo = 1 | 2 | 3 | 4;
 
 export const PASSI: { n: Passo; nome: string; spiega: string }[] = [
-  { n: 1, nome: "Trovate", spiega: "il CRM le analizza, tu decidi quali approfondire" },
-  { n: 2, nome: "Chi me la presenta", spiega: "la conosci tu o un ponte forte te la presenta" },
-  { n: 3, nome: "In riscaldamento", spiega: `nessun ponte: ${COMMENTI_PER_CONTATTO} commenti sulla stessa piattaforma` },
-  { n: 4, nome: "Contatto", spiega: "scrivi a chi decide o fissi l'incontro" },
+  { n: 1, nome: "Trovate", spiega: "il CRM le analizza e cerca chi decide" },
+  { n: 2, nome: "Collegamento", spiega: "il CRM chiede il collegamento su LinkedIn e segue chi decide su Instagram" },
+  { n: 3, nome: "In riscaldamento", spiega: `il CRM commenta i post di chi decide (${COMMENTI_PER_CONTATTO} sulla stessa piattaforma)` },
+  { n: 4, nome: "Contatto", spiega: "WhatsApp o mail a chi decide con il caso studio" },
 ];
 
 /** Chi deve muoversi: tu (c'è un pulsante), il CRM (lavora da solo), qualcun altro (si aspetta). */
@@ -63,8 +65,9 @@ export const STATI = {
   decidi: "Da decidere",
   chi_decide: "Chi decide: da trovare",
   analisi: "In analisi",
-  collegamento: "Controllo del collegamento",
+  collegamento: "Il CRM cerca chi decide",
   pronta: "Pronte per il passo 2",
+  collega: "Il CRM chiede il collegamento",
   conosco: "Conosci qualcuno?",
   ponte: "Da chiedere al ponte",
   promemoria: "Promemoria al ponte",
@@ -73,7 +76,7 @@ export const STATI = {
   cerca_ponte: "Il CRM cerca chi te la presenta",
   prepara_ponte: "Il CRM prepara il messaggio al ponte",
   commenta: "Da commentare",
-  cerca_post: "Il CRM cerca il prossimo post",
+  cerca_post: "Il CRM commenta i post di chi decide",
   caso: "Caso studio da mandare",
   scrivi: "Da contattare",
   pagina: "Da scrivere all'azienda (chi decide non si sa)",
@@ -108,8 +111,8 @@ export function passoDi(s: Stato, oggi: Date): Esito {
     if (s.decisione === "SCARTATO") return { dentro: false, perche: "fuori" };
     if (s.decisione === "IN_ATTESA" && s.collegata) return { dentro: true, passo: 1, tocca: "te", stato: "decidi", cosa: "Decidi: la approfondisci?", azione: { tipo: "decidi" } };
     // I posti sono 60 (20 per passo): quello che manca di solito è "chi decide", non il posto.
-    if (s.decisione === "APPROVATO") return { dentro: true, passo: 1, tocca: "crm", stato: s.collegata ? "pronta" : "chi_decide", cosa: s.collegata ? "Approfondita: entra al passo 2 al prossimo giro del CRM (alle 7 o alle 14)" : "Approfondita: il CRM cerca chi decide su LinkedIn, poi entra al passo 2", azione: null };
-    if (s.decisione === "IN_ATTESA") return { dentro: true, passo: 1, tocca: "crm", stato: "collegamento", cosa: "Il CRM controlla se chi decide è collegato a te", azione: null };
+    if (s.decisione === "APPROVATO") return { dentro: true, passo: 1, tocca: "crm", stato: s.collegata ? "pronta" : "chi_decide", cosa: s.collegata ? "Approfondita: entra al passo 2 al prossimo giro del CRM (alle 7 o alle 14)" : "Approfondita: il CRM cerca chi decide su LinkedIn e Instagram, poi entra al passo 2", azione: null };
+    if (s.decisione === "IN_ATTESA") return { dentro: true, passo: 1, tocca: "crm", stato: "collegamento", cosa: "Il CRM cerca chi decide su LinkedIn e Instagram", azione: null };
     return { dentro: true, passo: 1, tocca: "crm", stato: "analisi", cosa: "Il CRM la sta analizzando", azione: null };
   }
 
@@ -120,7 +123,7 @@ export function passoDi(s: Stato, oggi: Date): Esito {
 
   // Passo 4 — Contatto.
   const contatto = voce("RETE_CONTATTO");
-  if (contatto) return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: `${COMMENTI_PER_CONTATTO} commenti fatti: scrivi a ${nomeDi(s)}`, azione: daCassetta(contatto, "Mandato", "Non ora") };
+  if (contatto) return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: `Scrivi a ${nomeDi(s)} con il caso studio (WhatsApp o mail)`, azione: daCassetta(contatto, "Mandato", "Non ora") };
   const diretto = voce("RETE_DIRETTO");
   if (diretto) {
     const inComune = str(diretto.payload?.inComune);
@@ -143,14 +146,16 @@ export function passoDi(s: Stato, oggi: Date): Esito {
   if (l.fase === "CHIESTA" && !conPonte) return { dentro: true, passo: 4, tocca: "attesa", stato: "risposta", cosa: `Hai scritto a ${nomeDi(s)}: aspetti la risposta`, azione: { tipo: "incontro" } };
   if (l.fase === "PONTE_SCELTO" && !conPonte) return { dentro: true, passo: 4, tocca: "crm", stato: "prepara_contatto", cosa: `Il CRM prepara il messaggio per ${nomeDi(s)}`, azione: null };
 
-  // Passo 3 — In riscaldamento.
+  // Passo 3 — In riscaldamento: i commenti ai post di chi decide (v3.117: non più alla pagina dell'azienda).
   if (l.fase === "MAPPATA" && l.strada === "SCALDARE") {
     const c = s.commenti;
     const conto = c ? `${c.fatti} di ${COMMENTI_PER_CONTATTO} su ${NOMI_PIATTAFORMA[c.piattaforma]}` : `0 di ${COMMENTI_PER_CONTATTO}`;
-    const commento = voce("COMMENTO_LINKEDIN");
-    // v3.99 (Alessio: "chi scalda? preferisco il CRM in automatico"): i commenti li pubblica solo il CRM.
-    if (commento) return { dentro: true, passo: 3, tocca: "crm", stato: "cerca_post", cosa: `Commenti: ${conto}. Il CRM pubblica il prossimo`, azione: null };
-    return { dentro: true, passo: 3, tocca: "crm", stato: "cerca_post", cosa: `Commenti: ${conto}. Il CRM cerca il prossimo post`, azione: null };
+    return { dentro: true, passo: 3, tocca: "crm", stato: "cerca_post", cosa: `Commenti ai post di ${nomeDi(s)}: ${conto}. Li pubblica il CRM`, azione: null };
+  }
+
+  // Passo 2 — Collegamento (v3.117): richiesta su LinkedIn e "segui" su Instagram, li manda il CRM.
+  if (l.fase === "MAPPATA" && l.strada === STRADA_COLLEGARE) {
+    return { dentro: true, passo: 2, tocca: "crm", stato: "collega", cosa: `Il CRM chiede il collegamento a ${nomeDi(s)} su LinkedIn e lo segue su Instagram`, azione: null };
   }
 
   // Passo 2 — Chi me la presenta.
@@ -158,7 +163,7 @@ export function passoDi(s: Stato, oggi: Date): Esito {
     return { dentro: true, passo: 2, tocca: "te", stato: "conosco", cosa: "Conosci davvero qualcuno di questi?", azione: { tipo: "conosco", nomi: s.daConfermare } };
   }
   if (l.fase === "MAPPATA" && l.strada === "IN_ATTESA_PONTE") return { dentro: true, passo: 2, tocca: "attesa", stato: "occupato", cosa: "Il ponte giusto sta già presentando un'altra azienda: un favore alla volta", azione: null };
-  if (l.fase === "MAPPATA") return { dentro: true, passo: 2, tocca: "crm", stato: "cerca_ponte", cosa: "Il CRM cerca chi te la può presentare", azione: null };
+  if (l.fase === "MAPPATA") return { dentro: true, passo: 2, tocca: "crm", stato: "collega", cosa: "Il CRM prepara il collegamento con chi decide", azione: null };
   const ponte = voce("RETE_PONTE");
   if (ponte) return { dentro: true, passo: 2, tocca: "te", stato: "ponte", cosa: `Chiedi a ${l.ponte ?? "il ponte"} di presentarti ${nomeDi(s)}`, azione: daCassetta(ponte, "Mandato", "Non ora: prova un altro") };
   const promemoria = voce("RETE_PROMEMORIA");
