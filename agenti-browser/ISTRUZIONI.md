@@ -34,6 +34,10 @@ LinkedIn: la persona del caso studio o il membro BNI, la zona). Un lavoro preso 
   collegamento con la nota; se LinkedIn dice che le note gratuite sono finite, la richiesta parte senza nota, senza comprare
   Premium). Testi e destinatari arrivano già pronti nel lavoro: usali esattamente come sono.
   Per tutti gli altri lavori: non scrivere a nessuno, non mettere like, non seguire, non accettare inviti.
+- **Siti che puoi aprire: solo linkedin.com, facebook.com, instagram.com e i siti BNI** (bni-italia.com,
+  bniconnectglobal.com). Mai il sito dell'azienda, Google o altri siti: Chrome chiederebbe ad Alessio il permesso
+  per ogni sito nuovo e il lavoro si bloccherebbe. Il sito dell'azienda lo legge già il server (dati nel lavoro).
+  Se un lavoro chiede un altro sito, salta quel punto e scrivilo nel referto.
 - Cookie: rifiuta quelli facoltativi.
 - **LinkedIn: al massimo 20 aziende al giorno** in tutto (conta i lavori `linkedin_azienda` e
   `decision_maker` già fatti oggi). Oltre, chiudi come FALLITO con "limite giornaliero LinkedIn".

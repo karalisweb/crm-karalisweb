@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.110.0] - 2026-11-06
+
+### Changed
+- Agenti di browser: in Chrome si aprono **solo LinkedIn, Facebook, Instagram e i siti BNI**. Mai più il sito dell'azienda o Google (li legge già il server): erano loro a far chiedere a Chrome un permesso nuovo per ogni sito. "Chi decide" non apre più la pagina "chi siamo" del sito.
+
 ## [3.109.0] - 2026-11-06
 
 ### Added

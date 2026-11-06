@@ -1820,6 +1820,7 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   settimane); `LETTURE_NON_BNI` 25→60, `LETTURE_LINKEDIN_GIORNO` 35→70; `scartaSenzaStrade(leadId, oggi)` richiede solo
   il referto `decision_maker`: senza referto `social` decide comunque dopo `ORE_MASSIME_FERMA = 48` dall'approvazione.
 - v3.109 `components/ui/sezione.tsx` (`Sezione`: `<details>` chiudibile con conteggio, stato in localStorage per `id`, `forzaAperta`): la usano Oggi (chiavi `oggi:*`) e Percorso (gruppi per stato, chiave `percorso:<passo>:<stato>`; le schede dei passi elencano i gruppi con il conteggio e `vaiA` apre e scorre al gruppo). Regola: ogni nuova lista nasce chiudibile.
+- v3.110 `REGOLE_BROWSER` (registro.ts) e `agenti-browser/ISTRUZIONI.md`: domini ammessi in Chrome = linkedin.com, facebook.com, instagram.com, bni-italia.com, bniconnectglobal.com. Ogni altro dominio fa chiedere all'estensione Claude in Chrome un permesso per sito, che nelle esecuzioni pianificate senza nessuno blocca il lavoro per 5 minuti e lo fa fallire. `decision_maker` non legge più il sito (passo 4).
 
 ## Motore 121 (v3.52.0)
 
