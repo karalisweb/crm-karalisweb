@@ -14,6 +14,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.108.0] - 2026-11-06
+
+### Changed
+- **Più veloci dal ritrovamento al passo 2 o 3 (obiettivo: massimo 48 ore).** Il controllo di "chi decide" su LinkedIn parte prima per le aziende che aspettano da più tempo (prima passavano avanti le nuove e le vecchie restavano "In analisi" per settimane).
+- LinkedIn: da 35 a **70 letture al giorno** (circa 27 controlli di "chi decide" invece di 10). Se LinkedIn blocca, lo stop di 48 ore resta.
+
+### Fixed
+- Le aziende approfondite ferme perché i social non arrivavano non restano più bloccate: dopo 48 ore il CRM decide con quello che ha (avanti se c'è chi decide o una pagina, altrimenti scartata).
+
 ## [3.107.0] - 2026-11-06
 
 ### Fixed

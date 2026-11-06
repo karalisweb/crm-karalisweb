@@ -137,7 +137,7 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     select: { id: true },
     take: 200,
   });
-  for (const c of controllate) if (await scartaSenzaStrade(c.id)) r.scartate++;
+  for (const c of controllate) if (await scartaSenzaStrade(c.id, oggi)) r.scartate++;
 
   // 2) Nuove entrate fino alla capienza: le approfondite con il ponte più forte.
   let attive = await db.lavorazione.count({ where: { fase: { in: [...FASI_ATTIVE] } } });
@@ -361,13 +361,20 @@ export const SCARTATA_DAL_CRM = "crm";
  * Niente chi decide, nessuno che te la presenta, nessuna pagina social: si scarta e via (Alessio, 2026-10-28).
  * Solo a controlli finiti: chi decide (decision_maker) e i social (agente "social") devono aver già risposto.
  */
-export async function scartaSenzaStrade(leadId: string): Promise<boolean> {
-  const fatti = await db.agentReport.findMany({ where: { leadId, agent: { in: ["decision_maker", "social"] } }, distinct: ["agent"], select: { agent: true } });
-  if (fatti.length < 2) return false;
+/** v3.108 (Alessio, 2026-11-06): un'azienda approfondita non resta ferma più di 48 ore. */
+export const ORE_MASSIME_FERMA = 48;
+
+export async function scartaSenzaStrade(leadId: string, oggi = new Date()): Promise<boolean> {
+  const voce = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE, status: "APPROVATO" }, orderBy: { createdAt: "desc" }, select: { id: true, decidedAt: true } });
+  if (!voce) return false;
+  const fatti = new Set((await db.agentReport.findMany({ where: { leadId, agent: { in: ["decision_maker", "social"] } }, distinct: ["agent"], select: { agent: true } })).map((f) => f.agent));
+  if (!fatti.has("decision_maker")) return false;
+  // Se i social non arrivano (lavoro fallito, niente sito) dopo 48 ore si decide con quello che c'è: prima restava
+  // "Approfondita: il CRM cerca chi decide" per sempre (Eden Sardegna, Artstone Garden, Sarda Semafori…).
+  const scaduta = !!voce.decidedAt && oggi.getTime() - voce.decidedAt.getTime() > ORE_MASSIME_FERMA * 3600_000;
+  if (!fatti.has("social") && !scaduta) return false;
   const d = await datiAzienda(leadId);
   if (d.decisori.length || d.pontiBni.length || (await pagineAzienda(leadId)).length) return false;
-  const voce = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_FASCICOLO_BASE, status: "APPROVATO" }, orderBy: { createdAt: "desc" }, select: { id: true } });
-  if (!voce) return false;
   await db.approvalItem.update({
     where: { id: voce.id },
     data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: SCARTATA_DAL_CRM, note: "Scartata da sola: niente chi decide, nessuno che te la presenta, nessuna pagina social" },

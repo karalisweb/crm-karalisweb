@@ -1,7 +1,7 @@
 /**
  * Motore 121 — la parte che lavora sul database. Le regole sono in motore-121.ts.
  *
- *   - Budget LinkedIn comune a tutti gli agenti di browser (25 letture al giorno, 48 ore di stop dopo
+ *   - Budget LinkedIn comune a tutti gli agenti di browser (70 letture al giorno, 48 ore di stop dopo
  *     un blocco). I lavori BNI hanno la precedenza: gli altri ne usano al massimo 15.
  *   - Passo 4: lo studio dell'azienda del membro prima del 121 (agenti di server, niente LinkedIn).
  *   - Passo 5: i contatti da segnalare al membro (aziende del CRM utili al suo mestiere).
@@ -30,7 +30,9 @@ export const KIND_PRESENTAZIONE_BNI = "PRESENTAZIONE_BNI";
 const AGENTI_LINKEDIN_BNI = ["linkedin_membri", "rete_membro"];
 /** Letture al giorno che i lavori non BNI (chi decide, LinkedIn azienda) possono usare. */
 // v3.82: da 15 a 25 (10 controlli "chi decide" da 2 letture + la riserva di "scalda").
-const LETTURE_NON_BNI = 25;
+// v3.108 (Alessio, 2026-11-06: "troppo lenti, si accumulano"): da 25 a 60, circa 27 controlli al giorno. Ne arrivano
+// circa 8 al giorno: così la coda arretrata (50) si smaltisce in 2-3 giorni e poi si resta sotto le 48 ore.
+const LETTURE_NON_BNI = 60;
 
 // ─── Budget LinkedIn ────────────────────────────────────────────────────────
 

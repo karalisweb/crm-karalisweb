@@ -184,6 +184,12 @@ export async function eseguiTurnoArricchimento(oggi = new Date()): Promise<Riepi
   r.sbloccati = await sbloccaLavori(oggi);
   await lavoraSuApprovate(5, oggi, r);
   r.ganciRifatti = await ganciDaRifare(oggi);
+  // Le aziende in attesa senza controllo del collegamento, e i ricontrolli dopo i nuovi 121.
+  // v3.108 (Alessio, 2026-11-06: "massimo 48 ore"): PRIMA del giro veloce. Prima il giro veloce accodava le nuove
+  // (le più recenti) e prendeva i 3 posti in coda: le vecchie aspettavano settimane (fino a 3100 ore).
+  const c = await collegamentiDaVerificare(oggi);
+  r.collegamentiAccodati = c.accodati;
+  r.ricontrolli = c.ricontrolli;
   for (const l of await daGiroVeloce(GIRO_VELOCE_PER_TURNO)) {
     const e = await giroVeloce(l.id, oggi);
     r.giroVeloce++;
@@ -191,10 +197,6 @@ export async function eseguiTurnoArricchimento(oggi = new Date()): Promise<Riepi
     r.lavoriFalliti += e.falliti;
     if (e.proposta) r.proposte++;
   }
-  // Le aziende in attesa senza controllo del collegamento, e i ricontrolli dopo i nuovi 121.
-  const c = await collegamentiDaVerificare(oggi);
-  r.collegamentiAccodati = c.accodati;
-  r.ricontrolli = c.ricontrolli;
   // La rete al centro: le aziende in lavorazione (entrate, ponti, seguito, commenti).
   r.rete = await turnoRete(oggi);
   r.durataMs = Date.now() - inizio;

@@ -110,7 +110,7 @@ export default function GuidaPage() {
             Le aziende trovate dalla ricerca passano dal giro veloce e poi dal <strong>controllo del collegamento</strong>:
             in &quot;Da decidere&quot; arrivano solo quelle in cui chi decide è un tuo contatto o ha contatti in comune con te.
             Le altre stanno in &quot;senza collegamento&quot; e si ricontrollano da sole dopo i nuovi 121. LinkedIn si usa al
-            massimo 25 letture al giorno; se chiede una verifica o blocca, tutto si ferma per 48 ore.
+            massimo 70 letture al giorno; se chiede una verifica o blocca, tutto si ferma per 48 ore.
           </Tip>
         </Section>
 

@@ -1814,6 +1814,11 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.105 121 BNI: `PATCH /api/ricerca/bni/richieste/[id] { followup: true }` salva `payload.followupAt` sulla MESSAGGIO_BNI
   APPROVATO; `GET /api/ricerca/bni` usa `ORE_SENZA_RISPOSTA = 72` contando da `followupAt ?? mandataIl` (solo per le
   schede; `GIORNI_SENZA_RISPOSTA = 7` resta per le altre regole).
+- v3.107 `passoDi`: `RETE_PAGINA` (MAPPATA/SCALDARE) restituisce passo 4 stato `pagina`; `cosaDi` passo 3 = sempre `scalda`.
+- v3.108 Massimo 48 ore dal ritrovamento al passo 2/3: `eseguiTurnoArricchimento` chiama `collegamentiDaVerificare`
+  PRIMA del giro veloce (prima le nuove prendevano i 3 posti di `CONTROLLI_IN_CODA_MAX` e le vecchie aspettavano
+  settimane); `LETTURE_NON_BNI` 25→60, `LETTURE_LINKEDIN_GIORNO` 35→70; `scartaSenzaStrade(leadId, oggi)` richiede solo
+  il referto `decision_maker`: senza referto `social` decide comunque dopo `ORE_MASSIME_FERMA = 48` dall'approvazione.
 
 ## Motore 121 (v3.52.0)
 
