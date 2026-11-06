@@ -8,6 +8,7 @@ import { siglaIndirizzo } from "@/lib/ricerca/regole";
 import { collegamentoDaFindings, statoLinkedinOggi } from "./motore";
 import { mezzanotteRoma } from "./bni-regole";
 import { KIND_FASCICOLO_BASE } from "./turno";
+import { CHIAVI_BROWSER } from "./registro";
 import { KIND_COMMENTO, KINDS_RETE, SCARTATA_DAL_CRM, cerchiaNomi, datiAzienda, turnoRete } from "./rete";
 import { nomiDaConfermare, piattaformaPiuCommentata } from "./rete-regole";
 import { PASSI, STATI, coseDiOggi, ordineStato, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
@@ -25,6 +26,8 @@ export interface AziendaNelPercorso {
   statoNome: string;
   cosa: string;
   azione: Azione | null;
+  /** v3.112: un lavoro per il Mac (Chrome) in coda o in corso su quest'azienda, e da quando. */
+  mac: { stato: "in_coda" | "in_corso"; dal: string } | null;
 }
 
 export interface Percorso {
@@ -78,7 +81,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   });
 
   const ids = [...lavorazioni.map((l) => l.leadId), ...trovate.map((t) => t.lead!.id)];
-  const [dm, voci, commenti] = await Promise.all([
+  const [dm, voci, commenti, lavoriMac] = await Promise.all([
     db.agentReport.findMany({
       where: { leadId: { in: trovate.map((t) => t.lead!.id) }, agent: "decision_maker", validUntil: { gt: oggi } },
       orderBy: { collectedAt: "desc" },
@@ -90,7 +93,13 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
       select: { id: true, leadId: true, kind: true, payload: true },
     }),
     db.approvalItem.findMany({ where: { leadId: { in: ids }, kind: KIND_COMMENTO, status: "APPROVATO" }, select: { leadId: true, payload: true } }),
+    db.agentRun.findMany({ where: { leadId: { in: ids }, agent: { in: CHIAVI_BROWSER }, status: { in: ["IN_CODA", "IN_CORSO"] } }, orderBy: { queuedAt: "asc" }, select: { leadId: true, status: true, queuedAt: true } }),
   ]);
+  const macDi = new Map<string, AziendaNelPercorso["mac"]>();
+  for (const r of lavoriMac) {
+    const prima = macDi.get(r.leadId!);
+    if (!prima || r.status === "IN_CORSO") macDi.set(r.leadId!, { stato: r.status === "IN_CORSO" ? "in_corso" : "in_coda", dal: (prima?.dal ?? r.queuedAt.toISOString()) });
+  }
 
   const collegata = new Map<string, boolean>();
   for (const r of dm) if (!collegata.has(r.leadId!)) collegata.set(r.leadId!, collegamentoDaFindings(r.findings as Record<string, unknown>).collegata);
@@ -146,7 +155,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
 
   const scheda = (r: Riga): AziendaNelPercorso => {
     const e = r.esito as Extract<Esito, { dentro: true }>;
-    return { leadId: r.leadId, lavorazioneId: r.lavorazioneId, nome: r.nome, zona: r.zona, categoria: r.categoria, passo: e.passo, tocca: e.tocca, stato: e.stato, statoNome: STATI[e.stato], cosa: e.cosa, azione: e.azione };
+    return { leadId: r.leadId, lavorazioneId: r.lavorazioneId, nome: r.nome, zona: r.zona, categoria: r.categoria, passo: e.passo, tocca: e.tocca, stato: e.stato, statoNome: STATI[e.stato], cosa: e.cosa, azione: e.azione, mac: macDi.get(r.leadId) ?? null };
   };
   // Per stato (Alessio, 2026-10-28), che mette prima quelle dove tocca a lui; poi le già commentate (più commenti in alto).
   const stato = (r: Riga) => ordineStato((r.esito as Extract<Esito, { dentro: true }>).stato);

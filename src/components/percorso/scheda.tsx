@@ -18,6 +18,17 @@ export type Azione =
 export interface AziendaPercorso {
   leadId: string; lavorazioneId: string | null; nome: string; zona: string | null; categoria: string | null;
   passo: 1 | 2 | 3 | 4; tocca: "te" | "crm" | "attesa"; stato: string; statoNome: string; cosa: string; azione: Azione | null;
+  /** v3.112: lavoro in coda o in corso sul Mac. */
+  mac?: { stato: "in_coda" | "in_corso"; dal: string } | null;
+}
+
+/** "in coda per il Mac dalle 10:32" / "dal 5 nov alle 10:32". */
+export function testoMac(m: NonNullable<AziendaPercorso["mac"]>): string {
+  if (m.stato === "in_corso") return "il Mac ci sta lavorando";
+  const d = new Date(m.dal);
+  const ora = d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
+  const stessoGiorno = d.toLocaleDateString("it-IT", { timeZone: "Europe/Rome" }) === new Date().toLocaleDateString("it-IT", { timeZone: "Europe/Rome" });
+  return stessoGiorno ? `in coda per il Mac dalle ${ora}` : `in coda per il Mac dal ${d.toLocaleDateString("it-IT", { day: "numeric", month: "short", timeZone: "Europe/Rome" })} alle ${ora}`;
 }
 export type CosaDiOggi = "contatta" | "scalda" | "valida";
 export interface PassoPercorso { n: 1 | 2 | 3 | 4; nome: string; spiega: string; quante: number; toccaATe: number }
@@ -85,6 +96,7 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
         <Link href={`/aziende-trovate/${a.leadId}`} className="font-medium hover:underline break-words">{a.nome}</Link>
         <span className="text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground">{a.passo}. {passi.find((p) => p.n === a.passo)?.nome}</span>
         <span className={`text-[11px] px-2 py-0.5 rounded ${TOCCA[a.tocca].classe}`}>{TOCCA[a.tocca].testo}</span>
+        {a.mac && <span className="text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100">{testoMac(a.mac)}</span>}
       </div>
       {(a.zona || a.categoria) && <div className="text-xs text-muted-foreground break-words">{[a.categoria, a.zona].filter(Boolean).join(" · ")}</div>}
       <div className="text-sm">{a.cosa}</div>

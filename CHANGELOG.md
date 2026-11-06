@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.112.0] - 2026-11-06
+
+### Added
+- Percorso: si vede **cosa aspetta il Mac**. Accanto ad "Analizza adesso" c'è "N in coda per il Mac" (o "tutte"), le righe dei passi dicono "N in coda", e ogni azienda ha l'etichetta **"in coda per il Mac dalle 10:32"** o **"il Mac ci sta lavorando"**. Quando il Mac finisce, l'etichetta sparisce.
+
 ## [3.111.0] - 2026-11-06
 
 ### Added

@@ -62,7 +62,7 @@ function Cerchia() {
 }
 
 /** "Analizza adesso" (v3.111): spinge a mano una sottosezione dove lavora il CRM. */
-function AnalizzaAdesso({ passo, stato, quante, onFatto }: { passo: number; stato: string; quante: number; onFatto: () => void }) {
+function AnalizzaAdesso({ passo, stato, quante, inCoda, onFatto }: { passo: number; stato: string; quante: number; inCoda: number; onFatto: () => void }) {
   const [inCorso, setInCorso] = useState(false);
   async function vai() {
     setInCorso(true);
@@ -80,11 +80,15 @@ function AnalizzaAdesso({ passo, stato, quante, onFatto }: { passo: number; stat
       setInCorso(false);
     }
   }
+  // v3.112 (Alessio: "come mi rendo conto di quali ho premuto?"): quante sono già in coda per il Mac.
   return (
+    <span className="flex items-center gap-2">
+    {inCoda > 0 && <span className="text-xs font-normal text-amber-700 dark:text-amber-300">{inCoda === quante ? "tutte" : inCoda} in coda per il Mac</span>}
     <Button size="sm" variant="outline" className="h-7" disabled={inCorso} onClick={vai} title={`Fa partire subito il lavoro del CRM su tutte le ${quante}`}>
       {inCorso ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
       <span className="ml-1">Analizza adesso</span>
     </Button>
+    </span>
   );
 }
 
@@ -168,7 +172,7 @@ function Percorso() {
                     <li key={g.stato}>
                       <button onClick={() => vaiA(p.n, g.stato)} className="flex w-full items-baseline justify-between gap-2 text-left text-xs text-muted-foreground hover:text-foreground">
                         <span className={`min-w-0 break-words ${g.aziende[0].tocca === "te" ? "text-primary" : ""}`}>{g.nome}</span>
-                        <span className="shrink-0 tabular-nums">{g.aziende.length}</span>
+                        <span className="shrink-0 tabular-nums">{g.aziende.some((a) => a.mac) && <span className="text-amber-700 dark:text-amber-300">{g.aziende.filter((a) => a.mac).length} in coda · </span>}{g.aziende.length}</span>
                       </button>
                     </li>
                   ))}
@@ -191,7 +195,7 @@ function Percorso() {
           : <div className="space-y-3">{gruppi.map((g) => (
             <Sezione key={g.stato} id={`percorso:${passo}:${g.stato}`} titolo={g.nome} conteggio={g.aziende.length}
               forzaAperta={daAprire === g.stato || g.aziende.some((a) => a.leadId === daOggi)}
-              azione={g.aziende[0].tocca === "crm" ? <AnalizzaAdesso passo={passo} stato={g.stato} quante={g.aziende.length} onFatto={carica} /> : undefined}>
+              azione={g.aziende[0].tocca === "crm" ? <AnalizzaAdesso passo={passo} stato={g.stato} quante={g.aziende.length} inCoda={g.aziende.filter((a) => a.mac).length} onFatto={carica} /> : undefined}>
               {g.aziende.map((a) => <SchedaPercorso key={a.leadId} a={a} passi={d.passi} onCambio={carica} evidenziata={a.leadId === daOggi} />)}
             </Sezione>
           ))}</div>}
