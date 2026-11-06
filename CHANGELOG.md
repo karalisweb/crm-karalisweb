@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.107.0] - 2026-11-06
+
+### Fixed
+- Percorso: **"Da scrivere alla pagina"** (chi decide non si sa) ora sta nel passo **4 Contatto**, non più nel 3 In riscaldamento. È un messaggio, non un commento: era già fra i "Da contattare" in Oggi, adesso Percorso e Oggi dicono la stessa cosa.
+
 ## [3.106.0] - 2026-11-05
 
 ### Added

@@ -4,7 +4,7 @@
  *   1. Trovate             il CRM la analizza, controlla se chi decide è collegato, tu decidi se approfondire
  *   2. Chi me la presenta  la conosci tu / un ponte forte della cerchia te la presenta
  *   3. In riscaldamento    nessun ponte: commenti sulla pagina dell'azienda, 7 sulla stessa piattaforma
- *   4. Contatto            scrivi a chi decide (o fissi l'incontro se te l'hanno presentata)
+ *   4. Contatto            scrivi a chi decide, o alla pagina se non si sa chi è (o fissi l'incontro se te l'hanno presentata)
  *
  * Se conosci tu la proprietà si salta dal passo 1 al 4. Dopo il contatto l'azienda esce dal percorso
  * (incontro, proposta, cliente: vanno in Trattative). Funzione pura: si prova con i test.
@@ -72,10 +72,10 @@ export const STATI = {
   occupato: "Il ponte è occupato",
   cerca_ponte: "Il CRM cerca chi te la presenta",
   prepara_ponte: "Il CRM prepara il messaggio al ponte",
-  pagina: "Da scrivere alla pagina",
   commenta: "Da commentare",
   cerca_post: "Il CRM cerca il prossimo post",
   scrivi: "Da contattare",
+  pagina: "Da scrivere alla pagina",
   incontro: "Incontro da fissare",
   risposta: "Aspetti la risposta",
   followup: "Follow-up da mandare",
@@ -127,6 +127,10 @@ export function passoDi(s: Stato, oggi: Date): Esito {
     const cosa = inComune ? `Scrivi a ${nomeDi(s)}: avete in comune ${inComune}` : viaPonte ? `Scrivi a ${nomeDi(s)}, chi decide` : `Scrivi a ${nomeDi(s)}: lo conosci tu`;
     return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa, azione: daCassetta(diretto, "Mandato", "Non ora") };
   }
+  // v3.107 (Alessio, 2026-11-06: "trovo aziende del 4 in 3"): scrivere alla pagina è un contatto, non un commento:
+  // sta al passo 4 come in Oggi (dove era già fra i "contattare"). Prima restava al passo 3.
+  const pagina = l.fase === "MAPPATA" && l.strada === "SCALDARE" ? voce("RETE_PAGINA") : undefined;
+  if (pagina) return { dentro: true, passo: 4, tocca: "te", stato: "pagina", cosa: "Chi decide non si sa: scrivi alla pagina per arrivare a lui", azione: daCassetta(pagina, "Mandato", "Non serve") };
   // v3.103: nessuna risposta al contatto: il follow-up, sullo stesso canale.
   const followup = voce("RETE_FOLLOWUP");
   if (followup) return { dentro: true, passo: 4, tocca: "te", stato: "followup", cosa: `Non ha risposto: manda il follow-up a ${nomeDi(s)}`, azione: daCassetta(followup, "Mandato", "Non serve") };
@@ -137,8 +141,6 @@ export function passoDi(s: Stato, oggi: Date): Esito {
 
   // Passo 3 — In riscaldamento.
   if (l.fase === "MAPPATA" && l.strada === "SCALDARE") {
-    const pagina = voce("RETE_PAGINA");
-    if (pagina) return { dentro: true, passo: 3, tocca: "te", stato: "pagina", cosa: "Chi decide non si sa: scrivi alla pagina per arrivare a lui", azione: daCassetta(pagina, "Mandato", "Non serve") };
     const c = s.commenti;
     const conto = c ? `${c.fatti} di ${COMMENTI_PER_CONTATTO} su ${NOMI_PIATTAFORMA[c.piattaforma]}` : `0 di ${COMMENTI_PER_CONTATTO}`;
     const commento = voce("COMMENTO_LINKEDIN");
@@ -176,8 +178,8 @@ export const COSE: Cosa[] = ["contatta", "scalda", "valida"];
 export function cosaDi(e: Esito): Cosa | null {
   if (!e.dentro || e.tocca !== "te") return null;
   if (e.passo === 4) return "contatta";
-  // v3.99: scaldare lo fa il CRM; "scrivi alla pagina" è un messaggio, quindi sta fra i contatti.
-  if (e.passo === 3) return e.stato === "pagina" ? "contatta" : "scalda";
+  // v3.99: scaldare lo fa il CRM; "scrivi alla pagina" è un messaggio: dalla v3.107 sta al passo 4.
+  if (e.passo === 3) return "scalda";
   if (e.passo === 2) return e.azione?.tipo === "conosco" ? "valida" : "contatta";
   return "valida";
 }

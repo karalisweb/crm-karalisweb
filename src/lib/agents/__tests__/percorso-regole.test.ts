@@ -52,6 +52,8 @@ describe("passo 4 — Contatto", () => {
 });
 
 describe("fuori dal percorso", () => {
+  it("chi decide non si sa: scrivere alla pagina è un contatto, passo 4 (v3.107)", () =>
+    expect(passo({ lav: lav({ strada: "SCALDARE" }), voci: [{ id: "g", kind: "RETE_PAGINA", payload: { messaggio: "Buongiorno" } }] })).toMatchObject({ passo: 4, tocca: "te", azione: "cassetta" }));
   it("incontro fissato: va in Trattative", () => expect(passo({ lav: lav({ fase: "INCONTRO" }) })).toEqual({ fuori: "dopo" }));
   it("in pausa", () => expect(passo({ lav: lav({ fase: "PAUSA" }) })).toEqual({ fuori: "pausa" }));
 });
