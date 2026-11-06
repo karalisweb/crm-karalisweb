@@ -29,10 +29,11 @@ LinkedIn: la persona del caso studio o il membro BNI, la zona). Un lavoro preso 
 
 - Segui le `istruzioni` del lavoro. Usa Chrome di Alessio (in una scheda nuova), con calma, come
   una persona: una pagina alla volta.
-- **Solo lettura**, tranne due lavori: `scalda` (pubblica il commento sotto il post della pagina e mette
-  "mi piace" a quel post) e `contatta_persona` (manda su LinkedIn il messaggio a chi decide, o la richiesta di
-  collegamento con la nota; se LinkedIn dice che le note gratuite sono finite, la richiesta parte senza nota, senza comprare
-  Premium). Testi e destinatari arrivano già pronti nel lavoro: usali esattamente come sono.
+- **Solo lettura**, tranne tre lavori: `collega` (v3.117: richiesta di collegamento su LinkedIn senza nota e "Segui" su
+  Instagram, solo a chi decide), `scalda` (v3.117: pubblica il commento sotto il post del PROFILO PERSONALE di chi decide,
+  Instagram o LinkedIn, mai Facebook, e mette "mi piace" a quel post) e `contatta_persona` (manda su LinkedIn il messaggio
+  a chi decide, o la richiesta di collegamento con la nota; se LinkedIn dice che le note gratuite sono finite, la richiesta
+  parte senza nota, senza comprare Premium). Testi e destinatari arrivano già pronti nel lavoro: usali esattamente come sono.
   Per tutti gli altri lavori: non scrivere a nessuno, non mettere like, non seguire, non accettare inviti.
 - **Siti che puoi aprire: solo linkedin.com, facebook.com, instagram.com e i siti BNI** (bni-italia.com,
   bniconnectglobal.com). Mai il sito dell'azienda, Google o altri siti: Chrome chiederebbe ad Alessio il permesso
@@ -42,7 +43,7 @@ LinkedIn: la persona del caso studio o il membro BNI, la zona). Un lavoro preso 
 - **LinkedIn: il limite del giorno lo decide l'app** (70 letture, dalla v3.108): fai tutti i lavori che ricevi.
   Non c'è più il tetto di 20 aziende al giorno. `rete_membro` e `cerca_linkedin` sono al massimo 2 al giorno (li
   limita già l'app): apri al più una quindicina di profili per lavoro. Fra un'azienda e l'altra vai con calma.
-- **Richieste di collegamento e messaggi solo nel lavoro `contatta_persona`**, e solo alla persona indicata.
+- **Richieste di collegamento e messaggi solo nei lavori `collega` e `contatta_persona`**, e solo alla persona indicata.
   Le persone che trovi negli altri lavori non le contatti tu: le contatta il CRM con il suo lavoro.
 - **CAPTCHA, accesso richiesto, pagina bloccata:** non provare ad aggirarli. Chiudi il lavoro come
   FALLITO spiegando cosa è successo.
