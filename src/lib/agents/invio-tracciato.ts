@@ -10,10 +10,11 @@ import { db } from "@/lib/db";
 import { sendOutreachEmail } from "@/lib/email";
 import { KINDS_RETE, decisioneRete } from "./rete";
 
-export type Canale = "whatsapp" | "linkedin" | "email";
+export type Canale = "whatsapp" | "linkedin" | "email" | "pagina";
 
-const TIPO: Record<Canale, ActivityType> = { whatsapp: "WHATSAPP_SENT", linkedin: "LINKEDIN_SENT", email: "EMAIL_OUTREACH" };
-const NOME: Record<Canale, string> = { whatsapp: "WhatsApp", linkedin: "LinkedIn", email: "email" };
+const TIPO: Record<Canale, ActivityType> = { whatsapp: "WHATSAPP_SENT", linkedin: "LINKEDIN_SENT", email: "EMAIL_OUTREACH", pagina: "NOTE" };
+// v3.113: "pagina" = messaggio privato alla pagina Facebook/Instagram/LinkedIn dell'azienda (chi decide non si sa).
+const NOME: Record<Canale, string> = { whatsapp: "WhatsApp", linkedin: "LinkedIn", email: "email", pagina: "messaggio alla pagina" };
 
 export type EsitoInvio = { ok: true } | { ok: false; errore: string; stato: number };
 

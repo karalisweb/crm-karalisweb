@@ -208,7 +208,12 @@ export interface CapitoloPerScelta {
  */
 export function capitoliInCorso(capitoli: CapitoloPerScelta[], n = CAPITOLI_IN_CORSO): CapitoloPerScelta[] {
   const rango = (c: CapitoloPerScelta) => (c.sardo ? 0 : 3) + (c.conosciuti > 0 ? 0 : c.mio ? 1 : 2);
+  // v3.113 (Alessio, 2026-11-06: "prima finiamo tutta la Sardegna, poi andiamo nel Lazio"): finché in Sardegna c'è
+  // anche un solo membro da conoscere, gli altri capitoli non si toccano, nemmeno quando i sardi sono tutti in attesa
+  // di risposta (prima in quel caso si ripiegava sul Lazio).
+  const sardegnaAperta = capitoli.some((c) => c.sardo && c.totale > 0 && c.conosciuti < c.totale);
   return capitoli
+    .filter((c) => !sardegnaAperta || c.sardo)
     .filter((c) => c.totale > 0 && c.conosciuti < c.totale && c.daChiedere > 0)
     .sort((a, b) => rango(a) - rango(b) || b.conosciuti / b.totale - a.conosciuti / a.totale || a.nome.localeCompare(b.nome, "it"))
     .slice(0, n);

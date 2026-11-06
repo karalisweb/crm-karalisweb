@@ -4,13 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, FileText, Loader2 } from "lucide-react";
+import { Check, ExternalLink, FileText, Loader2, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { CosaDirgli } from "./cosa-dirgli";
 
 export type Azione =
   | { tipo: "decidi" }
-  | { tipo: "cassetta"; voceId: string; si: string; no: string; testo: string | null; link: string | null; whatsapp?: string | null; email?: string | null; linkedin?: string | null; casoId?: string | null }
+  | { tipo: "cassetta"; voceId: string; si: string; no: string; testo: string | null; link: string | null; whatsapp?: string | null; email?: string | null; linkedin?: string | null; casoId?: string | null; pagina?: string | null; piattaforma?: string | null }
   | { tipo: "conosco"; nomi: string[] }
   | { tipo: "presentato" }
   | { tipo: "incontro" };
@@ -20,6 +20,36 @@ export interface AziendaPercorso {
   passo: 1 | 2 | 3 | 4; tocca: "te" | "crm" | "attesa"; stato: string; statoNome: string; cosa: string; azione: Azione | null;
   /** v3.112: lavoro in coda o in corso sul Mac. */
   mac?: { stato: "in_coda" | "in_corso"; dal: string } | null;
+  /** v3.113: passo 4. */
+  contatto?: {
+    caso: { id: string; titolo: string } | null;
+    inviato: { quando: string; aChi: string; canale: string; dove: string | null; testo: string | null; tipo: "contatto" | "pagina" | "followup" } | null;
+    ricerche: { linkedin: string | null; linkedinFatto: boolean; facebook: boolean; instagram: boolean; bni: string[] };
+    followupPossibile: boolean;
+  };
+}
+
+const NOME_PIATTAFORMA: Record<string, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
+
+const quando = (iso: string) => new Date(iso).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
+
+/** Dove si è cercato chi decide (v3.113, Alessio: "l'ho cercato in BNI? su Facebook? su Instagram? su LinkedIn?"). */
+function Ricerche({ r }: { r: NonNullable<AziendaPercorso["contatto"]>["ricerche"] }) {
+  const voce = (nome: string, ok: boolean, dettaglio?: string) => (
+    <span className="inline-flex items-center gap-1">
+      {ok ? <Check className="h-3 w-3 text-green-600" /> : <Minus className="h-3 w-3 text-muted-foreground" />}
+      {nome}{dettaglio && <span className="text-muted-foreground">: {dettaglio}</span>}
+    </span>
+  );
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+      <span className="text-muted-foreground">Chi decide, cercato su:</span>
+      {voce("LinkedIn", !!r.linkedin, r.linkedinFatto ? (r.linkedin ?? "nessuno trovato") : "non ancora")}
+      {voce("Facebook", r.facebook, r.linkedinFatto ? (r.facebook ? "profilo trovato" : "nessun profilo") : "non ancora")}
+      {voce("Instagram", r.instagram, r.linkedinFatto ? (r.instagram ? "profilo trovato" : "nessun profilo") : "non ancora")}
+      {voce("BNI", r.bni.length > 0, r.bni.length ? r.bni.join(", ") : "nessun membro la conosce")}
+    </div>
+  );
 }
 
 /** "in coda per il Mac dalle 10:32" / "dal 5 nov alle 10:32". */
@@ -72,10 +102,10 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
     </Button>
   );
   // v3.103: WhatsApp e LinkedIn si registrano al tocco; l'email parte dal CRM. Tutto finisce nelle attività dell'azienda.
-  const traccia = (canale: "whatsapp" | "linkedin") => {
+  const traccia = (canale: "whatsapp" | "linkedin" | "pagina") => {
     if (x?.tipo !== "cassetta") return;
     void fetch("/api/percorso/invio", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ voceId: x.voceId, canale }) })
-      .then((r) => { if (r.ok) { toast.success(`Segnato: mandato via ${canale === "whatsapp" ? "WhatsApp" : "LinkedIn"}`); onCambio(); } });
+      .then((r) => { if (r.ok) { toast.success(`Segnato: mandato via ${canale === "whatsapp" ? "WhatsApp" : canale === "linkedin" ? "LinkedIn" : "messaggio alla pagina"}`); onCambio(); } });
   };
   const mandaEmail = async () => {
     if (x?.tipo !== "cassetta" || !x.email) return;
@@ -88,6 +118,13 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
     onCambio();
   };
   const x = a.azione;
+  // I canali per mandare il messaggio, con dove arriva (v3.113: "devo capire se scrivo via WhatsApp o via mail").
+  const canali = x?.tipo === "cassetta" && a.passo >= 2 ? [
+    x.whatsapp ? { descrizione: `WhatsApp al ${x.whatsapp}` } : null,
+    x.email && x.testo ? { descrizione: `email a ${x.email}, la manda il CRM` } : null,
+    x.linkedin ? { descrizione: "LinkedIn" } : null,
+    x.pagina ? { descrizione: `messaggio privato alla pagina ${NOME_PIATTAFORMA[x.piattaforma ?? ""] ?? ""}`.trim() } : null,
+  ].filter((c): c is { descrizione: string } => !!c) : [];
   const lav = a.lavorazioneId ? `/api/rete/lavorazioni/${a.lavorazioneId}` : null;
   return (
     // L'id serve a Oggi per aprire il Percorso proprio su quest'azienda (v3.78).
@@ -110,6 +147,36 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
       {x?.tipo === "cassetta" && x.testo && (
         <div className="rounded-md border bg-muted/40 p-2 text-sm whitespace-pre-wrap break-words">{x.testo}</div>
       )}
+      {/* v3.113: da contattare. Il canale e il caso studio si vedono prima di premere. */}
+      {a.passo === 4 && x?.tipo === "cassetta" && (
+        <div className="space-y-1 text-xs">
+          <div><span className="text-muted-foreground">Canale: </span>{canali.length ? canali.map((c) => c.descrizione).join(" oppure ") : "nessun canale trovato: copia il testo e mandalo tu"}</div>
+          {a.contatto?.caso && (
+            <div><span className="text-muted-foreground">Caso studio citato nel messaggio: </span>
+              <a href={`/api/ricerca/casi-studio/${a.contatto.caso.id}/pdf`} target="_blank" rel="noopener noreferrer" className="underline">{a.contatto.caso.titolo}</a>
+              <span className="text-muted-foreground"> (non è allegato: il messaggio chiede se può mandarlo; lo mandi quando dice sì)</span>
+            </div>
+          )}
+        </div>
+      )}
+      {/* v3.113: aspetti la risposta. Quando, a chi, su che canale, cosa. */}
+      {a.passo === 4 && a.contatto?.inviato && x?.tipo !== "cassetta" && (
+        <div className="rounded-md border p-2 space-y-1 text-xs">
+          <div>
+            <span className="text-muted-foreground">Scritto il </span>{quando(a.contatto.inviato.quando)}
+            <span className="text-muted-foreground"> a </span>{a.contatto.inviato.aChi}
+            <span className="text-muted-foreground"> via </span>{a.contatto.inviato.canale}{a.contatto.inviato.dove && <span className="text-muted-foreground"> ({a.contatto.inviato.dove})</span>}
+            {a.contatto.inviato.tipo === "followup" && <span className="text-muted-foreground"> · era il follow-up</span>}
+          </div>
+          {a.contatto.caso && <div><span className="text-muted-foreground">Caso studio citato: </span><a href={`/api/ricerca/casi-studio/${a.contatto.caso.id}/pdf`} target="_blank" rel="noopener noreferrer" className="underline">{a.contatto.caso.titolo}</a></div>}
+          {a.contatto.inviato.testo && (
+            <details><summary className="cursor-pointer text-muted-foreground hover:text-foreground">Cosa gli hai scritto</summary>
+              <div className="mt-1 rounded bg-muted/40 p-2 text-sm whitespace-pre-wrap break-words">{a.contatto.inviato.testo}</div>
+            </details>
+          )}
+        </div>
+      )}
+      {a.passo === 4 && a.contatto && <Ricerche r={a.contatto.ricerche} />}
       {x?.tipo === "conosco" && (
         <div className="space-y-1.5">
           {x.nomi.map((n) => (
@@ -127,17 +194,20 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
           {bottone("no", "Scarta", () => fai("no", `/api/ricerca/aziende/${a.leadId}/decisione`, "POST", { azione: "scarta" }, "Scartata"), "ghost")}
         </>}
         {x?.tipo === "cassetta" && <>
-          {x.testo && bottone("copia", "Copia il testo", () => { void navigator.clipboard.writeText(x.testo!).then(() => toast.success("Copiato")); })}
+          {/* v3.113: copia e "Mandato" solo se non c'è un canale: con WhatsApp, email o LinkedIn l'invio si registra da solo. */}
+          {x.testo && !canali.length && bottone("copia", "Copia il testo", () => { void navigator.clipboard.writeText(x.testo!).then(() => toast.success("Copiato")); })}
           {x.link && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Apri il post</a></Button>}
           {/* Scrivere subito, col testo già dentro (v3.87). */}
-          {x.whatsapp && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer" onClick={() => traccia("whatsapp")}>WhatsApp</a></Button>}
-          {x.email && x.testo && bottone("email", `Manda email a ${x.email}`, () => { void mandaEmail(); })}
+          {x.whatsapp && <Button asChild size="sm" variant="default" className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer" onClick={() => traccia("whatsapp")}>Manda su WhatsApp</a></Button>}
+          {x.email && x.testo && bottone("email", `Manda email a ${x.email}`, () => { void mandaEmail(); }, "default")}
           {/* v3.90: il caso studio da mandare appena dice sì. */}
-          {x.casoId && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`/api/ricerca/casi-studio/${x.casoId}/pdf`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Caso studio (PDF)</a></Button>}
-          {x.linkedin && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre il profilo e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("linkedin"); }}>Copia e apri LinkedIn</a></Button>}
-          {bottone("si", x.si, () => fai("si", `/api/cassetta/${x.voceId}`, "POST", { decisione: "APPROVATO" }, "Fatto: un passo avanti"), "default")}
-          {bottone("no", x.no, () => fai("no", `/api/cassetta/${x.voceId}`, "POST", { decisione: "SCARTATO" }, "Segnato"), "ghost")}
+          {x.casoId && a.passo !== 4 && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`/api/ricerca/casi-studio/${x.casoId}/pdf`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Caso studio (PDF)</a></Button>}
+          {x.linkedin && <Button asChild size="sm" variant="default" className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre il profilo e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("linkedin"); }}>Manda su LinkedIn (testo copiato)</a></Button>}
+          {x.pagina && <Button asChild size="sm" variant="default" className="h-8 text-xs"><a href={x.pagina} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre la pagina e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("pagina"); }}>Scrivi alla pagina {NOME_PIATTAFORMA[x.piattaforma ?? ""] ?? ""} (testo copiato)</a></Button>}
+          {!canali.length && bottone("si", x.testo ? "L'ho mandato" : x.si, () => fai("si", `/api/cassetta/${x.voceId}`, "POST", { decisione: "APPROVATO" }, "Fatto: un passo avanti"), "default")}
+          {a.stato !== "pagina" && bottone("no", x.no, () => fai("no", `/api/cassetta/${x.voceId}`, "POST", { decisione: "SCARTATO" }, "Segnato"), "ghost")}
         </>}
+        {a.contatto?.followupPossibile && x?.tipo !== "cassetta" && bottone("followup", "Manda il follow-up adesso", () => fai("followup", `/api/percorso/${a.leadId}/followup`, "POST", undefined, "Follow-up pronto: lo trovi qui sopra, in Follow-up da mandare"))}
         {x?.tipo === "presentato" && lav && bottone("presentato", "Me l'ha presentata", () => fai("presentato", lav, "PATCH", { azione: "presentato" }, "Presentata: ora al passo 4"))}
         {x?.tipo === "incontro" && lav && bottone("incontro", "Incontro fissato", () => fai("incontro", lav, "PATCH", { azione: "incontro" }, "Incontro fissato: va in Trattative"), a.tocca === "te" ? "default" : "outline")}
         {lav && x?.tipo !== "cassetta" && bottone("pausa", "Pausa 3 mesi", () => fai("pausa", lav, "PATCH", { azione: "pausa" }, "In pausa: torna fra 3 mesi"), "ghost")}

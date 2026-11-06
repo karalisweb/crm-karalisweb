@@ -28,6 +28,70 @@ export interface AziendaNelPercorso {
   azione: Azione | null;
   /** v3.112: un lavoro per il Mac (Chrome) in coda o in corso su quest'azienda, e da quando. */
   mac: { stato: "in_coda" | "in_corso"; dal: string } | null;
+  /** v3.113: solo passo 4. Cosa è stato mandato, con che caso studio, e dove è stata cercata la persona. */
+  contatto?: DettaglioContatto;
+}
+
+export interface DettaglioContatto {
+  /** Il caso studio citato nel messaggio da mandare (o in quello già mandato). */
+  caso: { id: string; titolo: string } | null;
+  /** L'ultimo messaggio mandato (contatto, pagina o follow-up). */
+  inviato: { quando: string; aChi: string; canale: string; dove: string | null; testo: string | null; tipo: "contatto" | "pagina" | "followup" } | null;
+  /** Dove si è cercato chi decide. null = non ancora cercato lì. */
+  ricerche: { linkedin: string | null; linkedinFatto: boolean; facebook: boolean; instagram: boolean; bni: string[] };
+  /** Si può mandare il follow-up adesso (c'è un messaggio mandato e il follow-up non è già fatto o in attesa). */
+  followupPossibile: boolean;
+}
+
+const KIND_INVIATI = ["RETE_CONTATTO", "RETE_DIRETTO", "RETE_PAGINA", "RETE_FOLLOWUP"];
+const TIPO_INVIATO: Record<string, "contatto" | "pagina" | "followup"> = { RETE_CONTATTO: "contatto", RETE_DIRETTO: "contatto", RETE_PAGINA: "pagina", RETE_FOLLOWUP: "followup" };
+
+/** Il dettaglio del contatto per le aziende del passo 4 (v3.113, Alessio: "quando gli ho scritto? a chi? su che canale?"). */
+async function dettagliContatto(righe: { leadId: string; voci: Stato["voci"]; decisore: string | null; followupFatto: boolean }[]): Promise<Map<string, DettaglioContatto>> {
+  const ids = righe.map((r) => r.leadId);
+  const out = new Map<string, DettaglioContatto>();
+  if (!ids.length) return out;
+  const [mandati, dm, bni] = await Promise.all([
+    db.approvalItem.findMany({ where: { leadId: { in: ids }, kind: { in: KIND_INVIATI }, status: "APPROVATO" }, orderBy: { decidedAt: "desc" }, select: { leadId: true, kind: true, decidedAt: true, note: true, payload: true } }),
+    db.agentReport.findMany({ where: { leadId: { in: ids }, agent: "decision_maker" }, orderBy: { collectedAt: "desc" }, select: { leadId: true, findings: true } }),
+    db.bniPresentazione.findMany({ where: { leadId: { in: ids }, stato: { not: "NO" } }, select: { leadId: true, membro: { select: { name: true } } } }),
+  ]);
+  const casoIds = new Set<string>();
+  const casoDi = (p: unknown) => { const c = (p as { casoId?: unknown } | null)?.casoId; return typeof c === "string" && c ? c : null; };
+  for (const m of mandati) { const c = casoDi(m.payload); if (c) casoIds.add(c); }
+  for (const r of righe) for (const v of r.voci) { const c = casoDi(v.payload); if (c) casoIds.add(c); }
+  const casi = new Map((await db.casoStudio.findMany({ where: { id: { in: [...casoIds] } }, select: { id: true, titolo: true } })).map((c) => [c.id, c.titolo]));
+
+  for (const r of righe) {
+    const m = mandati.find((x) => x.leadId === r.leadId);
+    const p = (m?.payload ?? {}) as Record<string, unknown>;
+    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+    const canaleNota = m?.note?.match(/via (WhatsApp|LinkedIn|email|messaggio alla pagina)/i)?.[1] ?? null;
+    const canale = canaleNota ?? (str(p.canale) === "whatsapp" ? "WhatsApp" : str(p.canale) === "email" ? "email" : str(p.canale) === "linkedin" ? "LinkedIn" : "segnato a mano");
+    const dove = canale === "email" ? str(p.email) : canale === "WhatsApp" ? str(p.telefono) : canale === "LinkedIn" ? str(p.linkedin) : canale === "messaggio alla pagina" ? str(p.pagina) : null;
+    const tipo = m ? TIPO_INVIATO[m.kind] : "contatto";
+    const inviato = m?.decidedAt ? {
+      quando: m.decidedAt.toISOString(),
+      aChi: tipo === "pagina" ? "alla pagina dell'azienda (chi decide non si sa)" : str(p.decisore) ?? r.decisore ?? "chi decide",
+      canale, dove, testo: str(p.messaggio), tipo,
+    } : null;
+    const voceCaso = r.voci.map((v) => casoDi(v.payload)).find(Boolean) ?? casoDi(m?.payload);
+    const report = dm.find((x) => x.leadId === r.leadId);
+    const persone = Array.isArray((report?.findings as { persone?: unknown } | null)?.persone) ? ((report!.findings as { persone: Record<string, unknown>[] }).persone) : [];
+    out.set(r.leadId, {
+      caso: voceCaso ? { id: voceCaso, titolo: casi.get(voceCaso) ?? "Caso studio" } : null,
+      inviato,
+      ricerche: {
+        linkedinFatto: !!report,
+        linkedin: str(persone.find((x) => x.fonte === "linkedin" || str(x.profilo)?.includes("linkedin"))?.nome),
+        facebook: persone.some((x) => !!str(x.profiloFacebook)),
+        instagram: persone.some((x) => !!str(x.profiloInstagram)),
+        bni: [...new Set(bni.filter((b) => b.leadId === r.leadId).map((b) => b.membro?.name).filter((n): n is string => !!n))],
+      },
+      followupPossibile: !!inviato && tipo !== "followup" && !r.followupFatto && !r.voci.some((v) => v.kind === "RETE_FOLLOWUP"),
+    });
+  }
+  return out;
 }
 
 export interface Percorso {
@@ -113,6 +177,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
   const righe: Riga[] = [];
   let dopo = 0;
   let inPausa = 0;
+  const perContatto: Parameters<typeof dettagliContatto>[0] = [];
 
   for (const l of lavorazioni) {
     const provati = Array.isArray(l.pontiProvati) ? (l.pontiProvati as string[]) : [];
@@ -131,7 +196,9 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
       continue;
     }
     righe.push({ esito, da: l.updatedAt.getTime(), commenti: giaCommentata?.fatti ?? 0, leadId: l.leadId, lavorazioneId: l.id, nome: l.lead.name, zona: l.lead.address, categoria: l.lead.category });
+    if (esito.passo === 4) perContatto.push({ leadId: l.leadId, voci: vociDi.get(l.leadId) ?? [], decisore: l.decisore, followupFatto: !!l.promemoriaAt });
   }
+  const contatti = await dettagliContatto(perContatto);
 
   for (const t of trovate) {
     const l = t.lead!;
@@ -155,7 +222,7 @@ export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {
 
   const scheda = (r: Riga): AziendaNelPercorso => {
     const e = r.esito as Extract<Esito, { dentro: true }>;
-    return { leadId: r.leadId, lavorazioneId: r.lavorazioneId, nome: r.nome, zona: r.zona, categoria: r.categoria, passo: e.passo, tocca: e.tocca, stato: e.stato, statoNome: STATI[e.stato], cosa: e.cosa, azione: e.azione, mac: macDi.get(r.leadId) ?? null };
+    return { leadId: r.leadId, lavorazioneId: r.lavorazioneId, nome: r.nome, zona: r.zona, categoria: r.categoria, passo: e.passo, tocca: e.tocca, stato: e.stato, statoNome: STATI[e.stato], cosa: e.cosa, azione: e.azione, mac: macDi.get(r.leadId) ?? null, contatto: contatti.get(r.leadId) };
   };
   // Per stato (Alessio, 2026-10-28), che mette prima quelle dove tocca a lui; poi le già commentate (più commenti in alto).
   const stato = (r: Riga) => ordineStato((r.esito as Extract<Esito, { dentro: true }>).stato);

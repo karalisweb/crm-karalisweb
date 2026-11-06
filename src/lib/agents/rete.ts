@@ -470,7 +470,7 @@ export async function creaFollowup(lavorazioneId: string): Promise<boolean> {
   if (!l || l.fase !== "CHIESTA" || !l.chiestaAt || l.promemoriaAt) return false;
   if (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_RETE_FOLLOWUP, createdAt: { gte: l.chiestaAt } }, select: { id: true } })) return false;
   const primo = await db.approvalItem.findFirst({
-    where: { leadId: l.leadId, kind: { in: [KIND_RETE_CONTATTO, KIND_RETE_DIRETTO] }, status: "APPROVATO" },
+    where: { leadId: l.leadId, kind: { in: [KIND_RETE_CONTATTO, KIND_RETE_DIRETTO, KIND_RETE_PAGINA] }, status: "APPROVATO" },
     orderBy: { decidedAt: "desc" },
     select: { payload: true },
   });
@@ -491,6 +491,9 @@ export async function creaFollowup(lavorazioneId: string): Promise<boolean> {
         telefono: p.telefono ?? null,
         email: p.email ?? null,
         linkedin: p.linkedin ?? null,
+        // v3.113: se il primo messaggio era alla pagina, anche il follow-up va lì.
+        pagina: p.pagina ?? null,
+        piattaforma: p.piattaforma ?? null,
       } as Prisma.InputJsonValue,
     },
   });
@@ -754,7 +757,8 @@ export async function decisioneRete(voceId: string, decisione: "APPROVATO" | "SC
   }
   if (v.kind === KIND_RETE_CONTATTO || v.kind === KIND_RETE_PAGINA) {
     const leadId = (await db.approvalItem.findUnique({ where: { id: voceId }, select: { leadId: true } }))?.leadId;
-    if (decisione === "APPROVATO" && leadId && v.kind === KIND_RETE_CONTATTO) {
+    // v3.113: anche il messaggio alla pagina è un contatto: si passa ad "Aspetti la risposta" (prima tornava a scaldare).
+    if (decisione === "APPROVATO" && leadId) {
       await db.lavorazione.updateMany({ where: { leadId, fase: { in: ["MAPPATA", "PONTE_SCELTO"] } }, data: { fase: "CHIESTA", strada: "SCALDATO", chiestaAt: new Date(), scaldataAt: new Date() } });
     }
     return;

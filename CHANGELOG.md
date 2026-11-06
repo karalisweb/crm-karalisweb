@@ -14,6 +14,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.113.0] - 2026-11-06
+
+### Fixed
+- BNI: **prima tutta la Sardegna, poi il Lazio.** Finché in Sardegna c'è anche un solo membro da conoscere, il CRM non prepara richieste di 121 per altre regioni (prima, se i sardi erano tutti in attesa di risposta, ripiegava sul Lazio). Le 5 richieste per il Lazio ancora da mandare sono state tolte.
+
+### Changed
+- Percorso, Contatto: si vede **su che canale** va il messaggio (WhatsApp al numero, email all'indirizzo, LinkedIn, messaggio alla pagina Facebook/Instagram/LinkedIn) e **quale caso studio** cita. I pulsanti "Copia il testo" e "Mandato" compaiono solo se non c'è nessun canale: con un canale l'invio si registra da solo. Tolto "Non serve" da "Da scrivere alla pagina".
+- Percorso, Aspetti la risposta: **quando** hai scritto, **a chi**, **su che canale**, **cosa** (si apre), il caso studio citato, e **dove è stato cercato chi decide** (LinkedIn, Facebook, Instagram, BNI). Pulsante **"Manda il follow-up adesso"** senza aspettare i 5 giorni.
+- Il messaggio alla pagina conta come contatto: dopo l'invio l'azienda va in "Aspetti la risposta" (prima tornava a scaldare) e il follow-up va sulla stessa pagina.
+
 ## [3.112.0] - 2026-11-06
 
 ### Added
