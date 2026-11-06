@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.109.0] - 2026-11-06
+
+### Added
+- Percorso: su ogni passo si vede **quante aziende ci sono in ogni sottosezione** (Da decidere, In analisi, Aspetti la risposta…), prima ancora di aprirlo. Tocchi una sottosezione e ci vai dritto, aperta.
+- Percorso: **ogni sottosezione si chiude e si apre** toccando il titolo, e il CRM si ricorda come l'hai lasciata.
+
 ## [3.108.0] - 2026-11-06
 
 ### Changed

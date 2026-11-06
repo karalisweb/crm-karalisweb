@@ -1819,6 +1819,7 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
   PRIMA del giro veloce (prima le nuove prendevano i 3 posti di `CONTROLLI_IN_CODA_MAX` e le vecchie aspettavano
   settimane); `LETTURE_NON_BNI` 25→60, `LETTURE_LINKEDIN_GIORNO` 35→70; `scartaSenzaStrade(leadId, oggi)` richiede solo
   il referto `decision_maker`: senza referto `social` decide comunque dopo `ORE_MASSIME_FERMA = 48` dall'approvazione.
+- v3.109 `components/ui/sezione.tsx` (`Sezione`: `<details>` chiudibile con conteggio, stato in localStorage per `id`, `forzaAperta`): la usano Oggi (chiavi `oggi:*`) e Percorso (gruppi per stato, chiave `percorso:<passo>:<stato>`; le schede dei passi elencano i gruppi con il conteggio e `vaiA` apre e scorre al gruppo). Regola: ogni nuova lista nasce chiudibile.
 
 ## Motore 121 (v3.52.0)
 

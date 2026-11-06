@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ArrowRight, Bell, CalendarClock, CheckCircle2, ChevronRight, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, CalendarClock, CheckCircle2, Trash2 } from "lucide-react";
 import { dataOra } from "@/components/ricerca/etichette";
 import { NuovaRichiestaDialog } from "@/components/vendita/nuova-richiesta-dialog";
+import { Sezione as SezioneComune } from "@/components/ui/sezione";
 import { type AziendaPercorso, type CosaDiOggi, type DatiPercorso } from "@/components/percorso/scheda";
 
 // Le 3 cose di oggi (v3.64; dalla v3.67 tutte, senza tetto): ogni azienda con la sua cosa da fare.
@@ -36,23 +37,9 @@ interface Oggi {
  * v3.99 (Alessio: "essendo molto lunga deve lavorare con gli accordion"): ogni blocco di Oggi si chiude e si riapre
  * con un tocco sul titolo, e resta come l'hai lasciato (salvato nel browser).
  */
-function Sezione({ id, titolo, conteggio, children }: { id: string; titolo: ReactNode; conteggio?: ReactNode; children: ReactNode }) {
-  const ref = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
-    if (ref.current && localStorage.getItem(`oggi:${id}`) === "0") ref.current.open = false;
-  }, [id]);
-  return (
-    <details ref={ref} open className="group rounded-lg border overflow-hidden" onToggle={(e) => localStorage.setItem(`oggi:${id}`, e.currentTarget.open ? "1" : "0")}>
-      <summary className="flex cursor-pointer select-none list-none items-center justify-between gap-3 bg-muted/50 hover:bg-muted p-3 transition [&::-webkit-details-marker]:hidden" title="Tocca per chiudere o aprire">
-        <span className="flex items-center gap-2 font-semibold min-w-0">
-          <ChevronRight className="h-5 w-5 shrink-0 text-primary transition-transform group-open:rotate-90" />
-          <span className="min-w-0">{titolo}</span>
-        </span>
-        {conteggio != null && <span className="rounded-full bg-background px-2.5 py-0.5 text-sm text-muted-foreground shrink-0">{conteggio}</span>}
-      </summary>
-      <div className="space-y-2 p-3">{children}</div>
-    </details>
-  );
+// Il blocco chiudibile ora è comune a tutte le pagine (components/ui/sezione). Le chiavi restano "oggi:…".
+function Sezione({ id, ...resto }: { id: string; titolo: ReactNode; conteggio?: ReactNode; children: ReactNode }) {
+  return <SezioneComune id={`oggi:${id}`} {...resto} />;
 }
 
 function Riga({ href, testo }: { href: string; testo: string }) {

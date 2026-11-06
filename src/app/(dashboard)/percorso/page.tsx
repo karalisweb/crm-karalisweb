@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { SchedaPercorso, type AziendaPercorso, type DatiPercorso } from "@/components/percorso/scheda";
 import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
 import { CercaTu } from "@/components/ricerca/cerca-tu";
+import { Sezione } from "@/components/ui/sezione";
 
 /** La cerchia stretta (prima in "In lavorazione"): un ponte vale solo se è qui. Sta nel passo 2. */
 function Cerchia() {
@@ -98,13 +99,21 @@ function Percorso() {
   }, [d, daOggi]);
 
   // Già in ordine di stato dal server: qui si raggruppano, con il nome dello stato sopra.
-  const nelPasso = (d?.aziende ?? []).filter((a) => a.passo === passo);
-  const gruppi = nelPasso.reduce<{ stato: string; nome: string; aziende: AziendaPercorso[] }[]>((g, a) => {
+  const raggruppa = (n: number) => (d?.aziende ?? []).filter((a) => a.passo === n).reduce<{ stato: string; nome: string; aziende: AziendaPercorso[] }[]>((g, a) => {
     const ultimo = g[g.length - 1];
     if (ultimo?.stato === a.stato) ultimo.aziende.push(a);
     else g.push({ stato: a.stato, nome: a.statoNome, aziende: [a] });
     return g;
   }, []);
+  const nelPasso = (d?.aziende ?? []).filter((a) => a.passo === passo);
+  const gruppi = raggruppa(passo);
+  // v3.109 (Alessio, 2026-11-06): dalla scheda del passo si va dritti a una sottosezione, aperta.
+  const [daAprire, setDaAprire] = useState<string | null>(null);
+  const vaiA = (n: 1 | 2 | 3 | 4, stato: string) => {
+    setPasso(n);
+    setDaAprire(stato);
+    setTimeout(() => document.getElementById(`percorso:${n}:${stato}`)?.scrollIntoView({ block: "start", behavior: "smooth" }), 100);
+  };
 
   return (
     <div className="space-y-5 min-w-0">
@@ -119,12 +128,26 @@ function Percorso() {
       {d && <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {d.passi.map((p) => (
-            <button key={p.n} onClick={() => setPasso(p.n)}
-              className={`text-left rounded-lg border p-3 transition min-w-0 ${passo === p.n ? "border-primary bg-primary/10" : "bg-muted/40 hover:bg-muted border-transparent"}`}>
-              <div className="text-xs text-muted-foreground">Passo {p.n}</div>
-              <div className="font-medium break-words">{p.nome}</div>
-              <div className="text-sm">{p.quante} {p.quante === 1 ? "azienda" : "aziende"}{p.toccaATe > 0 && <span className="text-primary"> · {p.toccaATe} a te</span>}</div>
-            </button>
+            <div key={p.n} className={`rounded-lg border p-3 transition min-w-0 ${passo === p.n ? "border-primary bg-primary/10" : "bg-muted/40 hover:bg-muted border-transparent"}`}>
+              <button onClick={() => setPasso(p.n)} className="text-left w-full">
+                <div className="text-xs text-muted-foreground">Passo {p.n}</div>
+                <div className="font-medium break-words">{p.nome}</div>
+                <div className="text-sm">{p.quante} {p.quante === 1 ? "azienda" : "aziende"}{p.toccaATe > 0 && <span className="text-primary"> · {p.toccaATe} a te</span>}</div>
+              </button>
+              {/* Le sottosezioni con quante ce ne sono, già da fuori (v3.109). */}
+              {raggruppa(p.n).length > 0 && (
+                <ul className="mt-2 space-y-0.5 border-t pt-2">
+                  {raggruppa(p.n).map((g) => (
+                    <li key={g.stato}>
+                      <button onClick={() => vaiA(p.n, g.stato)} className="flex w-full items-baseline justify-between gap-2 text-left text-xs text-muted-foreground hover:text-foreground">
+                        <span className={`min-w-0 break-words ${g.aziende[0].tocca === "te" ? "text-primary" : ""}`}>{g.nome}</span>
+                        <span className="shrink-0 tabular-nums">{g.aziende.length}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           ))}
         </div>
         <p className="text-sm text-muted-foreground">{d.passi.find((p) => p.n === passo)?.spiega}</p>
@@ -138,11 +161,11 @@ function Percorso() {
 
         {nelPasso.length === 0
           ? <Card><CardContent className="p-4 text-sm text-muted-foreground">Nessuna azienda in questo passo.</CardContent></Card>
-          : <div className="space-y-4">{gruppi.map((g) => (
-            <div key={g.stato} className="space-y-2">
-              <h3 className="text-sm font-semibold">{g.nome} <span className="text-muted-foreground font-normal">({g.aziende.length})</span></h3>
+          : <div className="space-y-3">{gruppi.map((g) => (
+            <Sezione key={g.stato} id={`percorso:${passo}:${g.stato}`} titolo={g.nome} conteggio={g.aziende.length}
+              forzaAperta={daAprire === g.stato || g.aziende.some((a) => a.leadId === daOggi)}>
               {g.aziende.map((a) => <SchedaPercorso key={a.leadId} a={a} passi={d.passi} onCambio={carica} evidenziata={a.leadId === daOggi} />)}
-            </div>
+            </Sezione>
           ))}</div>}
 
         {passo === 2 && <Cerchia />}
