@@ -18,7 +18,7 @@ import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento 
 import {
   FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, nomiDaConfermare, prossimaAzione, strade,
   testoContattoDiretto, testoDirettoConPonte, testoFollowupContatto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
-  COMMENTI_PER_CONTATTO, PIATTAFORME, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
+  COMMENTI_PER_CONTATTO, PIATTAFORME, paginaPreferita, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
   type PaginaSocial, type Piattaforma,
 } from "./rete-regole";
 import { noteDaReferti } from "./impressioni-sezioni";
@@ -157,7 +157,7 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     for (const c of candidate) {
       const d = await datiAzienda(c.id);
       // Senza chi decide si lavora dalla pagina (Alessio, 2026-10-25); senza nemmeno quella si scarta (1b).
-      if (!d.decisori.length && !d.pontiBni.length && !(await pagineAzienda(c.id)).length) continue;
+      if (!d.decisori.length && !d.pontiBni.length && !(await raggiungibile(c.id))) continue;
       conForza.push({ id: c.id, forza: forzaAzienda(d, cerchia), creata: c.createdAt.getTime() });
     }
     conForza.sort((a, b) => b.forza - a.forza || a.creata - b.creata);
@@ -180,6 +180,7 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   r.daScaldareAggiunte = await riempiScaldare(oggi);
   // 2b) v3.90: i messaggi di contatto ancora da mandare si riscrivono col caso studio e i canali trovati meglio.
   await aggiornaTestiContatto(oggi).catch(() => 0);
+  await aggiornaCanaliPagina().catch(() => 0);
 
   // 2c) v3.87: la richiesta al ponte non ancora mandata diventa il messaggio diretto a chi decide (si riparte da
   //     "mappata": avanzaMappata sceglie lo stesso ponte e scrive a chi decide, citandolo se lo conosce davvero).
@@ -374,10 +375,10 @@ export async function scartaSenzaStrade(leadId: string, oggi = new Date()): Prom
   const scaduta = !!voce.decidedAt && oggi.getTime() - voce.decidedAt.getTime() > ORE_MASSIME_FERMA * 3600_000;
   if (!fatti.has("social") && !scaduta) return false;
   const d = await datiAzienda(leadId);
-  if (d.decisori.length || d.pontiBni.length || (await pagineAzienda(leadId)).length) return false;
+  if (d.decisori.length || d.pontiBni.length || (await raggiungibile(leadId))) return false;
   await db.approvalItem.update({
     where: { id: voce.id },
-    data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: SCARTATA_DAL_CRM, note: "Scartata da sola: niente chi decide, nessuno che te la presenta, nessuna pagina social" },
+    data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: SCARTATA_DAL_CRM, note: "Scartata da sola: niente chi decide, nessuno che te la presenta, né WhatsApp, né mail, né pagine social" },
   });
   return true;
 }
@@ -650,7 +651,10 @@ export async function canaleDiretto(leadId: string, decisore: string | null): Pr
   // Un cellulare dell'azienda (3…) vale anche per WhatsApp.
   const tel = lead?.phone ?? null;
   if (!whatsapp && tel && /^(\+?39)?\s*3/.test(tel.replace(/[^\d+]/g, ""))) whatsapp = normalizePhoneForWhatsApp(tel);
-  return { whatsapp, email: emailPersona ?? emailAzienda, emailPersonale: !!emailPersona, telefono: tel, linkedin: persona?.linkedinUrl ?? null };
+  // v3.115: le mail lette dal sito possono portarsi dietro pezzi di HTML ("…it\&quot;"): si tiene solo l'indirizzo.
+  const pulita = (e: string | null) => e?.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/)?.[0]?.toLowerCase() ?? null;
+  const ePersona = pulita(emailPersona);
+  return { whatsapp, email: ePersona ?? pulita(emailAzienda), emailPersonale: !!ePersona, telefono: tel, linkedin: persona?.linkedinUrl ?? null };
 }
 
 /**
@@ -1047,29 +1051,61 @@ export async function dopoCommento(leadId: string, oggi = new Date()): Promise<b
   return true;
 }
 
-/** Chi decide non si sa: il messaggio privato alla pagina, una volta sola per azienda. */
+/** v3.115: l'azienda si può raggiungere anche senza chi decide: WhatsApp, mail o una pagina. */
+async function raggiungibile(leadId: string): Promise<boolean> {
+  const c = await canaliAzienda(leadId);
+  return !!(c.telefono || c.email || c.pagina);
+}
+
+/** Chi decide non si sa: il messaggio all'azienda (WhatsApp, mail o pagina), una volta sola. */
 export async function messaggioAllaPagina(leadId: string, oggi = new Date()): Promise<boolean> {
   const gia = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_RETE_PAGINA }, select: { id: true } });
   if (gia) return false;
-  const pagine = await pagineAzienda(leadId);
-  if (!pagine.length) return false;
   const lead = await db.lead.findUnique({ where: { id: leadId }, select: { name: true } });
   if (!lead) return false;
-  const piattaforma = (await piattaformaScelta(leadId, pagine, oggi)) ?? pagine[0].piattaforma;
-  const pagina = pagine.find((p) => p.piattaforma === piattaforma) ?? pagine[0];
+  const canali = await canaliAzienda(leadId);
+  if (!canali.telefono && !canali.email && !canali.pagina) return false;
+  const caso = await casoPerMessaggio(leadId, oggi);
+  const dove = canali.telefono ? "WhatsApp" : canali.email ? "email" : `pagina ${NOMI[canali.piattaforma!]}`;
   await db.approvalItem.create({
     data: {
       leadId,
       kind: KIND_RETE_PAGINA,
       agent: "rete",
-      title: `Non si sa chi decide in ${lead.name}: scrivi alla pagina ${NOMI[pagina.piattaforma]}`,
-      payload: await (async () => {
-        const caso = await casoPerMessaggio(leadId, oggi);
-        return { azienda: lead.name, piattaforma: pagina.piattaforma, pagina: pagina.url, messaggio: testoMessaggioPagina(lead.name, caso?.gancio ?? null, !!caso), casoId: caso?.casoId ?? null, versioneTesto: VERSIONE_TESTO };
-      })() as Prisma.InputJsonValue,
+      title: `Non si sa chi decide in ${lead.name}: scrivi all'azienda (${dove})`,
+      payload: { azienda: lead.name, ...canali, messaggio: testoMessaggioPagina(lead.name, caso?.gancio ?? null, !!caso), casoId: caso?.casoId ?? null, versioneTesto: VERSIONE_TESTO, canaliVersione: 1 } as Prisma.InputJsonValue,
     },
   });
   return true;
+}
+
+/**
+ * v3.115 (Alessio, 2026-11-06: "prima cerco WhatsApp, anche aziendale, poi la mail nel sito…"): i punti di contatto
+ * dell'azienda quando chi decide non si sa. WhatsApp e mail come per il contatto diretto (cellulari e mail del sito),
+ * la pagina in ordine Instagram, Facebook, LinkedIn.
+ */
+async function canaliAzienda(leadId: string): Promise<{ telefono: string | null; email: string | null; piattaforma: Piattaforma | null; pagina: string | null }> {
+  const [c, pagine] = await Promise.all([canaleDiretto(leadId, null), pagineAzienda(leadId)]);
+  const p = paginaPreferita(pagine);
+  return { telefono: c.whatsapp, email: c.email, piattaforma: p?.piattaforma ?? null, pagina: p?.url ?? null };
+}
+
+/** v3.115: i messaggi "all'azienda" già pronti prendono WhatsApp e mail dell'azienda e il nuovo testo. */
+export async function aggiornaCanaliPagina(): Promise<number> {
+  const voci = await db.approvalItem.findMany({ where: { kind: KIND_RETE_PAGINA, status: "IN_ATTESA", leadId: { not: null } }, select: { id: true, leadId: true, payload: true, lead: { select: { name: true } } } });
+  let fatte = 0;
+  for (const v of voci) {
+    const p = (v.payload ?? {}) as Record<string, unknown>;
+    if (p.canaliVersione === 1 || !v.lead) continue;
+    const canali = await canaliAzienda(v.leadId!);
+    const caso = await casoPerMessaggio(v.leadId!, new Date());
+    await db.approvalItem.update({
+      where: { id: v.id },
+      data: { payload: { ...p, ...canali, pagina: canali.pagina ?? p.pagina ?? null, piattaforma: canali.piattaforma ?? p.piattaforma ?? null, messaggio: testoMessaggioPagina(v.lead.name, caso?.gancio ?? null, !!caso), casoId: caso?.casoId ?? p.casoId ?? null, canaliVersione: 1 } as Prisma.InputJsonValue },
+    });
+    fatte++;
+  }
+  return fatte;
 }
 
 /** I profili di chi decide sulle tre piattaforme (dall'agente Chi decide; il LinkedIn anche dalle persone salvate). */

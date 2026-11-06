@@ -292,6 +292,32 @@ export function testoContattoDopoCommenti(decisore: string | null, azienda: stri
 
 /** Senza chi decide: il messaggio privato alla pagina per arrivare a lui. */
 export function testoMessaggioPagina(azienda: string, gancio: string | null, haCaso = !!gancio): string {
-  const storia = haCaso ? `${gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore."} Ho raccolto tutto in un breve caso studio che credo possa interessare al titolare.` : "Ho un esempio concreto di un lavoro fatto per un'azienda come la vostra che credo possa interessare al titolare.";
-  return `Buongiorno, sono Alessio Loi di Karalisweb (Cagliari) e seguo la pagina di ${azienda}.\n\n${storia}\n\nPosso mandarglielo? Mi dite a chi scriverlo? Grazie,\nAlessio`;
+  const storia = haCaso ? `${gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore."} Ho raccolto tutto in un breve caso studio che credo possa interessare al titolare di ${azienda}.` : `Ho un esempio concreto di un lavoro fatto per un'azienda come la vostra che credo possa interessare al titolare di ${azienda}.`;
+  // v3.115: lo stesso testo va bene su WhatsApp, email o pagina (prima diceva "seguo la pagina", strano su WhatsApp).
+  return `Buongiorno, sono Alessio Loi di Karalisweb (Cagliari).\n\n${storia}\n\nPosso mandarglielo? Mi dite a chi scriverlo? Grazie,\nAlessio`;
+}
+
+/**
+ * v3.115 (Alessio, 2026-11-06): i punti di contatto, in ordine di preferenza. Prima WhatsApp (anche quello
+ * dell'azienda), poi la mail (anche quella del sito), poi LinkedIn della persona, poi le pagine: Instagram, Facebook,
+ * e per ultima LinkedIn ("scrivere alla pagina LinkedIn o non scrivergli è pressoché la stessa cosa").
+ */
+export const ORDINE_CANALI = ["whatsapp", "email", "linkedin", "pagina_instagram", "pagina_facebook", "pagina_linkedin"] as const;
+export type CanaleContatto = (typeof ORDINE_CANALI)[number];
+export const ORDINE_PAGINE: Piattaforma[] = ["instagram", "facebook", "linkedin"];
+
+/** La pagina a cui scrivere: la prima disponibile in ordine Instagram, Facebook, LinkedIn. */
+export function paginaPreferita<T extends { piattaforma: Piattaforma }>(pagine: T[]): T | null {
+  return [...pagine].sort((a, b) => ORDINE_PAGINE.indexOf(a.piattaforma) - ORDINE_PAGINE.indexOf(b.piattaforma))[0] ?? null;
+}
+
+/** I canali disponibili, nell'ordine di preferenza: il primo è quello da usare. */
+export function canaliInOrdine(c: { whatsapp?: string | null; email?: string | null; linkedin?: string | null; piattaformaPagina?: Piattaforma | null; pagina?: string | null }): CanaleContatto[] {
+  const ci: Record<CanaleContatto, boolean> = {
+    whatsapp: !!c.whatsapp, email: !!c.email, linkedin: !!c.linkedin,
+    pagina_instagram: !!c.pagina && c.piattaformaPagina === "instagram",
+    pagina_facebook: !!c.pagina && c.piattaformaPagina === "facebook",
+    pagina_linkedin: !!c.pagina && c.piattaformaPagina === "linkedin",
+  };
+  return ORDINE_CANALI.filter((k) => ci[k]);
 }

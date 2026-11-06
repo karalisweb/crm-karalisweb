@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Check, ExternalLink, FileText, Loader2, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { CosaDirgli } from "./cosa-dirgli";
+import { canaliInOrdine } from "@/lib/agents/rete-regole";
 
 export type Azione =
   | { tipo: "decidi" }
@@ -118,13 +119,15 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
     onCambio();
   };
   const x = a.azione;
-  // I canali per mandare il messaggio, con dove arriva (v3.113: "devo capire se scrivo via WhatsApp o via mail").
-  const canali = x?.tipo === "cassetta" && a.passo >= 2 ? [
-    x.whatsapp ? { descrizione: `WhatsApp al ${x.whatsapp}` } : null,
-    x.email && x.testo ? { descrizione: `email a ${x.email}, la manda il CRM` } : null,
-    x.linkedin ? { descrizione: "LinkedIn" } : null,
-    x.pagina ? { descrizione: `messaggio privato alla pagina ${NOME_PIATTAFORMA[x.piattaforma ?? ""] ?? ""}`.trim() } : null,
-  ].filter((c): c is { descrizione: string } => !!c) : [];
+  // I canali per mandare il messaggio, in ordine di preferenza (v3.115, Alessio: WhatsApp, mail, LinkedIn della
+  // persona, pagina Instagram, Facebook, LinkedIn). Il primo è il pulsante principale, gli altri sono alternative.
+  const ordine = x?.tipo === "cassetta" && a.passo >= 2
+    ? canaliInOrdine({ whatsapp: x.whatsapp, email: x.testo ? x.email : null, linkedin: x.linkedin, pagina: x.pagina, piattaformaPagina: (x.piattaforma as "facebook" | "instagram" | "linkedin" | null) ?? null })
+    : [];
+  const descr = (k: (typeof ordine)[number]) => x?.tipo !== "cassetta" ? "" : k === "whatsapp" ? `WhatsApp al ${x.whatsapp}` : k === "email" ? `email a ${x.email} (la manda il CRM)` : k === "linkedin" ? "LinkedIn di chi decide" : `messaggio alla pagina ${NOME_PIATTAFORMA[x.piattaforma ?? ""] ?? ""}`.trim();
+  const canali = ordine.map((k) => ({ k, descrizione: descr(k) }));
+  const variante = (k: string): "default" | "outline" => (ordine[0] === k ? "default" : "outline");
+  const paginaK = x?.tipo === "cassetta" && x.pagina ? `pagina_${x.piattaforma}` : "";
   const lav = a.lavorazioneId ? `/api/rete/lavorazioni/${a.lavorazioneId}` : null;
   return (
     // L'id serve a Oggi per aprire il Percorso proprio su quest'azienda (v3.78).
@@ -150,7 +153,7 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
       {/* v3.113: da contattare. Il canale e il caso studio si vedono prima di premere. */}
       {a.passo === 4 && x?.tipo === "cassetta" && (
         <div className="space-y-1 text-xs">
-          <div><span className="text-muted-foreground">Canale: </span>{canali.length ? canali.map((c) => c.descrizione).join(" oppure ") : "nessun canale trovato: copia il testo e mandalo tu"}</div>
+          <div><span className="text-muted-foreground">Canale: </span>{canali.length ? <><strong>{canali[0].descrizione}</strong>{canali.length > 1 && <span className="text-muted-foreground"> · in alternativa: {canali.slice(1).map((c) => c.descrizione).join(", ")}</span>}</> : "nessun canale trovato: copia il testo e mandalo tu"}</div>
           {a.contatto?.caso && (
             <div><span className="text-muted-foreground">Caso studio citato nel messaggio: </span>
               <a href={`/api/ricerca/casi-studio/${a.contatto.caso.id}/pdf`} target="_blank" rel="noopener noreferrer" className="underline">{a.contatto.caso.titolo}</a>
@@ -198,12 +201,12 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
           {x.testo && !canali.length && bottone("copia", "Copia il testo", () => { void navigator.clipboard.writeText(x.testo!).then(() => toast.success("Copiato")); })}
           {x.link && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Apri il post</a></Button>}
           {/* Scrivere subito, col testo già dentro (v3.87). */}
-          {x.whatsapp && <Button asChild size="sm" variant="default" className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer" onClick={() => traccia("whatsapp")}>Manda su WhatsApp</a></Button>}
-          {x.email && x.testo && bottone("email", `Manda email a ${x.email}`, () => { void mandaEmail(); }, "default")}
+          {x.whatsapp && <Button asChild size="sm" variant={variante("whatsapp")} className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer" onClick={() => traccia("whatsapp")}>Manda su WhatsApp</a></Button>}
+          {x.email && x.testo && bottone("email", `Manda email a ${x.email}`, () => { void mandaEmail(); }, variante("email"))}
           {/* v3.90: il caso studio da mandare appena dice sì. */}
           {x.casoId && a.passo !== 4 && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`/api/ricerca/casi-studio/${x.casoId}/pdf`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Caso studio (PDF)</a></Button>}
-          {x.linkedin && <Button asChild size="sm" variant="default" className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre il profilo e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("linkedin"); }}>Manda su LinkedIn (testo copiato)</a></Button>}
-          {x.pagina && <Button asChild size="sm" variant="default" className="h-8 text-xs"><a href={x.pagina} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre la pagina e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("pagina"); }}>Scrivi alla pagina {NOME_PIATTAFORMA[x.piattaforma ?? ""] ?? ""} (testo copiato)</a></Button>}
+          {x.linkedin && <Button asChild size="sm" variant={variante("linkedin")} className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre il profilo e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("linkedin"); }}>Manda su LinkedIn (testo copiato)</a></Button>}
+          {x.pagina && <Button asChild size="sm" variant={variante(paginaK)} className="h-8 text-xs"><a href={x.pagina} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre la pagina e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("pagina"); }}>Scrivi alla pagina {NOME_PIATTAFORMA[x.piattaforma ?? ""] ?? ""} (testo copiato)</a></Button>}
           {!canali.length && bottone("si", x.testo ? "L'ho mandato" : x.si, () => fai("si", `/api/cassetta/${x.voceId}`, "POST", { decisione: "APPROVATO" }, "Fatto: un passo avanti"), "default")}
           {a.stato !== "pagina" && bottone("no", x.no, () => fai("no", `/api/cassetta/${x.voceId}`, "POST", { decisione: "SCARTATO" }, "Segnato"), "ghost")}
         </>}

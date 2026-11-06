@@ -1826,6 +1826,7 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.113 BNI: `capitoliInCorso` esclude i capitoli non sardi finché un capitolo sardo ha `conosciuti < totale` (test `capitoli-sardegna.test.ts`).
   Percorso passo 4: `AziendaNelPercorso.contatto` (`dettagliContatto()` in percorso.ts: ultimo RETE_CONTATTO/DIRETTO/PAGINA/FOLLOWUP APPROVATO con data, destinatario, canale dalla nota "via …", testo; caso studio da `payload.casoId`; ricerche da referto `decision_maker` + `bni_presentazioni`; `followupPossibile`). `POST /api/percorso/[leadId]/followup` → `creaFollowup`. Canale `pagina` in `/api/percorso/invio` (attività NOTE). `decisioneRete`: RETE_PAGINA approvata → lavorazione CHIESTA/SCALDATO. `creaFollowup` include RETE_PAGINA e copia `pagina`/`piattaforma`.
 - v3.114 `GET /api/ricerca/bni/membri`: `scrittoAt` = ultima MESSAGGIO_BNI APPROVATO per `bniMembroId`; Rubrica: stato `SCRITTO` (dopo CONOSCIUTO e FISSATO), conteggio per capitolo.
+- v3.115 `ORDINE_CANALI`, `canaliInOrdine()`, `paginaPreferita()` (rete-regole.ts, test): whatsapp > email > linkedin > pagina instagram > facebook > linkedin. `messaggioAllaPagina` usa `canaliAzienda()` (canaleDiretto(leadId, null) + pagina preferita) e salva `telefono`/`email`/`pagina`/`piattaforma`; `aggiornaCanaliPagina()` (in turnoRete) aggiorna le RETE_PAGINA in attesa (`canaliVersione: 1`). `raggiungibile()` sostituisce il controllo "ha pagine" in entrata e in `scartaSenzaStrade`. `canaleDiretto` ripulisce le email.
 
 ## Motore 121 (v3.52.0)
 

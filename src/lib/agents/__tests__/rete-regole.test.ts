@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   capienzaLavorazione, forzaAzienda, nomiDaConfermare, prossimaAzione, settimanaConPosto, stessaPersona, strade, testoRichiestaPonte,
   type DatiAzienda,
-  frequenzaTesto, piattaformaConsigliata, piattaformaDi, testoContattoDopoCommenti, testoMessaggioPagina,
+  frequenzaTesto, canaliInOrdine, paginaPreferita, piattaformaConsigliata, piattaformaDi, testoContattoDopoCommenti, testoMessaggioPagina,
 } from "../rete-regole";
 
 const accadueo: DatiAzienda = {
@@ -134,5 +134,20 @@ describe("v3.103 follow-up al contatto", () => {
     expect(testoFollowupContatto("Mario Rossi")).toMatch(/^Ciao Mario, ti riscrivo/);
     expect(testoFollowupContatto("chi decide")).toMatch(/^Ciao, ti riscrivo/);
     expect(testoFollowupContatto(null).length).toBeLessThan(220);
+  });
+});
+
+
+describe("punti di contatto in ordine (v3.115)", () => {
+  it("prima WhatsApp, poi mail, poi LinkedIn, poi le pagine", () => {
+    expect(canaliInOrdine({ email: "a@b.it", whatsapp: "39333", linkedin: "x", pagina: "p", piattaformaPagina: "facebook" })).toEqual(["whatsapp", "email", "linkedin", "pagina_facebook"]);
+    expect(canaliInOrdine({ pagina: "p", piattaformaPagina: "linkedin" })).toEqual(["pagina_linkedin"]);
+  });
+  it("la pagina: Instagram, poi Facebook, poi LinkedIn", () => {
+    expect(paginaPreferita([{ piattaforma: "linkedin" as const }, { piattaforma: "facebook" as const }])?.piattaforma).toBe("facebook");
+    expect(paginaPreferita([{ piattaforma: "facebook" as const }, { piattaforma: "instagram" as const }])?.piattaforma).toBe("instagram");
+  });
+  it("il testo per l'azienda va bene anche su WhatsApp", () => {
+    expect(testoMessaggioPagina("Piscine Blu", null)).not.toContain("seguo la pagina");
   });
 });

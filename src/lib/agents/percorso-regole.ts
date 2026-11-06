@@ -75,7 +75,7 @@ export const STATI = {
   commenta: "Da commentare",
   cerca_post: "Il CRM cerca il prossimo post",
   scrivi: "Da contattare",
-  pagina: "Da scrivere alla pagina",
+  pagina: "Da scrivere all'azienda (chi decide non si sa)",
   incontro: "Incontro da fissare",
   risposta: "Aspetti la risposta",
   followup: "Follow-up da mandare",
@@ -130,7 +130,7 @@ export function passoDi(s: Stato, oggi: Date): Esito {
   // v3.107 (Alessio, 2026-11-06: "trovo aziende del 4 in 3"): scrivere alla pagina è un contatto, non un commento:
   // sta al passo 4 come in Oggi (dove era già fra i "contattare"). Prima restava al passo 3.
   const pagina = l.fase === "MAPPATA" && l.strada === "SCALDARE" ? voce("RETE_PAGINA") : undefined;
-  if (pagina) return { dentro: true, passo: 4, tocca: "te", stato: "pagina", cosa: "Chi decide non si sa: scrivi alla pagina per arrivare a lui", azione: daCassetta(pagina, "Mandato", "Non serve") };
+  if (pagina) return { dentro: true, passo: 4, tocca: "te", stato: "pagina", cosa: "Chi decide non si sa: scrivi all'azienda per arrivare a lui", azione: daCassetta(pagina, "Mandato", "Non serve") };
   // v3.103: nessuna risposta al contatto: il follow-up, sullo stesso canale.
   const followup = voce("RETE_FOLLOWUP");
   if (followup) return { dentro: true, passo: 4, tocca: "te", stato: "followup", cosa: `Non ha risposto: manda il follow-up a ${nomeDi(s)}`, azione: daCassetta(followup, "Mandato", "Non serve") };

@@ -14,6 +14,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.115.0] - 2026-11-06
+
+### Changed
+- **Punti di contatto in ordine di preferenza: WhatsApp, mail, LinkedIn della persona, pagina Instagram, pagina Facebook, pagina LinkedIn.** Nel Percorso il primo canale disponibile è il pulsante principale, gli altri sono "in alternativa".
+- Chi decide non si sa: il CRM scrive prima **all'azienda su WhatsApp** (anche il cellulare aziendale scritto sul sito), poi **alla mail del sito**, e solo dopo alla pagina (Instagram, poi Facebook, poi LinkedIn). I messaggi già pronti sono stati aggiornati. Il testo non dice più "seguo la pagina", che su WhatsApp suonava strano. La sottosezione si chiama "Da scrivere all'azienda".
+- Un'azienda senza chi decide e senza pagine social ma con WhatsApp o mail non viene più scartata.
+
+### Fixed
+- Le mail lette dal sito non si portano più dietro pezzi di codice (es. "…it\&quot;").
+
 ## [3.114.0] - 2026-11-06
 
 ### Added

@@ -13,7 +13,7 @@ import { type AziendaPercorso, type CosaDiOggi, type DatiPercorso } from "@/comp
 
 // Le 3 cose di oggi (v3.64; dalla v3.67 tutte, senza tetto): ogni azienda con la sua cosa da fare.
 const COSE: { k: CosaDiOggi; titolo: string; spiega: string }[] = [
-  { k: "contatta", titolo: "Da contattare", spiega: "Passo 4: scrivi a chi decide (o alla loro pagina, se chi decide non si sa). Passo 2: scrivi a chi te la presenta." },
+  { k: "contatta", titolo: "Da contattare", spiega: "Passo 4: scrivi a chi decide (o all'azienda, se chi decide non si sa). Passo 2: scrivi a chi te la presenta." },
   { k: "scalda", titolo: "Da scaldare", spiega: "Lo fa il CRM da solo: commenta i post della loro pagina. Tu non devi fare niente." },
   { k: "valida", titolo: "Da validare", spiega: "Basta un sì o un no." },
 ];
