@@ -32,9 +32,17 @@ export async function GET(request: NextRequest) {
     .map((r) => ({ regione: r, capitoli: tutti.filter((c) => c.regione === r).length }))
     .sort((a, b) => Number(a.regione !== "Sardegna") - Number(b.regione !== "Sardegna") || a.regione.localeCompare(b.regione, "it"));
   const scelti = new Set(capitoli.map((c) => norm(c.name)));
+  // v3.114 (Alessio: "mi serve sapere a chi ho scritto"): l'ultima richiesta di 121 mandata a ogni membro.
+  const mandate = await db.approvalItem.findMany({
+    where: { kind: "MESSAGGIO_BNI", status: "APPROVATO", bniMembroId: { not: null } },
+    orderBy: { decidedAt: "desc" },
+    select: { bniMembroId: true, decidedAt: true, createdAt: true },
+  });
+  const scrittoIl = new Map<string, Date>();
+  for (const v of mandate) if (!scrittoIl.has(v.bniMembroId!)) scrittoIl.set(v.bniMembroId!, v.decidedAt ?? v.createdAt);
   const righe = membri
     .filter((m) => scelti.has(norm(m.chapter)))
-    .map((m) => ({ ...m, conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer }));
+    .map((m) => ({ ...m, conosciuto: !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer, scrittoAt: scrittoIl.get(m.id)?.toISOString() ?? null }));
   if (!q) {
     righe.sort((a, b) => norm(a.chapter).localeCompare(norm(b.chapter)) || a.name.localeCompare(b.name, "it"));
     return NextResponse.json({ membri: righe, totale: righe.length, capitoli, regione, altreRegioni });

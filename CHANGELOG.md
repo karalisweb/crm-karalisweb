@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.114.0] - 2026-11-06
+
+### Added
+- Rubrica BNI: per ogni capitolo anche **quanti ne hai scritti** (richiesta di 121 mandata, incontro non ancora fissato), in arancione anche nella barra; "ne mancano" non li conta più. Sul membro l'etichetta **"scritto il 5 nov"**.
+
 ## [3.113.0] - 2026-11-06
 
 ### Fixed

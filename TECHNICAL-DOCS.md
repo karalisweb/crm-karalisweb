@@ -1825,6 +1825,7 @@ devi dire". `src/lib/agents/avvisi-settore.ts`:
 - v3.112 `AziendaNelPercorso.mac` (`{ stato: in_coda|in_corso, dal }`): agent_runs di `CHIAVI_BROWSER` IN_CODA/IN_CORSO per l'azienda; `testoMac()` in scheda.tsx; conteggi "in coda" su gruppo e schede dei passi.
 - v3.113 BNI: `capitoliInCorso` esclude i capitoli non sardi finché un capitolo sardo ha `conosciuti < totale` (test `capitoli-sardegna.test.ts`).
   Percorso passo 4: `AziendaNelPercorso.contatto` (`dettagliContatto()` in percorso.ts: ultimo RETE_CONTATTO/DIRETTO/PAGINA/FOLLOWUP APPROVATO con data, destinatario, canale dalla nota "via …", testo; caso studio da `payload.casoId`; ricerche da referto `decision_maker` + `bni_presentazioni`; `followupPossibile`). `POST /api/percorso/[leadId]/followup` → `creaFollowup`. Canale `pagina` in `/api/percorso/invio` (attività NOTE). `decisioneRete`: RETE_PAGINA approvata → lavorazione CHIESTA/SCALDATO. `creaFollowup` include RETE_PAGINA e copia `pagina`/`piattaforma`.
+- v3.114 `GET /api/ricerca/bni/membri`: `scrittoAt` = ultima MESSAGGIO_BNI APPROVATO per `bniMembroId`; Rubrica: stato `SCRITTO` (dopo CONOSCIUTO e FISSATO), conteggio per capitolo.
 
 ## Motore 121 (v3.52.0)
 

@@ -22,22 +22,26 @@ interface Membro {
   conosciuto: boolean;
   next121At: string | null;
   leadershipRole: string | null;
+  /** v3.114: quando gli hai mandato la richiesta di 121 (l'ultima). */
+  scrittoAt?: string | null;
 }
 
 const RUOLI: Record<string, string> = { PRESIDENTE: "presidente", VICEPRESIDENTE: "vicepresidente", FORMAZIONE: "formazione", EVENTI: "eventi" };
 
-type Stato = "CONOSCIUTO" | "FISSATO" | "DA_INCONTRARE";
+type Stato = "CONOSCIUTO" | "FISSATO" | "SCRITTO" | "DA_INCONTRARE";
 
 function statoDi(m: Membro): Stato {
   if (m.conosciuto) return "CONOSCIUTO";
   if (m.next121At && new Date(m.next121At).getTime() > Date.now() - 86400000) return "FISSATO";
+  if (m.scrittoAt) return "SCRITTO";
   return "DA_INCONTRARE";
 }
 
 const STATI: Record<Stato, { etichetta: string; ordine: number; badge: string; bordo: string }> = {
   CONOSCIUTO: { etichetta: "conosciuto", ordine: 0, badge: "bg-green-600 text-white border-transparent", bordo: "border-l-4 border-l-green-600" },
   FISSATO: { etichetta: "incontro fissato", ordine: 1, badge: "bg-blue-600 text-white border-transparent", bordo: "border-l-4 border-l-blue-600" },
-  DA_INCONTRARE: { etichetta: "da incontrare", ordine: 2, badge: "bg-muted text-muted-foreground border-transparent", bordo: "border-l-4 border-l-transparent" },
+  SCRITTO: { etichetta: "gli hai scritto", ordine: 2, badge: "bg-amber-500 text-white border-transparent", bordo: "border-l-4 border-l-amber-500" },
+  DA_INCONTRARE: { etichetta: "da incontrare", ordine: 3, badge: "bg-muted text-muted-foreground border-transparent", bordo: "border-l-4 border-l-transparent" },
 };
 
 /** I membri raggruppati per capitolo (dal più grande); dentro, per stato e poi per nome. */
@@ -101,7 +105,7 @@ function RigaMembro({ m, conCapitolo, dettaglio }: { m: Membro; conCapitolo?: bo
         <div className="text-xs text-muted-foreground break-words">{[m.profession, m.company, conCapitolo ? m.chapter : null].filter(Boolean).join(" · ")}</div>
         {dettaglio && (m.cosaFa || m.referenzePuoDare) && <div className="text-xs mt-1 break-words line-clamp-2">{m.cosaFa ?? m.referenzePuoDare}</div>}
       </div>
-      <Badge className={`text-[10px] shrink-0 ${STATI[statoDi(m)].badge}`}>{STATI[statoDi(m)].etichetta}</Badge>
+      <Badge className={`text-[10px] shrink-0 ${STATI[statoDi(m)].badge}`}>{statoDi(m) === "SCRITTO" && m.scrittoAt ? `scritto il ${new Date(m.scrittoAt).toLocaleDateString("it-IT", { day: "numeric", month: "short", timeZone: "Europe/Rome" })}` : STATI[statoDi(m)].etichetta}</Badge>
     </Link>
   );
 }
@@ -177,6 +181,7 @@ function RubricaBni() {
           const corpo = caps.map(([capitolo, lista]) => {
             const conosciuti = lista.filter((m) => statoDi(m) === "CONOSCIUTO").length;
             const fissati = lista.filter((m) => statoDi(m) === "FISSATO").length;
+            const scritti = lista.filter((m) => statoDi(m) === "SCRITTO").length;
             return (
               <details key={capitolo} className="rounded-xl border bg-card group">
                 <summary className="cursor-pointer list-none p-4 space-y-2">
@@ -185,13 +190,15 @@ function RubricaBni() {
                     <span className="text-xs">
                       <span className="text-green-600 dark:text-green-400 font-medium">{conosciuti} conosciuti</span>
                       {fissati > 0 && <span className="text-blue-600 dark:text-blue-400 font-medium"> · {fissati} fissati</span>}
-                      <span className="text-foreground font-semibold"> · ne mancano {lista.length - conosciuti - fissati}</span>
+                      {scritti > 0 && <span className="text-amber-600 dark:text-amber-400 font-medium"> · {scritti} scritti</span>}
+                      <span className="text-foreground font-semibold"> · ne mancano {lista.length - conosciuti - fissati - scritti}</span>
                       <span className="text-muted-foreground"> su {lista.length}</span>
                     </span>
                   </div>
                   <div className="h-1.5 rounded bg-muted overflow-hidden flex">
                     <div className="h-full bg-green-600" style={{ width: `${(conosciuti / lista.length) * 100}%` }} />
                     <div className="h-full bg-blue-600" style={{ width: `${(fissati / lista.length) * 100}%` }} />
+                    <div className="h-full bg-amber-500" style={{ width: `${(scritti / lista.length) * 100}%` }} />
                   </div>
                 </summary>
                 <div className="px-3 pb-3 space-y-1.5">
