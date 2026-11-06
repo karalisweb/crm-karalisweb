@@ -29,8 +29,12 @@ export async function registraInvio(voceId: string, canale: Canale, chi: string)
     const lead = v.leadId ? await db.lead.findUnique({ where: { id: v.leadId }, select: { name: true, unsubscribed: true } }) : null;
     if (lead?.unsubscribed) return { ok: false, errore: "Si è disiscritto: non si scrive", stato: 403 };
     const azienda = p.azienda ?? lead?.name ?? "voi";
-    const oggetto = p.casoId ? `Un caso studio per ${azienda}` : `Per ${azienda}`;
-    const inviata = await sendOutreachEmail(p.email, oggetto, p.messaggio, v.leadId ?? undefined);
+    // v3.116: il caso studio richiesto parte come allegato PDF.
+    const conPdf = v.kind === "RETE_CASO_STUDIO" && p.casoId ? await db.casoStudio.findUnique({ where: { id: p.casoId }, select: { pdf: true, pdfNome: true, titolo: true } }) : null;
+    if (v.kind === "RETE_CASO_STUDIO" && !conPdf?.pdf) return { ok: false, errore: "Il PDF del caso studio non c'è: caricalo in Casi studio", stato: 400 };
+    const oggetto = conPdf ? `Il caso studio: ${conPdf.titolo}` : p.casoId ? `Un caso studio per ${azienda}` : `Per ${azienda}`;
+    const allegati = conPdf?.pdf ? [{ filename: conPdf.pdfNome || "caso-studio.pdf", content: Buffer.from(conPdf.pdf), contentType: "application/pdf" }] : undefined;
+    const inviata = await sendOutreachEmail(p.email, oggetto, p.messaggio, v.leadId ?? undefined, { allegati });
     if (!inviata) return { ok: false, errore: "L'email non è partita: riprova fra poco", stato: 502 };
   }
 

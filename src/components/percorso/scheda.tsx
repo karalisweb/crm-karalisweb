@@ -24,9 +24,10 @@ export interface AziendaPercorso {
   /** v3.113: passo 4. */
   contatto?: {
     caso: { id: string; titolo: string } | null;
-    inviato: { quando: string; aChi: string; canale: string; dove: string | null; testo: string | null; tipo: "contatto" | "pagina" | "followup" } | null;
+    inviato: { quando: string; aChi: string; canale: string; dove: string | null; testo: string | null; tipo: "contatto" | "pagina" | "followup" | "caso" } | null;
     ricerche: { linkedin: string | null; linkedinFatto: boolean; facebook: boolean; instagram: boolean; bni: string[] };
     followupPossibile: boolean;
+    rispostaPossibile?: boolean;
   };
 }
 
@@ -89,6 +90,20 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
   const [inCorso, setInCorso] = useState<string | null>(null);
   // Al contatto il foglio "Cosa dirgli": ganci, scheda tecnica e commenti fatti (v3.65).
   const [foglio, setFoglio] = useState(false);
+  // v3.116 (Alessio: "il clic su WhatsApp di fatto non invia nulla, solo apre: devo confermare"): il canale aperto
+  // aspetta la conferma. Resta ricordato (per voce) anche se ricarichi la pagina.
+  const voceId = a.azione?.tipo === "cassetta" ? a.azione.voceId : null;
+  // Le schede si disegnano solo nel browser (dopo il fetch), quindi localStorage c'è già.
+  const [aperto, setAperto] = useState<"whatsapp" | "linkedin" | "pagina" | null>(() =>
+    voceId && typeof window !== "undefined" ? ((localStorage.getItem(`aperto:${voceId}`) as "whatsapp" | "linkedin" | "pagina" | null) ?? null) : null);
+  const apri = (canale: "whatsapp" | "linkedin" | "pagina") => {
+    if (voceId) localStorage.setItem(`aperto:${voceId}`, canale);
+    setAperto(canale);
+  };
+  const chiudiConferma = () => {
+    if (voceId) localStorage.removeItem(`aperto:${voceId}`);
+    setAperto(null);
+  };
   const fai = async (chiave: string, url: string, metodo: string, body: unknown, ok: string) => {
     setInCorso(chiave);
     if (await chiama(url, metodo, body)) {
@@ -170,6 +185,7 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
             <span className="text-muted-foreground"> a </span>{a.contatto.inviato.aChi}
             <span className="text-muted-foreground"> via </span>{a.contatto.inviato.canale}{a.contatto.inviato.dove && <span className="text-muted-foreground"> ({a.contatto.inviato.dove})</span>}
             {a.contatto.inviato.tipo === "followup" && <span className="text-muted-foreground"> · era il follow-up</span>}
+            {a.contatto.inviato.tipo === "caso" && <span className="text-muted-foreground"> · era il caso studio che ti aveva chiesto</span>}
           </div>
           {a.contatto.caso && <div><span className="text-muted-foreground">Caso studio citato: </span><a href={`/api/ricerca/casi-studio/${a.contatto.caso.id}/pdf`} target="_blank" rel="noopener noreferrer" className="underline">{a.contatto.caso.titolo}</a></div>}
           {a.contatto.inviato.testo && (
@@ -191,7 +207,18 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
           ))}
         </div>
       )}
+      {x?.tipo === "cassetta" && aperto && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/50 bg-primary/10 p-2 text-sm">
+          <span>Hai aperto {aperto === "whatsapp" ? "WhatsApp" : aperto === "linkedin" ? "LinkedIn" : "la pagina"}: l&apos;hai mandato?</span>
+          {bottone("conferma", "Sì, mandato", () => { traccia(aperto); chiudiConferma(); }, "default")}
+          {bottone("annulla", "No, non ancora", chiudiConferma, "ghost")}
+        </div>
+      )}
+      {a.stato === "caso" && x?.tipo === "cassetta" && (
+        <div className="text-xs text-muted-foreground">Con la mail il PDF parte allegato dal CRM. Su WhatsApp o LinkedIn allegalo tu{x.casoId && <> (<a href={`/api/ricerca/casi-studio/${x.casoId}/pdf`} target="_blank" rel="noopener noreferrer" className="underline">scarica il PDF</a>)</>}, poi conferma.</div>
+      )}
       <div className="flex flex-wrap gap-2">
+        {a.contatto?.rispostaPossibile && x?.tipo !== "cassetta" && bottone("risposta", "Mi ha risposto: vuole il caso studio", () => fai("risposta", `/api/percorso/${a.leadId}/risposta`, "POST", undefined, "Segnato: il messaggio col caso studio è pronto qui sopra"), "default")}
         {x?.tipo === "decidi" && <>
           {bottone("si", "Approfondisci", () => fai("si", `/api/ricerca/aziende/${a.leadId}/decisione`, "POST", { azione: "approfondisci" }, "Approfondita: entra al passo 2"), "default")}
           {bottone("no", "Scarta", () => fai("no", `/api/ricerca/aziende/${a.leadId}/decisione`, "POST", { azione: "scarta" }, "Scartata"), "ghost")}
@@ -201,12 +228,12 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
           {x.testo && !canali.length && bottone("copia", "Copia il testo", () => { void navigator.clipboard.writeText(x.testo!).then(() => toast.success("Copiato")); })}
           {x.link && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={x.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Apri il post</a></Button>}
           {/* Scrivere subito, col testo già dentro (v3.87). */}
-          {x.whatsapp && <Button asChild size="sm" variant={variante("whatsapp")} className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer" onClick={() => traccia("whatsapp")}>Manda su WhatsApp</a></Button>}
+          {x.whatsapp && <Button asChild size="sm" variant={variante("whatsapp")} className="h-8 text-xs"><a href={`https://wa.me/${x.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(x.testo ?? "")}`} target="_blank" rel="noopener noreferrer" onClick={() => apri("whatsapp")}>Apri WhatsApp col testo</a></Button>}
           {x.email && x.testo && bottone("email", `Manda email a ${x.email}`, () => { void mandaEmail(); }, variante("email"))}
           {/* v3.90: il caso studio da mandare appena dice sì. */}
           {x.casoId && a.passo !== 4 && <Button asChild size="sm" variant="outline" className="h-8 text-xs"><a href={`/api/ricerca/casi-studio/${x.casoId}/pdf`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" />Caso studio (PDF)</a></Button>}
-          {x.linkedin && <Button asChild size="sm" variant={variante("linkedin")} className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre il profilo e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("linkedin"); }}>Manda su LinkedIn (testo copiato)</a></Button>}
-          {x.pagina && <Button asChild size="sm" variant={variante(paginaK)} className="h-8 text-xs"><a href={x.pagina} target="_blank" rel="noopener noreferrer" title="Copia il testo, apre la pagina e lo segna come mandato" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); traccia("pagina"); }}>Scrivi alla pagina {NOME_PIATTAFORMA[x.piattaforma ?? ""] ?? ""} (testo copiato)</a></Button>}
+          {x.linkedin && <Button asChild size="sm" variant={variante("linkedin")} className="h-8 text-xs"><a href={x.linkedin} target="_blank" rel="noopener noreferrer" title="Copia il testo e apre il profilo" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); apri("linkedin"); }}>Apri LinkedIn (testo copiato)</a></Button>}
+          {x.pagina && <Button asChild size="sm" variant={variante(paginaK)} className="h-8 text-xs"><a href={x.pagina} target="_blank" rel="noopener noreferrer" title="Copia il testo e apre la pagina" onClick={() => { if (x.testo) void navigator.clipboard.writeText(x.testo); apri("pagina"); }}>Apri la pagina {NOME_PIATTAFORMA[x.piattaforma ?? ""] ?? ""} (testo copiato)</a></Button>}
           {!canali.length && bottone("si", x.testo ? "L'ho mandato" : x.si, () => fai("si", `/api/cassetta/${x.voceId}`, "POST", { decisione: "APPROVATO" }, "Fatto: un passo avanti"), "default")}
           {a.stato !== "pagina" && bottone("no", x.no, () => fai("no", `/api/cassetta/${x.voceId}`, "POST", { decisione: "SCARTATO" }, "Segnato"), "ghost")}
         </>}

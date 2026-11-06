@@ -36,15 +36,17 @@ export interface DettaglioContatto {
   /** Il caso studio citato nel messaggio da mandare (o in quello già mandato). */
   caso: { id: string; titolo: string } | null;
   /** L'ultimo messaggio mandato (contatto, pagina o follow-up). */
-  inviato: { quando: string; aChi: string; canale: string; dove: string | null; testo: string | null; tipo: "contatto" | "pagina" | "followup" } | null;
+  inviato: { quando: string; aChi: string; canale: string; dove: string | null; testo: string | null; tipo: "contatto" | "pagina" | "followup" | "caso" } | null;
   /** Dove si è cercato chi decide. null = non ancora cercato lì. */
   ricerche: { linkedin: string | null; linkedinFatto: boolean; facebook: boolean; instagram: boolean; bni: string[] };
   /** Si può mandare il follow-up adesso (c'è un messaggio mandato e il follow-up non è già fatto o in attesa). */
   followupPossibile: boolean;
+  /** v3.116: si può segnare "mi ha risposto: vuole il caso studio". */
+  rispostaPossibile: boolean;
 }
 
-const KIND_INVIATI = ["RETE_CONTATTO", "RETE_DIRETTO", "RETE_PAGINA", "RETE_FOLLOWUP"];
-const TIPO_INVIATO: Record<string, "contatto" | "pagina" | "followup"> = { RETE_CONTATTO: "contatto", RETE_DIRETTO: "contatto", RETE_PAGINA: "pagina", RETE_FOLLOWUP: "followup" };
+const KIND_INVIATI = ["RETE_CONTATTO", "RETE_DIRETTO", "RETE_PAGINA", "RETE_FOLLOWUP", "RETE_CASO_STUDIO"];
+const TIPO_INVIATO: Record<string, "contatto" | "pagina" | "followup" | "caso"> = { RETE_CONTATTO: "contatto", RETE_DIRETTO: "contatto", RETE_PAGINA: "pagina", RETE_FOLLOWUP: "followup", RETE_CASO_STUDIO: "caso" };
 
 /** Il dettaglio del contatto per le aziende del passo 4 (v3.113, Alessio: "quando gli ho scritto? a chi? su che canale?"). */
 async function dettagliContatto(righe: { leadId: string; voci: Stato["voci"]; decisore: string | null; followupFatto: boolean }[]): Promise<Map<string, DettaglioContatto>> {
@@ -88,7 +90,8 @@ async function dettagliContatto(righe: { leadId: string; voci: Stato["voci"]; de
         instagram: persone.some((x) => !!str(x.profiloInstagram)),
         bni: [...new Set(bni.filter((b) => b.leadId === r.leadId).map((b) => b.membro?.name).filter((n): n is string => !!n))],
       },
-      followupPossibile: !!inviato && tipo !== "followup" && !r.followupFatto && !r.voci.some((v) => v.kind === "RETE_FOLLOWUP"),
+      followupPossibile: !!inviato && tipo !== "followup" && tipo !== "caso" && !r.followupFatto && !r.voci.some((v) => v.kind === "RETE_FOLLOWUP"),
+      rispostaPossibile: !!inviato && tipo !== "caso" && !r.voci.some((v) => v.kind === "RETE_CASO_STUDIO"),
     });
   }
   return out;
@@ -108,7 +111,7 @@ export interface Percorso {
 /** Quale voce della Cassetta, approvata, conta come cosa fatta. */
 const COSA_DELLA_VOCE: Record<string, Cosa> = {
   RETE_CONTATTO: "contatta", RETE_DIRETTO: "contatta", RETE_PONTE: "contatta", RETE_PROMEMORIA: "contatta",
-  [KIND_COMMENTO]: "scalda", RETE_PAGINA: "contatta", RETE_FOLLOWUP: "contatta",
+  [KIND_COMMENTO]: "scalda", RETE_PAGINA: "contatta", RETE_FOLLOWUP: "contatta", RETE_CASO_STUDIO: "contatta",
 };
 
 export async function leggiPercorso(oggi = new Date()): Promise<Percorso> {

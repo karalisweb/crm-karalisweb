@@ -277,7 +277,7 @@ export async function sendOutreachEmail(
   subject: string,
   body: string,
   leadId?: string,
-  options?: { fromName?: string; fromEmail?: string },
+  options?: { fromName?: string; fromEmail?: string; allegati?: { filename: string; content: Buffer; contentType?: string }[] },
 ): Promise<boolean> {
   const gdpr = await getGdprSettings();
 
@@ -330,6 +330,7 @@ export async function sendOutreachEmail(
       text: plainText,
       html,
       ...(Object.keys(unsubHeaders).length > 0 && { headers: unsubHeaders }),
+      ...(options?.allegati?.length && { attachments: options.allegati }),
     });
 
     console.log(`[EMAIL] Outreach inviato a ${to}, messageId: ${info.messageId}`);

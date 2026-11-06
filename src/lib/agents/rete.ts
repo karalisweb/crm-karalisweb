@@ -39,7 +39,9 @@ export const KIND_RETE_CONTATTO = "RETE_CONTATTO";
 export const KIND_RETE_PAGINA = "RETE_PAGINA";
 /** v3.103: il follow-up a chi decide che non ha risposto al contatto. */
 export const KIND_RETE_FOLLOWUP = "RETE_FOLLOWUP";
-export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP];
+/** v3.116: ha risposto e vuole il caso studio: il messaggio con il PDF. */
+export const KIND_RETE_CASO = "RETE_CASO_STUDIO";
+export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP, KIND_RETE_CASO];
 
 /** Decisori al giorno da scaldare con i commenti (letture LinkedIn). */
 /** Aziende lette dal lavoro "scalda": un po' più dei commenti, perché chi non ha post recenti si salta. */
@@ -501,6 +503,47 @@ export async function creaFollowup(lavorazioneId: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * v3.116 (Alessio, 2026-11-06: "se mi risponde come PiscineSpa, che mi ha chiesto il caso studio, devo segnalarlo nel
+ * CRM"): la risposta resta nelle attività e si prepara il messaggio con il caso studio, sullo stesso canale del primo.
+ */
+export async function segnaRispostaCaso(leadId: string, chi: string): Promise<boolean> {
+  const l = await db.lavorazione.findUnique({ where: { leadId }, include: { lead: { select: { name: true } } } });
+  if (!l) return false;
+  if (await db.approvalItem.findFirst({ where: { leadId, kind: KIND_RETE_CASO, status: "IN_ATTESA" }, select: { id: true } })) return false;
+  const primo = await db.approvalItem.findFirst({
+    where: { leadId, kind: { in: [KIND_RETE_CONTATTO, KIND_RETE_DIRETTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP] }, status: "APPROVATO" },
+    orderBy: { decidedAt: "desc" },
+    select: { payload: true },
+  });
+  const p = (primo?.payload ?? {}) as Record<string, unknown>;
+  const decisore = l.decisore ?? (typeof p.decisore === "string" ? p.decisore : null);
+  const casoId = typeof p.casoId === "string" ? p.casoId : (await casoPerMessaggio(leadId, new Date()))?.casoId ?? null;
+  await db.approvalItem.updateMany({ where: { leadId, kind: KIND_RETE_FOLLOWUP, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: chi, note: "Ha risposto" } });
+  await db.approvalItem.create({
+    data: {
+      leadId,
+      kind: KIND_RETE_CASO,
+      agent: "rete",
+      title: `Manda il caso studio a ${decisore ? chiDecideTesto(decisore, l.lead.name) : l.lead.name}`,
+      payload: {
+        lavorazioneId: l.id, decisore, azienda: l.lead.name, casoId,
+        messaggio: testoInvioCaso(decisore),
+        canale: p.canale ?? null, telefono: p.telefono ?? null, email: p.email ?? null, linkedin: p.linkedin ?? null, pagina: p.pagina ?? null, piattaforma: p.piattaforma ?? null,
+      } as Prisma.InputJsonValue,
+    },
+  });
+  // Finché il caso studio non parte, niente follow-up automatico.
+  await db.lavorazione.update({ where: { id: l.id }, data: { promemoriaAt: new Date() } });
+  await db.activity.create({ data: { leadId, type: "RESPONSE_RECEIVED", notes: "[Percorso] Ha risposto: vuole il caso studio", createdBy: chi } });
+  return true;
+}
+
+function testoInvioCaso(decisore: string | null): string {
+  const nome = decisore ? ` ${decisore.trim().split(/\s+/)[0]}` : "";
+  return `Buongiorno${nome}, come promesso le mando il caso studio.\n\nSe le va, ne parliamo in 20 minuti: mi dica lei quando le è più comodo.\n\nGrazie,\nAlessio`;
+}
+
 export async function mettiInPausa(lavorazioneId: string, motivo: string, giorni = GIORNI_PAUSA): Promise<void> {
   const l = await db.lavorazione.update({ where: { id: lavorazioneId }, data: { fase: "PAUSA", pausaFino: new Date(Date.now() + giorni * 86400_000), note: motivo } });
   await chiudiVociAperte(l.leadId, "Superata: azienda in pausa");
@@ -769,6 +812,11 @@ export async function decisioneRete(voceId: string, decisione: "APPROVATO" | "SC
   }
   const id = (v.payload as { lavorazioneId?: string } | null)?.lavorazioneId;
   if (!id) return;
+  // v3.116: caso studio mandato: si riparte ad aspettare la risposta, e fra 5 giorni il follow-up.
+  if (decisione === "APPROVATO" && v.kind === KIND_RETE_CASO) {
+    await db.lavorazione.updateMany({ where: { id }, data: { fase: "CHIESTA", chiestaAt: new Date(), promemoriaAt: null } });
+    return;
+  }
   // "Non serve" sul follow-up: conta come fatto, così a 10 giorni l'azienda va in pausa invece di restare ferma.
   if (decisione === "SCARTATO" && v.kind === KIND_RETE_FOLLOWUP) await db.lavorazione.updateMany({ where: { id }, data: { promemoriaAt: new Date() } });
   if (decisione === "APPROVATO") {

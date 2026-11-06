@@ -14,6 +14,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.116.0] - 2026-11-06
+
+### Added
+- Percorso, Aspetti la risposta: pulsante **"Mi ha risposto: vuole il caso studio"**. Resta nelle attività dell'azienda, ferma il follow-up automatico e prepara il messaggio col caso studio sugli stessi canali del primo contatto ("Caso studio da mandare"). Con la mail il CRM **allega il PDF**; su WhatsApp o LinkedIn lo alleghi tu (c'è il link per scaricarlo). Dopo l'invio si torna ad aspettare la risposta, col follow-up fra 5 giorni.
+
+### Changed
+- WhatsApp, LinkedIn e pagina: il pulsante ora **apre soltanto** ("Apri WhatsApp col testo"). Subito dopo compare **"L'hai mandato? Sì, mandato / No, non ancora"**: solo il "Sì" lo registra. La domanda resta anche se ricarichi la pagina. La mail invece parte dal CRM e si registra da sola.
+
 ## [3.115.0] - 2026-11-06
 
 ### Changed

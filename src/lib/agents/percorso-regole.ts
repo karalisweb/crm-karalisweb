@@ -74,6 +74,7 @@ export const STATI = {
   prepara_ponte: "Il CRM prepara il messaggio al ponte",
   commenta: "Da commentare",
   cerca_post: "Il CRM cerca il prossimo post",
+  caso: "Caso studio da mandare",
   scrivi: "Da contattare",
   pagina: "Da scrivere all'azienda (chi decide non si sa)",
   incontro: "Incontro da fissare",
@@ -131,6 +132,9 @@ export function passoDi(s: Stato, oggi: Date): Esito {
   // sta al passo 4 come in Oggi (dove era già fra i "contattare"). Prima restava al passo 3.
   const pagina = l.fase === "MAPPATA" && l.strada === "SCALDARE" ? voce("RETE_PAGINA") : undefined;
   if (pagina) return { dentro: true, passo: 4, tocca: "te", stato: "pagina", cosa: "Chi decide non si sa: scrivi all'azienda per arrivare a lui", azione: daCassetta(pagina, "Mandato", "Non serve") };
+  // v3.116: ha risposto e vuole il caso studio.
+  const caso = voce("RETE_CASO_STUDIO");
+  if (caso) return { dentro: true, passo: 4, tocca: "te", stato: "caso", cosa: `Ha chiesto il caso studio: mandalo a ${nomeDi(s)}`, azione: daCassetta(caso, "Mandato", "Non serve") };
   // v3.103: nessuna risposta al contatto: il follow-up, sullo stesso canale.
   const followup = voce("RETE_FOLLOWUP");
   if (followup) return { dentro: true, passo: 4, tocca: "te", stato: "followup", cosa: `Non ha risposto: manda il follow-up a ${nomeDi(s)}`, azione: daCassetta(followup, "Mandato", "Non serve") };
