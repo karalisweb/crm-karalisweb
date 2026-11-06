@@ -41,7 +41,7 @@ function Cerchia() {
     <Card><CardContent className="p-4 space-y-3">
       <div className="text-sm font-semibold flex items-center gap-2"><UserPlus className="h-4 w-4" /> La tua cerchia stretta</div>
       <p className="text-xs text-muted-foreground">
-        {c.daBni} membri BNI con cui hai fatto un 121 (entrano da soli) + {c.aggiunti.length} persone che hai segnato. Chi te la presenta deve essere qui.
+        {c.daBni} membri BNI con cui hai fatto un 121 (entrano da soli) + {c.aggiunti.length} persone che hai segnato. Se chi decide in un'azienda è qui, il CRM ti prepara subito il messaggio (niente collegamento né commenti).
       </p>
       <div className="flex flex-wrap gap-2">
         <Input value={nuovo} onChange={(e) => setNuovo(e.target.value)} placeholder="Nome e cognome" className="h-8 max-w-xs" onKeyDown={(e) => e.key === "Enter" && aggiungi()} />
@@ -150,7 +150,7 @@ function Percorso() {
     <div className="space-y-5 min-w-0">
       <div className="min-w-0">
         <h1 className="text-2xl font-bold flex items-center gap-2"><Footprints className="h-6 w-6 text-primary" /> Percorso</h1>
-        <p className="text-sm text-muted-foreground">Tutte le aziende, in 4 passi: trovate, chi te la presenta, in riscaldamento, contatto. Le cose da fare oggi le trovi in <Link href="/" className="underline">Oggi</Link>.</p>
+        <p className="text-sm text-muted-foreground">Tutte le aziende, in 4 passi: trovate, collegamento, in riscaldamento, contatto. Le cose da fare oggi le trovi in <Link href="/" className="underline">Oggi</Link>.</p>
       </div>
 
       {errore && <Card><CardContent className="p-4 text-sm flex items-center gap-2 text-red-600"><AlertTriangle className="h-4 w-4" />{errore}</CardContent></Card>}
