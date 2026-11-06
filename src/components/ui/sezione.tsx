@@ -7,12 +7,14 @@ import { ChevronRight } from "lucide-react";
  * Un blocco chiudibile con il conteggio nel titolo (Alessio, 2026-11-06: "in ogni pagina, se c'è una lista ci sia
  * anche un collapse"). Ricorda aperto/chiuso per `id`; `forzaAperta` lo apre comunque (es. arrivi su un'azienda dentro).
  */
-export function Sezione({ id, titolo, conteggio, children, forzaAperta = false }: {
+export function Sezione({ id, titolo, conteggio, children, forzaAperta = false, azione }: {
   id: string;
   titolo: ReactNode;
   conteggio?: ReactNode;
   children: ReactNode;
   forzaAperta?: boolean;
+  /** Un pulsante nella barra del titolo (il clic non apre né chiude il blocco). */
+  azione?: ReactNode;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -27,7 +29,10 @@ export function Sezione({ id, titolo, conteggio, children, forzaAperta = false }
           <ChevronRight className="h-5 w-5 shrink-0 text-primary transition-transform group-open:rotate-90" />
           <span className="min-w-0">{titolo}</span>
         </span>
-        {conteggio != null && <span className="rounded-full bg-background px-2.5 py-0.5 text-sm text-muted-foreground shrink-0">{conteggio}</span>}
+        <span className="flex items-center gap-2 shrink-0">
+          {azione && <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>{azione}</span>}
+          {conteggio != null && <span className="rounded-full bg-background px-2.5 py-0.5 text-sm text-muted-foreground">{conteggio}</span>}
+        </span>
       </summary>
       <div className="space-y-2 p-3">{children}</div>
     </details>

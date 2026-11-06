@@ -14,6 +14,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.111.0] - 2026-11-06
+
+### Added
+- Percorso: pulsante **"Analizza adesso"** su ogni sottosezione dove lavora il CRM (In analisi, Chi decide: da trovare, Il CRM cerca chi te la presenta…). Mette in coda subito il controllo di chi decide per tutte le aziende della sottosezione, senza il limite di 3 alla volta, e fa partire il giro della rete. Se LinkedIn ha bloccato da poco, aspetta le 48 ore per non rischiare l'account.
+
+### Changed
+- Il Mac fa i lavori di browser **ogni ora** (prima ogni 2 ore) e ne prende **10 alla volta** (prima 5). Tolto il vecchio tetto di 20 aziende LinkedIn al giorno scritto nelle istruzioni del Mac: il limite lo decide il CRM (70 letture).
+
 ## [3.110.0] - 2026-11-06
 
 ### Changed

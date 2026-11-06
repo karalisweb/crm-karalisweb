@@ -17,7 +17,7 @@ BNI (B1), Rete del membro (B5), Cercatore Meta (R2), Cercatore LinkedIn (R3). L'
 ## 1. Prendi i lavori
 
 ```bash
-~/.karalisweb/crm-agenti.sh lavori 5
+~/.karalisweb/crm-agenti.sh lavori 10
 ```
 
 Ogni lavoro ha `runId`, `agente`, `istruzioni` (cosa fare, passo per passo, e la forma dei
@@ -39,10 +39,9 @@ LinkedIn: la persona del caso studio o il membro BNI, la zona). Un lavoro preso 
   per ogni sito nuovo e il lavoro si bloccherebbe. Il sito dell'azienda lo legge già il server (dati nel lavoro).
   Se un lavoro chiede un altro sito, salta quel punto e scrivilo nel referto.
 - Cookie: rifiuta quelli facoltativi.
-- **LinkedIn: al massimo 20 aziende al giorno** in tutto (conta i lavori `linkedin_azienda` e
-  `decision_maker` già fatti oggi). Oltre, chiudi come FALLITO con "limite giornaliero LinkedIn".
-  `rete_membro` e `cerca_linkedin` sono al massimo 2 al giorno (li limita già l'app): apri al più una
-  quindicina di profili per lavoro.
+- **LinkedIn: il limite del giorno lo decide l'app** (70 letture, dalla v3.108): fai tutti i lavori che ricevi.
+  Non c'è più il tetto di 20 aziende al giorno. `rete_membro` e `cerca_linkedin` sono al massimo 2 al giorno (li
+  limita già l'app): apri al più una quindicina di profili per lavoro. Fra un'azienda e l'altra vai con calma.
 - **Richieste di collegamento e messaggi solo nel lavoro `contatta_persona`**, e solo alla persona indicata.
   Le persone che trovi negli altri lavori non le contatti tu: le contatta il CRM con il suo lavoro.
 - **CAPTCHA, accesso richiesto, pagina bloccata:** non provare ad aggirarli. Chiudi il lavoro come

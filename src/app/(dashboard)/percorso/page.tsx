@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, Footprints, UserPlus, X } from "lucide-react";
+import { AlertTriangle, Footprints, Loader2, UserPlus, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { SchedaPercorso, type AziendaPercorso, type DatiPercorso } from "@/components/percorso/scheda";
 import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
@@ -58,6 +58,33 @@ function Cerchia() {
         </div>
       )}
     </CardContent></Card>
+  );
+}
+
+/** "Analizza adesso" (v3.111): spinge a mano una sottosezione dove lavora il CRM. */
+function AnalizzaAdesso({ passo, stato, quante, onFatto }: { passo: number; stato: string; quante: number; onFatto: () => void }) {
+  const [inCorso, setInCorso] = useState(false);
+  async function vai() {
+    setInCorso(true);
+    try {
+      const r = await fetch("/api/percorso/forza", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ passo, stato }) });
+      const e = (await r.json().catch(() => null)) as { accodati?: number; giaInCoda?: number; bloccoLinkedin?: boolean } | null;
+      if (!r.ok || !e) throw new Error();
+      if (e.bloccoLinkedin) toast.warning("LinkedIn ha bloccato da poco: il CRM aspetta 48 ore per non rischiare l'account. Ho fatto il resto del giro.");
+      else if (e.accodati || e.giaInCoda) toast.success(`${(e.accodati ?? 0) + (e.giaInCoda ?? 0)} in coda per il Mac: le fa al prossimo giro (ogni ora, 10 alla volta).`);
+      else toast.success("Fatto il giro adesso.");
+      onFatto();
+    } catch {
+      toast.error("Non sono riuscito a farlo partire");
+    } finally {
+      setInCorso(false);
+    }
+  }
+  return (
+    <Button size="sm" variant="outline" className="h-7" disabled={inCorso} onClick={vai} title={`Fa partire subito il lavoro del CRM su tutte le ${quante}`}>
+      {inCorso ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+      <span className="ml-1">Analizza adesso</span>
+    </Button>
   );
 }
 
@@ -163,7 +190,8 @@ function Percorso() {
           ? <Card><CardContent className="p-4 text-sm text-muted-foreground">Nessuna azienda in questo passo.</CardContent></Card>
           : <div className="space-y-3">{gruppi.map((g) => (
             <Sezione key={g.stato} id={`percorso:${passo}:${g.stato}`} titolo={g.nome} conteggio={g.aziende.length}
-              forzaAperta={daAprire === g.stato || g.aziende.some((a) => a.leadId === daOggi)}>
+              forzaAperta={daAprire === g.stato || g.aziende.some((a) => a.leadId === daOggi)}
+              azione={g.aziende[0].tocca === "crm" ? <AnalizzaAdesso passo={passo} stato={g.stato} quante={g.aziende.length} onFatto={carica} /> : undefined}>
               {g.aziende.map((a) => <SchedaPercorso key={a.leadId} a={a} passi={d.passi} onCambio={carica} evidenziata={a.leadId === daOggi} />)}
             </Sezione>
           ))}</div>}

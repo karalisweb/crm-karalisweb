@@ -5,10 +5,10 @@
  */
 import { db } from "@/lib/db";
 import { siglaIndirizzo } from "@/lib/ricerca/regole";
-import { collegamentoDaFindings } from "./motore";
+import { collegamentoDaFindings, statoLinkedinOggi } from "./motore";
 import { mezzanotteRoma } from "./bni-regole";
 import { KIND_FASCICOLO_BASE } from "./turno";
-import { KIND_COMMENTO, KINDS_RETE, SCARTATA_DAL_CRM, cerchiaNomi, datiAzienda } from "./rete";
+import { KIND_COMMENTO, KINDS_RETE, SCARTATA_DAL_CRM, cerchiaNomi, datiAzienda, turnoRete } from "./rete";
 import { nomiDaConfermare, piattaformaPiuCommentata } from "./rete-regole";
 import { PASSI, STATI, coseDiOggi, ordineStato, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
 
@@ -179,4 +179,52 @@ export async function eliminaDalPercorso(leadId: string): Promise<boolean> {
     db.agentRun.deleteMany({ where: { leadId, status: "IN_CODA" } }),
   ]);
   return true;
+}
+
+/**
+ * v3.111 (Alessio, 2026-11-06: "un pulsante per forzare: analizza tutte le 40 in analisi, stesso discorso per chi
+ * decide, chi me la presenta…"). Le sottosezioni dove lavora il CRM si possono spingere a mano:
+ * - dove manca il controllo di chi decide (In analisi, Controllo del collegamento, Chi decide: da trovare): il
+ *   controllo LinkedIn si accoda per TUTTE, senza il tetto dei 3 in coda e del budget del giorno. Resta solo lo stop
+ *   se LinkedIn ha bloccato (48 ore): forzare lì vorrebbe dire rischiare l'account.
+ * - le altre (cerca il ponte, prepara il messaggio, cerca il post…): il giro della rete parte adesso.
+ * Il Mac le prende al suo giro (ogni ora, 10 lavori alla volta).
+ */
+const STATI_CHI_DECIDE = ["analisi", "collegamento", "chi_decide", "pronta"];
+
+export interface EsitoForza {
+  aziende: number;
+  accodati: number;
+  giaInCoda: number;
+  bloccoLinkedin: boolean;
+  giroRete: boolean;
+}
+
+export async function forzaSottosezione(passo: Passo, stato: string, oggi = new Date()): Promise<EsitoForza> {
+  const p = await leggiPercorso(oggi);
+  const ids = p.aziende.filter((a) => a.passo === passo && a.stato === stato && a.tocca === "crm").map((a) => a.leadId);
+  const esito: EsitoForza = { aziende: ids.length, accodati: 0, giaInCoda: 0, bloccoLinkedin: false, giroRete: false };
+  if (!ids.length) return esito;
+
+  if (STATI_CHI_DECIDE.includes(stato)) {
+    esito.bloccoLinkedin = (await statoLinkedinOggi(oggi)).blocco;
+    if (!esito.bloccoLinkedin) {
+      const [fatti, inCoda] = await Promise.all([
+        db.agentReport.findMany({ where: { leadId: { in: ids }, agent: "decision_maker" }, distinct: ["leadId"], select: { leadId: true } }),
+        db.agentRun.findMany({ where: { leadId: { in: ids }, agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { leadId: true } }),
+      ]);
+      const conReferto = new Set(fatti.map((f) => f.leadId));
+      const giaInCoda = new Set(inCoda.map((r) => r.leadId));
+      for (const id of ids) {
+        if (giaInCoda.has(id)) { esito.giaInCoda++; continue; }
+        if (conReferto.has(id)) continue; // chi decide c'è già: lo porta avanti il giro della rete qui sotto
+        await db.agentRun.create({ data: { leadId: id, agent: "decision_maker", status: "IN_CODA" } });
+        esito.accodati++;
+      }
+    }
+  }
+  // In ogni caso il giro della rete adesso: fa entrare le approfondite, sceglie i ponti, prepara i messaggi.
+  await turnoRete(oggi);
+  esito.giroRete = true;
+  return esito;
 }
