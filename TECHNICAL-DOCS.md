@@ -1886,6 +1886,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 
 ## Relazione diretta (v3.117.0)
 
+> v3.118.0: in "Aspetti la risposta" il canale dell'invio si legge solo dalla nota registrata all'invio (`Mandato via …` da `invio-tracciato.ts`, `… su LinkedIn dal CRM` dal Mac); `payload.canale` è il canale consigliato e non si usa più come ripiego.
+
 Decisione di Alessio del 2026-11-06: niente contatti in comune né presentazioni; la relazione si fa con chi decide.
 Nessuna migrazione, niente colonne nuove: valori nuovi di `lavorazioni.strada` e un lavoro di browser nuovo.
 - **Collegata = chi decide trovato**: `collegamentoDa()` (motore-121.ts) guarda il `nome` dei decisori, non più grado e

@@ -183,7 +183,9 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
           <div>
             <span className="text-muted-foreground">Scritto il </span>{quando(a.contatto.inviato.quando)}
             <span className="text-muted-foreground"> a </span>{a.contatto.inviato.aChi}
-            <span className="text-muted-foreground"> via </span>{a.contatto.inviato.canale}{a.contatto.inviato.dove && <span className="text-muted-foreground"> ({a.contatto.inviato.dove})</span>}
+            {a.contatto.inviato.canale === "segnato a mano"
+              ? <span className="text-muted-foreground"> · segnato a mano, canale non registrato</span>
+              : <><span className="text-muted-foreground"> via </span>{a.contatto.inviato.canale}</>}{a.contatto.inviato.dove && <span className="text-muted-foreground"> ({a.contatto.inviato.dove})</span>}
             {a.contatto.inviato.tipo === "followup" && <span className="text-muted-foreground"> · era il follow-up</span>}
             {a.contatto.inviato.tipo === "caso" && <span className="text-muted-foreground"> · era il caso studio che ti aveva chiesto</span>}
           </div>

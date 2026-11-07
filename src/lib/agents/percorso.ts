@@ -68,8 +68,12 @@ async function dettagliContatto(righe: { leadId: string; voci: Stato["voci"]; de
     const m = mandati.find((x) => x.leadId === r.leadId);
     const p = (m?.payload ?? {}) as Record<string, unknown>;
     const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
-    const canaleNota = m?.note?.match(/via (WhatsApp|LinkedIn|email|messaggio alla pagina)/i)?.[1] ?? null;
-    const canale = canaleNota ?? (str(p.canale) === "whatsapp" ? "WhatsApp" : str(p.canale) === "email" ? "email" : str(p.canale) === "linkedin" ? "LinkedIn" : "segnato a mano");
+    // v3.118 (Alessio, 2026-11-07: "molti sono indicati che abbiamo inviato la mail ma non è vero"): il canale è solo
+    // quello registrato all'invio. payload.canale è il canale CONSIGLIATO quando il messaggio è stato preparato, non
+    // quello usato: segnato a mano o mandato dal Mac su LinkedIn, prima risultava "via email".
+    const canaleNota = m?.note?.match(/via (WhatsApp|LinkedIn|email|messaggio alla pagina)/i)?.[1]
+      ?? (m?.note && /su LinkedIn dal CRM/i.test(m.note) ? "LinkedIn" : null);
+    const canale = canaleNota ?? "segnato a mano";
     const dove = canale === "email" ? str(p.email) : canale === "WhatsApp" ? str(p.telefono) : canale === "LinkedIn" ? str(p.linkedin) : canale === "messaggio alla pagina" ? str(p.pagina) : null;
     const tipo = m ? TIPO_INVIATO[m.kind] : "contatto";
     const inviato = m?.decidedAt ? {

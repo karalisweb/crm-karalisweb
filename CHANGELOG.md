@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.118.0] - 2026-11-07
+
+### Fixed
+- **Percorso, "Aspetti la risposta": il canale mostrato è quello vero** (Alessio: "molti sono indicati che abbiamo inviato la mail ma non è vero"). La scheda prendeva il canale *consigliato* quando il messaggio era stato preparato (spesso la mail) anche se il messaggio era stato segnato a mano o mandato dal Mac su LinkedIn. Ora: WhatsApp/email/LinkedIn/pagina solo se registrati all'invio, LinkedIn quando l'ha mandato il Mac, altrimenti "segnato a mano, canale non registrato".
+
 ## [3.117.0] - 2026-11-06
 
 ### Changed
