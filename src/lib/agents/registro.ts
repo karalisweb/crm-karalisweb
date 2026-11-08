@@ -45,6 +45,8 @@ export const SQUADRA: SchedaAgente[] = [
   { chiave: "recensioni", numero: "A5", nome: "Recensioni", compito: "Cosa lodano e di cosa si lamentano i clienti, con le loro parole", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
   { chiave: "concorrenti", numero: "A2", nome: "Concorrenti", compito: "Chi esce prima su Google Maps per la stessa ricerca, e con che numeri", famiglia: "server", squadra: "commerciale", stato: "attivo" },
   { chiave: "ganci", numero: "A9", nome: "I 3 ganci", compito: "I 3 ganci con i numeri per la prima frase della chiamata", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
+  { chiave: "chi_decide_server", numero: "9a", nome: "Chi decide (dal server)", compito: "Trova chi decide dal sito e da Google, in pochi minuti, senza Chrome", famiglia: "server", squadra: "commerciale", stato: "attivo" },
+  { chiave: "contatti_server", numero: "9b", nome: "Contatti mancanti (dal server)", compito: "Telefono e mail da Google per chi non ne ha", famiglia: "server", squadra: "commerciale", stato: "attivo" },
   { chiave: "esploratore", numero: "1", nome: "Esploratore", compito: "Trova aziende nuove su Google Search (e Google Maps dalle Ricerche)", famiglia: "server", squadra: "commerciale", stato: "attivo", nota: "Google Maps resta nelle Ricerche; LinkedIn si usa per conoscere le aziende, non per trovarle" },
   { chiave: "lettore", numero: "2", nome: "Lettore del sito", compito: "Cosa dice il sito e come lo dice", famiglia: "sintesi", squadra: "commerciale", stato: "attivo" },
   { chiave: "tecnico", numero: "2.5", nome: "Tecnico", compito: "Con che cosa è fatto il sito, se è aggiornato, da quando è fermo", famiglia: "server", squadra: "commerciale", stato: "attivo" },

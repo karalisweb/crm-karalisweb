@@ -23,6 +23,7 @@ import {
 } from "./rete-regole";
 import { noteDaReferti } from "./impressioni-sezioni";
 import { scaricaPagina } from "./pagina";
+import { AGENTE_SERVER, cercaChiDecideServer } from "./chi-decide-server";
 import { extractWhatsAppNumber, normalizePhoneForWhatsApp } from "@/lib/audit/whatsapp-extractor";
 import { extractContactEmail, extractEmails } from "@/lib/audit/email-finder";
 import { pontiInZona } from "./presentazioni";
@@ -536,6 +537,15 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
     await scegliPonte(l.id, { strada: "DIRETTO", nome: conosciuto.nome, decisore: conosciuto.nome });
     return creaMessaggio(l.id, "DIRETTO", oggi);
   }
+  // v3.122 (Alessio, 2026-11-08: "Sì, subito"): con WhatsApp o mail va subito in Da contattare, senza riscaldamento.
+  const giaContatto = await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_RETE_CONTATTO, status: { in: ["IN_ATTESA", "APPROVATO"] } }, select: { id: true } });
+  if (!giaContatto) {
+    const canale = await canaleDiretto(l.leadId, decisore);
+    if (canale.whatsapp || canale.email) {
+      await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_SCALDARE, decisore, ponteNome: null, ponteMembroId: null } });
+      return dopoCommento(l.leadId, oggi, true);
+    }
+  }
   // Già al lavoro (collegamento chiesto o commenti in corso): resta dov'è.
   if (l.strada === STRADA_COLLEGARE || l.strada === STRADA_SCALDARE) {
     if (!l.decisore) await db.lavorazione.update({ where: { id: l.id }, data: { decisore } });
@@ -572,10 +582,11 @@ async function accodaCollega(oggi: Date): Promise<number> {
     if (!p.linkedin && !p.instagram) {
       // Nessun profilo personale. Se chi decide è stato cercato con le istruzioni vecchie (senza Instagram, a volte senza
       // link) si ricerca una volta; se nemmeno così: niente da collegare né da commentare, si scrive col caso studio.
-      const ricerca = await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: "decision_maker", input: { path: ["relazioneDiretta"], equals: true } }, orderBy: { queuedAt: "desc" }, select: { status: true } });
-      if (ricerca?.status === "IN_CODA" || ricerca?.status === "IN_CORSO") continue;
+      const ricerca = await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: AGENTE_SERVER, input: { path: ["relazioneDiretta"], equals: true } }, orderBy: { queuedAt: "desc" }, select: { status: true } });
+      if (ricerca?.status === "IN_CORSO") continue;
       if (!ricerca) {
-        if (await linkedinPermette("decision_maker", null, oggi)) await db.agentRun.create({ data: { leadId: l.leadId, agent: "decision_maker", status: "IN_CODA", input: { ricontrollo: true, relazioneDiretta: true } } });
+        // v3.122: la ricerca dei profili la fa il server, non il Chrome.
+        await cercaChiDecideServer(l.leadId, oggi, { forza: true, relazioneDiretta: true });
         continue;
       }
       await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_SCALDARE } });

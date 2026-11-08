@@ -3,6 +3,7 @@
  * Mette insieme quello che prima stava su tre pagine (Aziende trovate, In lavorazione, Cassetta):
  * per ogni azienda il passo, chi deve muoversi e la cosa da fare.
  */
+import { cercaInParallelo } from "./chi-decide-server";
 import { db } from "@/lib/db";
 import { siglaIndirizzo } from "@/lib/ricerca/regole";
 import { collegamentoDaFindings, statoLinkedinOggi } from "./motore";
@@ -290,20 +291,17 @@ export async function forzaSottosezione(passo: Passo, stato: string, oggi = new 
   if (!ids.length) return esito;
 
   if (STATI_CHI_DECIDE.includes(stato)) {
-    esito.bloccoLinkedin = (await statoLinkedinOggi(oggi)).blocco;
-    if (!esito.bloccoLinkedin) {
+    {
       const [fatti, inCoda] = await Promise.all([
         db.agentReport.findMany({ where: { leadId: { in: ids }, agent: "decision_maker" }, distinct: ["leadId"], select: { leadId: true } }),
         db.agentRun.findMany({ where: { leadId: { in: ids }, agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { leadId: true } }),
       ]);
       const conReferto = new Set(fatti.map((f) => f.leadId));
       const giaInCoda = new Set(inCoda.map((r) => r.leadId));
-      for (const id of ids) {
-        if (giaInCoda.has(id)) { esito.giaInCoda++; continue; }
-        if (conReferto.has(id)) continue; // chi decide c'è già: lo porta avanti il giro della rete qui sotto
-        await db.agentRun.create({ data: { leadId: id, agent: "decision_maker", status: "IN_CODA" } });
-        esito.accodati++;
-      }
+      // v3.122: la ricerca la fa il server, adesso (le prime 15, le altre il giro veloce fra 10 minuti).
+      const daFare = ids.filter((id) => !conReferto.has(id));
+      esito.giaInCoda = daFare.filter((id) => giaInCoda.has(id)).length;
+      esito.accodati = (await cercaInParallelo(daFare.slice(0, 15), oggi, 4)).fatte;
     }
   }
   // In ogni caso il giro della rete adesso: fa entrare le approfondite, sceglie i ponti, prepara i messaggi.

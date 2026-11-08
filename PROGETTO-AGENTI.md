@@ -33,6 +33,10 @@ studio"**. Facebook fuori. Sostituisce "chi me la presenta" e i commenti alla pa
 Chi decide introvabile: pausa 3 mesi, poi si ricerca (non si scrive all'azienda). Se Alessio conosce chi decide si salta
 al 4. I 121 BNI con i membri vanno avanti a parte.
 
+## Percorso veloce (confermato da Alessio il 2026-11-08, v3.122.0)
+
+Detto da Alessio: **"in 30-40 minuti il CRM prenda un'azienda, l'analizzi, cerchi il decision maker e me la porti in da contattare. VELOCITÀ prima di tutto"**. Chi decide lo cerca il server, ogni 10 minuti. **Con WhatsApp o mail si va subito in Da contattare, senza riscaldamento**; senza, collegamento e commenti dal Chrome del Mac.
+
 ## Vendita: dalla richiesta di info all'incarico (confermata con Alessio il 2026-11-03: "una fila sola"; fila e promemoria costruiti in v3.93.0, preventivo/contratto da fare)
 
 Scelte di Alessio (2026-11-03): dopo la call **solo preventivo** (niente lettera strategica prima), prezzi

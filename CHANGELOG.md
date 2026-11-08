@@ -14,6 +14,16 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.122.0] - 2026-11-08
+
+### Added
+- **Percorso veloce** (Alessio: "in 30-40 minuti... VELOCITÀ prima di tutto"). Chi decide lo cerca il **server**, dal sito e da Google (`chi-decide-server.ts`): niente Chrome, niente permessi, niente account LinkedIn. Un nome passa solo se la citazione c'è davvero nelle fonti e la fonte parla di quell'azienda.
+- **Giro veloce ogni 10 minuti** dentro il server (`instrumentation.ts`, `turno-veloce.ts`): analisi delle nuove, chi decide, telefono e mail mancanti da Google, e avanti.
+
+### Changed
+- **Con WhatsApp o mail l'azienda va subito in Da contattare**, senza riscaldamento (scelta di Alessio). Il messaggio non dice più "ci siamo collegati da poco" se non è vero.
+- Il pulsante per forzare "chi decide" lavora dal server.
+
 ## [3.121.0] - 2026-11-08
 
 ### Changed

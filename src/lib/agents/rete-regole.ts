@@ -301,7 +301,7 @@ export function piattaformaPersona(profili: { instagram: string | null; linkedin
 export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, gancio: string | null, haCaso = !!gancio, commentati = true): string {
   const dove = piattaforma ? ` su ${NOMI_PIATTAFORMA[piattaforma]}` : "";
   const intro = decisore
-    ? commentati ? `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i tuoi post${dove}.` : "sono Alessio Loi di Karalisweb, ci siamo collegati da poco."
+    ? commentati ? `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i tuoi post${dove}.` : "sono Alessio Loi di Karalisweb (Cagliari)."
     : `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i post di ${azienda}${dove}.`;
   if (decisore) return `Ciao ${nomeProprio(decisore)}, ${intro}\n\n${offertaCaso(azienda, gancio, haCaso, true)}\n\nAlessio`;
   // Senza chi decide si scrive all'azienda: il caso studio è per il titolare.

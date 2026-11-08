@@ -59,7 +59,7 @@ export async function concorrenteDelCliente(leadId: string): Promise<boolean> {
 }
 
 /** Le aziende da passare al giro veloce: trovate dalla ricerca, non ancora proposte ad Alessio. */
-async function daGiroVeloce(limit: number) {
+export async function daGiroVeloce(limit: number) {
   const candidati = await db.lead.findMany({
     where: {
       // Anche quelle trovate su LinkedIn (titolari simili al caso studio, reti dei membri BNI).

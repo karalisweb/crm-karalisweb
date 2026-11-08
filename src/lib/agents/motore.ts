@@ -422,13 +422,10 @@ export async function verificaCollegamento(leadId: string, oggi = new Date()): P
     await dopoCollegamento(leadId);
     return c.stato;
   }
-  if (c.stato === "IN_VERIFICA") return c.stato;
-  if (!(await linkedinPermette("decision_maker", null, oggi))) return "DA_VERIFICARE";
-  // v3.84: al massimo 3 controlli in coda alla volta, così le visite ai profili si spalmano sulla giornata (giro ogni
-  // 2 ore) invece di 10 di fila: LinkedIn nota le raffiche. Gli altri li riprende il giro dopo.
-  if ((await db.agentRun.count({ where: { agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } } })) >= CONTROLLI_IN_CODA_MAX) return "DA_VERIFICARE";
-  await db.agentRun.create({ data: { leadId, agent: "decision_maker", status: "IN_CODA" } });
-  return "IN_VERIFICA";
+  // v3.122 (Alessio, 2026-11-08: "VELOCITÀ prima di tutto"): chi decide lo cerca il server, subito. Niente coda sul Chrome.
+  const { cercaChiDecideServer } = await import("./chi-decide-server");
+  await cercaChiDecideServer(leadId, oggi);
+  return (await collegamentoAzienda(leadId)).stato;
 }
 
 /**
@@ -515,8 +512,9 @@ export async function collegamentiDaVerificare(oggi = new Date(), limite = 10): 
     if (accodati >= limite) break;
     const prima = await collegamentoAzienda(v.leadId!);
     if (prima.stato !== "DA_VERIFICARE") continue;
-    if ((await verificaCollegamento(v.leadId!, oggi)) === "IN_VERIFICA") accodati++;
-    else break; // LinkedIn non ne permette altri oggi
+    // v3.122: il controllo ora si fa subito sul server; se resta da verificare (budget, DataForSEO) ci si ferma.
+    if ((await verificaCollegamento(v.leadId!, oggi)) === "DA_VERIFICARE") break;
+    accodati++;
   }
   // Ricontrollo: la rete cresce con ogni 121. Una volta al mese al massimo per azienda.
   const ultimo121 = await db.oneToOne.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } });
