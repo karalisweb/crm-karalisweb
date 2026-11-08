@@ -1886,6 +1886,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 
 ## Relazione diretta (v3.117.0)
 
+> v3.119.0: `riallineaRelazioneDiretta` riporta a MAPPATA le lavorazioni CHIESTA il cui unico "mandato" è un invito del Mac sulla voce vecchia `RETE_DIRETTO` (`soloInvito`), e chiude il loro follow-up. `accodaContatti` conta solo i `contatta_persona` FATTO dopo la creazione della voce. Lettura prod: `scripts/leggi-prod.sh "select …"` (read-only).
+>
 > v3.118.0: in "Aspetti la risposta" il canale dell'invio si legge solo dalla nota registrata all'invio (`Mandato via …` da `invio-tracciato.ts`, `… su LinkedIn dal CRM` dal Mac); `payload.canale` è il canale consigliato e non si usa più come ripiego.
 
 Decisione di Alessio del 2026-11-06: niente contatti in comune né presentazioni; la relazione si fa con chi decide.

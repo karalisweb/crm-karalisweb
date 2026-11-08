@@ -36,3 +36,21 @@ describe("nota dell'invito LinkedIn", () => {
     expect(notaInvito(null, "Ciao, in queste settimane ho seguito e commentato i post di X.")).toContain("commentato i vostri post");
   });
 });
+
+import { soloInvito } from "../rete";
+
+// v3.119: chi ha ricevuto solo la richiesta di collegamento dal Mac non è "contattato".
+describe("solo invito LinkedIn", () => {
+  const invito = { kind: "RETE_DIRETTO", note: "Richiesta di collegamento senza nota mandata su LinkedIn dal CRM" };
+  it("solo inviti del Mac: sì", () => {
+    expect(soloInvito([invito])).toBe(true);
+    expect(soloInvito([{ ...invito, note: "Richiesta di collegamento con nota mandata su LinkedIn dal CRM" }])).toBe(true);
+  });
+  it("un messaggio vero, segnato a mano o col follow-up: no", () => {
+    expect(soloInvito([invito, { kind: "RETE_FOLLOWUP", note: null }])).toBe(false);
+    expect(soloInvito([{ kind: "RETE_DIRETTO", note: "Messaggio mandato su LinkedIn dal CRM" }])).toBe(false);
+    expect(soloInvito([{ kind: "RETE_DIRETTO", note: null }])).toBe(false);
+    expect(soloInvito([{ kind: "RETE_CONTATTO", note: "Richiesta di collegamento senza nota mandata su LinkedIn dal CRM" }])).toBe(false);
+    expect(soloInvito([])).toBe(false);
+  });
+});

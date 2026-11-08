@@ -218,6 +218,25 @@ const NOTA_RIALLINEAMENTO = "Superata: dal 2026-11-06 niente presentazioni né c
 const STRADE_PONTE = ["BNI", "CERCHIA", "DIRETTO", "DA_CONFERMARE", "IN_ATTESA_PONTE"];
 
 /**
+ * v3.119 (Alessio, 2026-11-08: "Sì, rimettile"): col giro vecchio il Mac mandava a chi decide solo la richiesta di
+ * collegamento (con la nota "Abbiamo in comune…" o senza nota) e l'azienda finiva in "Aspetti la risposta" senza aver mai
+ * ricevuto il messaggio col caso studio. Sono "solo invito" se tutto quello che risulta mandato è un invito del Mac sulla
+ * voce vecchia (RETE_DIRETTO): ripartono dal collegamento. Il giro nuovo usa RETE_CONTATTO, quindi non rimbalzano.
+ */
+const NOTA_SOLO_INVITO = "Mandata solo la richiesta di collegamento su LinkedIn, nessun messaggio: si riparte dal collegamento (v3.119)";
+const INVITO_DEL_MAC = /^Richiesta di collegamento .*su LinkedIn dal CRM$/;
+export function soloInvito(mandati: { kind: string; note: string | null }[]): boolean {
+  return mandati.length > 0 && mandati.every((m) => m.kind === KIND_RETE_DIRETTO && INVITO_DEL_MAC.test(m.note ?? ""));
+}
+async function haSoloInvito(leadId: string): Promise<boolean> {
+  const mandati = await db.approvalItem.findMany({
+    where: { leadId, kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP, KIND_RETE_CASO] }, status: "APPROVATO" },
+    select: { kind: true, note: true },
+  });
+  return soloInvito(mandati);
+}
+
+/**
  * v3.117 (Alessio, 2026-11-06: "prendi tutte le aziende del Percorso e allinea a questa nuova procedura"). Idempotente:
  * tocca solo quello che è rimasto sulla strada vecchia, quindi si può rifare a ogni giro.
  *   - messaggi non ancora mandati (al ponte, promemoria, contatto dopo i commenti alla pagina, "scrivi all'azienda"):
@@ -248,9 +267,11 @@ export async function riallineaRelazioneDiretta(cerchia: string[]): Promise<numb
   const lav = await db.lavorazione.findMany({ where: { fase: { in: ["MAPPATA", "PONTE_SCELTO", "CHIESTA"] } }, select: { id: true, leadId: true, fase: true, strada: true, decisore: true, presentatoAt: true } });
   for (const l of lav) {
     const conPonte = l.strada === "BNI" || l.strada === "CERCHIA";
+    // v3.119: "contattate" solo con l'invito LinkedIn: non restano ad aspettare una risposta a un messaggio mai mandato.
+    const invitoSolo = l.fase === "CHIESTA" && !conPonte && (await haSoloInvito(l.leadId));
     // Già contattate (aspetti la risposta / follow-up / caso studio) o presentate: restano.
-    if (l.fase === "CHIESTA" && !(conPonte && !l.presentatoAt)) continue;
-    let riporta = daRiportare.has(l.leadId);
+    if (l.fase === "CHIESTA" && !(conPonte && !l.presentatoAt) && !invitoSolo) continue;
+    let riporta = daRiportare.has(l.leadId) || invitoSolo;
     if (l.fase === "PONTE_SCELTO" || (l.fase === "CHIESTA" && conPonte)) riporta = true;
     if (l.fase === "MAPPATA" && (l.strada === null || STRADE_PONTE.includes(l.strada))) riporta = true;
     // Ai commenti senza aver mai chiesto il collegamento (la strada vecchia, commenti alla pagina): si riparte da lì.
@@ -265,8 +286,10 @@ export async function riallineaRelazioneDiretta(cerchia: string[]): Promise<numb
     if (l.strada === "DIRETTO" && l.decisore && nellaCerchia(l.decisore, cerchia) && (await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_RETE_DIRETTO, status: "IN_ATTESA" }, select: { id: true } }))) riporta = false;
     if (!riporta) continue;
     if (l.fase === "MAPPATA" && l.strada === null) continue; // già pronta per il giro
-    await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", strada: null, ponteNome: null, ponteMembroId: null, chiestaAt: null, promemoriaAt: null, note: "Riallineata alla relazione diretta (v3.117)" } });
+    await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", strada: null, ponteNome: null, ponteMembroId: null, chiestaAt: null, promemoriaAt: null, note: invitoSolo ? NOTA_SOLO_INVITO : "Riallineata alla relazione diretta (v3.117)" } });
     await chiudi({ leadId: l.leadId, kind: { in: [KIND_RETE_PONTE, KIND_RETE_PROMEMORIA] } });
+    // Il follow-up direbbe "ti riscrivo per il messaggio di qualche giorno fa": un messaggio che non c'è stato.
+    if (invitoSolo) await db.approvalItem.updateMany({ where: { leadId: l.leadId, kind: KIND_RETE_FOLLOWUP, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: ora, decidedBy: "rete", note: NOTA_SOLO_INVITO } });
     daRiportare.add(l.leadId);
   }
 
@@ -400,7 +423,7 @@ async function accodaContatti(oggi: Date): Promise<number> {
   const voci = await db.approvalItem.findMany({
     where: { kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA", leadId: { not: null } },
     orderBy: { createdAt: "asc" },
-    select: { id: true, kind: true, leadId: true, payload: true, lead: { select: { name: true } } },
+    select: { id: true, kind: true, leadId: true, payload: true, createdAt: true, lead: { select: { name: true } } },
     take: 20,
   });
   let accodati = 0;
@@ -410,7 +433,8 @@ async function accodaContatti(oggi: Date): Promise<number> {
     // v3.117 (Alessio: "poi mail o WhatsApp per il caso studio"): con WhatsApp o mail scrive Alessio da lì; LinkedIn
     // solo se non c'è altro (ormai siete collegati: il messaggio, non l'invito).
     if (v.kind === KIND_RETE_CONTATTO && (p.telefono || p.email)) continue;
-    if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", status: { in: ["IN_CODA", "IN_CORSO", "FATTO"] } }, select: { id: true } })) continue;
+    // v3.119: un invito fatto per una voce vecchia non blocca il messaggio di questa (conta solo quello fatto dopo).
+    if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { status: "FATTO", queuedAt: { gte: v.createdAt } }] }, select: { id: true } })) continue;
     if (await archiviaSeNonRiuscito(v.id, v.leadId)) continue;
     // v3.99: l'azienda di un membro BNI passa dal 121, non da LinkedIn.
     if (await db.bniMembro.findFirst({ where: { leadId: v.leadId, status: "ATTIVO" }, select: { id: true } })) continue;

@@ -14,6 +14,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.119.0] - 2026-11-08
+
+### Fixed
+- **Percorso: le aziende "contattate" solo con l'invito LinkedIn ripartono dal collegamento** (Alessio: "Sì, rimettile"). Col giro vecchio il Mac mandava a chi decide solo la richiesta di collegamento (con la nota "Abbiamo in comune…" o senza nota) e l'azienda finiva in "Aspetti la risposta" senza aver mai ricevuto il messaggio col caso studio: erano 9 (Macciocco & Partners, A.I.T Segnaletica, Studio Oggiano, Logudoro Servizi, Smeralda Consulting, Studio Floris, Studio Legale Ibba Invidiato, Imprenditoriamo, Sub Service). Il giro del CRM le riporta al passo 2 (collegamento, poi commenti, poi il messaggio col caso studio) e chiude il follow-up che diceva "ti riscrivo per il messaggio di qualche giorno fa".
+- Il messaggio LinkedIn del passo 4 non viene più bloccato da un invito fatto in passato per una voce vecchia.
+
+### Added
+- `scripts/leggi-prod.sh`: lettura del database di produzione in sola lettura (sessione Postgres read-only), per rispondere sui numeri veri.
+
 ## [3.118.0] - 2026-11-07
 
 ### Fixed
