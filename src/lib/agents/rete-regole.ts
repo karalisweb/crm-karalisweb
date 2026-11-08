@@ -340,3 +340,32 @@ export function canaliInOrdine(c: { whatsapp?: string | null; email?: string | n
   };
   return ORDINE_CANALI.filter((k) => ci[k]);
 }
+
+// ─── Quando serve il riscaldamento (Alessio, 2026-11-08: "usare sempre la testa") ──────────────────────
+
+/** Oltre questo tempo il messaggio parte comunque, riscaldata o no. */
+export const ORE_MAX_RISCALDAMENTO = 48;
+const GIORNI_PUBBLICA = 90;
+
+/** Pubblica davvero? null = non si sa (chi decide trovato dal server: i suoi post li legge solo il Chrome). */
+export function pubblicaDa(persona: Record<string, unknown>, oggi: Date): boolean | null {
+  if (!("ultimoPostLinkedin" in persona) && !("ultimoPostInstagram" in persona)) return null;
+  return [persona.ultimoPostLinkedin, persona.ultimoPostInstagram].some((d) => {
+    const t = typeof d === "string" ? Date.parse(d) : NaN;
+    return !Number.isNaN(t) && oggi.getTime() - t < GIORNI_PUBBLICA * 86400_000;
+  });
+}
+
+/**
+ * Il riscaldamento serve solo se chi decide pubblica, il messaggio arriva a lui e non ti conosce già. Il WhatsApp conta
+ * come suo (il numero dell'ufficio è un fisso e WhatsApp non ce l'ha). Solo LinkedIn: il collegamento è obbligato.
+ * Dopo 48 ore il messaggio parte comunque, con qualunque canale.
+ */
+export function stradaContatto(c: { whatsapp: boolean; email: boolean; emailPersonale: boolean; linkedin: boolean; instagram: boolean; pubblica: boolean | null; loConosce: boolean; oreInCorso: number }): "contatta" | "scalda" {
+  const haCanale = c.whatsapp || c.email || c.linkedin;
+  if (c.loConosce && haCanale) return "contatta";
+  if (c.oreInCorso >= ORE_MAX_RISCALDAMENTO && haCanale) return "contatta";
+  if (c.whatsapp || c.emailPersonale) return c.pubblica === false || (!c.linkedin && !c.instagram) ? "contatta" : "scalda";
+  if (c.email) return "contatta"; // info@: lo legge la segreteria, i commenti non li ha visti
+  return "scalda";
+}

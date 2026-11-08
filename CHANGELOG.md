@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.123.0] - 2026-11-08
+
+### Changed
+- **Riscaldamento solo quando serve** (Alessio: "quando serve il riscaldamento?"). Si scalda solo se chi decide pubblica (o non si sa ancora), il messaggio arriva a lui (WhatsApp o mail sua) e non ti conosce già. Messaggio subito se: lo conosci o è di BNI, non pubblica o non ha profili, il contatto è info@. Solo LinkedIn: collegamento. **Dopo 48 ore il messaggio parte comunque.** Sostituisce "con WhatsApp o mail subito".
+- Le richieste di collegamento del Mac partono sempre **senza nota**: via la nota "Abbiamo in comune…".
+
 ## [3.122.0] - 2026-11-08
 
 ### Added

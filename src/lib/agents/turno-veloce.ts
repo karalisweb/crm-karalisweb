@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { daGiroVeloce, giroVeloce } from "./arricchimento";
 import { cercaContattiMancanti, cercaInParallelo, daCercare } from "./chi-decide-server";
 import { avanzaMappata } from "./rete";
+import { ORE_MAX_RISCALDAMENTO } from "./rete-regole";
 
 const ANALISI_PER_GIRO = 6;
 const RICERCHE_PER_GIRO = 12;
@@ -25,7 +26,14 @@ export async function turnoVeloce(oggi = new Date()): Promise<RiepilogoVeloce> {
   r.trovate = ricerca.trovate;
   const conContatti = await cercaContattiMancanti(CONTATTI_PER_GIRO, oggi);
   r.contatti = conContatti.length;
-  const nuove = await db.lavorazione.findMany({ where: { fase: "MAPPATA", strada: null }, select: { id: true } });
+  // Le nuove, e quelle arrivate alle 48 ore senza messaggio: parte comunque.
+  const limite = new Date(oggi.getTime() - ORE_MAX_RISCALDAMENTO * 3600_000);
+  const nuove = await db.lavorazione.findMany({
+    where: { fase: "MAPPATA", OR: [{ strada: null }, { strada: { in: ["COLLEGARE", "SCALDARE"] }, createdAt: { lte: limite }, lead: { approvalItems: { none: { kind: "RETE_CONTATTO", status: { in: ["IN_ATTESA", "APPROVATO"] } } } } }] },
+    orderBy: { updatedAt: "asc" },
+    select: { id: true },
+    take: 15,
+  });
   for (const id of [...nuove.map((l) => l.id), ...conContatti]) {
     await avanzaMappata(id, undefined, oggi).catch((e) => console.error("[veloce] avanzamento fallito:", e));
     r.avanzate++;

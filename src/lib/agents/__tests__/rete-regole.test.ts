@@ -163,3 +163,31 @@ describe("v3.117: dove commentare chi decide", () => {
     expect(piattaformaPersona({ instagram: null, linkedin: null }, null)).toBeNull();
   });
 });
+
+import { pubblicaDa, stradaContatto } from "../rete-regole";
+
+describe("quando serve il riscaldamento (v3.123)", () => {
+  const base = { whatsapp: false, email: false, emailPersonale: false, linkedin: true, instagram: false, pubblica: null as boolean | null, loConosce: false, oreInCorso: 1 };
+  it("lo conosci: messaggio subito", () => expect(stradaContatto({ ...base, whatsapp: true, loConosce: true })).toBe("contatta"));
+  it("info@: messaggio subito", () => expect(stradaContatto({ ...base, email: true })).toBe("contatta"));
+  it("suo cellulare o sua mail e pubblica (o non si sa): riscaldamento", () => {
+    expect(stradaContatto({ ...base, whatsapp: true, pubblica: true })).toBe("scalda");
+    expect(stradaContatto({ ...base, whatsapp: true })).toBe("scalda");
+    expect(stradaContatto({ ...base, email: true, emailPersonale: true })).toBe("scalda");
+  });
+  it("non pubblica o senza profili: messaggio subito", () => {
+    expect(stradaContatto({ ...base, whatsapp: true, pubblica: false })).toBe("contatta");
+    expect(stradaContatto({ ...base, whatsapp: true, linkedin: false })).toBe("contatta");
+  });
+  it("solo LinkedIn: collegamento", () => expect(stradaContatto(base)).toBe("scalda"));
+  it("dopo 48 ore parte comunque", () => {
+    expect(stradaContatto({ ...base, whatsapp: true, pubblica: true, oreInCorso: 48 })).toBe("contatta");
+    expect(stradaContatto({ ...base, oreInCorso: 50 })).toBe("contatta");
+  });
+  it("legge se pubblica", () => {
+    const oggi = new Date("2026-11-08");
+    expect(pubblicaDa({ nome: "x" }, oggi)).toBeNull();
+    expect(pubblicaDa({ ultimoPostLinkedin: "2026-10-20", ultimoPostInstagram: null }, oggi)).toBe(true);
+    expect(pubblicaDa({ ultimoPostLinkedin: "2025-01-01", ultimoPostInstagram: null }, oggi)).toBe(false);
+  });
+});

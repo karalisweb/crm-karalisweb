@@ -16,7 +16,7 @@ import { KIND_FASCICOLO_BASE } from "./turno";
 import { mezzanotteRoma, norm } from "./bni-regole";
 import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento } from "./motore";
 import {
-  FASI_ATTIVE, GIORNI_PAUSA, capienzaLavorazione, chiDecideTesto, forzaAzienda, prossimaAzione,
+  FASI_ATTIVE, GIORNI_PAUSA, pubblicaDa, stradaContatto, capienzaLavorazione, chiDecideTesto, forzaAzienda, prossimaAzione,
   testoContattoDiretto, testoDirettoConPonte, testoFollowupContatto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
   COMMENTI_PER_CONTATTO, PIATTAFORME, paginaPreferita, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
   type PaginaSocial, type Piattaforma, STRADA_COLLEGARE, STRADA_SCALDARE, nellaCerchia, piattaformaPersona, stessaPersona,
@@ -372,16 +372,6 @@ async function riempiScaldare(oggi: Date): Promise<number> {
  * mandare, con il suo profilo LinkedIn, diventano un lavoro per il Mac che li manda (messaggio se collegati, altrimenti
  * richiesta di collegamento con la nota). Uno alla volta per azienda, dentro il budget LinkedIn.
  */
-const LUNGHEZZA_NOTA = 280;
-
-export function notaInvito(decisore: string | null, testo: string): string {
-  const nome = decisore ? decisore.trim().split(/\s+/)[0] : null;
-  const inComune = testo.match(/Abbiamo in comune ([^.]+)\./)?.[1];
-  const commenti = /commentato i post/.test(testo);
-  const base = `${nome ? `Buongiorno ${nome}` : "Buongiorno"}, sono Alessio Loi di Karalisweb (Cagliari).${inComune ? ` Abbiamo in comune ${inComune}.` : commenti ? " Ho seguito e commentato i vostri post." : ""} Lavoro con aziende come la vostra: mi farebbe piacere collegarci.`;
-  return base.length <= LUNGHEZZA_NOTA ? base : `${base.slice(0, LUNGHEZZA_NOTA - 1)}…`;
-}
-
 /**
  * v3.95 (Alessio, 2026-11-05: "dopo due fallimenti, senza segnalarlo, archivialo in un posto"): un messaggio LinkedIn
  * che non è partito per 2 volte non torna più in coda. La voce si chiude in silenzio e finisce in Archivio → Non riusciti,
@@ -442,7 +432,7 @@ async function accodaContatti(oggi: Date): Promise<number> {
     if (!(await linkedinPermette("contatta_persona", null, oggi))) break;
     const decisore = p.decisore && p.decisore !== "chi decide" ? p.decisore : null;
     await db.agentRun.create({
-      data: { agent: "contatta_persona", status: "IN_CODA", leadId: v.leadId, input: { voceId: v.id, leadId: v.leadId, persona: decisore, azienda: v.lead?.name ?? null, profilo: p.linkedin, messaggio: p.messaggio, nota: notaInvito(decisore, p.messaggio) } },
+      data: { agent: "contatta_persona", status: "IN_CODA", leadId: v.leadId, input: { voceId: v.id, leadId: v.leadId, persona: decisore, azienda: v.lead?.name ?? null, profilo: p.linkedin, messaggio: p.messaggio } },
     });
     accodati++;
   }
@@ -537,11 +527,23 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
     await scegliPonte(l.id, { strada: "DIRETTO", nome: conosciuto.nome, decisore: conosciuto.nome });
     return creaMessaggio(l.id, "DIRETTO", oggi);
   }
-  // v3.122 (Alessio, 2026-11-08: "Sì, subito"): con WhatsApp o mail va subito in Da contattare, senza riscaldamento.
+  // v3.123 (Alessio, 2026-11-08: "quando serve il riscaldamento?"): messaggio subito, salvo quando scaldare serve davvero.
   const giaContatto = await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_RETE_CONTATTO, status: { in: ["IN_ATTESA", "APPROVATO"] } }, select: { id: true } });
   if (!giaContatto) {
-    const canale = await canaleDiretto(l.leadId, decisore);
-    if (canale.whatsapp || canale.email) {
+    const [canale, profili, membro, report] = await Promise.all([
+      canaleDiretto(l.leadId, decisore),
+      profiliDecisore(l.leadId),
+      db.bniMembro.findFirst({ where: { OR: [{ leadId: l.leadId }, { name: { equals: decisore, mode: "insensitive" } }], status: "ATTIVO" }, select: { id: true } }),
+      db.agentReport.findFirst({ where: { leadId: l.leadId, agent: "decision_maker" }, orderBy: { collectedAt: "desc" }, select: { findings: true } }),
+    ]);
+    const persona = ((report?.findings as { persone?: Record<string, unknown>[] } | null)?.persone ?? [])[0] ?? {};
+    // Le aziende riportate al collegamento (v3.119) ripartono da lì; le altre contano dall'ingresso nel percorso.
+    const dal = l.note === NOTA_SOLO_INVITO ? l.updatedAt : l.createdAt;
+    const strada = stradaContatto({
+      whatsapp: !!canale.whatsapp, email: !!canale.email, emailPersonale: canale.emailPersonale, linkedin: !!(canale.linkedin ?? profili.linkedin), instagram: !!profili.instagram,
+      pubblica: pubblicaDa(persona, oggi), loConosce: !!membro, oreInCorso: (oggi.getTime() - dal.getTime()) / 3600_000,
+    });
+    if (strada === "contatta") {
       await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_SCALDARE, decisore, ponteNome: null, ponteMembroId: null } });
       return dopoCommento(l.leadId, oggi, true);
     }
