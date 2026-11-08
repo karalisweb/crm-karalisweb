@@ -284,11 +284,11 @@ function buildGdprFooterHtml(gdpr: Record<string, string | null>, leadId?: strin
 // ============================================================================
 const NOMI_INVIATA = /^(INBOX[./])?(Sent|Sent Items|Sent Messages|Inviata|Inviati|Posta inviata|Elementi inviati)$/i;
 
-/** Senza `raw` si collega e trova solo la cartella (controllo, non scrive niente). */
-export async function salvaInPostaInviata(raw: Buffer | null, data = new Date()): Promise<{ ok: true; cartella: string } | { ok: false; errore: string }> {
+/** La casella di Alessio via IMAP (null se le credenziali non ci sono). Da aprire e chiudere a chi la usa. */
+export function casellaImap(): ImapFlow | null {
   const pass = process.env.IMAP_PASSWORD || process.env.SMTP_PASSWORD;
-  if (!pass) return { ok: false, errore: 'credenziali della casella non impostate' };
-  const client = new ImapFlow({
+  if (!pass) return null;
+  return new ImapFlow({
     host: process.env.IMAP_HOST || process.env.SMTP_HOST || 'mail.karalisweb.net',
     port: parseInt(process.env.IMAP_PORT || '993'),
     secure: (process.env.IMAP_PORT || '993') === '993',
@@ -299,6 +299,12 @@ export async function salvaInPostaInviata(raw: Buffer | null, data = new Date())
     greetingTimeout: 10000,
     socketTimeout: 20000,
   });
+}
+
+/** Senza `raw` si collega e trova solo la cartella (controllo, non scrive niente). */
+export async function salvaInPostaInviata(raw: Buffer | null, data = new Date()): Promise<{ ok: true; cartella: string } | { ok: false; errore: string }> {
+  const client = casellaImap();
+  if (!client) return { ok: false, errore: 'credenziali della casella non impostate' };
   try {
     await client.connect();
     const cartelle = await client.list();

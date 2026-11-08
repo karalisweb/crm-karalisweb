@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.124.0] - 2026-11-08
+
+### Added
+- **Il CRM legge le risposte alle mail del Percorso** (ogni 10 minuti, sola lettura: non segna niente come letto). Chi risponde passa in **"Ti ha risposto"** con il testo della risposta e i pulsanti "Vuole il caso studio", "La seguo io", "Non è interessato"; il follow-up si chiude e i conti alla rovescia si fermano. Se chiede chiaramente il caso studio, il messaggio col caso studio si prepara da solo. Fuori ufficio e mancati recapiti non contano. L'AI non mette mai in pausa un'azienda da sola.
+
 ## [3.123.0] - 2026-11-08
 
 ### Changed

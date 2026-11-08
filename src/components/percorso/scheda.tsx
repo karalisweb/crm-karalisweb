@@ -166,7 +166,7 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
         <div className="rounded-md border bg-muted/40 p-2 text-sm whitespace-pre-wrap break-words">{x.testo}</div>
       )}
       {/* v3.113: da contattare. Il canale e il caso studio si vedono prima di premere. */}
-      {a.passo === 4 && x?.tipo === "cassetta" && (
+      {a.passo === 4 && x?.tipo === "cassetta" && a.stato !== "ha_risposto" && (
         <div className="space-y-1 text-xs">
           <div><span className="text-muted-foreground">Canale: </span>{canali.length ? <><strong>{canali[0].descrizione}</strong>{canali.length > 1 && <span className="text-muted-foreground"> · in alternativa: {canali.slice(1).map((c) => c.descrizione).join(", ")}</span>}</> : "nessun canale trovato: copia il testo e mandalo tu"}</div>
           {a.contatto?.caso && (
@@ -220,6 +220,7 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
         <div className="text-xs text-muted-foreground">Con la mail il PDF parte allegato dal CRM. Su WhatsApp o LinkedIn allegalo tu{x.casoId && <> (<a href={`/api/ricerca/casi-studio/${x.casoId}/pdf`} target="_blank" rel="noopener noreferrer" className="underline">scarica il PDF</a>)</>}, poi conferma.</div>
       )}
       <div className="flex flex-wrap gap-2">
+        {a.stato === "ha_risposto" && bottone("vuole-caso", "Vuole il caso studio", () => fai("vuole-caso", `/api/percorso/${a.leadId}/risposta`, "POST", undefined, "Segnato: il messaggio col caso studio è pronto qui sopra"), "default")}
         {a.contatto?.rispostaPossibile && x?.tipo !== "cassetta" && bottone("risposta", "Mi ha risposto: vuole il caso studio", () => fai("risposta", `/api/percorso/${a.leadId}/risposta`, "POST", undefined, "Segnato: il messaggio col caso studio è pronto qui sopra"), "default")}
         {x?.tipo === "decidi" && <>
           {bottone("si", "Approfondisci", () => fai("si", `/api/ricerca/aziende/${a.leadId}/decisione`, "POST", { azione: "approfondisci" }, "Approfondita: entra al passo 2"), "default")}

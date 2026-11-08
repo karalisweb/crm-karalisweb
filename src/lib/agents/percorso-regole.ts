@@ -77,6 +77,7 @@ export const STATI = {
   prepara_ponte: "Il CRM prepara il messaggio al ponte",
   commenta: "Da commentare",
   cerca_post: "Il CRM commenta i post di chi decide",
+  ha_risposto: "Ti ha risposto",
   caso: "Caso studio da mandare",
   scrivi: "Da contattare",
   pagina: "Da scrivere all'azienda (chi decide non si sa)",
@@ -122,6 +123,9 @@ export function passoDi(s: Stato, oggi: Date): Esito {
   if (l.fase === "PAUSA") return { dentro: false, perche: "pausa" };
 
   // Passo 4 — Contatto.
+  // v3.124: una mail di risposta letta dalla casella viene prima di tutto.
+  const risposta = voce("RETE_RISPOSTA");
+  if (risposta) return { dentro: true, passo: 4, tocca: "te", stato: "ha_risposto", cosa: `${nomeDi(s)} ti ha risposto via mail: "${str(risposta.payload?.estratto) ?? ""}"`, azione: daCassetta(risposta, "La seguo io", "Non è interessato") };
   const contatto = voce("RETE_CONTATTO");
   if (contatto) return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: `Scrivi a ${nomeDi(s)} con il caso studio (WhatsApp o mail)`, azione: daCassetta(contatto, "Mandato", "Non ora") };
   const diretto = voce("RETE_DIRETTO");

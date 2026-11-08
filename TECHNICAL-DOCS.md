@@ -1886,6 +1886,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 
 ## Relazione diretta (v3.117.0)
 
+> v3.124.0: `leggiRisposte` (`risposte-mail.ts`, regole in `risposte-regole.ts`) gira in `turnoVeloce`: INBOX in sola lettura, mittente = destinatario della mail del Percorso (o stesso dominio aziendale). Voce `RETE_RISPOSTA` → stato `ha_risposto`. Il primo controllo dopo ogni avvio lascia un `agent_runs` `risposte_mail` (FATTO/FALLITO): è la prova che IMAP funziona.
+>
 > v3.122.0: percorso veloce. `verificaCollegamento` chiama `cercaChiDecideServer` (DataForSEO + sito + AI, verifiche in `chi-decide-regole.ts`; run `chi_decide_server`, referto `decision_maker`). `turnoVeloce` gira ogni 10 minuti da `src/instrumentation.ts` (off con `TURNO_VELOCE=off`). `avanzaMappata`: con WhatsApp o mail crea subito `RETE_CONTATTO`. Il Chrome resta per collegamento e commenti.
 >
 > v3.120.0: le mail del Percorso (`registraInvio` → `mandaOutreach(..., { inInviata: true })` in `src/lib/email.ts`) si salvano anche in Posta inviata via IMAP (`salvaInPostaInviata`, imapflow; cartella `\\Sent` o per nome, o `IMAP_SENT_FOLDER`), con lo stesso Message-ID. Controllo: `GET /api/percorso/posta-inviata`. In Percorso "Aspetti la risposta" si divide per `contatto.inviato.canale` (`CANALI_RISPOSTA`).

@@ -41,7 +41,9 @@ export const KIND_RETE_PAGINA = "RETE_PAGINA";
 export const KIND_RETE_FOLLOWUP = "RETE_FOLLOWUP";
 /** v3.116: ha risposto e vuole il caso studio: il messaggio con il PDF. */
 export const KIND_RETE_CASO = "RETE_CASO_STUDIO";
-export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP, KIND_RETE_CASO];
+/** v3.124: una mail di risposta letta dalla casella: "Ti ha risposto". */
+export const KIND_RETE_RISPOSTA = "RETE_RISPOSTA";
+export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP, KIND_RETE_CASO, KIND_RETE_RISPOSTA];
 
 /** Decisori al giorno da scaldare con i commenti (letture LinkedIn). */
 /** Aziende lette dal lavoro "scalda": un po' più dei commenti, perché chi non ha post recenti si salta. */
@@ -114,7 +116,10 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
 
   // 1) Il seguito e i rientri dalla pausa.
   const tutte = await db.lavorazione.findMany({ where: { fase: { in: [...FASI_ATTIVE, "PAUSA"] } } });
+  // v3.124: chi ha risposto non riceve follow-up né va in pausa finché Alessio non ha letto.
+  const conRisposta = new Set((await db.approvalItem.findMany({ where: { kind: KIND_RETE_RISPOSTA, status: "IN_ATTESA" }, select: { leadId: true } })).map((v) => v.leadId));
   for (const l of tutte) {
+    if (conRisposta.has(l.leadId)) continue;
     const azione = prossimaAzione(l, oggi);
     if (azione === "RIENTRA") {
       await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", tentativi: 0, pausaFino: null, ponteNome: null, ponteMembroId: null, strada: null, chiestaAt: null, promemoriaAt: null } });
@@ -700,6 +705,7 @@ export async function segnaRispostaCaso(leadId: string, chi: string): Promise<bo
   const decisore = l.decisore ?? (typeof p.decisore === "string" ? p.decisore : null);
   const casoId = typeof p.casoId === "string" ? p.casoId : (await casoPerMessaggio(leadId, new Date()))?.casoId ?? null;
   await db.approvalItem.updateMany({ where: { leadId, kind: KIND_RETE_FOLLOWUP, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: chi, note: "Ha risposto" } });
+  await db.approvalItem.updateMany({ where: { leadId, kind: KIND_RETE_RISPOSTA, status: "IN_ATTESA" }, data: { status: "APPROVATO", decidedAt: new Date(), decidedBy: chi, note: "Vuole il caso studio" } });
   await db.approvalItem.create({
     data: {
       leadId,
@@ -993,6 +999,12 @@ export async function decisioneRete(voceId: string, decisione: "APPROVATO" | "SC
   }
   const id = (v.payload as { lavorazioneId?: string } | null)?.lavorazioneId;
   if (!id) return;
+  // v3.124: "La seguo io" ferma follow-up e pausa automatici; "Non è interessato" la mette in pausa. Lo decide Alessio.
+  if (v.kind === KIND_RETE_RISPOSTA) {
+    if (decisione === "APPROVATO") await db.lavorazione.updateMany({ where: { id }, data: { presentatoAt: new Date() } });
+    else await mettiInPausa(id, "Ha risposto: non è interessato");
+    return;
+  }
   // v3.116: caso studio mandato: si riparte ad aspettare la risposta, e fra 5 giorni il follow-up.
   if (decisione === "APPROVATO" && v.kind === KIND_RETE_CASO) {
     await db.lavorazione.updateMany({ where: { id }, data: { fase: "CHIESTA", chiestaAt: new Date(), promemoriaAt: null } });
