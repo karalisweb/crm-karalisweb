@@ -14,6 +14,15 @@ import { LanciaAdesso } from "@/components/ricerca/lancia-adesso";
 import { CercaTu } from "@/components/ricerca/cerca-tu";
 import { Sezione } from "@/components/ui/sezione";
 
+/** I canali di "Aspetti la risposta" (v3.120): il valore è quello registrato all'invio (percorso.ts, dettagliContatto). */
+const CANALI_RISPOSTA = [
+  { canale: "email", id: "email", nome: "via mail" },
+  { canale: "WhatsApp", id: "whatsapp", nome: "via WhatsApp" },
+  { canale: "LinkedIn", id: "linkedin", nome: "via LinkedIn" },
+  { canale: "messaggio alla pagina", id: "pagina", nome: "messaggio alla pagina" },
+  { canale: "segnato a mano", id: "mano", nome: "segnato a mano" },
+];
+
 /** La cerchia stretta (prima in "In lavorazione"): un ponte vale solo se è qui. Sta nel passo 2. */
 function Cerchia() {
   const [c, setC] = useState<{ daBni: number; aggiunti: { id: string; nome: string }[] } | null>(null);
@@ -130,12 +139,25 @@ function Percorso() {
   }, [d, daOggi]);
 
   // Già in ordine di stato dal server: qui si raggruppano, con il nome dello stato sopra.
-  const raggruppa = (n: number) => (d?.aziende ?? []).filter((a) => a.passo === n).reduce<{ stato: string; nome: string; aziende: AziendaPercorso[] }[]>((g, a) => {
-    const ultimo = g[g.length - 1];
-    if (ultimo?.stato === a.stato) ultimo.aziende.push(a);
-    else g.push({ stato: a.stato, nome: a.statoNome, aziende: [a] });
-    return g;
-  }, []);
+  // v3.120 (Alessio, 2026-11-08: "separare nei 'aspetti la risposta' chi ho contattato via mail, chi via WhatsApp"):
+  // "Aspetti la risposta" si divide per il canale registrato all'invio, così sai dove andare a cercare la risposta.
+  const chiaveDi = (a: AziendaPercorso) => {
+    if (a.stato !== "risposta") return { stato: a.stato, nome: a.statoNome, ordine: 0 };
+    const c = a.contatto?.inviato?.canale ?? "segnato a mano";
+    const i = CANALI_RISPOSTA.findIndex((x) => x.canale === c);
+    const v = CANALI_RISPOSTA[i < 0 ? CANALI_RISPOSTA.length - 1 : i];
+    return { stato: `risposta-${v.id}`, nome: `${a.statoNome} · ${v.nome}`, ordine: i < 0 ? CANALI_RISPOSTA.length : i + 1 };
+  };
+  const raggruppa = (n: number) => (d?.aziende ?? []).filter((a) => a.passo === n)
+    .map((a, pos) => ({ a, pos, k: chiaveDi(a) }))
+    // Stesso ordine del server; dentro "Aspetti la risposta", per canale.
+    .sort((x, y) => (x.a.stato === "risposta" && y.a.stato === "risposta" ? x.k.ordine - y.k.ordine || x.pos - y.pos : x.pos - y.pos))
+    .reduce<{ stato: string; nome: string; aziende: AziendaPercorso[] }[]>((g, { a, k }) => {
+      const ultimo = g[g.length - 1];
+      if (ultimo?.stato === k.stato) ultimo.aziende.push(a);
+      else g.push({ stato: k.stato, nome: k.nome, aziende: [a] });
+      return g;
+    }, []);
   const nelPasso = (d?.aziende ?? []).filter((a) => a.passo === passo);
   const gruppi = raggruppa(passo);
   // v3.109 (Alessio, 2026-11-06): dalla scheda del passo si va dritti a una sottosezione, aperta.

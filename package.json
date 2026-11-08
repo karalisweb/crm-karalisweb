@@ -1,6 +1,6 @@
 {
   "name": "sales-crm-karalisweb",
-  "version": "3.119.0",
+  "version": "3.120.0",
   "private": true,
   "engines": {
     "node": ">=20.0.0"
@@ -49,6 +49,7 @@
     "framer-motion": "^12.34.3",
     "googleapis": "^171.4.0",
     "html2canvas": "^1.4.1",
+    "imapflow": "^1.7.8",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.0",

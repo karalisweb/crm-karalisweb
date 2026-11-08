@@ -14,6 +14,15 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.120.0] - 2026-11-08
+
+### Added
+- **Le mail del Percorso finiscono anche in Posta inviata** (Alessio: "se usiamo il CRM per scrivere via mail non vedo la mail: mi crea un problema di controllo"). Dopo l'invio il CRM mette la stessa mail (stesso Message-ID) nella cartella Inviata di alessio@karalisweb.net via IMAP: la vedi nella tua posta e la risposta del cliente si attacca alla conversazione. Se la copia non riesce la mail parte lo stesso e l'attività dell'azienda dice "copia in Posta inviata NON salvata". Casella: `IMAP_HOST/IMAP_PORT/IMAP_USER/IMAP_PASSWORD/IMAP_SENT_FOLDER` se impostate, altrimenti le credenziali SMTP principali. Controllo: `GET /api/percorso/posta-inviata` (si collega e trova la cartella, non scrive niente).
+- **"Aspetti la risposta" diviso per canale**: via mail, via WhatsApp, via LinkedIn, messaggio alla pagina, segnato a mano. Sai subito dove andare a cercare la risposta.
+
+### Changed
+- `scripts/deploy-rapido.sh`: se cambia `package-lock.json` fa `npm ci` + `prisma generate` prima della build.
+
 ## [3.119.0] - 2026-11-08
 
 ### Fixed

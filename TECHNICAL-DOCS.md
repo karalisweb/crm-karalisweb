@@ -1886,6 +1886,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 
 ## Relazione diretta (v3.117.0)
 
+> v3.120.0: le mail del Percorso (`registraInvio` → `mandaOutreach(..., { inInviata: true })` in `src/lib/email.ts`) si salvano anche in Posta inviata via IMAP (`salvaInPostaInviata`, imapflow; cartella `\\Sent` o per nome, o `IMAP_SENT_FOLDER`), con lo stesso Message-ID. Controllo: `GET /api/percorso/posta-inviata`. In Percorso "Aspetti la risposta" si divide per `contatto.inviato.canale` (`CANALI_RISPOSTA`).
+>
 > v3.119.0: `riallineaRelazioneDiretta` riporta a MAPPATA le lavorazioni CHIESTA il cui unico "mandato" è un invito del Mac sulla voce vecchia `RETE_DIRETTO` (`soloInvito`), e chiude il loro follow-up. `accodaContatti` conta solo i `contatta_persona` FATTO dopo la creazione della voce. Lettura prod: `scripts/leggi-prod.sh "select …"` (read-only).
 >
 > v3.118.0: in "Aspetti la risposta" il canale dell'invio si legge solo dalla nota registrata all'invio (`Mandato via …` da `invio-tracciato.ts`, `… su LinkedIn dal CRM` dal Mac); `payload.canale` è il canale consigliato e non si usa più come ripiego.

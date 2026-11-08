@@ -20,8 +20,15 @@ fi
 ssh $SSH_OPTS "$VPS_HOST" "bash -s" <<REMOTE
 set -e
 cd $VPS_PATH
+prima=\$(git rev-parse HEAD)
 git pull -q origin main
 echo "server su: \$(git rev-parse --short HEAD)"
+# v3.120: con dipendenze nuove (package-lock cambiato) si installano dal lockfile, esatte.
+if git diff --name-only "\$prima" HEAD | grep -q '^package-lock.json$'; then
+  echo "dipendenze cambiate: npm ci"
+  if ! npm ci --no-audit --no-fund > /tmp/npm-ci-crm.log 2>&1; then echo "NPM CI FALLITO"; tail -20 /tmp/npm-ci-crm.log; exit 1; fi
+  npx prisma generate > /tmp/prisma-gen-crm.log 2>&1 || { echo "PRISMA GENERATE FALLITO"; tail -20 /tmp/prisma-gen-crm.log; exit 1; }
+fi
 if ! NODE_OPTIONS="--max-old-space-size=4096" npm run build > /tmp/build-crm.log 2>&1; then
   echo "BUILD FALLITA"; tail -20 /tmp/build-crm.log; exit 1
 fi

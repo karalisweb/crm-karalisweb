@@ -1,4 +1,8 @@
 import nodemailer from 'nodemailer';
+import MailComposer from 'nodemailer/lib/mail-composer';
+import type Mail from 'nodemailer/lib/mailer';
+import { randomUUID } from 'crypto';
+import { ImapFlow } from 'imapflow';
 import { db } from './db';
 
 // Configurazione SMTP da variabili d'ambiente
@@ -271,6 +275,48 @@ function buildGdprFooterHtml(gdpr: Record<string, string | null>, leadId?: strin
   </p>`;
 }
 
+// ============================================================================
+// COPIA IN POSTA INVIATA (v3.120, Alessio 2026-11-08: "se usiamo il CRM per scrivere via mail non vedo la mail")
+// Una mail spedita via SMTP non finisce da sola in "Posta inviata": lo fa il programma di posta. Qui il CRM fa lo
+// stesso: mette la stessa mail (stesso Message-ID, così la risposta si attacca alla conversazione) nella cartella
+// Inviata della casella di Alessio via IMAP. Casella: IMAP_* se impostate, altrimenti le credenziali SMTP principali.
+// Se non riesce la mail è comunque partita: si registra solo che la copia manca.
+// ============================================================================
+const NOMI_INVIATA = /^(INBOX[./])?(Sent|Sent Items|Sent Messages|Inviata|Inviati|Posta inviata|Elementi inviati)$/i;
+
+/** Senza `raw` si collega e trova solo la cartella (controllo, non scrive niente). */
+export async function salvaInPostaInviata(raw: Buffer | null, data = new Date()): Promise<{ ok: true; cartella: string } | { ok: false; errore: string }> {
+  const pass = process.env.IMAP_PASSWORD || process.env.SMTP_PASSWORD;
+  if (!pass) return { ok: false, errore: 'credenziali della casella non impostate' };
+  const client = new ImapFlow({
+    host: process.env.IMAP_HOST || process.env.SMTP_HOST || 'mail.karalisweb.net',
+    port: parseInt(process.env.IMAP_PORT || '993'),
+    secure: (process.env.IMAP_PORT || '993') === '993',
+    auth: { user: process.env.IMAP_USER || process.env.SMTP_USER || 'alessio@karalisweb.net', pass },
+    tls: { rejectUnauthorized: false },
+    logger: false,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+  });
+  try {
+    await client.connect();
+    const cartelle = await client.list();
+    const inviata = process.env.IMAP_SENT_FOLDER
+      ?? cartelle.find((c) => c.specialUse === '\\Sent')?.path
+      ?? cartelle.find((c) => NOMI_INVIATA.test(c.path))?.path;
+    if (!inviata) return { ok: false, errore: `cartella Posta inviata non trovata (${cartelle.map((c) => c.path).join(', ')})` };
+    if (raw) await client.append(inviata, raw, ['\\Seen'], data);
+    return { ok: true, cartella: inviata };
+  } catch (error) {
+    return { ok: false, errore: error instanceof Error ? error.message : String(error) };
+  } finally {
+    await client.logout().catch(() => client.close());
+  }
+}
+
+export type EsitoOutreach = { inviata: boolean; inInviata: boolean | null };
+
 // Invia email di outreach a un prospect
 export async function sendOutreachEmail(
   to: string,
@@ -279,6 +325,17 @@ export async function sendOutreachEmail(
   leadId?: string,
   options?: { fromName?: string; fromEmail?: string; allegati?: { filename: string; content: Buffer; contentType?: string }[] },
 ): Promise<boolean> {
+  return (await mandaOutreach(to, subject, body, leadId, options)).inviata;
+}
+
+/** Come sendOutreachEmail, e con `inInviata` mette anche la copia in Posta inviata (null = non richiesta). */
+export async function mandaOutreach(
+  to: string,
+  subject: string,
+  body: string,
+  leadId?: string,
+  options?: { fromName?: string; fromEmail?: string; allegati?: { filename: string; content: Buffer; contentType?: string }[]; inInviata?: boolean },
+): Promise<EsitoOutreach> {
   const gdpr = await getGdprSettings();
 
   const fromEmail = options?.fromEmail || gdpr.emailFromAddress || process.env.SMTP_FROM_OUTREACH || process.env.SMTP_USER || 'alessio@karalisweb.net';
@@ -321,23 +378,39 @@ export async function sendOutreachEmail(
       unsubHeaders['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
     }
 
-    // Outreach: usa il trasporto dedicato (dominio separato) se configurato.
-    const info = await getOutreachTransporter().sendMail({
+    // Message-ID e data fissati qui: la copia in Posta inviata è la stessa mail, e la risposta si attacca a lei.
+    const data = new Date();
+    const dominio = fromEmail.split('@')[1] || 'karalisweb.net';
+    const mail: Mail.Options = {
       from: `"${fromName}" <${fromEmail}>`,
       to,
       ...(bccAddress && { bcc: bccAddress }),
       subject,
       text: plainText,
       html,
+      date: data,
+      messageId: `<${randomUUID()}@${dominio}>`,
       ...(Object.keys(unsubHeaders).length > 0 && { headers: unsubHeaders }),
       ...(options?.allegati?.length && { attachments: options.allegati }),
-    });
-
+    };
+    // Outreach: usa il trasporto dedicato (dominio separato) se configurato.
+    const info = await getOutreachTransporter().sendMail(mail);
     console.log(`[EMAIL] Outreach inviato a ${to}, messageId: ${info.messageId}`);
-    return true;
+
+    if (!options?.inInviata) return { inviata: true, inInviata: null };
+    try {
+      const raw = await new MailComposer(mail).compile().build();
+      const copia = await salvaInPostaInviata(raw, data);
+      if (copia.ok) console.log(`[EMAIL] Copia in ${copia.cartella} salvata per ${to}`);
+      else console.error(`[EMAIL] Copia in Posta inviata non salvata per ${to}: ${copia.errore}`);
+      return { inviata: true, inInviata: copia.ok };
+    } catch (error) {
+      console.error('[EMAIL] Copia in Posta inviata non salvata:', error);
+      return { inviata: true, inInviata: false };
+    }
   } catch (error) {
     console.error('[EMAIL] Errore invio outreach:', error);
-    return false;
+    return { inviata: false, inInviata: null };
   }
 }
 

@@ -7,7 +7,7 @@
  */
 import type { ActivityType } from "@prisma/client";
 import { db } from "@/lib/db";
-import { sendOutreachEmail } from "@/lib/email";
+import { mandaOutreach } from "@/lib/email";
 import { KINDS_RETE, decisioneRete } from "./rete";
 
 export type Canale = "whatsapp" | "linkedin" | "email" | "pagina";
@@ -23,6 +23,7 @@ export async function registraInvio(voceId: string, canale: Canale, chi: string)
   if (!v || !KINDS_RETE.includes(v.kind)) return { ok: false, errore: "Messaggio non trovato", stato: 404 };
   const p = (v.payload ?? {}) as { email?: string | null; messaggio?: string | null; azienda?: string | null; casoId?: string | null };
 
+  let copiaInviata: boolean | null = null;
   if (canale === "email") {
     if (!p.email || !p.messaggio) return { ok: false, errore: "Manca l'indirizzo email o il testo", stato: 400 };
     if (v.status !== "IN_ATTESA") return { ok: false, errore: "Già mandato", stato: 409 };
@@ -34,8 +35,10 @@ export async function registraInvio(voceId: string, canale: Canale, chi: string)
     if (v.kind === "RETE_CASO_STUDIO" && !conPdf?.pdf) return { ok: false, errore: "Il PDF del caso studio non c'è: caricalo in Casi studio", stato: 400 };
     const oggetto = conPdf ? `Il caso studio: ${conPdf.titolo}` : p.casoId ? `Un caso studio per ${azienda}` : `Per ${azienda}`;
     const allegati = conPdf?.pdf ? [{ filename: conPdf.pdfNome || "caso-studio.pdf", content: Buffer.from(conPdf.pdf), contentType: "application/pdf" }] : undefined;
-    const inviata = await sendOutreachEmail(p.email, oggetto, p.messaggio, v.leadId ?? undefined, { allegati });
-    if (!inviata) return { ok: false, errore: "L'email non è partita: riprova fra poco", stato: 502 };
+    // v3.120: anche in Posta inviata, così Alessio la vede nella sua posta con la risposta attaccata.
+    const esito = await mandaOutreach(p.email, oggetto, p.messaggio, v.leadId ?? undefined, { allegati, inInviata: true });
+    if (!esito.inviata) return { ok: false, errore: "L'email non è partita: riprova fra poco", stato: 502 };
+    copiaInviata = esito.inInviata;
   }
 
   // Segnato come mandato (una volta sola) e il percorso va avanti come col pulsante "Mandato".
@@ -45,7 +48,7 @@ export async function registraInvio(voceId: string, canale: Canale, chi: string)
   });
   if (r.count) await decisioneRete(voceId, "APPROVATO");
   if (v.leadId) {
-    await db.activity.create({ data: { leadId: v.leadId, type: TIPO[canale], notes: `[Percorso] ${v.title} — via ${NOME[canale]}${canale === "email" ? ` a ${p.email}` : ""}`, createdBy: chi } });
+    await db.activity.create({ data: { leadId: v.leadId, type: TIPO[canale], notes: `[Percorso] ${v.title} — via ${NOME[canale]}${canale === "email" ? ` a ${p.email}${copiaInviata === false ? " (copia in Posta inviata NON salvata)" : copiaInviata ? " (copia in Posta inviata)" : ""}` : ""}`, createdBy: chi } });
     await db.lead.update({ where: { id: v.leadId }, data: { lastContactedAt: new Date() } }).catch(() => null);
   }
   return { ok: true };
