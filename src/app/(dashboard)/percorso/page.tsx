@@ -141,17 +141,19 @@ function Percorso() {
   // Già in ordine di stato dal server: qui si raggruppano, con il nome dello stato sopra.
   // v3.120 (Alessio, 2026-11-08: "separare nei 'aspetti la risposta' chi ho contattato via mail, chi via WhatsApp"):
   // "Aspetti la risposta" si divide per il canale registrato all'invio, così sai dove andare a cercare la risposta.
+  // v3.121 (Alessio, 2026-11-08): anche i follow-up, per il canale del messaggio a cui fanno seguito.
+  const perCanale = (stato: string) => stato === "risposta" || stato === "followup";
   const chiaveDi = (a: AziendaPercorso) => {
-    if (a.stato !== "risposta") return { stato: a.stato, nome: a.statoNome, ordine: 0 };
+    if (!perCanale(a.stato)) return { stato: a.stato, nome: a.statoNome, ordine: 0 };
     const c = a.contatto?.inviato?.canale ?? "segnato a mano";
     const i = CANALI_RISPOSTA.findIndex((x) => x.canale === c);
     const v = CANALI_RISPOSTA[i < 0 ? CANALI_RISPOSTA.length - 1 : i];
-    return { stato: `risposta-${v.id}`, nome: `${a.statoNome} · ${v.nome}`, ordine: i < 0 ? CANALI_RISPOSTA.length : i + 1 };
+    return { stato: `${a.stato}-${v.id}`, nome: `${a.statoNome} · ${v.nome}`, ordine: i < 0 ? CANALI_RISPOSTA.length : i + 1 };
   };
   const raggruppa = (n: number) => (d?.aziende ?? []).filter((a) => a.passo === n)
     .map((a, pos) => ({ a, pos, k: chiaveDi(a) }))
-    // Stesso ordine del server; dentro "Aspetti la risposta", per canale.
-    .sort((x, y) => (x.a.stato === "risposta" && y.a.stato === "risposta" ? x.k.ordine - y.k.ordine || x.pos - y.pos : x.pos - y.pos))
+    // Stesso ordine del server; dentro "Aspetti la risposta" e "Follow-up", per canale.
+    .sort((x, y) => (x.a.stato === y.a.stato && perCanale(x.a.stato) ? x.k.ordine - y.k.ordine || x.pos - y.pos : x.pos - y.pos))
     .reduce<{ stato: string; nome: string; aziende: AziendaPercorso[] }[]>((g, { a, k }) => {
       const ultimo = g[g.length - 1];
       if (ultimo?.stato === k.stato) ultimo.aziende.push(a);

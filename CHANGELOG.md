@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.121.0] - 2026-11-08
+
+### Changed
+- **Percorso: anche "Follow-up da mandare" è diviso per canale** (via mail, via WhatsApp, via LinkedIn, messaggio alla pagina, segnato a mano), come "Aspetti la risposta".
+
 ## [3.120.0] - 2026-11-08
 
 ### Added
