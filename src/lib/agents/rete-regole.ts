@@ -206,6 +206,41 @@ export function testoFollowupContatto(decisore: string | null): string {
   return `Ciao${nome}, ti riscrivo per il messaggio di qualche giorno fa: se ti va ti mando il caso studio, ci metti due minuti a capire se può servire anche a voi. Mi basta un sì. Alessio`;
 }
 
+/** v3.118: il canale di un messaggio mandato si legge dalla nota registrata all'invio. */
+export function canaleDallaNota(note: string | null | undefined): string | null {
+  return note?.match(/via (WhatsApp|LinkedIn|email|messaggio alla pagina)/i)?.[1] ?? (note && /su LinkedIn dal CRM/i.test(note) ? "LinkedIn" : null);
+}
+
+/** v3.125: mail e telefono trovati a mano. whatsapp c'è solo se il numero è un cellulare. */
+export interface ContattoManuale { email: string | null; telefono: string | null; whatsapp: string | null }
+
+/** Controlla e mette in ordine quello che scrive Alessio. Un fisso italiano non ha WhatsApp; un numero estero si considera cellulare. */
+export function pulisciContattoManuale(dati: { email?: string | null; telefono?: string | null }): ({ ok: true } & ContattoManuale) | { ok: false; errore: string } {
+  const e = dati.email?.trim().toLowerCase() || null;
+  if (e && !/^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e)) return { ok: false, errore: "La mail non sembra giusta" };
+  const t = dati.telefono?.trim() || null;
+  if (!e && !t) return { ok: false, errore: "Scrivi la mail o il telefono" };
+  if (!t) return { ok: true, email: e, telefono: null, whatsapp: null };
+
+  const internazionale = /^(\+|00)/.test(t);
+  const tutte = t.replace(/\D/g, "");
+  const cifre = t.startsWith("00") ? tutte.slice(2) : tutte;
+  const locale = cifre.startsWith("39") && cifre.length > 10 ? cifre.slice(2) : cifre;
+  if (/^3\d{8,9}$/.test(locale)) return { ok: true, email: e, telefono: `+39${locale}`, whatsapp: `39${locale}` };
+  if (/^0\d{5,10}$/.test(locale)) return { ok: true, email: e, telefono: `+39${locale}`, whatsapp: null };
+  if (internazionale && !cifre.startsWith("39") && /^\d{8,15}$/.test(cifre)) return { ok: true, email: e, telefono: `+${cifre}`, whatsapp: cifre };
+  return { ok: false, errore: "Il numero non sembra giusto" };
+}
+
+/** v3.125: già scritto da una parte, ora si scrive da un'altra: il messaggio dice perché ti riscrive. */
+export function testoCambioCanale(decisore: string | null, canalePrima: string | null, casoGiaMandato = false): string {
+  const nome = decisore && decisore.trim() && decisore !== "chi decide" ? ` ${nomeProprio(decisore)}` : "";
+  const dove = !canalePrima ? "" : canalePrima === "email" ? " per email" : canalePrima === "messaggio alla pagina" ? " alla pagina dell'azienda" : ` su ${canalePrima}`;
+  return casoGiaMandato
+    ? `Ciao${nome}, ti avevo mandato il caso studio${dove} qualche giorno fa, magari ti è sfuggito e ti riscrivo qui. Se ti va ne parliamo: mi basta un sì. Alessio`
+    : `Ciao${nome}, ti avevo scritto${dove} qualche giorno fa, magari ti è sfuggito e ti riscrivo qui. Se ti va ti mando il caso studio, ci metti due minuti a capire se può servire anche a voi. Mi basta un sì. Alessio`;
+}
+
 export function testoPromemoria(ponte: string, decisore: string): string {
   return `Ciao ${nomeProprio(ponte)}, ti riscrivo solo per sapere se sei riuscito a sentire ${decisore}. Nessuna fretta, e se non è il momento va benissimo. Alessio`;
 }

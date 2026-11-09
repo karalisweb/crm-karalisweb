@@ -11,7 +11,7 @@ import { mezzanotteRoma } from "./bni-regole";
 import { KIND_FASCICOLO_BASE } from "./turno";
 import { CHIAVI_BROWSER } from "./registro";
 import { KIND_COMMENTO, KINDS_RETE, SCARTATA_DAL_CRM, cerchiaNomi, datiAzienda, turnoRete } from "./rete";
-import { nomiDaConfermare, piattaformaPiuCommentata } from "./rete-regole";
+import { canaleDallaNota, nomiDaConfermare, piattaformaPiuCommentata } from "./rete-regole";
 import { PASSI, STATI, coseDiOggi, ordineStato, passoDi, type Azione, type Cosa, type Esito, type Passo, type Stato, type Tocca } from "./percorso-regole";
 
 export interface AziendaNelPercorso {
@@ -72,8 +72,7 @@ async function dettagliContatto(righe: { leadId: string; voci: Stato["voci"]; de
     // v3.118 (Alessio, 2026-11-07: "molti sono indicati che abbiamo inviato la mail ma non è vero"): il canale è solo
     // quello registrato all'invio. payload.canale è il canale CONSIGLIATO quando il messaggio è stato preparato, non
     // quello usato: segnato a mano o mandato dal Mac su LinkedIn, prima risultava "via email".
-    const canaleNota = m?.note?.match(/via (WhatsApp|LinkedIn|email|messaggio alla pagina)/i)?.[1]
-      ?? (m?.note && /su LinkedIn dal CRM/i.test(m.note) ? "LinkedIn" : null);
+    const canaleNota = canaleDallaNota(m?.note);
     const canale = canaleNota ?? "segnato a mano";
     const dove = canale === "email" ? str(p.email) : canale === "WhatsApp" ? str(p.telefono) : canale === "LinkedIn" ? str(p.linkedin) : canale === "messaggio alla pagina" ? str(p.pagina) : null;
     const tipo = m ? TIPO_INVIATO[m.kind] : "contatto";

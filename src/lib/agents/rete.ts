@@ -16,6 +16,7 @@ import { KIND_FASCICOLO_BASE } from "./turno";
 import { mezzanotteRoma, norm } from "./bni-regole";
 import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento } from "./motore";
 import {
+  canaleDallaNota, testoCambioCanale, type ContattoManuale,
   FASI_ATTIVE, GIORNI_PAUSA, pubblicaDa, stradaContatto, capienzaLavorazione, chiDecideTesto, forzaAzienda, prossimaAzione,
   testoContattoDiretto, testoDirettoConPonte, testoFollowupContatto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
   COMMENTI_PER_CONTATTO, PIATTAFORME, paginaPreferita, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
@@ -43,6 +44,7 @@ export const KIND_RETE_FOLLOWUP = "RETE_FOLLOWUP";
 export const KIND_RETE_CASO = "RETE_CASO_STUDIO";
 /** v3.124: una mail di risposta letta dalla casella: "Ti ha risposto". */
 export const KIND_RETE_RISPOSTA = "RETE_RISPOSTA";
+const KIND_MESSAGGI_A_CHI_DECIDE = [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP, KIND_RETE_CASO];
 export const KINDS_RETE = [KIND_RETE_PONTE, KIND_RETE_DIRETTO, KIND_RETE_PROMEMORIA, KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, KIND_RETE_FOLLOWUP, KIND_RETE_CASO, KIND_RETE_RISPOSTA];
 
 /** Decisori al giorno da scaldare con i commenti (letture LinkedIn). */
@@ -424,11 +426,11 @@ async function accodaContatti(oggi: Date): Promise<number> {
   });
   let accodati = 0;
   for (const v of voci) {
-    const p = (v.payload ?? {}) as { linkedin?: string; messaggio?: string; decisore?: string; telefono?: string | null; email?: string | null };
+    const p = (v.payload ?? {}) as { linkedin?: string; messaggio?: string; decisore?: string; telefono?: string | null; email?: string | null; contattoManuale?: boolean };
     if (!v.leadId || !p.linkedin || !/linkedin\.com\/in\//i.test(p.linkedin) || !p.messaggio) continue;
     // v3.117 (Alessio: "poi mail o WhatsApp per il caso studio"): con WhatsApp o mail scrive Alessio da lì; LinkedIn
     // solo se non c'è altro (ormai siete collegati: il messaggio, non l'invito).
-    if (v.kind === KIND_RETE_CONTATTO && (p.telefono || p.email)) continue;
+    if ((v.kind === KIND_RETE_CONTATTO || p.contattoManuale) && (p.telefono || p.email)) continue;
     // v3.119: un invito fatto per una voce vecchia non blocca il messaggio di questa (conta solo quello fatto dopo).
     if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { status: "FATTO", queuedAt: { gte: v.createdAt } }] }, select: { id: true } })) continue;
     if (await archiviaSeNonRiuscito(v.id, v.leadId)) continue;
@@ -544,7 +546,8 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
     const persona = ((report?.findings as { persone?: Record<string, unknown>[] } | null)?.persone ?? [])[0] ?? {};
     // Le aziende riportate al collegamento (v3.119) ripartono da lì; le altre contano dall'ingresso nel percorso.
     const dal = l.note === NOTA_SOLO_INVITO ? l.updatedAt : l.createdAt;
-    const strada = stradaContatto({
+    const aMano = await contattoManualeDi(l.leadId);
+    const strada = aMano?.email || aMano?.whatsapp ? "contatta" : stradaContatto({
       whatsapp: !!canale.whatsapp, email: !!canale.email, emailPersonale: canale.emailPersonale, linkedin: !!(canale.linkedin ?? profili.linkedin), instagram: !!profili.instagram,
       pubblica: pubblicaDa(persona, oggi), loConosce: !!membro, oreInCorso: (oggi.getTime() - dal.getTime()) / 3600_000,
     });
@@ -686,6 +689,97 @@ export async function creaFollowup(lavorazioneId: string): Promise<boolean> {
     },
   });
   return true;
+}
+
+/** v3.125: mail e telefono trovati a mano. Una voce per azienda, già chiusa: non compare fra le cose da fare. */
+export const KIND_CONTATTO_MANUALE = "CONTATTO_MANUALE";
+
+async function contattoManualeDi(leadId: string): Promise<ContattoManuale | null> {
+  const v = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_CONTATTO_MANUALE }, orderBy: { createdAt: "desc" }, select: { payload: true } });
+  return (v?.payload as unknown as ContattoManuale | null) ?? null;
+}
+
+export type EsitoContatto = "da_contattare" | "canale_aggiunto" | "nuovo_messaggio" | "salvato";
+
+/**
+ * v3.125 (Alessio, 2026-11-09: "dopo una richiesta di collegamento trovo email o telefono: aggiungere o cambiare
+ * canale"). Salva il contatto e lo fa valere subito:
+ *   - messaggio già pronto: il nuovo canale si aggiunge a quel messaggio;
+ *   - collegamento o riscaldamento in corso: si smette di aspettare, il messaggio va in Da contattare;
+ *   - già scritto, nessuna risposta: un nuovo messaggio, solo sul nuovo canale.
+ * Non manda niente: scrive Alessio. Un numero fisso si salva per chiamare e non cambia il percorso.
+ */
+export async function aggiungiContatto(leadId: string, nuovo: ContattoManuale, chi: string, oggi = new Date()): Promise<EsitoContatto | null> {
+  const lead = await db.lead.findUnique({ where: { id: leadId }, select: { email: true, phone: true } });
+  if (!lead) return null;
+
+  const gia = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_CONTATTO_MANUALE }, orderBy: { createdAt: "desc" }, select: { id: true, payload: true } });
+  const prima = (gia?.payload as unknown as ContattoManuale | null) ?? { email: null, telefono: null, whatsapp: null };
+  const salvato: ContattoManuale = { email: nuovo.email ?? prima.email, ...(nuovo.telefono ? { telefono: nuovo.telefono, whatsapp: nuovo.whatsapp } : { telefono: prima.telefono, whatsapp: prima.whatsapp }) };
+  const dati = { payload: salvato as unknown as Prisma.InputJsonValue, decidedAt: oggi, decidedBy: chi };
+  if (gia) await db.approvalItem.update({ where: { id: gia.id }, data: dati });
+  else await db.approvalItem.create({ data: { ...dati, leadId, kind: KIND_CONTATTO_MANUALE, agent: "rete", status: "APPROVATO", title: "Mail o telefono trovati a mano" } });
+
+  // Anche le altre pagine del CRM lo vedono. La mail dell'azienda, se c'è, resta com'è.
+  await db.lead.update({
+    where: { id: leadId },
+    data: {
+      ...(nuovo.email && !lead.email ? { email: nuovo.email } : {}),
+      ...(nuovo.whatsapp ? { whatsappNumber: nuovo.whatsapp, whatsappSource: "manual", ...(lead.phone ? {} : { phone: nuovo.telefono }) } : nuovo.telefono ? { phone: nuovo.telefono, phoneVerified: true } : {}),
+    },
+  });
+  const cosa = [nuovo.email && `mail ${nuovo.email}`, nuovo.telefono && `${nuovo.whatsapp ? "WhatsApp" : "telefono"} ${nuovo.telefono}`].filter(Boolean).join(", ");
+  const sostituito = nuovo.telefono && !nuovo.whatsapp && lead.phone ? ` (prima il telefono era ${lead.phone})` : "";
+  await db.activity.create({ data: { leadId, type: "NOTE", notes: `[Percorso] Contatto trovato a mano: ${cosa}${sostituito}`, createdBy: chi } });
+
+  if (!nuovo.email && !nuovo.whatsapp) return "salvato";
+
+  // Un messaggio già pronto: si aggiunge il canale, il testo resta.
+  const aperte = await db.approvalItem.findMany({ where: { leadId, status: "IN_ATTESA", kind: { in: KIND_MESSAGGI_A_CHI_DECIDE } }, select: { id: true, payload: true } });
+  if (aperte.length) {
+    for (const v of aperte) {
+      const payload = { ...((v.payload ?? {}) as Record<string, unknown>), ...(nuovo.whatsapp ? { telefono: nuovo.whatsapp } : {}), ...(nuovo.email ? { email: nuovo.email, emailPersonale: true } : {}), contattoManuale: true };
+      await db.approvalItem.update({ where: { id: v.id }, data: { payload: payload as Prisma.InputJsonValue } });
+    }
+    // Se il Mac doveva scrivere su LinkedIn e non ha ancora iniziato, si ferma: scrivi tu dal canale nuovo.
+    await db.agentRun.updateMany({ where: { leadId, agent: "contatta_persona", status: "IN_CODA" }, data: { status: "FALLITO", finishedAt: oggi, error: "Annullato: Alessio ha trovato WhatsApp o mail" } });
+    return "canale_aggiunto";
+  }
+
+  const l = await db.lavorazione.findUnique({ where: { leadId } });
+  if (!l) return "salvato";
+
+  if (l.fase === "MAPPATA") {
+    const d = await datiAzienda(leadId, !!l.scaldataAt);
+    await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_SCALDARE, decisore: l.decisore ?? d.decisori[0]?.nome ?? null, ponteNome: null, ponteMembroId: null } });
+    return (await dopoCommento(leadId, oggi, true)) ? "da_contattare" : "salvato";
+  }
+
+  if (l.fase !== "CHIESTA" || !contattoDiretto(l) || l.presentatoAt) return "salvato";
+  if (await db.approvalItem.findFirst({ where: { leadId, kind: KIND_RETE_RISPOSTA, status: "IN_ATTESA" }, select: { id: true } })) return "salvato";
+  const ultimo = await db.approvalItem.findFirst({ where: { leadId, kind: { in: KIND_MESSAGGI_A_CHI_DECIDE }, status: "APPROVATO" }, orderBy: { decidedAt: "desc" }, select: { kind: true, note: true, payload: true } });
+  if (!ultimo) return "salvato";
+  const p = (ultimo.payload ?? {}) as Record<string, unknown>;
+  const decisore = l.decisore ?? (typeof p.decisore === "string" ? p.decisore : null);
+  const azienda = (await db.lead.findUnique({ where: { id: leadId }, select: { name: true } }))?.name ?? "";
+  await db.approvalItem.create({
+    data: {
+      leadId,
+      kind: KIND_RETE_FOLLOWUP,
+      agent: "rete",
+      title: `Nuovo canale: riscrivi a ${decisore ? chiDecideTesto(decisore, azienda) : azienda}`,
+      payload: {
+        lavorazioneId: l.id,
+        decisore,
+        azienda,
+        messaggio: testoCambioCanale(decisore, canaleDallaNota(ultimo.note), ultimo.kind === KIND_RETE_CASO),
+        telefono: nuovo.whatsapp,
+        email: nuovo.email,
+        contattoManuale: true,
+      } as Prisma.InputJsonValue,
+    },
+  });
+  return "nuovo_messaggio";
 }
 
 /**
@@ -836,14 +930,16 @@ function emailDellaPersona(email: string[], decisore: string): string | null {
  * dell'azienda resta per chiamare.
  */
 export async function canaleDiretto(leadId: string, decisore: string | null): Promise<{ whatsapp: string | null; email: string | null; emailPersonale: boolean; telefono: string | null; linkedin: string | null }> {
-  const [lead, persona, contatto, membro] = await Promise.all([
+  const [lead, persona, contatto, membro, aMano] = await Promise.all([
     db.lead.findUnique({ where: { id: leadId }, select: { website: true, phone: true, email: true } }),
     decisore ? db.persona.findFirst({ where: { leadId, nome: decisore }, select: { linkedinUrl: true } }) : null,
     db.agentReport.findFirst({ where: { leadId, agent: "contatto" }, orderBy: { collectedAt: "desc" }, select: { findings: true } }),
     decisore ? db.bniMembro.findFirst({ where: { name: { equals: decisore, mode: "insensitive" } }, select: { phone: true, email: true } }) : null,
+    contattoManualeDi(leadId),
   ]);
-  let whatsapp = membro?.phone ? normalizePhoneForWhatsApp(membro.phone) : null;
-  let emailPersona = membro?.email ?? null;
+  // v3.125: quello che Alessio ha trovato e scritto lui viene prima di tutto.
+  let whatsapp = aMano?.whatsapp ?? (membro?.phone ? normalizePhoneForWhatsApp(membro.phone) : null);
+  let emailPersona = aMano?.email ?? membro?.email ?? null;
   let emailAzienda = lead?.email ?? null;
   if (lead?.website) {
     const home = lead.website.startsWith("http") ? lead.website : `https://${lead.website}`;
@@ -878,7 +974,7 @@ export async function canaleDiretto(leadId: string, decisore: string | null): Pr
     }
   }
   // Un cellulare dell'azienda (3…) vale anche per WhatsApp.
-  const tel = lead?.phone ?? null;
+  const tel = aMano?.telefono ?? lead?.phone ?? null;
   if (!whatsapp && tel && /^(\+?39)?\s*3/.test(tel.replace(/[^\d+]/g, ""))) whatsapp = normalizePhoneForWhatsApp(tel);
   // v3.115: le mail lette dal sito possono portarsi dietro pezzi di HTML ("…it\&quot;"): si tiene solo l'indirizzo.
   const pulita = (e: string | null) => e?.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/)?.[0]?.toLowerCase() ?? null;

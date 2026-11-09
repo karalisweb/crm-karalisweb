@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.125.0] - 2026-11-09
+
+### Added
+- **Mail e telefono trovati dopo si possono aggiungere**: su ogni scheda del Percorso (dal passo 2) e nella pagina dell'azienda c'è **Aggiungi mail o telefono**. Il CRM li usa subito: se c'è un messaggio pronto, il nuovo canale si aggiunge a quel messaggio; se il collegamento o il riscaldamento sono in corso, l'azienda passa a **Da contattare** senza aspettare; se le hai già scritto e non ha risposto, trovi un nuovo messaggio solo sul nuovo canale, che dice dove le avevi scritto prima. Non parte niente da solo: scrivi tu. Un cellulare vale per WhatsApp; un numero fisso si salva per chiamare e non cambia il percorso.
+
 ## [3.124.0] - 2026-11-08
 
 ### Added

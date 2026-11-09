@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Check, ExternalLink, FileText, Loader2, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { CosaDirgli } from "./cosa-dirgli";
+import { AggiungiContatto } from "./aggiungi-contatto";
 import { canaliInOrdine } from "@/lib/agents/rete-regole";
 
 export type Azione =
@@ -247,6 +248,7 @@ export function SchedaPercorso({ a, passi, onCambio, evidenziata }: { a: Azienda
         {/* v3.99: Elimina a qualunque passo (contatto, scaldare, approfondire): esce dal percorso per sempre. */}
         {bottone("elimina", "Elimina", () => { if (confirm(`Elimino ${a.nome}? Esce dal percorso e il CRM non la propone più.`)) void fai("elimina", `/api/percorso/${a.leadId}`, "DELETE", undefined, "Eliminata"); }, "ghost")}
       </div>
+      {a.passo >= 2 && <AggiungiContatto leadId={a.leadId} onFatto={onCambio} />}
     </CardContent></Card>
   );
 }

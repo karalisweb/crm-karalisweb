@@ -3,7 +3,43 @@ import {
   capienzaLavorazione, forzaAzienda, nomiDaConfermare, prossimaAzione, settimanaConPosto, stessaPersona, strade, testoRichiestaPonte,
   type DatiAzienda,
   frequenzaTesto, canaliInOrdine, paginaPreferita, piattaformaConsigliata, piattaformaDi, testoContattoDopoCommenti, testoMessaggioPagina, piattaformaPersona,
+  pulisciContattoManuale, testoCambioCanale, canaleDallaNota,
 } from "../rete-regole";
+
+describe("contatto trovato a mano (v3.125)", () => {
+  it("un cellulare vale per WhatsApp, in qualunque modo sia scritto", () => {
+    for (const t of ["347 123 4567", "+39 347.123.4567", "00393471234567", "3471234567"]) {
+      expect(pulisciContattoManuale({ telefono: t })).toEqual({ ok: true, email: null, telefono: "+393471234567", whatsapp: "393471234567" });
+    }
+  });
+  it("un cellulare che inizia per 39 non perde il prefisso", () => {
+    expect(pulisciContattoManuale({ telefono: "392 123 4567" })).toMatchObject({ whatsapp: "393921234567" });
+  });
+  it("un fisso si salva ma WhatsApp no", () => {
+    expect(pulisciContattoManuale({ telefono: "070 123456" })).toEqual({ ok: true, email: null, telefono: "+39070123456", whatsapp: null });
+  });
+  it("un numero estero vale per WhatsApp", () => {
+    expect(pulisciContattoManuale({ telefono: "+41 79 123 45 67" })).toMatchObject({ telefono: "+41791234567", whatsapp: "41791234567" });
+  });
+  it("la mail si mette in ordine, quelle sbagliate no", () => {
+    expect(pulisciContattoManuale({ email: " Mario.Rossi@Azienda.IT " })).toMatchObject({ ok: true, email: "mario.rossi@azienda.it" });
+    expect(pulisciContattoManuale({ email: "mario@azienda" })).toEqual({ ok: false, errore: "La mail non sembra giusta" });
+  });
+  it("niente da salvare o numero assurdo: errore", () => {
+    expect(pulisciContattoManuale({ email: " ", telefono: "" }).ok).toBe(false);
+    expect(pulisciContattoManuale({ telefono: "12345" })).toEqual({ ok: false, errore: "Il numero non sembra giusto" });
+  });
+  it("il messaggio dice da dove gli avevi scritto", () => {
+    expect(testoCambioCanale("Mario Rossi", "LinkedIn")).toContain("Ciao Mario, ti avevo scritto su LinkedIn");
+    expect(testoCambioCanale(null, "email")).toContain("Ciao, ti avevo scritto per email");
+    expect(testoCambioCanale("Mario Rossi", null, true)).toContain("ti avevo mandato il caso studio qualche giorno fa");
+  });
+  it("il canale si legge dalla nota dell'invio", () => {
+    expect(canaleDallaNota("Mandato via WhatsApp")).toBe("WhatsApp");
+    expect(canaleDallaNota("Messaggio mandato su LinkedIn dal CRM")).toBe("LinkedIn");
+    expect(canaleDallaNota(null)).toBeNull();
+  });
+});
 
 const accadueo: DatiAzienda = {
   decisori: [{ nome: "Accadueo Sardegna (socio)", grado: 2, contattiInComune: ["Giorgio Fodde", "Salvatore Moi"] }],
