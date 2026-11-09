@@ -9,7 +9,7 @@ import { ArrowLeft, Check, Globe, Laptop, Linkedin, Loader2, MapPin, Pencil, Pho
 import { CANALI, STATI_PRESENTAZIONE, data } from "@/components/ricerca/etichette";
 import { RETI_SOCIAL, noteDaReferti, type ReteSocial, type SezioneImpressione } from "@/lib/agents/impressioni-sezioni";
 import { CorpoCommento, CorpoContatto, CorpoPagina } from "@/components/agents/voci-cassetta";
-import { AggiungiContatto } from "@/components/percorso/aggiungi-contatto";
+import { ContattiAzienda } from "@/components/percorso/aggiungi-contatto";
 
 interface Leva { servizio: string; testo: string; prova: string }
 interface Referto { summary: string; findings: Record<string, unknown>; levers: Leva[]; data: string }
@@ -22,6 +22,7 @@ interface Scheda {
     pipelineStage: string;
   };
   perche: { canale: string; createdAt: string; chiave: { tipo: string; casoStudio: { id: string; titolo: string } | null; bniMembro: { id: string; name: string } | null } } | null;
+  contatti: { email: string | null; telefono: string | null };
   casi: { id: string; titolo: string }[];
   persone: { id: string; nome: string; ruolo: string | null; linkedinUrl: string | null; contattoInComune: string | null }[];
   ponti: { id: string; name: string; chapter: string | null; come: string; stato?: string }[];
@@ -462,9 +463,10 @@ export default function SchedaAziendaPage({ params }: { params: Promise<{ id: st
             {a.phone && <Button asChild variant="outline" size="sm"><a href={`tel:${a.phone}`}><Phone className="h-4 w-4 mr-1.5" />Chiama</a></Button>}
             {a.googleMapsUrl && <Button asChild variant="outline" size="sm"><a href={a.googleMapsUrl} target="_blank" rel="noopener noreferrer"><MapPin className="h-4 w-4 mr-1.5" />Mappa</a></Button>}
             <CambiaSito id={a.id} attuale={a.website} onFatto={() => setVersione((v) => v + 1)} />
-            <AggiungiContatto leadId={a.id} onFatto={() => setVersione((v) => v + 1)} />
             {a.pipelineStage !== "ARCHIVIATO" && <Button variant="ghost" size="sm" className="text-red-600 dark:text-red-400 ml-auto" onClick={() => setChiedeMotivo("elimina")} disabled={occupato}><Trash2 className="h-4 w-4 mr-1.5" />Elimina</Button>}
           </div>
+
+          <ContattiAzienda key={`${s.contatti.email}|${s.contatti.telefono}`} leadId={a.id} persona={s.persone[0]?.nome ?? null} email={s.contatti.email} telefono={s.contatti.telefono} onFatto={() => setVersione((v) => v + 1)} />
 
           {chiedeMotivo && (
             <div className="mt-4 rounded-md border px-3 py-3 space-y-2">

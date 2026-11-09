@@ -694,7 +694,7 @@ export async function creaFollowup(lavorazioneId: string): Promise<boolean> {
 /** v3.125: mail e telefono trovati a mano. Una voce per azienda, già chiusa: non compare fra le cose da fare. */
 export const KIND_CONTATTO_MANUALE = "CONTATTO_MANUALE";
 
-async function contattoManualeDi(leadId: string): Promise<ContattoManuale | null> {
+export async function contattoManualeDi(leadId: string): Promise<ContattoManuale | null> {
   const v = await db.approvalItem.findFirst({ where: { leadId, kind: KIND_CONTATTO_MANUALE }, orderBy: { createdAt: "desc" }, select: { payload: true } });
   return (v?.payload as unknown as ContattoManuale | null) ?? null;
 }

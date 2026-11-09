@@ -7,7 +7,7 @@ import { CHIAVI_BROWSER } from "@/lib/agents/registro";
 import { CATALOGO, modiAgenti } from "@/lib/agents/catalogo";
 import { collegamentoAzienda } from "@/lib/agents/motore";
 import { KIND_DA_CONTATTARE, daContattare, sceltaDaStato } from "@/lib/ricerca/contattare";
-import { KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, commentiFatti, pagineAzienda, piattaformaScelta, profiliDecisore } from "@/lib/agents/rete";
+import { KIND_COMMENTO, KIND_RETE_CONTATTO, KIND_RETE_PAGINA, commentiFatti, contattoManualeDi, pagineAzienda, piattaformaScelta, profiliDecisore } from "@/lib/agents/rete";
 import { COMMENTI_PER_CONTATTO, frequenzaTesto } from "@/lib/agents/rete-regole";
 import { pontiInZona } from "@/lib/agents/presentazioni";
 import { ETICHETTE_TIPO } from "@/lib/agents/presentazioni-regole";
@@ -24,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const lead = await db.lead.findUnique({
     where: { id },
     select: {
-      id: true, name: true, website: true, address: true, category: true, phone: true,
+      id: true, name: true, website: true, address: true, category: true, phone: true, email: true,
       googleRating: true, googleReviewsCount: true, googleMapsUrl: true, socialUrl: true, createdAt: true, pipelineStage: true,
       activities: { orderBy: { createdAt: "desc" }, take: 20, select: { id: true, type: true, notes: true, createdAt: true } },
     },
@@ -126,9 +126,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   };
 
   const { activities: _a, ...azienda } = lead;
+  const aMano = await contattoManualeDi(id);
   void _a;
   return NextResponse.json({
     azienda: { ...azienda, googleRating: azienda.googleRating != null ? Number(azienda.googleRating) : null },
+    contatti: { email: aMano?.email ?? azienda.email, telefono: aMano?.telefono ?? azienda.phone },
     perche: ritrovamenti[0] ?? null,
     casi,
     persone,

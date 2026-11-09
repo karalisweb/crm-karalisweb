@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.125.1] - 2026-11-09
+
+### Changed
+- **Mail e telefono si vedono e si scrivono direttamente nella pagina dell'azienda**: sotto il nome c'è sempre il riquadro "Mail e telefono di…", con quello che il CRM ha già e i campi per scrivere, senza dover aprire niente. Il pulsante sulle schede del Percorso ora c'è a tutti i passi.
+
 ## [3.125.0] - 2026-11-09
 
 ### Added
