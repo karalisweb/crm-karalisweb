@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.126.0] - 2026-11-10
+
+### Changed
+- **I colleghi trovati dal caso studio di Liliana restano e ricevono una proposta di collaborazione.** Consulenti, coach e chi fa marketing o comunicazione arrivati da un caso di consulenza non vengono più tolti come concorrenti. Il messaggio non gli vende il caso come a un cliente: racconta cosa hai fatto per una professionista come lui, dice cosa puoi aggiungere ai suoi clienti (rendere dimostrabile la promessa, sito, campagne, marketing che si misura) e propone di collaborare; il caso studio serve a fargli vedere come lavori. Anche il follow-up, il messaggio sul nuovo canale e l'invio del caso parlano di collaborazione. In Da contattare la scheda dice "è un collega, proponigli di collaborare".
+- I colleghi già tolti in automatico (es. Maria Letizia Russo) tornano in gioco con le loro voci riaperte, una volta sola. Fuori dai casi di consulenza i concorrenti restano fuori come prima.
+
 ## [3.125.1] - 2026-11-09
 
 ### Changed

@@ -12,7 +12,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { detectFranchise } from "@/lib/franchise-brands";
-import { NOTA_CONCORRENTE, rilevaConcorrente, togliConcorrenti } from "@/lib/concorrenti";
+import { NOTA_CONCORRENTE, chiaveDaColleghi, rilevaConcorrente, togliConcorrenti } from "@/lib/concorrenti";
 import { detectSegment } from "@/lib/segments";
 import { isRealWebsite } from "@/lib/url-utils";
 import { budgetDisponibile } from "@/lib/agents/costi";
@@ -80,7 +80,8 @@ export async function salvaAzienda(a: AziendaTrovata, chiaveId: string | null, c
   let esito: EsitoAzienda["esito"] = "esistente";
   if (!leadId) {
     const catena = detectFranchise(nome, sito);
-    const concorrente = catena ? null : rilevaConcorrente({ nome, categoria: a.categoria, sito });
+    // v3.126: dal caso di una consulente (Liliana) i colleghi restano: gli si propone di collaborare.
+    const concorrente = catena || (await chiaveDaColleghi(chiaveId)) ? null : rilevaConcorrente({ nome, categoria: a.categoria, sito });
     const lead = await db.lead.create({
       data: {
         name: nome,
@@ -258,7 +259,7 @@ async function cercaSuMaps(termine: string, zona: string, chiaveId: string, cont
     categoria: i.category ?? termine, placeId: i.place_id, rating: i.rating?.value ?? null, recensioni: i.rating?.votes_count ?? null,
     mapsUrl: i.place_id ? `https://www.google.com/maps/place/?q=place_id:${i.place_id}` : null,
   }));
-  const filtro = await filtraSimili(contesto, candidati);
+  const filtro = await filtraSimili(contesto, candidati, await chiaveDaColleghi(chiaveId));
   const simili = candidati.filter((c, i) => filtro.tenere.has(i) && nellaZona(c.indirizzo, zona, escluse));
   const e: EsitoPasso = { ricerca, canale: "maps", trovati: items.length, diversi: candidati.length - simili.length, nuove: 0, esistenti: 0, scartate: 0, rimandati: 0, costCents: costCents + filtro.costCents };
   await salvaFinoAQuota(simili, quota, chiaveId, "maps", "google_maps", e);
@@ -285,7 +286,7 @@ async function cercaSuGoogle(termine: string, zona: string, chiaveId: string, co
     candidati.push({ nome: nomeDaTitolo(i.title ?? d, d), sito: `https://${d}`, indirizzo: zona, categoria: termine });
   }
   // Google non dà l'indirizzo: la zona la giudica il filtro, dal sito e dal titolo.
-  const filtro = await filtraSimili(`${contesto} · zona cercata: ${zona}`, candidati.map((c, i) => ({ ...c, categoria: organici[i]?.title ?? c.categoria })));
+  const filtro = await filtraSimili(`${contesto} · zona cercata: ${zona}`, candidati.map((c, i) => ({ ...c, categoria: organici[i]?.title ?? c.categoria })), await chiaveDaColleghi(chiaveId));
   const simili = candidati.filter((_, i) => filtro.tenere.has(i));
   const e: EsitoPasso = { ricerca, canale: "google", trovati: organici.length, diversi: candidati.length - simili.length, nuove: 0, esistenti: 0, scartate, rimandati: 0, costCents: costCents + filtro.costCents };
   await salvaFinoAQuota(simili, quota, chiaveId, "google", "google_search", e);
@@ -699,7 +700,7 @@ export async function importaAziendeLinkedin(input: unknown, findings: Record<st
   // Solo chi fa il mestiere del caso (lo stesso filtro di Maps e Google).
   const chiave = chiaveId ? await db.chiaveRicerca.findUnique({ where: { id: chiaveId }, select: { valore: true, casoStudioId: true } }) : null;
   const contesto = chiave ? await contestoChiave(chiave) : "";
-  const filtro = contesto ? await filtraSimili(contesto, candidate.map((a) => ({ nome: a.nome, sito: a.sito, indirizzo: a.citta, categoria: a.settore ?? undefined }))) : null;
+  const filtro = contesto ? await filtraSimili(contesto, candidate.map((a) => ({ nome: a.nome, sito: a.sito, indirizzo: a.citta, categoria: a.settore ?? undefined })), await chiaveDaColleghi(chiaveId)) : null;
 
   for (const [i, a] of candidate.entries()) {
     const sigla = a.provincia?.toUpperCase().match(/\b[A-Z]{2}\b/)?.[0] ?? null;

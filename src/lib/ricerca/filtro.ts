@@ -21,14 +21,21 @@ const SCHEMA: Schema = {
 };
 
 /** Restituisce gli indici da tenere e il costo. Se l'AI non risponde, si tiene tutto (meglio un falso positivo che perdere la ricerca). */
-export async function filtraSimili(contesto: string, candidati: Candidato[]): Promise<{ tenere: Set<number>; costCents: number }> {
+/**
+ * v3.126: con `colleghi` (il caso di una consulente, es. Liliana Mitroi) i consulenti, i coach e chi fa marketing o
+ * comunicazione NON si scartano: sono colleghi di Alessio e a loro si propone di collaborare.
+ */
+export async function filtraSimili(contesto: string, candidati: Candidato[], colleghi = false): Promise<{ tenere: Set<number>; costCents: number }> {
   if (!candidati.length) return { tenere: new Set(), costCents: 0 };
   try {
     // Gli scarti di Alessio con il motivo: la ricerca non ripropone aziende come quelle.
     const lezioni = await lezioniDagliScarti().catch(() => []);
     const ai = await chiediJSON<{ tenere: number[] }>({
       sistema:
-        "Selezioni aziende per Karalisweb, agenzia di web marketing. Ricevi il cliente di un caso studio e un elenco di attività trovate su Google. Tieni SOLO le imprese private che fanno lo stesso mestiere del cliente (concorrenti o colleghi: a loro il caso studio parla). Scarta enti pubblici, impianti comunali, associazioni e club sportivi, palestre, scuole, negozi o attività di un altro mestiere, portali, directory ed elenchi di imprese, catene e franchising (marchi con punti vendita in tutta Italia), negozi online nazionali e aziende che chiaramente non lavorano nella zona cercata (se è indicata). Scarta SEMPRE i concorrenti di Karalisweb, anche se fanno un lavoro vicino a quello del cliente: agenzie e consulenti di marketing, comunicazione o pubblicità, chi fa siti web, social media, SEO o campagne, chi insegna LinkedIn o vendita online. Nel dubbio, scarta.",
+        "Selezioni aziende per Karalisweb, agenzia di web marketing. Ricevi il cliente di un caso studio e un elenco di attività trovate su Google. Tieni SOLO le imprese private che fanno lo stesso mestiere del cliente (concorrenti o colleghi: a loro il caso studio parla). Scarta enti pubblici, impianti comunali, associazioni e club sportivi, palestre, scuole, negozi o attività di un altro mestiere, portali, directory ed elenchi di imprese, catene e franchising (marchi con punti vendita in tutta Italia), negozi online nazionali e aziende che chiaramente non lavorano nella zona cercata (se è indicata). " +
+        (colleghi
+          ? "Il cliente è un consulente: qui cerchi i COLLEGHI di Alessio, a cui proporre una collaborazione. Tieni consulenti, coach, formatori aziendali e anche agenzie e consulenti di marketing, comunicazione, vendite o posizionamento: professionisti e piccoli studi che lavorano con le imprese. Scarta i grandi gruppi e le società di consulenza nazionali. Nel dubbio, tieni."
+          : "Scarta SEMPRE i concorrenti di Karalisweb, anche se fanno un lavoro vicino a quello del cliente: agenzie e consulenti di marketing, comunicazione o pubblicità, chi fa siti web, social media, SEO o campagne, chi insegna LinkedIn o vendita online. Nel dubbio, scarta."),
       testo: [
         `CLIENTE DEL CASO STUDIO: ${contesto}`,
         ...(lezioni.length ? ["", "AZIENDE CHE ALESSIO HA SCARTATO, CON IL MOTIVO (scarta anche quelle che hanno lo stesso problema):", ...lezioni.map((l) => `- ${l}`)] : []),

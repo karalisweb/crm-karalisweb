@@ -178,31 +178,52 @@ export function testoRichiestaPonte(ponte: string, decisore: string, azienda: st
  * scritto dall'AI dal caso studio), offre il caso studio e chiede solo il permesso di mandarlo. Niente call da
  * fissare: un sì costa poco, e il caso studio fa il resto.
  */
-export function offertaCaso(azienda: string, gancio: string | null, haCaso: boolean, tu: boolean): string {
+export function offertaCaso(azienda: string, gancio: string | null, haCaso: boolean, tu: boolean, collega = false): string {
+  if (collega) return offertaCollaborazione(gancio, haCaso, tu);
   const ti = tu ? "ti" : "le";
   if (!haCaso) return `Lavoro con aziende come ${azienda} su strategia, sito e marketing. Posso mandar${ti} un esempio concreto di un lavoro fatto, così vede${tu ? "i" : ""} se può servire anche a voi?`;
   const storia = gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore.";
   return `${storia}\n\nHo raccolto tutto in un breve caso studio: com'era, cosa abbiamo fatto, cosa è cambiato. Credo che possa esser${ti} utile. ${tu ? "Te lo mando?" : "Posso mandarglielo?"}`;
 }
 
-export function testoContattoDiretto(decisore: string, azienda: string, gancio: string | null, haCaso = !!gancio): string {
-  return `Ciao${decisore.trim() ? ` ${nomeProprio(decisore)}` : ""}, sono Alessio.\n\n${offertaCaso(azienda, gancio, haCaso, true)}\n\nAlessio`;
+/**
+ * v3.126 (Alessio, 2026-11-10: "quando trovi un collega attraverso il caso studio di Liliana devi parlare di collaborare
+ * e far capire che puoi portare valore aggiunto"): a un collega non si vende il caso come a un cliente. Il gancio (AI)
+ * dice cosa Alessio ha fatto per una professionista come lui e cosa può portare in più; il testo propone di
+ * collaborare (non di farsi concorrenza) e il caso studio serve a far vedere come lavora.
+ */
+export const VALORE_COLLEGA = "Lavoro con consulenti e professionisti come te: li aiuto a rendere concreta e dimostrabile la loro promessa, e porto ai loro clienti la parte che spesso manca, cioè sito, campagne e un marketing che si misura.";
+
+export function offertaCollaborazione(gancio: string | null, haCaso: boolean, tu: boolean): string {
+  const storia = gancio ?? (tu ? VALORE_COLLEGA : VALORE_COLLEGA.replace("come te", "come lei"));
+  const proposta = tu
+    ? "Facciamo due lavori vicini e credo che collaborare convenga a tutti e due: tu resti il riferimento dei tuoi clienti, io aggiungo quello che a loro manca."
+    : "Facciamo due lavori vicini e credo che collaborare convenga a tutti e due: lei resta il riferimento dei suoi clienti, io aggiungo quello che a loro manca.";
+  const chiusura = haCaso
+    ? tu ? "Ho raccolto un esempio in un breve caso studio: te lo mando, così vedi come lavoro?" : "Ho raccolto un esempio in un breve caso studio: posso mandarglielo, così vede come lavoro?"
+    : tu ? "Ti va se ne parliamo?" : "Le va se ne parliamo?";
+  return `${storia}\n\n${proposta} ${chiusura}`;
+}
+
+export function testoContattoDiretto(decisore: string, azienda: string, gancio: string | null, haCaso = !!gancio, collega = false): string {
+  return `Ciao${decisore.trim() ? ` ${nomeProprio(decisore)}` : ""}, sono Alessio.\n\n${offertaCaso(azienda, gancio, haCaso, true, collega)}\n\nAlessio`;
 }
 
 /**
  * v3.87 (Alessio: "dobbiamo contattare le aziende, non trovare interlocutori"): il messaggio va a chi decide, subito,
  * citando la persona che avete in comune (se c'è davvero) e il caso studio. Il ponte non è più un passaggio obbligato.
  */
-export function testoDirettoConPonte(decisore: string, azienda: string, inComune: string | null, gancio: string | null, haCaso = !!gancio): string {
-  return `Buongiorno${decisore.trim() ? ` ${nomeProprio(decisore)}` : ""}, sono Alessio Loi di Karalisweb (Cagliari).${inComune ? ` Abbiamo in comune ${inComune}.` : ""}\n\n${offertaCaso(azienda, gancio, haCaso, false)}\n\nGrazie,\nAlessio`;
+export function testoDirettoConPonte(decisore: string, azienda: string, inComune: string | null, gancio: string | null, haCaso = !!gancio, collega = false): string {
+  return `Buongiorno${decisore.trim() ? ` ${nomeProprio(decisore)}` : ""}, sono Alessio Loi di Karalisweb (Cagliari).${inComune ? ` Abbiamo in comune ${inComune}.` : ""}\n\n${offertaCaso(azienda, gancio, haCaso, false, collega)}\n\nGrazie,\nAlessio`;
 }
 
 /**
  * v3.103 (Alessio, 2026-11-05: "in da contattare manca il follow up"): chi decide non ha risposto al contatto. Un solo
  * promemoria, breve e da collega, sullo stesso canale.
  */
-export function testoFollowupContatto(decisore: string | null): string {
+export function testoFollowupContatto(decisore: string | null, collega = false): string {
   const nome = decisore && decisore.trim() && decisore !== "chi decide" ? ` ${nomeProprio(decisore)}` : "";
+  if (collega) return `Ciao${nome}, ti riscrivo per il messaggio di qualche giorno fa: mi piacerebbe capire se possiamo collaborare. Se ti va ti mando il caso studio, così vedi come lavoro. Mi basta un sì. Alessio`;
   return `Ciao${nome}, ti riscrivo per il messaggio di qualche giorno fa: se ti va ti mando il caso studio, ci metti due minuti a capire se può servire anche a voi. Mi basta un sì. Alessio`;
 }
 
@@ -233,9 +254,12 @@ export function pulisciContattoManuale(dati: { email?: string | null; telefono?:
 }
 
 /** v3.125: già scritto da una parte, ora si scrive da un'altra: il messaggio dice perché ti riscrive. */
-export function testoCambioCanale(decisore: string | null, canalePrima: string | null, casoGiaMandato = false): string {
+export function testoCambioCanale(decisore: string | null, canalePrima: string | null, casoGiaMandato = false, collega = false): string {
   const nome = decisore && decisore.trim() && decisore !== "chi decide" ? ` ${nomeProprio(decisore)}` : "";
   const dove = !canalePrima ? "" : canalePrima === "email" ? " per email" : canalePrima === "messaggio alla pagina" ? " alla pagina dell'azienda" : ` su ${canalePrima}`;
+  if (collega) return casoGiaMandato
+    ? `Ciao${nome}, ti avevo mandato il caso studio${dove} qualche giorno fa, magari ti è sfuggito e ti riscrivo qui. Mi piacerebbe capire se possiamo collaborare: se ti va ne parliamo, mi basta un sì. Alessio`
+    : `Ciao${nome}, ti avevo scritto${dove} qualche giorno fa, magari ti è sfuggito e ti riscrivo qui. Mi piacerebbe capire se possiamo collaborare: se ti va ti mando il caso studio, così vedi come lavoro. Mi basta un sì. Alessio`;
   return casoGiaMandato
     ? `Ciao${nome}, ti avevo mandato il caso studio${dove} qualche giorno fa, magari ti è sfuggito e ti riscrivo qui. Se ti va ne parliamo: mi basta un sì. Alessio`
     : `Ciao${nome}, ti avevo scritto${dove} qualche giorno fa, magari ti è sfuggito e ti riscrivo qui. Se ti va ti mando il caso studio, ci metti due minuti a capire se può servire anche a voi. Mi basta un sì. Alessio`;
@@ -333,19 +357,21 @@ export function piattaformaPersona(profili: { instagram: string | null; linkedin
 }
 
 /** Dopo i commenti ai suoi post (o subito, se non pubblica): il primo messaggio diretto a chi decide. */
-export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, gancio: string | null, haCaso = !!gancio, commentati = true): string {
+export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, gancio: string | null, haCaso = !!gancio, commentati = true, collega = false): string {
   const dove = piattaforma ? ` su ${NOMI_PIATTAFORMA[piattaforma]}` : "";
   const intro = decisore
     ? commentati ? `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i tuoi post${dove}.` : "sono Alessio Loi di Karalisweb (Cagliari)."
     : `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i post di ${azienda}${dove}.`;
-  if (decisore) return `Ciao ${nomeProprio(decisore)}, ${intro}\n\n${offertaCaso(azienda, gancio, haCaso, true)}\n\nAlessio`;
+  if (decisore) return `Ciao ${nomeProprio(decisore)}, ${intro}\n\n${offertaCaso(azienda, gancio, haCaso, true, collega)}\n\nAlessio`;
+  if (collega) return `Buongiorno, ${intro}\n\n${offertaCollaborazione(gancio, haCaso, false)}\n\nMi dite a chi scrivere? Grazie,\nAlessio`;
   // Senza chi decide si scrive all'azienda: il caso studio è per il titolare.
   const storia = haCaso ? `${gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore."}\n\nHo raccolto tutto in un breve caso studio: com'era, cosa abbiamo fatto, cosa è cambiato. Credo che possa interessare al titolare.` : "Lavoro con aziende come la vostra su strategia, sito e marketing, e ho un esempio concreto che credo possa interessare al titolare.";
   return `Buongiorno, ${intro}\n\n${storia} Posso mandarglielo? Ditemi voi a chi scriverlo.\n\nGrazie,\nAlessio`;
 }
 
 /** Senza chi decide: il messaggio privato alla pagina per arrivare a lui. */
-export function testoMessaggioPagina(azienda: string, gancio: string | null, haCaso = !!gancio): string {
+export function testoMessaggioPagina(azienda: string, gancio: string | null, haCaso = !!gancio, collega = false): string {
+  if (collega) return `Buongiorno, sono Alessio Loi di Karalisweb (Cagliari).\n\n${offertaCollaborazione(gancio, haCaso, false)}\n\nMi dite a chi scrivere? Grazie,\nAlessio`;
   const storia = haCaso ? `${gancio ?? "Ho appena chiuso un lavoro con un'azienda del vostro settore."} Ho raccolto tutto in un breve caso studio che credo possa interessare al titolare di ${azienda}.` : `Ho un esempio concreto di un lavoro fatto per un'azienda come la vostra che credo possa interessare al titolare di ${azienda}.`;
   // v3.115: lo stesso testo va bene su WhatsApp, email o pagina (prima diceva "seguo la pagina", strano su WhatsApp).
   return `Buongiorno, sono Alessio Loi di Karalisweb (Cagliari).\n\n${storia}\n\nPosso mandarglielo? Mi dite a chi scriverlo? Grazie,\nAlessio`;

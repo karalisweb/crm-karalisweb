@@ -127,7 +127,8 @@ export function passoDi(s: Stato, oggi: Date): Esito {
   const risposta = voce("RETE_RISPOSTA");
   if (risposta) return { dentro: true, passo: 4, tocca: "te", stato: "ha_risposto", cosa: `${nomeDi(s)} ti ha risposto via mail: "${str(risposta.payload?.estratto) ?? ""}"`, azione: daCassetta(risposta, "La seguo io", "Non è interessato") };
   const contatto = voce("RETE_CONTATTO");
-  if (contatto) return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: `Scrivi a ${nomeDi(s)} con il caso studio (WhatsApp o mail)`, azione: daCassetta(contatto, "Mandato", "Non ora") };
+  // v3.126: il collega trovato dal caso di una consulente: gli si propone di collaborare.
+  if (contatto) return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: contatto.payload?.collega === true ? `Scrivi a ${nomeDi(s)}: è un collega, proponigli di collaborare (WhatsApp o mail)` : `Scrivi a ${nomeDi(s)} con il caso studio (WhatsApp o mail)`, azione: daCassetta(contatto, "Mandato", "Non ora") };
   const diretto = voce("RETE_DIRETTO");
   if (diretto) {
     const inComune = str(diretto.payload?.inComune);

@@ -10,6 +10,7 @@
  */
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { casoDaColleghi, trovataDaColleghi } from "@/lib/concorrenti";
 import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import { KIND_FASCICOLO_BASE } from "./turno";
@@ -677,7 +678,8 @@ export async function creaFollowup(lavorazioneId: string): Promise<boolean> {
         lavorazioneId: l.id,
         decisore,
         azienda: l.lead.name,
-        messaggio: testoFollowupContatto(decisore),
+        messaggio: testoFollowupContatto(decisore, p.collega === true),
+        collega: p.collega === true,
         canale: p.canale ?? null,
         telefono: p.telefono ?? null,
         email: p.email ?? null,
@@ -772,7 +774,8 @@ export async function aggiungiContatto(leadId: string, nuovo: ContattoManuale, c
         lavorazioneId: l.id,
         decisore,
         azienda,
-        messaggio: testoCambioCanale(decisore, canaleDallaNota(ultimo.note), ultimo.kind === KIND_RETE_CASO),
+        messaggio: testoCambioCanale(decisore, canaleDallaNota(ultimo.note), ultimo.kind === KIND_RETE_CASO, p.collega === true),
+        collega: p.collega === true,
         telefono: nuovo.whatsapp,
         email: nuovo.email,
         contattoManuale: true,
@@ -808,7 +811,8 @@ export async function segnaRispostaCaso(leadId: string, chi: string): Promise<bo
       title: `Manda il caso studio a ${decisore ? chiDecideTesto(decisore, l.lead.name) : l.lead.name}`,
       payload: {
         lavorazioneId: l.id, decisore, azienda: l.lead.name, casoId,
-        messaggio: testoInvioCaso(decisore),
+        messaggio: testoInvioCaso(decisore, p.collega === true),
+        collega: p.collega === true,
         canale: p.canale ?? null, telefono: p.telefono ?? null, email: p.email ?? null, linkedin: p.linkedin ?? null, pagina: p.pagina ?? null, piattaforma: p.piattaforma ?? null,
       } as Prisma.InputJsonValue,
     },
@@ -819,8 +823,10 @@ export async function segnaRispostaCaso(leadId: string, chi: string): Promise<bo
   return true;
 }
 
-function testoInvioCaso(decisore: string | null): string {
+function testoInvioCaso(decisore: string | null, collega = false): string {
   const nome = decisore ? ` ${decisore.trim().split(/\s+/)[0]}` : "";
+  // v3.126: al collega si dà del tu e si propone di sentirsi per capire come collaborare.
+  if (collega) return `Ciao${nome}, come promesso ti mando il caso studio, così vedi come lavoro.\n\nSe ti va ci sentiamo 20 minuti per capire come possiamo collaborare: dimmi tu quando ti è più comodo.\n\nAlessio`;
   return `Buongiorno${nome}, come promesso le mando il caso studio.\n\nSe le va, ne parliamo in 20 minuti: mi dica lei quando le è più comodo.\n\nGrazie,\nAlessio`;
 }
 
@@ -850,6 +856,8 @@ const SCHEMA_MOTIVO: Schema = {
 export interface CasoPerMessaggio {
   gancio: string | null;
   casoId: string;
+  /** v3.126: trovata dal caso di una consulente (Liliana): è un collega, gli si propone di collaborare. */
+  collega: boolean;
 }
 
 /** Il caso studio dell'azienda e il gancio per il messaggio. Il cliente del caso non si cita per iscritto. */
@@ -858,6 +866,7 @@ async function casoPerMessaggio(leadId: string, oggi: Date): Promise<CasoPerMess
     where: { id: leadId },
     select: { name: true, category: true, ritrovamenti: { take: 5, orderBy: { createdAt: "asc" }, select: { chiave: { select: { casoStudio: { select: { id: true, storia: true, settore: true, aziendaNome: true } } } } } } },
   });
+  const daColleghi = !!l?.ritrovamenti.some((r) => casoDaColleghi(r.chiave.casoStudio));
   // Il caso della ricerca che l'ha trovata; se arriva da altre strade (rete di un membro, LinkedIn), il caso attivo
   // dello stesso settore (v3.87: Centro Piscine e Macciocco partivano senza caso studio nel messaggio).
   let caso = l?.ritrovamenti.map((r) => r.chiave.casoStudio).find((c) => c?.storia) ?? null;
@@ -867,10 +876,11 @@ async function casoPerMessaggio(leadId: string, oggi: Date): Promise<CasoPerMess
     caso = casi.find((c) => norm(c.settore).split(/\s+/).some((w) => w.length >= 5 && testo.includes(w.slice(0, -1)))) ?? null;
   }
   if (!l || !caso?.storia) return null;
-  if (!(await budgetDisponibile(oggi)).ok) return { gancio: null, casoId: caso.id };
+  const collega = daColleghi || casoDaColleghi(caso);
+  if (!(await budgetDisponibile(oggi)).ok) return { gancio: null, casoId: caso.id, collega };
   try {
     const ai = await chiediJSON<RispostaMotivo>({
-      sistema: `${REGOLE_COMUNI}\n\nScrivi il gancio di un messaggio WhatsApp/email che Alessio Loi (Karalisweb, strategia, siti e marketing digitale) manda al titolare di un'azienda per offrirgli il caso studio di un'azienda simile. Deve far pensare al titolare "questo è proprio il mio problema".
+      sistema: collega ? `${REGOLE_COMUNI}\n\n${ISTRUZIONI_GANCIO_COLLEGA}` : `${REGOLE_COMUNI}\n\nScrivi il gancio di un messaggio WhatsApp/email che Alessio Loi (Karalisweb, strategia, siti e marketing digitale) manda al titolare di un'azienda per offrirgli il caso studio di un'azienda simile. Deve far pensare al titolare "questo è proprio il mio problema".
 DUE frasi, in PRIMA PERSONA (firma Alessio):
 1) il problema concreto che aveva l'azienda del caso, raccontato in modo che il titolare ci si riconosca ("Un'azienda di piscine come la vostra era cresciuta in fretta, ma il marketing andava a strappi e il sito non raccontava chi erano davvero.");
 2) cosa è cambiato dopo il lavoro con Alessio, concreto ("Ci ho lavorato insieme e oggi sanno a chi parlare, come, e cosa fare ogni mese.").
@@ -882,11 +892,21 @@ REGOLE: il cliente del caso NON si nomina mai (lo racconta Alessio a voce), si d
     let gancio = ai.dati.gancio.trim().replace(/^(Alessio Loi|Alessio|Karalisweb|karalisweb)\s+ha\s+/i, "Ho ");
     // Rete di sicurezza: se il nome del cliente scappa comunque, si toglie il gancio (il caso studio resta).
     if (caso.aziendaNome && gancio.toLowerCase().includes(caso.aziendaNome.toLowerCase().split(" ")[0])) gancio = "";
-    return { gancio: gancio || null, casoId: caso.id };
+    return { gancio: gancio || null, casoId: caso.id, collega };
   } catch {
-    return { gancio: null, casoId: caso.id };
+    return { gancio: null, casoId: caso.id, collega };
   }
 }
+
+/**
+ * v3.126 (Alessio, 2026-11-10): il gancio per un collega trovato dal caso di una consulente. Non gli si vende il caso:
+ * gli si fa vedere cosa Alessio sa fare per un professionista come lui e cosa può aggiungere ai suoi clienti.
+ */
+const ISTRUZIONI_GANCIO_COLLEGA = `Scrivi il gancio di un messaggio WhatsApp/email che Alessio Loi (Karalisweb, strategia, siti e marketing digitale) manda a un COLLEGA: un consulente, coach, formatore o professionista del marketing che lavora con le imprese. Non è un cliente da convincere: Alessio gli propone di COLLABORARE e deve fargli capire che può portargli valore aggiunto, non fargli concorrenza.
+DUE frasi, in PRIMA PERSONA (firma Alessio), dando del tu:
+1) cosa ha fatto per una professionista come lui, dal caso studio, raccontato da collega a collega ("Ho lavorato con una consulente B2B che aveva un'offerta solida ma faticava a dimostrare il suo valore: insieme l'abbiamo resa concreta, e oggi chiude collaborazioni in delega.");
+2) cosa può aggiungere al suo lavoro o ai suoi clienti, legato a quello che fa lui (il suo mestiere è nel nome e nella categoria): la parte che di solito gli manca, ad esempio rendere dimostrabile la promessa, il sito, le campagne, un marketing che si misura ("Ai tuoi clienti posso portare la parte che di solito resta scoperta: il sito e le campagne che mettono in pratica quello che imposti tu.").
+REGOLE: il cliente del caso NON si nomina mai, si descrive con il mestiere; niente numeri che non siano nel caso; niente promesse vaghe; niente gergo (DDSC, piano operativo, documento strategico); mai "Alessio ha" o "Karalisweb ha"; non chiedere niente, non proporre ancora la collaborazione né offrire il caso studio (lo fa il resto del messaggio).`;
 
 /** Cosa portare al ponte prima di chiedere (solo quando lo si sa: per i membri BNI). */
 async function cosaDare(membroId: string | null): Promise<string | null> {
@@ -996,28 +1016,32 @@ export async function aggiornaTestiContatto(oggi = new Date(), massimo = 20): Pr
   for (const v of voci) {
     const p = (v.payload ?? {}) as Record<string, unknown>;
     if (fatte >= massimo) break;
-    if (!v.leadId || !v.lead || (typeof p.versioneTesto === "number" && p.versioneTesto >= VERSIONE_TESTO)) continue;
+    if (!v.leadId || !v.lead) continue;
+    // v3.126: si riscrive anche quando l'azienda risulta un collega (trovato dal caso di una consulente) e il testo no.
+    const collegaOra = await trovataDaColleghi(v.leadId);
+    if (typeof p.versioneTesto === "number" && p.versioneTesto >= VERSIONE_TESTO && !!p.collega === collegaOra) continue;
     const azienda = v.lead.name;
     const decisore = typeof p.decisore === "string" && p.decisore !== "chi decide" ? p.decisore : null;
     const caso = await casoPerMessaggio(v.leadId, oggi);
     const gancio = caso?.gancio ?? null;
+    const collega = caso?.collega ?? collegaOra;
     let nuovo: Record<string, unknown>;
     if (v.kind === KIND_RETE_PAGINA) {
-      nuovo = { messaggio: testoMessaggioPagina(azienda, gancio, !!caso) };
+      nuovo = { messaggio: testoMessaggioPagina(azienda, gancio, !!caso, collega) };
     } else {
       const canale = await canaleDiretto(v.leadId, decisore);
       const canali = { telefono: canale.whatsapp ?? (p.telefono as string | null) ?? null, email: canale.email ?? (p.email as string | null) ?? null, emailPersonale: canale.emailPersonale, chiamare: canale.telefono, linkedin: (p.linkedin as string | null) ?? canale.linkedin };
       if (v.kind === KIND_RETE_CONTATTO) {
         const piattaforma = piattaformaPiuCommentata(await commentiDi(v.leadId))?.piattaforma ?? null;
-        nuovo = { ...canali, messaggio: testoContattoDopoCommenti(decisore, azienda, piattaforma, gancio, !!caso, !!piattaforma) };
+        nuovo = { ...canali, messaggio: testoContattoDopoCommenti(decisore, azienda, piattaforma, gancio, !!caso, !!piattaforma, collega) };
       } else if ("inComune" in p) {
-        nuovo = { ...canali, messaggio: testoDirettoConPonte(decisore ?? "", azienda, (p.inComune as string | null) ?? null, gancio, !!caso) };
+        nuovo = { ...canali, messaggio: testoDirettoConPonte(decisore ?? "", azienda, (p.inComune as string | null) ?? null, gancio, !!caso, collega) };
       } else {
         // Lo conosce Alessio: si resta sul tu, i canali sono quelli che c'erano.
-        nuovo = { messaggio: testoContattoDiretto(decisore ?? "", azienda, gancio, !!caso) };
+        nuovo = { messaggio: testoContattoDiretto(decisore ?? "", azienda, gancio, !!caso, collega) };
       }
     }
-    await db.approvalItem.update({ where: { id: v.id }, data: { payload: { ...p, ...nuovo, motivoDalCaso: !!gancio, casoId: caso?.casoId ?? null, versioneTesto: VERSIONE_TESTO } as Prisma.InputJsonValue } });
+    await db.approvalItem.update({ where: { id: v.id }, data: { payload: { ...p, ...nuovo, motivoDalCaso: !!gancio, casoId: caso?.casoId ?? null, collega, versioneTesto: VERSIONE_TESTO } as Prisma.InputJsonValue } });
     fatte++;
   }
   return fatte;
@@ -1041,8 +1065,8 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
   const canale = viaPonte ? await canaleDiretto(l.leadId, decisore) : null;
   const messaggio =
     tipo === "PONTE" ? testoRichiestaPonte(l.ponteNome, decisore, l.lead.name, motivo)
-    : viaPonte ? testoDirettoConPonte(decisore, l.lead.name, inComune ?? null, motivo, !!caso)
-    : tipo === "DIRETTO" ? testoContattoDiretto(decisore, l.lead.name, motivo, !!caso)
+    : viaPonte ? testoDirettoConPonte(decisore, l.lead.name, inComune ?? null, motivo, !!caso, !!caso?.collega)
+    : tipo === "DIRETTO" ? testoContattoDiretto(decisore, l.lead.name, motivo, !!caso, !!caso?.collega)
     : testoPromemoria(l.ponteNome, decisore);
   const titolo =
     tipo === "PONTE" ? `Chiedi a ${l.ponteNome} di presentarti ${chiDecideTesto(decisore, l.lead.name)}`
@@ -1067,6 +1091,7 @@ export async function creaMessaggio(lavorazioneId: string, tipo: "PONTE" | "DIRE
         dare: tipo === "PONTE" ? await cosaDare(l.ponteMembroId) : null,
         motivoDalCaso: !!motivo,
         casoId: caso?.casoId ?? null,
+        collega: !!caso?.collega,
         versioneTesto: VERSIONE_TESTO,
         relazioneDiretta: true,
       } as Prisma.InputJsonValue,
@@ -1375,11 +1400,11 @@ export async function dopoCommento(leadId: string, oggi = new Date(), subito = f
       leadId,
       kind: KIND_RETE_CONTATTO,
       agent: "rete",
-      title: `${commentati ? `${commentati} commenti fatti: ` : ""}scrivi a ${decisore ? chiDecideTesto(decisore, lead.name) : lead.name} col caso studio`,
+      title: `${commentati ? `${commentati} commenti fatti: ` : ""}scrivi a ${decisore ? chiDecideTesto(decisore, lead.name) : lead.name} ${caso?.collega ? "per proporgli di collaborare" : "col caso studio"}`,
       payload: {
         decisore,
         azienda: lead.name,
-        messaggio: testoContattoDopoCommenti(decisore, lead.name, commentati ? piattaforma : null, caso?.gancio ?? null, !!caso, commentati > 0),
+        messaggio: testoContattoDopoCommenti(decisore, lead.name, commentati ? piattaforma : null, caso?.gancio ?? null, !!caso, commentati > 0, !!caso?.collega),
         piattaforma,
         telefono: canale.whatsapp,
         email: canale.email,
@@ -1390,6 +1415,7 @@ export async function dopoCommento(leadId: string, oggi = new Date(), subito = f
         instagram: profili.instagram,
         motivoDalCaso: !!caso?.gancio,
         casoId: caso?.casoId ?? null,
+        collega: !!caso?.collega,
         versioneTesto: VERSIONE_TESTO,
         relazioneDiretta: true,
       } as Prisma.InputJsonValue,
@@ -1414,7 +1440,7 @@ export async function messaggioAllaPagina(leadId: string, oggi = new Date()): Pr
       kind: KIND_RETE_PAGINA,
       agent: "rete",
       title: `Non si sa chi decide in ${lead.name}: scrivi all'azienda (${dove})`,
-      payload: { azienda: lead.name, ...canali, messaggio: testoMessaggioPagina(lead.name, caso?.gancio ?? null, !!caso), casoId: caso?.casoId ?? null, versioneTesto: VERSIONE_TESTO, canaliVersione: 1 } as Prisma.InputJsonValue,
+      payload: { azienda: lead.name, ...canali, messaggio: testoMessaggioPagina(lead.name, caso?.gancio ?? null, !!caso, !!caso?.collega), casoId: caso?.casoId ?? null, collega: !!caso?.collega, versioneTesto: VERSIONE_TESTO, canaliVersione: 1 } as Prisma.InputJsonValue,
     },
   });
   return true;
@@ -1442,7 +1468,7 @@ export async function aggiornaCanaliPagina(): Promise<number> {
     const caso = await casoPerMessaggio(v.leadId!, new Date());
     await db.approvalItem.update({
       where: { id: v.id },
-      data: { payload: { ...p, ...canali, pagina: canali.pagina ?? p.pagina ?? null, piattaforma: canali.piattaforma ?? p.piattaforma ?? null, messaggio: testoMessaggioPagina(v.lead.name, caso?.gancio ?? null, !!caso), casoId: caso?.casoId ?? p.casoId ?? null, canaliVersione: 1 } as Prisma.InputJsonValue },
+      data: { payload: { ...p, ...canali, pagina: canali.pagina ?? p.pagina ?? null, piattaforma: canali.piattaforma ?? p.piattaforma ?? null, messaggio: testoMessaggioPagina(v.lead.name, caso?.gancio ?? null, !!caso, !!caso?.collega), casoId: caso?.casoId ?? p.casoId ?? null, collega: !!caso?.collega, canaliVersione: 1 } as Prisma.InputJsonValue },
     });
     fatte++;
   }

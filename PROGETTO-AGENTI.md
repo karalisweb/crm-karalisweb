@@ -33,6 +33,8 @@ studio"**. Facebook fuori. Sostituisce "chi me la presenta" e i commenti alla pa
 Chi decide introvabile: pausa 3 mesi, poi si ricerca (non si scrive all'azienda). Se Alessio conosce chi decide si salta
 al 4. I 121 BNI con i membri vanno avanti a parte.
 
+**I colleghi (v3.126, Alessio 2026-11-10):** chi arriva dal caso studio di una consulente (Liliana Mitroi) è un collega, non un concorrente da togliere: il messaggio propone di collaborare e dice cosa Alessio può aggiungere ai suoi clienti; il caso studio serve a far vedere come lavora.
+
 ## Percorso veloce (confermato da Alessio il 2026-11-08, v3.122.0)
 
 Detto da Alessio: **"in 30-40 minuti il CRM prenda un'azienda, l'analizzi, cerchi il decision maker e me la porti in da contattare. VELOCITÀ prima di tutto"**. Chi decide lo cerca il server, ogni 10 minuti. Regola del contatto (2026-11-08, v3.123, `stradaContatto`): **si scalda solo se chi decide pubblica, il messaggio arriva a lui e non ti conosce già**. Messaggio subito se lo conosci o è di BNI, se non pubblica o non ha profili, se il contatto è info@. Solo LinkedIn: collegamento. Dopo 48 ore il messaggio parte comunque.
