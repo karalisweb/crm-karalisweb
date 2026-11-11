@@ -1044,6 +1044,20 @@ export async function aggiornaTestiContatto(oggi = new Date(), massimo = 20): Pr
     await db.approvalItem.update({ where: { id: v.id }, data: { payload: { ...p, ...nuovo, motivoDalCaso: !!gancio, casoId: caso?.casoId ?? null, collega, versioneTesto: VERSIONE_TESTO } as Prisma.InputJsonValue } });
     fatte++;
   }
+  // v3.126.1: anche il follow-up e l'invio del caso già pronti, se l'azienda è un collega, parlano di collaborare.
+  const seguiti = await db.approvalItem.findMany({
+    where: { kind: { in: [KIND_RETE_FOLLOWUP, KIND_RETE_CASO] }, status: "IN_ATTESA", leadId: { not: null } },
+    select: { id: true, kind: true, leadId: true, payload: true },
+  });
+  for (const v of seguiti) {
+    const p = (v.payload ?? {}) as Record<string, unknown>;
+    // Il messaggio sul nuovo canale (contattoManuale) ha un testo suo: resta com'è.
+    if (p.collega === true || p.contattoManuale === true || !v.leadId || !(await trovataDaColleghi(v.leadId))) continue;
+    const decisore = typeof p.decisore === "string" && p.decisore !== "chi decide" ? p.decisore : null;
+    const messaggio = v.kind === KIND_RETE_CASO ? testoInvioCaso(decisore, true) : testoFollowupContatto(decisore, true);
+    await db.approvalItem.update({ where: { id: v.id }, data: { payload: { ...p, messaggio, collega: true } as Prisma.InputJsonValue } });
+    fatte++;
+  }
   return fatte;
 }
 

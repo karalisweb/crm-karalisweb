@@ -1890,6 +1890,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 >
 > v3.122.0: percorso veloce. `verificaCollegamento` chiama `cercaChiDecideServer` (DataForSEO + sito + AI, verifiche in `chi-decide-regole.ts`; run `chi_decide_server`, referto `decision_maker`). `turnoVeloce` gira ogni 10 minuti da `src/instrumentation.ts` (off con `TURNO_VELOCE=off`). `avanzaMappata`: con WhatsApp o mail crea subito `RETE_CONTATTO`. Il Chrome resta per collegamento e commenti.
 >
+> v3.126.1: `aggiornaTestiContatto` riscrive anche le voci aperte `RETE_FOLLOWUP` (non `contattoManuale`) e `RETE_CASO` dei colleghi.
+>
 > v3.126.0: colleghi dal caso di una consulente. `casoDaColleghi({settore})` (`concorrenti.ts`, regex su consulenza/coaching/formazione/marketing/comunicazione/posizionamento) → `chiaveDaColleghi(chiaveId)` e `trovataDaColleghi(leadId)` (dai `ritrovamenti`). Effetti: `salvaAzienda` non mette NON_TARGET, `filtraSimili(..., colleghi)` tiene consulenti e marketing, `togliConcorrenti` li salta e chiama `rimettiColleghi()` (NON_TARGET con nota concorrente → DA_ANALIZZARE, voci `crm_concorrente` riaperte; marcate da `NOTA_COLLEGA`, idempotente). `casoPerMessaggio` restituisce `collega` e usa `ISTRUZIONI_GANCIO_COLLEGA`; i testi in `rete-regole.ts` hanno l'ultimo parametro `collega` (`offertaCollaborazione`, follow-up, cambio canale, invio caso); payload `collega: true`; `aggiornaTestiContatto` riscrive le voci aperte quando `collega` cambia. Test: `__tests__/colleghi.test.ts`.
 >
 > v3.125.1: la pagina azienda mostra il riquadro `ContattiAzienda` (`aggiungi-contatto.tsx`); `GET /api/ricerca/aziende/[id]` restituisce `contatti` (a mano prima, poi `leads`).

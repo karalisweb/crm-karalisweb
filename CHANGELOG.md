@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.126.1] - 2026-11-11
+
+### Fixed
+- Anche i **follow-up** e i messaggi **"ti mando il caso studio"** già pronti per un collega vengono riscritti con la proposta di collaborazione (prima si riscrivevano solo i primi messaggi di contatto).
+
 ## [3.126.0] - 2026-11-10
 
 ### Changed
