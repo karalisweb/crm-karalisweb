@@ -39,6 +39,14 @@ cerchia ("lo conosco"), presentato, oppure ha già risposto (mail letta dal CRM,
 messaggio visti dal lavoro "scalda"; un "mi piace" o il collegamento accettato non bastano). Senza LinkedIn né Instagram
 dove scaldarlo: pausa 3 mesi. Collegamento non accettato in 14 giorni: pausa. Tolte le scorciatoie della v3.123.
 
+**Senza relazione si molla (v3.128, Alessio 2026-11-11):** *"il web è pieno di aziende. Piuttosto che fermarci su qualche
+azienda che non ha social, non troviamo punti di aggancio e mandare qualcosa di freddo meglio andare avanti. Prima il
+rapport, prima relazione poi gli si manda qualcosa; se non ho nessuna relazione molla e vai avanti"*. Chi decide
+introvabile, nessun profilo dove scaldarlo, collegamento non accettato in 14 giorni, nessuna risposta né al messaggio né
+al follow-up: l'azienda esce dal Percorso per sempre (`mollaAzienda`, fase ELIMINATA, nota "Mollata dal CRM") e il posto
+va a un'altra. Niente pause da 3 mesi né nuove ricerche. Resta nel CRM (non Non target). Le pause di prima con questi
+motivi si mollano al primo giro. "Ha risposto: non è interessato" resta in pausa 3 mesi.
+
 Chi decide introvabile: pausa 3 mesi, poi si ricerca (non si scrive all'azienda). Se Alessio conosce chi decide si salta
 al 4. I 121 BNI con i membri vanno avanti a parte.
 

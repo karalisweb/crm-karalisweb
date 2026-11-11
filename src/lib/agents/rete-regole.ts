@@ -425,7 +425,7 @@ export function segnaleDiRisposta(nota: string | null | undefined): boolean {
   return /^Segnale: (risposta|messaggio)\b/i.test(nota ?? "");
 }
 
-/** Pausa per chi non ti conosce e non ha profili dove scaldarlo. */
-export const NOTA_SENZA_PROFILI = "Nessun profilo dove scaldarlo: WhatsApp e mail solo dopo che ti ha risposto";
-/** Il primo messaggio su LinkedIn aspetta che accetti il collegamento: oltre questi giorni l'azienda va in pausa. */
+/** v3.128: chi non ti conosce e non ha profili dove scaldarlo si molla (niente messaggi a freddo). */
+export const NOTA_SENZA_PROFILI = "Nessun profilo dove scaldarlo";
+/** Il primo messaggio su LinkedIn aspetta che accetti il collegamento: oltre questi giorni l'azienda si molla. */
 export const GIORNI_ATTESA_COLLEGAMENTO = 14;

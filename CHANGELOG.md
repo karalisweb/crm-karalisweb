@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.128.0] - 2026-11-11
+
+### Changed
+- **Senza relazione il CRM molla e va avanti.** "Il web è pieno di aziende: prima la relazione, se non c'è molla." Chi decide introvabile, nessun LinkedIn né Instagram dove scaldarlo, collegamento non accettato in 14 giorni, nessuna risposta né al messaggio né al follow-up: l'azienda esce dal Percorso per sempre e il posto va a un'altra. Prima andava in pausa 3 mesi e poi il CRM ci riprovava.
+- Le aziende già in pausa per questi motivi vengono mollate al primo giro. Restano nel CRM, solo fuori dal Percorso.
+
 ## [3.127.0] - 2026-11-11
 
 ### Changed

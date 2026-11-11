@@ -140,13 +140,17 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   const conRisposta = new Set((await db.approvalItem.findMany({ where: { kind: KIND_RETE_RISPOSTA, status: "IN_ATTESA" }, select: { leadId: true } })).map((v) => v.leadId));
   for (const l of tutte) {
     if (conRisposta.has(l.leadId)) continue;
+    // v3.128: le pause "senza relazione" di prima non tornano fra 3 mesi: si mollano adesso.
+    if (l.fase === "PAUSA" && pausaDaMollare(l.note)) {
+      await mollaAzienda(l.id, l.note!.replace(/: si ricerca fra 3 mesi$/, ""));
+      r.inPausa++;
+      continue;
+    }
     const azione = prossimaAzione(l, oggi);
     if (azione === "RIENTRA") {
       await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", tentativi: 0, pausaFino: null, ponteNome: null, ponteMembroId: null, strada: null, chiestaAt: null, promemoriaAt: null } });
       // v3.117: era in pausa perché chi decide non si trovava: si ricerca adesso.
       if (l.note?.startsWith(NOTA_SENZA_CHI_DECIDE)) await ricercaChiDecide(l.leadId, oggi);
-      // v3.127: era in pausa perché non c'era dove scaldarlo: si ricercano i suoi profili.
-      else if (l.note?.startsWith(NOTA_SENZA_PROFILI)) await cercaChiDecideServer(l.leadId, oggi, { forza: true, relazioneDiretta: true }).catch(() => null);
       r.rientrate++;
     } else if (azione === "PROMEMORIA") {
       // v3.103: senza ponte (contatto diretto a chi decide) il promemoria è il follow-up a lui.
@@ -154,7 +158,7 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
     } else if (azione === "CAMBIA_PONTE" && contattoDiretto(l)) {
       // Nessun ponte da cambiare: senza risposta nemmeno al follow-up, l'azienda va in pausa (torna fra 3 mesi).
       if (l.promemoriaAt) {
-        await mettiInPausa(l.id, "Nessuna risposta al contatto né al follow-up");
+        await mollaAzienda(l.id, NOTA_NESSUNA_RISPOSTA);
         r.inPausa++;
       } else if (await creaFollowup(l.id)) r.promemoria++;
     } else if (azione === "CAMBIA_PONTE") {
@@ -455,7 +459,7 @@ async function accodaContatti(oggi: Date): Promise<number> {
     // 14 giorni non l'ha accettato, l'azienda va in pausa: niente WhatsApp né mail a freddo.
     if (v.kind === KIND_RETE_CONTATTO && (p as { soloDopoRisposta?: boolean }).soloDopoRisposta && Date.now() - v.createdAt.getTime() > GIORNI_ATTESA_COLLEGAMENTO * 86400_000) {
       const lav = await db.lavorazione.findUnique({ where: { leadId: v.leadId }, select: { id: true, fase: true } });
-      if (lav && lav.fase === "MAPPATA") await mettiInPausa(lav.id, `Non ha accettato il collegamento su LinkedIn in ${GIORNI_ATTESA_COLLEGAMENTO} giorni`);
+      if (lav && lav.fase === "MAPPATA") await mollaAzienda(lav.id, `Non ha accettato il collegamento su LinkedIn in ${GIORNI_ATTESA_COLLEGAMENTO} giorni`);
       continue;
     }
     // v3.119: un invito fatto per una voce vecchia non blocca il messaggio di questa (conta solo quello fatto dopo).
@@ -517,7 +521,7 @@ export async function scartaSenzaStrade(leadId: string, oggi = new Date()): Prom
   // v3.117 (Alessio, 2026-11-06): chi decide non si trova: pausa 3 mesi, poi si ricerca (non si scrive all'azienda).
   if (await db.lavorazione.findUnique({ where: { leadId }, select: { id: true } })) return false;
   const l = await db.lavorazione.create({ data: { leadId } });
-  await mettiInPausa(l.id, `${NOTA_SENZA_CHI_DECIDE}: si ricerca fra 3 mesi`);
+  await mollaAzienda(l.id, NOTA_SENZA_CHI_DECIDE);
   return true;
 }
 
@@ -543,14 +547,14 @@ export async function entraSubito(leadId: string, oggi = new Date()): Promise<"e
   return "entrata";
 }
 
-/** v3.117: chi decide non si trova da nessuna parte: l'azienda va in pausa 3 mesi (poi si ricerca chi decide). */
+/** Chi decide non si trova da nessuna parte: v3.128 l'azienda si molla (prima pausa 3 mesi e nuova ricerca). */
 export const NOTA_SENZA_CHI_DECIDE = "Chi decide non trovato";
 
 /**
  * Un'azienda mappata (v3.117, Alessio 2026-11-06: "chi me la presenta di fatto non serve"):
  *   - chi decide lo conosci tu (cerchia): il messaggio diretto, subito (passo 4);
  *   - chi decide si sa: il CRM chiede il collegamento su LinkedIn e lo segue su Instagram (passo 2), poi i commenti;
- *   - chi decide non si sa: pausa 3 mesi (niente più messaggi alla pagina).
+ *   - chi decide non si sa: v3.128 si molla e si va avanti (niente più messaggi alla pagina).
  */
 export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], oggi = new Date()): Promise<boolean> {
   const l = await db.lavorazione.findUnique({ where: { id: lavorazioneId } });
@@ -561,7 +565,7 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
   if (!decisore) {
     // Si sta ricercando chi decide (rientro dalla pausa): si aspetta il referto.
     if (await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: "decision_maker", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } })) return false;
-    await mettiInPausa(l.id, `${NOTA_SENZA_CHI_DECIDE}: si ricerca fra 3 mesi`);
+    await mollaAzienda(l.id, NOTA_SENZA_CHI_DECIDE);
     return false;
   }
   const conosciuto = d.decisori.find((x) => nellaCerchia(x.nome, c) && !provatiDi(l.pontiProvati).some((p) => stessaPersona(p, x.nome)));
@@ -587,7 +591,7 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
     }
     // Pausa solo dopo aver cercato i suoi profili: altrimenti va al collegamento, dove la ricerca si fa prima.
     if (strada === "pausa" && (await profiliCercati(l.leadId))) {
-      await mettiInPausa(l.id, NOTA_SENZA_PROFILI);
+      await mollaAzienda(l.id, NOTA_SENZA_PROFILI);
       return false;
     }
   }
@@ -882,6 +886,27 @@ function testoInvioCaso(decisore: string | null, collega = false): string {
   return `Buongiorno${nome}, come promesso le mando il caso studio.\n\nSe le va, ne parliamo in 20 minuti: mi dica lei quando le è più comodo.\n\nGrazie,\nAlessio`;
 }
 
+/**
+ * v3.128 (Alessio, 2026-11-11: "il web è pieno di aziende... prima il rapport, prima relazione, poi gli si manda qualcosa;
+ * se non ho nessuna relazione molla e vai avanti"). Dove non c'è modo di creare una relazione (chi decide introvabile,
+ * nessun profilo dove scaldarlo, collegamento non accettato, nessuna risposta) il CRM non mette in pausa per riprovare fra
+ * 3 mesi: molla l'azienda per sempre e il posto va a un'altra. Resta nel CRM (non diventa Non target), solo fuori dal Percorso.
+ */
+export const NOTA_MOLLATA = "Mollata dal CRM";
+export async function mollaAzienda(lavorazioneId: string, motivo: string): Promise<void> {
+  const l = await db.lavorazione.update({ where: { id: lavorazioneId }, data: { fase: "ELIMINATA", pausaFino: null, note: `${NOTA_MOLLATA}: ${motivo}` } });
+  await db.approvalItem.updateMany({ where: { leadId: l.leadId, kind: { in: KINDS_RETE }, status: "IN_ATTESA" }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: "rete", note: `Mollata: ${motivo}` } });
+  await db.agentRun.deleteMany({ where: { leadId: l.leadId, status: "IN_CODA" } });
+  await db.activity.create({ data: { leadId: l.leadId, type: "NOTE", notes: `[Percorso] ${NOTA_MOLLATA}: ${motivo}` } }).catch(() => null);
+}
+
+/** Le pause di prima che oggi si mollano: nessuna relazione possibile o nessuna risposta. */
+function pausaDaMollare(nota: string | null): boolean {
+  if (!nota) return false;
+  return [NOTA_SENZA_CHI_DECIDE, NOTA_SENZA_PROFILI, "Non ha accettato il collegamento", NOTA_NESSUNA_RISPOSTA].some((n) => nota.startsWith(n));
+}
+const NOTA_NESSUNA_RISPOSTA = "Nessuna risposta al contatto né al follow-up";
+
 export async function mettiInPausa(lavorazioneId: string, motivo: string, giorni = GIORNI_PAUSA): Promise<void> {
   const l = await db.lavorazione.update({ where: { id: lavorazioneId }, data: { fase: "PAUSA", pausaFino: new Date(Date.now() + giorni * 86400_000), note: motivo } });
   await chiudiVociAperte(l.leadId, "Superata: azienda in pausa");
@@ -1096,7 +1121,7 @@ export async function aggiornaTestiContatto(oggi = new Date(), massimo = 20): Pr
             const lav = await db.lavorazione.findUnique({ where: { leadId: v.leadId }, select: { id: true, fase: true } });
             // Profili mai cercati: si torna al collegamento (lì si cercano); cercati e non trovati: pausa.
             if (lav && lav.fase === "MAPPATA") {
-              if (await profiliCercati(v.leadId)) await mettiInPausa(lav.id, NOTA_SENZA_PROFILI);
+              if (await profiliCercati(v.leadId)) await mollaAzienda(lav.id, NOTA_SENZA_PROFILI);
               else await db.lavorazione.update({ where: { id: lav.id }, data: { strada: STRADA_COLLEGARE } });
             }
             fatte++;
@@ -1487,7 +1512,7 @@ export async function dopoCommento(leadId: string, oggi = new Date(), subito = f
   const conosce = await conosceAlessio(leadId, decisore);
   if (!conosce && !profili.linkedin && !profili.instagram) {
     const lav = await db.lavorazione.findUnique({ where: { leadId }, select: { id: true, fase: true } });
-    if (lav && lav.fase === "MAPPATA") await mettiInPausa(lav.id, NOTA_SENZA_PROFILI);
+    if (lav && lav.fase === "MAPPATA") await mollaAzienda(lav.id, NOTA_SENZA_PROFILI);
     return false;
   }
   await db.approvalItem.create({
