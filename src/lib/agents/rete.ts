@@ -138,6 +138,7 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
   const tutte = await db.lavorazione.findMany({ where: { fase: { in: [...FASI_ATTIVE, "PAUSA"] } } });
   // v3.124: chi ha risposto non riceve follow-up né va in pausa finché Alessio non ha letto.
   const conRisposta = new Set((await db.approvalItem.findMany({ where: { kind: KIND_RETE_RISPOSTA, status: "IN_ATTESA" }, select: { leadId: true } })).map((v) => v.leadId));
+  const followupAperti = new Set((await db.approvalItem.findMany({ where: { kind: KIND_RETE_FOLLOWUP, status: "IN_ATTESA" }, select: { leadId: true } })).map((v) => v.leadId));
   for (const l of tutte) {
     if (conRisposta.has(l.leadId)) continue;
     // v3.128: le pause "senza relazione" di prima non tornano fra 3 mesi: si mollano adesso.
@@ -147,6 +148,13 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
       continue;
     }
     const azione = prossimaAzione(l, oggi);
+    // v3.129: scritto a freddo (WhatsApp, mail o pagina a chi non ti conosce) e nessuna risposta: niente follow-up sullo
+    // stesso canale, si molla. Una risposta (mail letta o "Mi ha risposto") lo ferma prima.
+    if (l.fase === "CHIESTA" && contattoDiretto(l) && (azione !== "NIENTE" || followupAperti.has(l.leadId)) && (await contattoAFreddo(l.leadId, l.decisore))) {
+      await mollaAzienda(l.id, NOTA_FREDDO_SENZA_RISPOSTA);
+      r.inPausa++;
+      continue;
+    }
     if (azione === "RIENTRA") {
       await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", tentativi: 0, pausaFino: null, ponteNome: null, ponteMembroId: null, strada: null, chiestaAt: null, promemoriaAt: null } });
       // v3.117: era in pausa perché chi decide non si trovava: si ricerca adesso.
@@ -900,6 +908,18 @@ export async function mollaAzienda(lavorazioneId: string, motivo: string): Promi
   await db.activity.create({ data: { leadId: l.leadId, type: "NOTE", notes: `[Percorso] ${NOTA_MOLLATA}: ${motivo}` } }).catch(() => null);
 }
 
+/** v3.129: il primo messaggio è partito a freddo? WhatsApp, mail o pagina a chi non conosce Alessio (LinkedIn no). */
+export const NOTA_FREDDO_SENZA_RISPOSTA = "Scritto a freddo, nessuna risposta: niente follow-up";
+async function contattoAFreddo(leadId: string, decisore: string | null): Promise<boolean> {
+  if (await conosceAlessio(leadId, decisore)) return false;
+  const primo = await db.approvalItem.findFirst({ where: { leadId, kind: { in: [KIND_RETE_CONTATTO, KIND_RETE_DIRETTO, KIND_RETE_PAGINA] }, status: "APPROVATO" }, orderBy: { decidedAt: "desc" }, select: { note: true, payload: true } });
+  if (!primo) return false;
+  const canale = canaleDallaNota(primo.note);
+  if (canale) return !/linkedin/i.test(canale);
+  const p = (primo.payload ?? {}) as Record<string, unknown>;
+  return p.soloDopoRisposta !== true && !!(p.telefono || p.email || p.pagina);
+}
+
 /** Le pause di prima che oggi si mollano: nessuna relazione possibile o nessuna risposta. */
 function pausaDaMollare(nota: string | null): boolean {
   if (!nota) return false;
@@ -1612,4 +1632,43 @@ export async function profiliDecisore(leadId: string): Promise<{ nome: string | 
     instagram: str(p.profiloInstagram),
     amiciFacebook: (Array.isArray(p.amiciInComuneFacebook) ? p.amiciInComuneFacebook : []).map((x) => (typeof x === "string" ? x : str((x as { nome?: unknown })?.nome))).filter((x): x is string => !!x).slice(0, 30),
   };
+}
+
+// ─── Il setaccio (v3.129) ───────────────────────────────────────────────────
+
+interface Foto { nome: string; fase: string; strada: string | null; note: string | null; voci: string[] }
+
+async function fotoPercorso(): Promise<Map<string, Foto>> {
+  const lav = await db.lavorazione.findMany({ include: { lead: { select: { name: true } } } });
+  const voci = await db.approvalItem.findMany({ where: { kind: { in: KINDS_RETE }, status: "IN_ATTESA", leadId: { not: null } }, select: { leadId: true, kind: true, payload: true } });
+  const perLead = new Map<string, string[]>();
+  for (const v of voci) {
+    const p = (v.payload ?? {}) as Record<string, unknown>;
+    const canali = [p.telefono && "WhatsApp", p.email && "mail", p.linkedin && "LinkedIn", p.soloDopoRisposta === true && !p.linkedin && p.instagram && "Instagram"].filter(Boolean).join("+") || "nessun canale";
+    perLead.set(v.leadId!, [...(perLead.get(v.leadId!) ?? []), `${v.kind} (${canali})`]);
+  }
+  return new Map(lav.map((l) => [l.id, { nome: l.lead.name, fase: l.fase, strada: l.strada, note: l.note, voci: perLead.get(l.leadId) ?? [] }]));
+}
+
+export interface EsitoSetaccio { prima: Record<string, number>; dopo: Record<string, number>; cambiate: { azienda: string; prima: string; dopo: string }[] }
+
+/**
+ * v3.129 (Alessio, 2026-11-11: "ripassa al setaccio con la nuova logica tutte le aziende del percorso"): una passata su
+ * tutte, subito. Riscrive tutti i messaggi aperti (niente WhatsApp/mail a chi non ti conosce), poi il giro della rete
+ * (mollate le pause senza relazione e i contatti a freddo senza risposta, avanzate le mappate). Dice cosa è cambiato.
+ */
+export async function setaccioPercorso(oggi = new Date()): Promise<EsitoSetaccio> {
+  const prima = await fotoPercorso();
+  await aggiornaTestiContatto(oggi, 10_000);
+  await turnoRete(oggi);
+  const dopo = await fotoPercorso();
+  const descrivi = (f: Foto | undefined) => (f ? `${f.fase}${f.strada ? `/${f.strada}` : ""}${f.fase === "ELIMINATA" || f.fase === "PAUSA" ? ` (${f.note ?? ""})` : ""}${f.voci.length ? ` · ${f.voci.join(", ")}` : ""}` : "non c'era");
+  const conta = (m: Map<string, Foto>) => [...m.values()].reduce<Record<string, number>>((acc, f) => ({ ...acc, [f.fase]: (acc[f.fase] ?? 0) + 1 }), {});
+  const cambiate = [];
+  for (const [id, d] of dopo) {
+    const a = descrivi(prima.get(id));
+    const b = descrivi(d);
+    if (a !== b) cambiate.push({ azienda: d.nome, prima: a, dopo: b });
+  }
+  return { prima: conta(prima), dopo: conta(dopo), cambiate };
 }

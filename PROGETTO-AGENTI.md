@@ -46,6 +46,8 @@ introvabile, nessun profilo dove scaldarlo, collegamento non accettato in 14 gio
 al follow-up: l'azienda esce dal Percorso per sempre (`mollaAzienda`, fase ELIMINATA, nota "Mollata dal CRM") e il posto
 va a un'altra. Niente pause da 3 mesi né nuove ricerche. Resta nel CRM (non Non target). Le pause di prima con questi
 motivi si mollano al primo giro. "Ha risposto: non è interessato" resta in pausa 3 mesi.
+Chi è stato contattato a freddo prima della v3.127 (WhatsApp, mail o pagina senza conoscerti) non riceve il follow-up: se
+non risponde si molla (v3.129).
 
 Chi decide introvabile: pausa 3 mesi, poi si ricerca (non si scrive all'azienda). Se Alessio conosce chi decide si salta
 al 4. I 121 BNI con i membri vanno avanti a parte.

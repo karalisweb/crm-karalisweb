@@ -14,6 +14,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.129.0] - 2026-11-11
+
+### Added
+- **Setaccio del Percorso** (`POST /api/internal/setaccio-percorso`, con CRON_SECRET): ripassa subito tutte le aziende con le regole nuove e dice, azienda per azienda, cosa è cambiato.
+
+### Changed
+- **Niente follow-up a freddo.** A chi ha ricevuto un WhatsApp, una mail o un messaggio alla pagina senza conoscerti (come Sergio), il CRM non manda il follow-up sullo stesso canale: se non risponde lo molla. Se ti risponde, segna "Mi ha risposto" e si va avanti col caso studio.
+
 ## [3.128.0] - 2026-11-11
 
 ### Changed
