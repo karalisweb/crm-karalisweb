@@ -85,6 +85,7 @@ export const STATI = {
   risposta: "Aspetti la risposta",
   followup: "Follow-up da mandare",
   prepara_contatto: "Il CRM prepara il messaggio",
+  scrive_linkedin: "Il CRM gli scrive su LinkedIn",
 } as const;
 export type StatoNelPasso = keyof typeof STATI;
 export const ordineStato = (s: StatoNelPasso) => Object.keys(STATI).indexOf(s);
@@ -97,8 +98,10 @@ const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null
 
 function daCassetta(v: Voce, si: string, no: string): Azione {
   const p = v.payload ?? {};
+  // v3.127: chi non ti conosce senza LinkedIn: gli scrivi in privato su Instagram (WhatsApp e mail dopo la risposta).
+  const instagram = p.soloDopoRisposta === true && !str(p.linkedin) && !str(p.pagina) ? str(p.instagram) : null;
   // I canali per scrivere subito (v3.87): WhatsApp, mail e LinkedIn di chi decide o del ponte.
-  return { tipo: "cassetta", voceId: v.id, si, no, testo: str(p.messaggio) ?? str(p.commento), link: str(p.post), whatsapp: str(p.telefono), email: str(p.email), linkedin: str(p.linkedin), casoId: str(p.casoId), pagina: str(p.pagina), piattaforma: str(p.piattaforma) };
+  return { tipo: "cassetta", voceId: v.id, si, no, testo: str(p.messaggio) ?? str(p.commento), link: str(p.post), whatsapp: str(p.telefono), email: str(p.email), linkedin: str(p.linkedin), casoId: str(p.casoId), pagina: str(p.pagina) ?? instagram, piattaforma: instagram ? "instagram" : str(p.piattaforma) };
 }
 
 const giorniDa = (d: Date, oggi: Date) => Math.max(0, Math.floor((oggi.getTime() - d.getTime()) / 86400_000));
@@ -127,6 +130,12 @@ export function passoDi(s: Stato, oggi: Date): Esito {
   const risposta = voce("RETE_RISPOSTA");
   if (risposta) return { dentro: true, passo: 4, tocca: "te", stato: "ha_risposto", cosa: `${nomeDi(s)} ti ha risposto via mail: "${str(risposta.payload?.estratto) ?? ""}"`, azione: daCassetta(risposta, "La seguo io", "Non è interessato") };
   const contatto = voce("RETE_CONTATTO");
+  // v3.127 (Alessio, 2026-11-11): a chi non ti conosce il primo messaggio lo manda il CRM su LinkedIn, quando accetta il
+  // collegamento; senza LinkedIn glielo scrivi tu in privato su Instagram. WhatsApp e mail solo dopo la sua risposta.
+  if (contatto?.payload?.soloDopoRisposta === true) {
+    if (str(contatto.payload.linkedin)) return { dentro: true, passo: 4, tocca: "crm", stato: "scrive_linkedin", cosa: `Non ti conosce ancora: il CRM scrive a ${nomeDi(s)} su LinkedIn appena accetta il collegamento. WhatsApp e mail dopo che ti ha risposto`, azione: null };
+    return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: `Non ti conosce ancora: scrivi a ${nomeDi(s)} in privato su Instagram. WhatsApp e mail dopo che ti ha risposto`, azione: daCassetta(contatto, "Mandato", "Non ora") };
+  }
   // v3.126: il collega trovato dal caso di una consulente: gli si propone di collaborare.
   if (contatto) return { dentro: true, passo: 4, tocca: "te", stato: "scrivi", cosa: contatto.payload?.collega === true ? `Scrivi a ${nomeDi(s)}: è un collega, proponigli di collaborare (WhatsApp o mail)` : `Scrivi a ${nomeDi(s)} con il caso studio (WhatsApp o mail)`, azione: daCassetta(contatto, "Mandato", "Non ora") };
   const diretto = voce("RETE_DIRETTO");

@@ -357,10 +357,12 @@ export function piattaformaPersona(profili: { instagram: string | null; linkedin
 }
 
 /** Dopo i commenti ai suoi post (o subito, se non pubblica): il primo messaggio diretto a chi decide. */
-export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, gancio: string | null, haCaso = !!gancio, commentati = true, collega = false): string {
+export function testoContattoDopoCommenti(decisore: string | null, azienda: string, piattaforma: Piattaforma | null, gancio: string | null, haCaso = !!gancio, commentati = true, collega = false, sconosciuto = false): string {
   const dove = piattaforma ? ` su ${NOMI_PIATTAFORMA[piattaforma]}` : "";
+  // v3.127: a chi non ti conosce si dice subito che non vi conoscete (Sergio, 2026-11-11: "non mi ricordo di te").
   const intro = decisore
-    ? commentati ? `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i tuoi post${dove}.` : "sono Alessio Loi di Karalisweb (Cagliari)."
+    ? commentati ? `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i tuoi post${dove}.`
+      : sconosciuto ? "sono Alessio Loi di Karalisweb, a Cagliari. Non ci conosciamo ancora: ti scrivo perché credo di avere una cosa utile per te." : "sono Alessio Loi di Karalisweb (Cagliari)."
     : `sono Alessio Loi di Karalisweb: in queste settimane ho seguito i post di ${azienda}${dove}.`;
   if (decisore) return `Ciao ${nomeProprio(decisore)}, ${intro}\n\n${offertaCaso(azienda, gancio, haCaso, true, collega)}\n\nAlessio`;
   if (collega) return `Buongiorno, ${intro}\n\n${offertaCollaborazione(gancio, haCaso, false)}\n\nMi dite a chi scrivere? Grazie,\nAlessio`;
@@ -402,31 +404,28 @@ export function canaliInOrdine(c: { whatsapp?: string | null; email?: string | n
   return ORDINE_CANALI.filter((k) => ci[k]);
 }
 
-// ─── Quando serve il riscaldamento (Alessio, 2026-11-08: "usare sempre la testa") ──────────────────────
-
-/** Oltre questo tempo il messaggio parte comunque, riscaldata o no. */
-export const ORE_MAX_RISCALDAMENTO = 48;
-const GIORNI_PUBBLICA = 90;
-
-/** Pubblica davvero? null = non si sa (chi decide trovato dal server: i suoi post li legge solo il Chrome). */
-export function pubblicaDa(persona: Record<string, unknown>, oggi: Date): boolean | null {
-  if (!("ultimoPostLinkedin" in persona) && !("ultimoPostInstagram" in persona)) return null;
-  return [persona.ultimoPostLinkedin, persona.ultimoPostInstagram].some((d) => {
-    const t = typeof d === "string" ? Date.parse(d) : NaN;
-    return !Number.isNaN(t) && oggi.getTime() - t < GIORNI_PUBBLICA * 86400_000;
-  });
-}
+// ─── Quando si può scrivere su WhatsApp o mail (Alessio, 2026-11-11) ─────────────────────────────────────
 
 /**
- * Il riscaldamento serve solo se chi decide pubblica, il messaggio arriva a lui e non ti conosce già. Il WhatsApp conta
- * come suo (il numero dell'ufficio è un fisso e WhatsApp non ce l'ha). Solo LinkedIn: il collegamento è obbligato.
- * Dopo 48 ore il messaggio parte comunque, con qualunque canale.
+ * v3.127 (Alessio, 2026-11-11, dopo "Scusami ma non mi ricordo di te": "bisogna scaldare e arrivare a lui dopo che ci
+ * siamo scambiati messaggi, o ci hanno presentato"; scelta: "deve avermi risposto"). Su WhatsApp o mail si scrive solo a
+ * chi conosce già Alessio: membro BNI, cerchia, presentato, o ha già risposto (a un messaggio, a un commento, a una mail).
+ * Tutti gli altri: collegamento e commenti, poi il primo messaggio su LinkedIn (o in privato su Instagram); WhatsApp e
+ * mail dopo la sua risposta. Senza profili dove scaldarlo: pausa, niente messaggi a freddo. Via le scorciatoie v3.123
+ * (subito se non pubblica, comunque dopo 48 ore, info@ subito).
  */
-export function stradaContatto(c: { whatsapp: boolean; email: boolean; emailPersonale: boolean; linkedin: boolean; instagram: boolean; pubblica: boolean | null; loConosce: boolean; oreInCorso: number }): "contatta" | "scalda" {
-  const haCanale = c.whatsapp || c.email || c.linkedin;
-  if (c.loConosce && haCanale) return "contatta";
-  if (c.oreInCorso >= ORE_MAX_RISCALDAMENTO && haCanale) return "contatta";
-  if (c.whatsapp || c.emailPersonale) return c.pubblica === false || (!c.linkedin && !c.instagram) ? "contatta" : "scalda";
-  if (c.email) return "contatta"; // info@: lo legge la segreteria, i commenti non li ha visti
-  return "scalda";
+export function stradaContatto(c: { conosce: boolean; whatsapp: boolean; email: boolean; linkedin: boolean; instagram: boolean }): "contatta" | "scalda" | "pausa" {
+  if (c.conosce && (c.whatsapp || c.email || c.linkedin)) return "contatta";
+  if (c.linkedin || c.instagram) return "scalda";
+  return "pausa";
 }
+
+/** I segnali del lavoro "scalda" che valgono come risposta: un "mi piace" o il collegamento accettato no. */
+export function segnaleDiRisposta(nota: string | null | undefined): boolean {
+  return /^Segnale: (risposta|messaggio)\b/i.test(nota ?? "");
+}
+
+/** Pausa per chi non ti conosce e non ha profili dove scaldarlo. */
+export const NOTA_SENZA_PROFILI = "Nessun profilo dove scaldarlo: WhatsApp e mail solo dopo che ti ha risposto";
+/** Il primo messaggio su LinkedIn aspetta che accetti il collegamento: oltre questi giorni l'azienda va in pausa. */
+export const GIORNI_ATTESA_COLLEGAMENTO = 14;

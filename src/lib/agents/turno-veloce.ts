@@ -6,7 +6,6 @@ import { db } from "@/lib/db";
 import { daGiroVeloce, giroVeloce } from "./arricchimento";
 import { cercaContattiMancanti, cercaInParallelo, daCercare } from "./chi-decide-server";
 import { avanzaMappata } from "./rete";
-import { ORE_MAX_RISCALDAMENTO } from "./rete-regole";
 import { leggiRisposte } from "./risposte-mail";
 
 const ANALISI_PER_GIRO = 6;
@@ -27,10 +26,9 @@ export async function turnoVeloce(oggi = new Date()): Promise<RiepilogoVeloce> {
   r.trovate = ricerca.trovate;
   const conContatti = await cercaContattiMancanti(CONTATTI_PER_GIRO, oggi);
   r.contatti = conContatti.length;
-  // Le nuove, e quelle arrivate alle 48 ore senza messaggio: parte comunque.
-  const limite = new Date(oggi.getTime() - ORE_MAX_RISCALDAMENTO * 3600_000);
+  // Le nuove. v3.127 (Alessio, 2026-11-11): via la scorciatoia delle 48 ore, a chi non ti conosce non si scrive a freddo.
   const nuove = await db.lavorazione.findMany({
-    where: { fase: "MAPPATA", OR: [{ strada: null }, { strada: { in: ["COLLEGARE", "SCALDARE"] }, createdAt: { lte: limite }, lead: { approvalItems: { none: { kind: "RETE_CONTATTO", status: { in: ["IN_ATTESA", "APPROVATO"] } } } } }] },
+    where: { fase: "MAPPATA", strada: null },
     orderBy: { updatedAt: "asc" },
     select: { id: true },
     take: 15,

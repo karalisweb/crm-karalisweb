@@ -28,7 +28,16 @@ studio"**. Facebook fuori. Sostituisce "chi me la presenta" e i commenti alla pa
 2. **Collegamento**: il CRM chiede il collegamento su LinkedIn (senza nota) e lo segue su Instagram.
 3. **In riscaldamento**: il CRM commenta i suoi post (prima Instagram, poi LinkedIn), 3 sulla stessa piattaforma. Se non
    pubblica, si passa subito al 4.
-4. **Contatto**: WhatsApp o mail col caso studio, poi il follow-up dopo 5 giorni, pausa dopo altri 5.
+4. **Contatto**: a chi non ti conosce il primo messaggio va su LinkedIn (lo manda il CRM quando accetta il collegamento) o
+   in privato su Instagram; **WhatsApp o mail col caso studio solo dopo che ha risposto** (v3.127). Poi il follow-up dopo
+   5 giorni, pausa dopo altri 5.
+
+**Niente messaggi a freddo (v3.127, Alessio 2026-11-11).** Sergio ha risposto al WhatsApp "Scusami ma non mi ricordo di
+te": *"questo è imbarazzante. Ecco perché bisogna scaldare e arrivare a lui dopo che ci siamo scambiati messaggi, o ci
+hanno presentato"*. Scelta di Alessio: **"deve avermi risposto"**. WhatsApp e mail solo a chi ti conosce già: membro BNI,
+cerchia ("lo conosco"), presentato, oppure ha già risposto (mail letta dal CRM, "Mi ha risposto" segnato, risposta o
+messaggio visti dal lavoro "scalda"; un "mi piace" o il collegamento accettato non bastano). Senza LinkedIn né Instagram
+dove scaldarlo: pausa 3 mesi. Collegamento non accettato in 14 giorni: pausa. Tolte le scorciatoie della v3.123.
 
 Chi decide introvabile: pausa 3 mesi, poi si ricerca (non si scrive all'azienda). Se Alessio conosce chi decide si salta
 al 4. I 121 BNI con i membri vanno avanti a parte.
@@ -37,7 +46,7 @@ al 4. I 121 BNI con i membri vanno avanti a parte.
 
 ## Percorso veloce (confermato da Alessio il 2026-11-08, v3.122.0)
 
-Detto da Alessio: **"in 30-40 minuti il CRM prenda un'azienda, l'analizzi, cerchi il decision maker e me la porti in da contattare. VELOCITÀ prima di tutto"**. Chi decide lo cerca il server, ogni 10 minuti. Regola del contatto (2026-11-08, v3.123, `stradaContatto`): **si scalda solo se chi decide pubblica, il messaggio arriva a lui e non ti conosce già**. Messaggio subito se lo conosci o è di BNI, se non pubblica o non ha profili, se il contatto è info@. Solo LinkedIn: collegamento. Dopo 48 ore il messaggio parte comunque.
+Detto da Alessio: **"in 30-40 minuti il CRM prenda un'azienda, l'analizzi, cerchi il decision maker e me la porti in da contattare. VELOCITÀ prima di tutto"**. Chi decide lo cerca il server, ogni 10 minuti. ~~Regola del contatto v3.123 (messaggio subito se non pubblica o non ha profili, se il contatto è info@, comunque dopo 48 ore)~~: **superata il 2026-11-11 dalla v3.127**, vedi "Niente messaggi a freddo" sopra. La velocità vale per analisi e ricerca di chi decide, non per saltare il riscaldamento.
 
 ## Vendita: dalla richiesta di info all'incarico (confermata con Alessio il 2026-11-03: "una fila sola"; fila e promemoria costruiti in v3.93.0, preventivo/contratto da fare)
 

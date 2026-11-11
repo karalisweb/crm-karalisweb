@@ -18,7 +18,7 @@ import { mezzanotteRoma, norm } from "./bni-regole";
 import { indirizzoSardo, linkedinPermette, mandaAScaldare, verificaCollegamento } from "./motore";
 import {
   canaleDallaNota, testoCambioCanale, type ContattoManuale,
-  FASI_ATTIVE, GIORNI_PAUSA, pubblicaDa, stradaContatto, capienzaLavorazione, chiDecideTesto, forzaAzienda, prossimaAzione,
+  FASI_ATTIVE, GIORNI_PAUSA, stradaContatto, segnaleDiRisposta, NOTA_SENZA_PROFILI, GIORNI_ATTESA_COLLEGAMENTO, capienzaLavorazione, chiDecideTesto, forzaAzienda, prossimaAzione,
   testoContattoDiretto, testoDirettoConPonte, testoFollowupContatto, testoPromemoria, testoRichiestaPonte, type DatiAzienda, type Ponte,
   COMMENTI_PER_CONTATTO, PIATTAFORME, paginaPreferita, piattaformaConsigliata, piattaformaDi, piattaformaPiuCommentata, testoContattoDopoCommenti, testoMessaggioPagina,
   type PaginaSocial, type Piattaforma, STRADA_COLLEGARE, STRADA_SCALDARE, nellaCerchia, piattaformaPersona, stessaPersona,
@@ -62,6 +62,23 @@ export async function cerchiaNomi(): Promise<string[]> {
     db.cerchiaContatto.findMany({ where: { rimossoAt: null }, select: { nome: true } }),
   ]);
   return [...membri.map((m) => m.name), ...altri.map((c) => c.nome)];
+}
+
+/**
+ * v3.127 (Alessio, 2026-11-11: "arrivare a lui dopo che ci siamo scambiati messaggi, o ci hanno presentato"): chi decide
+ * conosce già Alessio? Solo allora si scrive su WhatsApp o mail. Vale: membro BNI, cerchia ("lo conosco"), presentato,
+ * oppure ha già risposto (mail letta dal CRM, "mi ha risposto" segnato, risposta o messaggio visti dal lavoro "scalda").
+ */
+export async function conosceAlessio(leadId: string, decisore: string | null, cerchia?: string[]): Promise<boolean> {
+  const [membro, l, risposta, attivita] = await Promise.all([
+    db.bniMembro.findFirst({ where: { status: "ATTIVO", OR: [{ leadId }, ...(decisore ? [{ name: { equals: decisore, mode: "insensitive" as const } }] : [])] }, select: { id: true } }),
+    db.lavorazione.findUnique({ where: { leadId }, select: { presentatoAt: true, scaldataAt: true, note: true } }),
+    db.approvalItem.findFirst({ where: { leadId, kind: { in: [KIND_RETE_RISPOSTA, KIND_RETE_CASO] } }, select: { id: true } }),
+    db.activity.findFirst({ where: { leadId, type: "RESPONSE_RECEIVED" }, select: { id: true } }),
+  ]);
+  if (membro || l?.presentatoAt || risposta || attivita) return true;
+  if (l?.scaldataAt && segnaleDiRisposta(l.note)) return true;
+  return !!decisore && nellaCerchia(decisore, cerchia ?? (await cerchiaNomi()));
 }
 
 // ─── I dati dell'azienda per le strade ──────────────────────────────────────
@@ -128,6 +145,8 @@ export async function turnoRete(oggi = new Date()): Promise<RiepilogoRete> {
       await db.lavorazione.update({ where: { id: l.id }, data: { fase: "MAPPATA", tentativi: 0, pausaFino: null, ponteNome: null, ponteMembroId: null, strada: null, chiestaAt: null, promemoriaAt: null } });
       // v3.117: era in pausa perché chi decide non si trovava: si ricerca adesso.
       if (l.note?.startsWith(NOTA_SENZA_CHI_DECIDE)) await ricercaChiDecide(l.leadId, oggi);
+      // v3.127: era in pausa perché non c'era dove scaldarlo: si ricercano i suoi profili.
+      else if (l.note?.startsWith(NOTA_SENZA_PROFILI)) await cercaChiDecideServer(l.leadId, oggi, { forza: true, relazioneDiretta: true }).catch(() => null);
       r.rientrate++;
     } else if (azione === "PROMEMORIA") {
       // v3.103: senza ponte (contatto diretto a chi decide) il promemoria è il follow-up a lui.
@@ -432,8 +451,17 @@ async function accodaContatti(oggi: Date): Promise<number> {
     // v3.117 (Alessio: "poi mail o WhatsApp per il caso studio"): con WhatsApp o mail scrive Alessio da lì; LinkedIn
     // solo se non c'è altro (ormai siete collegati: il messaggio, non l'invito).
     if ((v.kind === KIND_RETE_CONTATTO || p.contattoManuale) && (p.telefono || p.email)) continue;
+    // v3.127: a chi non ti conosce il primo messaggio va su LinkedIn quando ha accettato il collegamento. Se dopo
+    // 14 giorni non l'ha accettato, l'azienda va in pausa: niente WhatsApp né mail a freddo.
+    if (v.kind === KIND_RETE_CONTATTO && (p as { soloDopoRisposta?: boolean }).soloDopoRisposta && Date.now() - v.createdAt.getTime() > GIORNI_ATTESA_COLLEGAMENTO * 86400_000) {
+      const lav = await db.lavorazione.findUnique({ where: { leadId: v.leadId }, select: { id: true, fase: true } });
+      if (lav && lav.fase === "MAPPATA") await mettiInPausa(lav.id, `Non ha accettato il collegamento su LinkedIn in ${GIORNI_ATTESA_COLLEGAMENTO} giorni`);
+      continue;
+    }
     // v3.119: un invito fatto per una voce vecchia non blocca il messaggio di questa (conta solo quello fatto dopo).
-    if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { status: "FATTO", queuedAt: { gte: v.createdAt } }] }, select: { id: true } })) continue;
+    // v3.127: un giro finito senza messaggio (invito ancora in sospeso) si riprova dopo 2 giorni.
+    const riprovaDal = new Date(Math.max(v.createdAt.getTime(), Date.now() - 2 * 86400_000));
+    if (await db.agentRun.findFirst({ where: { leadId: v.leadId, agent: "contatta_persona", OR: [{ status: { in: ["IN_CODA", "IN_CORSO"] } }, { status: "FATTO", queuedAt: { gte: riprovaDal } }] }, select: { id: true } })) continue;
     if (await archiviaSeNonRiuscito(v.id, v.leadId)) continue;
     // v3.99: l'azienda di un membro BNI passa dal 121, non da LinkedIn.
     if (await db.bniMembro.findFirst({ where: { leadId: v.leadId, status: "ATTIVO" }, select: { id: true } })) continue;
@@ -452,8 +480,14 @@ export async function importaContattoPersona(findings: Record<string, unknown>):
   const leadId = str(findings.leadId);
   const esito = str(findings.esito);
   if (!leadId || (esito !== "MESSAGGIO" && esito !== "INVITO")) return;
-  const voce = await db.approvalItem.findFirst({ where: { leadId, kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true } });
+  const voce = await db.approvalItem.findFirst({ where: { leadId, kind: { in: [KIND_RETE_DIRETTO, KIND_RETE_CONTATTO] }, status: "IN_ATTESA" }, orderBy: { createdAt: "asc" }, select: { id: true, kind: true } });
   if (!voce) return;
+  // v3.127: per il contatto a chi decide conta solo il messaggio. Con il solo invito la voce resta aperta e il Mac
+  // riprova quando il collegamento è accettato (prima l'azienda finiva in "Aspetti la risposta" senza messaggio).
+  if (voce.kind === KIND_RETE_CONTATTO && esito !== "MESSAGGIO") {
+    await db.activity.create({ data: { leadId, type: "LINKEDIN_SENT", notes: "[Contatto-auto] invito LinkedIn a chi decide: il messaggio parte quando accetta" } }).catch(() => null);
+    return;
+  }
   await db.approvalItem.update({ where: { id: voce.id }, data: { status: "APPROVATO", decidedAt: new Date(), decidedBy: "crm_auto", note: esito === "MESSAGGIO" ? "Messaggio mandato su LinkedIn dal CRM" : findings.senzaNota === true ? "Richiesta di collegamento senza nota mandata su LinkedIn dal CRM" : "Richiesta di collegamento con nota mandata su LinkedIn dal CRM" } });
   await decisioneRete(voce.id, "APPROVATO");
   await db.activity.create({ data: { leadId, type: "LINKEDIN_SENT", notes: `[Contatto-auto] ${esito === "MESSAGGIO" ? "messaggio LinkedIn a chi decide" : findings.senzaNota === true ? "invito LinkedIn senza nota a chi decide" : "invito LinkedIn con nota a chi decide"}` } }).catch(() => null);
@@ -535,26 +569,26 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
     await scegliPonte(l.id, { strada: "DIRETTO", nome: conosciuto.nome, decisore: conosciuto.nome });
     return creaMessaggio(l.id, "DIRETTO", oggi);
   }
-  // v3.123 (Alessio, 2026-11-08: "quando serve il riscaldamento?"): messaggio subito, salvo quando scaldare serve davvero.
+  // v3.127 (Alessio, 2026-11-11): WhatsApp e mail solo a chi ti conosce già; gli altri si scaldano, senza scorciatoie.
   const giaContatto = await db.approvalItem.findFirst({ where: { leadId: l.leadId, kind: KIND_RETE_CONTATTO, status: { in: ["IN_ATTESA", "APPROVATO"] } }, select: { id: true } });
   if (!giaContatto) {
-    const [canale, profili, membro, report] = await Promise.all([
+    const [canale, profili, aMano, conosce] = await Promise.all([
       canaleDiretto(l.leadId, decisore),
       profiliDecisore(l.leadId),
-      db.bniMembro.findFirst({ where: { OR: [{ leadId: l.leadId }, { name: { equals: decisore, mode: "insensitive" } }], status: "ATTIVO" }, select: { id: true } }),
-      db.agentReport.findFirst({ where: { leadId: l.leadId, agent: "decision_maker" }, orderBy: { collectedAt: "desc" }, select: { findings: true } }),
+      contattoManualeDi(l.leadId),
+      conosceAlessio(l.leadId, decisore, c),
     ]);
-    const persona = ((report?.findings as { persone?: Record<string, unknown>[] } | null)?.persone ?? [])[0] ?? {};
-    // Le aziende riportate al collegamento (v3.119) ripartono da lì; le altre contano dall'ingresso nel percorso.
-    const dal = l.note === NOTA_SOLO_INVITO ? l.updatedAt : l.createdAt;
-    const aMano = await contattoManualeDi(l.leadId);
-    const strada = aMano?.email || aMano?.whatsapp ? "contatta" : stradaContatto({
-      whatsapp: !!canale.whatsapp, email: !!canale.email, emailPersonale: canale.emailPersonale, linkedin: !!(canale.linkedin ?? profili.linkedin), instagram: !!profili.instagram,
-      pubblica: pubblicaDa(persona, oggi), loConosce: !!membro, oreInCorso: (oggi.getTime() - dal.getTime()) / 3600_000,
+    const strada = stradaContatto({
+      conosce, whatsapp: !!(canale.whatsapp || aMano?.whatsapp), email: !!(canale.email || aMano?.email), linkedin: !!(canale.linkedin ?? profili.linkedin), instagram: !!profili.instagram,
     });
     if (strada === "contatta") {
       await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_SCALDARE, decisore, ponteNome: null, ponteMembroId: null } });
       return dopoCommento(l.leadId, oggi, true);
+    }
+    // Pausa solo dopo aver cercato i suoi profili: altrimenti va al collegamento, dove la ricerca si fa prima.
+    if (strada === "pausa" && (await profiliCercati(l.leadId))) {
+      await mettiInPausa(l.id, NOTA_SENZA_PROFILI);
+      return false;
     }
   }
   // Già al lavoro (collegamento chiesto o commenti in corso): resta dov'è.
@@ -564,6 +598,11 @@ export async function avanzaMappata(lavorazioneId: string, cerchia?: string[], o
   }
   await db.lavorazione.update({ where: { id: l.id }, data: { strada: STRADA_COLLEGARE, decisore, ponteNome: null, ponteMembroId: null } });
   return false;
+}
+
+/** La ricerca dei profili personali di chi decide (relazione diretta) è già stata fatta? */
+async function profiliCercati(leadId: string): Promise<boolean> {
+  return !!(await db.agentRun.findFirst({ where: { leadId, agent: AGENTE_SERVER, status: { in: ["FATTO", "FALLITO"] }, input: { path: ["relazioneDiretta"], equals: true } }, select: { id: true } }));
 }
 
 /** v3.117: rientrata dalla pausa senza chi decide: si rifà la ricerca (se LinkedIn lo permette oggi). */
@@ -592,7 +631,7 @@ async function accodaCollega(oggi: Date): Promise<number> {
     const p = await profiliDecisore(l.leadId);
     if (!p.linkedin && !p.instagram) {
       // Nessun profilo personale. Se chi decide è stato cercato con le istruzioni vecchie (senza Instagram, a volte senza
-      // link) si ricerca una volta; se nemmeno così: niente da collegare né da commentare, si scrive col caso studio.
+      // link) si ricerca una volta; se nemmeno così: niente da collegare né da commentare: a chi ti conosce si scrive, gli altri in pausa (v3.127).
       const ricerca = await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: AGENTE_SERVER, input: { path: ["relazioneDiretta"], equals: true } }, orderBy: { queuedAt: "desc" }, select: { status: true } });
       if (ricerca?.status === "IN_CORSO") continue;
       if (!ricerca) {
@@ -701,7 +740,7 @@ export async function contattoManualeDi(leadId: string): Promise<ContattoManuale
   return (v?.payload as unknown as ContattoManuale | null) ?? null;
 }
 
-export type EsitoContatto = "da_contattare" | "canale_aggiunto" | "nuovo_messaggio" | "salvato";
+export type EsitoContatto = "da_contattare" | "canale_aggiunto" | "nuovo_messaggio" | "salvato" | "dopo_risposta";
 
 /**
  * v3.125 (Alessio, 2026-11-09: "dopo una richiesta di collegamento trovo email o telefono: aggiungere o cambiare
@@ -736,8 +775,19 @@ export async function aggiungiContatto(leadId: string, nuovo: ContattoManuale, c
 
   if (!nuovo.email && !nuovo.whatsapp) return "salvato";
 
+  // v3.127: a chi non ti conosce WhatsApp e mail servono dopo la sua risposta: si tengono da parte, il percorso non cambia.
+  const lavPrima = await db.lavorazione.findUnique({ where: { leadId }, select: { decisore: true } });
+  const conosce = await conosceAlessio(leadId, lavPrima?.decisore ?? null);
+
   // Un messaggio già pronto: si aggiunge il canale, il testo resta.
   const aperte = await db.approvalItem.findMany({ where: { leadId, status: "IN_ATTESA", kind: { in: KIND_MESSAGGI_A_CHI_DECIDE } }, select: { id: true, payload: true } });
+  if (aperte.length && !conosce) {
+    for (const v of aperte) {
+      const payload = { ...((v.payload ?? {}) as Record<string, unknown>), ...(nuovo.whatsapp ? { telefonoDopo: nuovo.whatsapp } : {}), ...(nuovo.email ? { emailDopo: nuovo.email } : {}), contattoManuale: true };
+      await db.approvalItem.update({ where: { id: v.id }, data: { payload: payload as Prisma.InputJsonValue } });
+    }
+    return "dopo_risposta";
+  }
   if (aperte.length) {
     for (const v of aperte) {
       const payload = { ...((v.payload ?? {}) as Record<string, unknown>), ...(nuovo.whatsapp ? { telefono: nuovo.whatsapp } : {}), ...(nuovo.email ? { email: nuovo.email, emailPersonale: true } : {}), contattoManuale: true };
@@ -750,6 +800,7 @@ export async function aggiungiContatto(leadId: string, nuovo: ContattoManuale, c
 
   const l = await db.lavorazione.findUnique({ where: { leadId } });
   if (!l) return "salvato";
+  if (!conosce) return "dopo_risposta";
 
   if (l.fase === "MAPPATA") {
     const d = await datiAzienda(leadId, !!l.scaldataAt);
@@ -813,7 +864,8 @@ export async function segnaRispostaCaso(leadId: string, chi: string): Promise<bo
         lavorazioneId: l.id, decisore, azienda: l.lead.name, casoId,
         messaggio: testoInvioCaso(decisore, p.collega === true),
         collega: p.collega === true,
-        canale: p.canale ?? null, telefono: p.telefono ?? null, email: p.email ?? null, linkedin: p.linkedin ?? null, pagina: p.pagina ?? null, piattaforma: p.piattaforma ?? null,
+        // v3.127: ha risposto, quindi ora WhatsApp e mail vanno bene (anche quelli tenuti da parte per dopo).
+        canale: p.canale ?? null, telefono: p.telefono ?? p.telefonoDopo ?? null, email: p.email ?? p.emailDopo ?? null, linkedin: p.linkedin ?? null, pagina: p.pagina ?? null, piattaforma: p.piattaforma ?? null,
       } as Prisma.InputJsonValue,
     },
   });
@@ -916,7 +968,8 @@ async function cosaDare(membroId: string | null): Promise<string | null> {
 }
 
 /** v3.90: i testi delle voci di contatto. Le voci ancora aperte con una versione più vecchia si riscrivono al turno. */
-export const VERSIONE_TESTO = 2;
+/** v3.127: 3 = i messaggi a chi non ti conosce vanno su LinkedIn/Instagram, WhatsApp e mail dopo la risposta. */
+export const VERSIONE_TESTO = 3;
 
 const CELLULARE = /(?<![\d])(?:\+?39[\s./-]?)?3\d{2}[\s./-]?\d{3}[\s./-]?\d{3,4}(?![\d])/g;
 const PAGINE_UTILI = /contatt|chi-?siamo|about|team|staff|azienda|dove-?siamo|titolare|fondator/i;
@@ -1033,7 +1086,27 @@ export async function aggiornaTestiContatto(oggi = new Date(), massimo = 20): Pr
       const canali = { telefono: canale.whatsapp ?? (p.telefono as string | null) ?? null, email: canale.email ?? (p.email as string | null) ?? null, emailPersonale: canale.emailPersonale, chiamare: canale.telefono, linkedin: (p.linkedin as string | null) ?? canale.linkedin };
       if (v.kind === KIND_RETE_CONTATTO) {
         const piattaforma = piattaformaPiuCommentata(await commentiDi(v.leadId))?.piattaforma ?? null;
-        nuovo = { ...canali, messaggio: testoContattoDopoCommenti(decisore, azienda, piattaforma, gancio, !!caso, !!piattaforma, collega) };
+        // v3.127: i messaggi già pronti per chi non ti conosce perdono WhatsApp e mail (tenuti per dopo la risposta).
+        const conosce = await conosceAlessio(v.leadId, decisore);
+        if (!conosce) {
+          const profili = await profiliDecisore(v.leadId);
+          const linkedin = canali.linkedin ?? profili.linkedin;
+          if (!linkedin && !profili.instagram) {
+            await db.approvalItem.update({ where: { id: v.id }, data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: "rete", note: NOTA_SENZA_PROFILI } });
+            const lav = await db.lavorazione.findUnique({ where: { leadId: v.leadId }, select: { id: true, fase: true } });
+            // Profili mai cercati: si torna al collegamento (lì si cercano); cercati e non trovati: pausa.
+            if (lav && lav.fase === "MAPPATA") {
+              if (await profiliCercati(v.leadId)) await mettiInPausa(lav.id, NOTA_SENZA_PROFILI);
+              else await db.lavorazione.update({ where: { id: lav.id }, data: { strada: STRADA_COLLEGARE } });
+            }
+            fatte++;
+            continue;
+          }
+          nuovo = {
+            ...canali, linkedin, instagram: (p.instagram as string | null) ?? profili.instagram, telefono: null, email: null, telefonoDopo: canali.telefono, emailDopo: canali.email, soloDopoRisposta: true,
+            messaggio: testoContattoDopoCommenti(decisore, azienda, piattaforma, gancio, !!caso, !!piattaforma, collega, true),
+          };
+        } else nuovo = { ...canali, soloDopoRisposta: false, messaggio: testoContattoDopoCommenti(decisore, azienda, piattaforma, gancio, !!caso, !!piattaforma, collega) };
       } else if ("inComune" in p) {
         nuovo = { ...canali, messaggio: testoDirettoConPonte(decisore ?? "", azienda, (p.inComune as string | null) ?? null, gancio, !!caso, collega) };
       } else {
@@ -1409,6 +1482,14 @@ export async function dopoCommento(leadId: string, oggi = new Date(), subito = f
   const piattaforma = piattaformaPiuCommentata(await commentiDi(leadId))?.piattaforma ?? null;
   const caso = await casoPerMessaggio(leadId, oggi);
   const canale = await canaleDiretto(leadId, decisore);
+  // v3.127 (Alessio, 2026-11-11): a chi non ti conosce il primo messaggio va su LinkedIn (o in privato su Instagram);
+  // WhatsApp e mail restano da parte per quando ti ha risposto. Senza profili: pausa, niente messaggi a freddo.
+  const conosce = await conosceAlessio(leadId, decisore);
+  if (!conosce && !profili.linkedin && !profili.instagram) {
+    const lav = await db.lavorazione.findUnique({ where: { leadId }, select: { id: true, fase: true } });
+    if (lav && lav.fase === "MAPPATA") await mettiInPausa(lav.id, NOTA_SENZA_PROFILI);
+    return false;
+  }
   await db.approvalItem.create({
     data: {
       leadId,
@@ -1418,10 +1499,13 @@ export async function dopoCommento(leadId: string, oggi = new Date(), subito = f
       payload: {
         decisore,
         azienda: lead.name,
-        messaggio: testoContattoDopoCommenti(decisore, lead.name, commentati ? piattaforma : null, caso?.gancio ?? null, !!caso, commentati > 0, !!caso?.collega),
+        messaggio: testoContattoDopoCommenti(decisore, lead.name, commentati ? piattaforma : null, caso?.gancio ?? null, !!caso, commentati > 0, !!caso?.collega, !conosce),
         piattaforma,
-        telefono: canale.whatsapp,
-        email: canale.email,
+        telefono: conosce ? canale.whatsapp : null,
+        email: conosce ? canale.email : null,
+        telefonoDopo: canale.whatsapp,
+        emailDopo: canale.email,
+        soloDopoRisposta: !conosce,
         emailPersonale: canale.emailPersonale,
         chiamare: canale.telefono,
         linkedin: profili.linkedin,

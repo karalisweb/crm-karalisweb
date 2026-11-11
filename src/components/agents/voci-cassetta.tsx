@@ -201,7 +201,7 @@ export function CorpoContatto({ p }: { p: Record<string, unknown> }) {
   return (
     <div className="space-y-2">
       <Messaggio testo={s(p.messaggio)} telefono={s(p.telefono) || null} email={s(p.email) || null} linkedin={s(p.linkedin) || null} chiama altri={altri} />
-      {!s(p.telefono) && !s(p.email) && <p className="text-xs text-muted-foreground">Nessun telefono né mail dell&apos;azienda: scrivigli in privato sui social.</p>}
+      {!s(p.telefono) && !s(p.email) && <p className="text-xs text-muted-foreground">{p.soloDopoRisposta === true ? "Non ti conosce ancora: scrivigli in privato su LinkedIn o Instagram. WhatsApp e mail dopo che ti ha risposto." : "Nessun telefono né mail dell'azienda: scrivigli in privato sui social."}</p>}
       {p.motivoDalCaso === false && <p className="text-xs text-muted-foreground">Aggiungi tu, a voce o per iscritto, la storia del caso studio (senza il nome del cliente).</p>}
     </div>
   );

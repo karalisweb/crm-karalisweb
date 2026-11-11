@@ -14,6 +14,20 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.127.0] - 2026-11-11
+
+### Changed
+- **Niente più WhatsApp o mail a chi non ti conosce.** Dopo la risposta di Sergio ("Scusami ma non mi ricordo di te"): WhatsApp e mail partono solo verso chi ti conosce già (membro BNI, "lo conosco", presentato) o **ti ha già risposto**. Agli altri il primo messaggio arriva su LinkedIn, lo manda il CRM quando accetta il collegamento; senza LinkedIn glielo scrivi tu in privato su Instagram. Il testo dice "Non ci conosciamo ancora". WhatsApp e mail restano da parte e tornano nel messaggio col caso studio quando segni "Mi ha risposto".
+- Chi non ha né LinkedIn né Instagram dove scaldarlo va in pausa 3 mesi (prima si cercano i suoi profili). Se non accetta il collegamento in 14 giorni: pausa.
+- Mail e telefono aggiunti a mano per chi non ti conosce si salvano per dopo la risposta, non fanno partire un messaggio.
+
+### Removed
+- Le scorciatoie della v3.123: messaggio subito se chi decide non pubblica o non ha profili, subito a info@, e comunque dopo 48 ore.
+
+### Fixed
+- Il solo invito LinkedIn non chiude più il messaggio a chi decide: prima l'azienda finiva in "Aspetti la risposta" senza aver ricevuto niente. Il CRM riprova ogni 2 giorni finché il collegamento è accettato.
+- I messaggi WhatsApp/mail già pronti in Da contattare per chi non ti conosce vengono spostati su LinkedIn/Instagram (o ritirati se non c'è dove scrivergli).
+
 ## [3.126.1] - 2026-11-11
 
 ### Fixed

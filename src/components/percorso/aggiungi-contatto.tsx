@@ -11,6 +11,7 @@ const MESSAGGI: Record<string, string> = {
   canale_aggiunto: "Salvato: ora puoi scrivergli anche da lì",
   nuovo_messaggio: "Salvato: il messaggio sul nuovo canale è in Da contattare",
   salvato: "Salvato",
+  dopo_risposta: "Salvato: non ti conosce ancora, gli scrivi da lì quando ti ha risposto",
 };
 
 function useSalvaContatto(leadId: string, onFatto: () => void) {
