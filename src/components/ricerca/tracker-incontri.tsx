@@ -30,6 +30,8 @@ export interface RigaRichiesta {
 }
 export interface Tracker {
   daMandare: RigaRichiesta[];
+  /** v3.132: le richieste da mandare a chi non ha il cellulare. */
+  senzaCellulare?: RigaRichiesta[];
   inAttesa: RigaRichiesta[];
   senzaRisposta: RigaRichiesta[];
   fatti: { id: string; data: string; formato: string | null; membroId: string; nome: string; capitolo: string | null }[];
@@ -50,7 +52,7 @@ export interface Fissato {
   next121At: string;
 }
 
-type Scheda = "daMandare" | "inAttesa" | "senzaRisposta" | "fissati" | "fatti";
+type Scheda = "daMandare" | "senzaCellulare" | "inAttesa" | "senzaRisposta" | "fissati" | "fatti";
 
 const FORMATO: Record<string, string> = { PRESENZA: "di persona", ONLINE: "online", A_SCELTA: "di persona o online" };
 
@@ -155,7 +157,7 @@ export function DaMandare({ r, onFatto }: { r: RigaRichiesta; onFatto: () => voi
           <a href={wa} target="_blank" rel="noopener noreferrer"><Button size="sm"><MessageCircle className="h-3.5 w-3.5 mr-1" /> Manda su WhatsApp</Button></a>
         ) : (
           <>
-            <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(testo).then(() => toast.success("Copiato"))}><Copy className="h-3.5 w-3.5 mr-1" /> Copia (manca il telefono)</Button>
+            <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(testo).then(() => toast.success("Copiato"))}><Copy className="h-3.5 w-3.5 mr-1" /> Copia (manca il cellulare)</Button>
             <AggiungiNumero membroId={r.membroId} onFatto={onFatto} />
           </>
         )}
@@ -203,6 +205,7 @@ async function decidi(voceId: string, decisione: "APPROVATO" | "SCARTATO", ok: s
 export function TrackerIncontri({ tracker, fissati, visite = [], onCambio }: { tracker: Tracker; fissati: Fissato[]; visite?: Visita[]; onCambio: () => void }) {
   const conteggi: Record<Scheda, number> = {
     daMandare: tracker.daMandare.length,
+    senzaCellulare: tracker.senzaCellulare?.length ?? 0,
     inAttesa: tracker.inAttesa.length,
     senzaRisposta: tracker.senzaRisposta.length,
     fissati: fissati.length,
@@ -211,6 +214,7 @@ export function TrackerIncontri({ tracker, fissati, visite = [], onCambio }: { t
   const [scheda, setScheda] = useState<Scheda>(tracker.daMandare.length ? "daMandare" : fissati.length ? "fissati" : "inAttesa");
   const schede: { k: Scheda; label: string }[] = [
     { k: "daMandare", label: "Da mandare" },
+    { k: "senzaCellulare", label: "Senza cellulare" },
     { k: "inAttesa", label: "Aspetto risposta" },
     { k: "senzaRisposta", label: "Non hanno risposto" },
     { k: "fissati", label: "Fissati" },
@@ -218,6 +222,7 @@ export function TrackerIncontri({ tracker, fissati, visite = [], onCambio }: { t
   ];
   const vuoto: Record<Scheda, string> = {
     daMandare: "Nessun messaggio da mandare. Ogni mattina alle 7 arrivano i prossimi (o premi \"Prepara le richieste adesso\").",
+    senzaCellulare: "Nessuno: tutti quelli da invitare hanno il cellulare.",
     inAttesa: "Nessuno: chi ha ricevuto il messaggio (o il follow-up) nelle ultime 72 ore compare qui.",
     senzaRisposta: "Nessuno: chi non risponde da più di 72 ore compare qui.",
     fissati: "Nessun incontro in calendario.",
@@ -251,6 +256,12 @@ export function TrackerIncontri({ tracker, fissati, visite = [], onCambio }: { t
       ) : (
         <div className="space-y-2">
           {scheda === "daMandare" && tracker.daMandare.map((r) => <DaMandare key={r.voceId} r={r} onFatto={onCambio} />)}
+          {scheda === "senzaCellulare" && (
+            <>
+              <p className="text-xs text-muted-foreground">Senza cellulare il messaggio su WhatsApp non parte: aggiungi il numero e passa in Da mandare, oppure copia il testo e mandalo come puoi.</p>
+              {(tracker.senzaCellulare ?? []).map((r) => <DaMandare key={r.voceId} r={r} onFatto={onCambio} />)}
+            </>
+          )}
           {scheda === "inAttesa" && tracker.inAttesa.map((r) => <RigaSemplice key={r.voceId} r={r} nota={`mandato ${giorniFa(r.mandataIl!)}`} onFatto={onCambio} />)}
           {scheda === "senzaRisposta" && tracker.senzaRisposta.map((r) => <RigaSemplice key={r.voceId} r={r} nota={`nessuna risposta da ${giorniFa(r.mandataIl!).replace(" fa", "")}`} onFatto={onCambio} />)}
           {scheda === "fissati" && fissati.map((m) => (

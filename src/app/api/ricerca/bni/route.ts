@@ -82,8 +82,10 @@ export async function GET() {
       };
     })
     .filter((r) => !r.conosciuto && !r.fissato);
-  // v3.131: in "Da mandare" solo chi ha un cellulare (il messaggio parte su WhatsApp).
+  // v3.132 (Alessio: "mi dividi quelli con e quelli senza cell?"): "Da mandare" con il cellulare,
+  // "Senza cellulare" a parte (si aggiunge il numero e passano di là).
   const daMandare = righe.filter((r) => !r.mandataIl && numeroWhatsApp(r.telefono));
+  const senzaCellulare = righe.filter((r) => !r.mandataIl && !numeroWhatsApp(r.telefono));
   const ultimo = (r: (typeof righe)[number]) => (r.followupAt ?? r.mandataIl)!.getTime();
   const inAttesa = righe.filter((r) => r.mandataIl && ultimo(r) > limiteRisposta);
   const senzaRisposta = righe.filter((r) => r.mandataIl && ultimo(r) <= limiteRisposta);
@@ -190,6 +192,7 @@ export async function GET() {
     richiesteAperte,
     tracker: {
       daMandare,
+      senzaCellulare,
       inAttesa,
       senzaRisposta,
       fatti: fattiRecenti.map((f) => ({ id: f.id, data: f.date, formato: f.formato, membroId: f.membro.id, nome: f.membro.name, capitolo: f.membro.chapter })),

@@ -286,8 +286,10 @@ export function scegliProssimi(tutti: CapitoloCaricato[], quanti: number, oggi: 
   const ordine = capitoliInCorso(perScelta, perScelta.length).map((c) => c.id);
   const code = ordine.map((id) => {
     const x = candidati.find((c) => c.t.capitolo.id === id)!;
-    // v3.131: senza cellulare la richiesta non si può mandare su WhatsApp: non si prepara.
-    return x.prossimi.filter((p) => numeroWhatsApp(p.membro.phone)).map((p) => ({ ...p, capitolo: x.t.capitolo }));
+    // v3.132: prima chi ha il cellulare (la richiesta parte su WhatsApp), poi gli altri.
+    const conCell = x.prossimi.filter((p) => numeroWhatsApp(p.membro.phone));
+    const senza = x.prossimi.filter((p) => !numeroWhatsApp(p.membro.phone));
+    return [...conCell, ...senza].map((p) => ({ ...p, capitolo: x.t.capitolo }));
   });
   const scelti: (ProssimoMembro & { capitolo: CapitoloCaricato["capitolo"] })[] = [];
   // Prima i 2 capitoli in corso, a turno; poi, se non bastano, gli altri nello stesso ordine.
@@ -350,17 +352,6 @@ export async function eseguiTurnoBni(oggi = new Date(), fase: FaseBni = "tutto")
       where: { kind: KIND_MESSAGGIO_BNI, status: "IN_ATTESA", agent: { not: "alessio" }, bniChapterId: { in: senza121 } },
       data: { status: "SCARTATO", note: "Capitolo senza 121: scelta di Alessio", decidedAt: oggi },
     });
-  }
-  // v3.131: le richieste automatiche ancora da mandare a chi non ha un cellulare si chiudono (restano quelle tue).
-  if (fase !== "mattina") {
-    const aperte = await db.approvalItem.findMany({
-      where: { kind: KIND_MESSAGGIO_BNI, status: "IN_ATTESA", agent: { not: "alessio" } },
-      select: { id: true, bniMembro: { select: { phone: true } } },
-    });
-    const senzaNumero = aperte.filter((v) => !numeroWhatsApp(v.bniMembro?.phone)).map((v) => v.id);
-    if (senzaNumero.length) {
-      await db.approvalItem.updateMany({ where: { id: { in: senzaNumero } }, data: { status: "SCARTATO", note: "Senza cellulare: non si può mandare su WhatsApp", decidedAt: oggi } });
-    }
   }
   const r: RiepilogoBni = {
     settimana: await statoSettimana(oggi, tutti),

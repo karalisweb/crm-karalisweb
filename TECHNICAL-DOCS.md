@@ -1886,6 +1886,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 
 ## Relazione diretta (v3.117.0)
 
+> v3.132.0: `GET /api/ricerca/bni` → `tracker.senzaCellulare` (righe non mandate senza `numeroWhatsApp`), scheda "Senza cellulare" in `TrackerIncontri`. `scegliProssimi` mette prima chi ha il cellulare invece di scartare gli altri; tolta la chiusura automatica in `eseguiTurnoBni`.
+>
 > v3.131.0: `numeroWhatsApp()` (`src/lib/numero-whatsapp.ts`, usato anche da `linkWhatsApp`): cellulare o null, i fissi italiani (39 + non 3) esclusi. `scegliProssimi` scarta i membri senza; `eseguiTurnoBni` (fasi richieste/tutto) chiude come SCARTATO le `MESSAGGIO_BNI` IN_ATTESA non di Alessio senza cellulare; `GET /api/ricerca/bni` tiene in `daMandare` solo righe con cellulare (il telefono della scheda vince su quello del payload).
 >
 > v3.130.0: scheda membro BNI. `GET /api/ricerca/bni/membri/[id]` restituisce anche `scrittoAt` (ultima `MESSAGGIO_BNI` APPROVATO), `scrittoFuoriCrm`, `followupAt`, `oneToOneCount`, `ultimo121At`, `cliente`. `PATCH` accetta `scritto: true` (approva la richiesta pronta in cassetta o ne crea una APPROVATO con `payload.fuoriCrm`; `bniStage` DA_AVVICINARE→RICHIESTA_121) e `scritto: false` (cancella solo quella `fuoriCrm`). In pagina: "Invitalo" solo se niente richiesta pronta/mandata, niente `next121At` e non conosciuto; "Registra il 121" solo se non conosciuto o con `next121At`.

@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.132.0] - 2026-11-14
+
+### Changed
+- **Richieste di 121 divise in due.** "Da mandare" ha chi ha il cellulare (parte su WhatsApp); accanto c'è **Senza cellulare**, con chi non ha numero o ha solo il fisso: aggiungi il numero e passa in Da mandare, oppure copia il testo. L'agente prepara prima le richieste per chi ha il cellulare e non chiude più quelle senza (supera la regola della 3.131).
+
 ## [3.131.0] - 2026-11-14
 
 ### Changed
