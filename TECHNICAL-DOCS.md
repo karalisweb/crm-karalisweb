@@ -1886,6 +1886,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 
 ## Relazione diretta (v3.117.0)
 
+> v3.130.0: scheda membro BNI. `GET /api/ricerca/bni/membri/[id]` restituisce anche `scrittoAt` (ultima `MESSAGGIO_BNI` APPROVATO), `scrittoFuoriCrm`, `followupAt`, `oneToOneCount`, `ultimo121At`, `cliente`. `PATCH` accetta `scritto: true` (approva la richiesta pronta in cassetta o ne crea una APPROVATO con `payload.fuoriCrm`; `bniStage` DA_AVVICINARE→RICHIESTA_121) e `scritto: false` (cancella solo quella `fuoriCrm`). In pagina: "Invitalo" solo se niente richiesta pronta/mandata, niente `next121At` e non conosciuto; "Registra il 121" solo se non conosciuto o con `next121At`.
+>
 > v3.129.0: `setaccioPercorso()` (foto prima/dopo di lavorazioni e voci aperte, `aggiornaTestiContatto(oggi, 10000)` + `turnoRete`), esposto da `POST /api/internal/setaccio-percorso` (CRON_SECRET). In `turnoRete`: CHIESTA con `contattoDiretto`, azione dovuta o `RETE_FOLLOWUP` aperto, e `contattoAFreddo` (non `conosceAlessio` e primo messaggio via WhatsApp/mail/pagina da `canaleDallaNota` o payload) → `mollaAzienda(NOTA_FREDDO_SENZA_RISPOSTA)`.
 >
 > v3.128.0: senza relazione si molla. `mollaAzienda(lavorazioneId, motivo)` in `rete.ts`: fase `ELIMINATA`, note `NOTA_MOLLATA: motivo`, voci `KINDS_RETE` aperte scartate, run in coda cancellati, activity NOTE; `pipelineStage` invariato. Sostituisce `mettiInPausa` per chi decide introvabile (`NOTA_SENZA_CHI_DECIDE`), `NOTA_SENZA_PROFILI`, collegamento non accettato in `GIORNI_ATTESA_COLLEGAMENTO`, nessuna risposta dopo il follow-up. `turnoRete` molla le PAUSA con questi motivi (`pausaDaMollare`). Restano in pausa: "3 ponti", "non è interessato", pausa di Alessio.

@@ -14,6 +14,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.130.0] - 2026-11-14
+
+### Added
+- **Scheda del membro BNI: "A che punto siete".** Dice se gli hai già scritto (e quando, col follow-up) e se vi siete già incontrati (quanti 121, l'ultimo). Se gli hai scritto fuori dal CRM premi **Gli ho già scritto**; se l'hai incontrato senza registrarlo premi **L'ho già incontrato**. Tutti e due si annullano. In "Chi è" c'è anche il link al sito.
+
+### Changed
+- **Niente bottoni inutili.** "Invitalo a un 121" sparisce se gli hai già scritto, se l'incontro è fissato o se vi conoscete. "Registra il 121" sparisce se vi siete già incontrati (torna se fissi un nuovo incontro); per aggiungere cosa vi siete detti resta il link in "La vostra storia".
+
 ## [3.129.0] - 2026-11-11
 
 ### Added

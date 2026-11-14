@@ -21,12 +21,19 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
     },
   });
   if (!m) return NextResponse.json({ error: "Membro non trovato" }, { status: 404 });
-  const [capitolo, inCassetta, reteInCorso, capitoli] = await Promise.all([
+  const [capitolo, inCassetta, reteInCorso, capitoli, mandato] = await Promise.all([
     m.chapter ? db.bniChapter.findFirst({ where: { name: { equals: m.chapter, mode: "insensitive" } }, select: { id: true, name: true, mode: true, meetingDay: true, meetingTime: true, sede: true } }) : null,
     db.approvalItem.findMany({ where: { bniMembroId: id, status: "IN_ATTESA" }, select: { id: true, kind: true, title: true, createdAt: true, payload: true } }),
     db.agentRun.findFirst({ where: { bniMembroId: id, agent: "rete_membro", status: { in: ["IN_CODA", "IN_CORSO"] } }, select: { id: true } }),
     db.bniChapter.findMany({ select: { name: true }, orderBy: { name: "asc" } }),
+    // v3.130 (Alessio: "se gli ho già scritto togli Invitalo"): l'ultima richiesta di 121 mandata.
+    db.approvalItem.findFirst({
+      where: { bniMembroId: id, kind: "MESSAGGIO_BNI", status: "APPROVATO" },
+      orderBy: { decidedAt: "desc" },
+      select: { id: true, decidedAt: true, createdAt: true, payload: true },
+    }),
   ]);
+  const pm = (mandato?.payload ?? {}) as { followupAt?: string; fuoriCrm?: boolean };
   const conosciuto = !!m.conosciutoAt || m.oneToOneCount > 0 || m.isCustomer;
   const stato = conosciuto ? "CONOSCIUTO" : m.next121At && m.next121At.getTime() > Date.now() - 86400_000 ? "FISSATO" : "DA_INCONTRARE";
   return NextResponse.json({
@@ -37,6 +44,12 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
       reteLettaAt: m.reteLettaAt, reteInCorso: !!reteInCorso, personeInRete: m._count.persone, note: m.notes, stato, conosciutoAt: m.conosciutoAt,
       azienda_collegata: m.lead,
       linkedinStato: m.linkedinStato, newsletterAt: m.newsletterAt, studiatoAt: m.studiatoAt,
+      scrittoAt: mandato ? (mandato.decidedAt ?? mandato.createdAt) : null,
+      scrittoFuoriCrm: !!pm.fuoriCrm,
+      followupAt: pm.followupAt ?? null,
+      oneToOneCount: m.oneToOneCount,
+      ultimo121At: m.lastOneToOneAt,
+      cliente: m.isCustomer,
     },
     capitolo,
     capitoli: capitoli.map((c) => c.name),
@@ -45,6 +58,31 @@ export async function GET(_r: NextRequest, { params }: { params: Promise<{ id: s
     segnalazioni: m.segnalazioni,
     inCassetta,
   });
+}
+
+/** Segna la richiesta di 121 come mandata: quella pronta nella cassetta, o una nuova "scritta fuori dal CRM". */
+async function segnaScritto(id: string) {
+  const ora = new Date();
+  const pronta = await db.approvalItem.findFirst({ where: { bniMembroId: id, kind: "MESSAGGIO_BNI", status: "IN_ATTESA" }, select: { id: true } });
+  if (pronta) {
+    await db.approvalItem.update({ where: { id: pronta.id }, data: { status: "APPROVATO", decidedAt: ora, decidedBy: "alessio" } });
+  } else {
+    const m = await db.bniMembro.findUnique({ where: { id }, select: { name: true, company: true, phone: true, chapter: true } });
+    if (!m) return;
+    await db.approvalItem.create({
+      data: {
+        bniMembroId: id,
+        kind: "MESSAGGIO_BNI",
+        agent: "alessio",
+        title: `121 con ${m.name}${m.company ? ` (${m.company})` : ""}`,
+        status: "APPROVATO",
+        decidedAt: ora,
+        decidedBy: "alessio",
+        payload: { perche: "Scritto da te fuori dal CRM", messaggio: "", telefono: m.phone, capitolo: m.chapter, manuale: true, fuoriCrm: true },
+      },
+    });
+  }
+  await db.bniMembro.updateMany({ where: { id, bniStage: "DA_AVVICINARE" }, data: { bniStage: "RICHIESTA_121" } });
 }
 
 const testo = (max: number) => z.string().max(max).nullable().optional();
@@ -68,6 +106,8 @@ const Schema = z.object({
   linkedinStato: z.enum(["NON_TROVATO", "DA_COLLEGARE", "RICHIESTA_INVIATA", "COLLEGATI"]).optional(),
   // Motore 121, passo 3: invitato alle newsletter (LinkedIn e Substack).
   newsletter: z.boolean().optional(),
+  // v3.130: "gli ho già scritto" (fuori dal CRM, a voce o su WhatsApp): conta come richiesta mandata.
+  scritto: z.boolean().optional(),
 });
 
 /** PATCH /api/ricerca/bni/membri/[id] — Alessio corregge la scheda o fissa la data del 121. */
@@ -111,6 +151,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       ...(d.next121At ? { bniStage: "RICHIESTA_121" } : {}),
     };
     await db.bniMembro.update({ where: { id }, data });
+    if (d.scritto === true) await segnaScritto(id);
+    if (d.scritto === false) {
+      // Si annulla solo il segno messo a mano: una richiesta mandata dal CRM resta nella storia.
+      const ultima = await db.approvalItem.findFirst({ where: { bniMembroId: id, kind: "MESSAGGIO_BNI", status: "APPROVATO" }, orderBy: { decidedAt: "desc" }, select: { id: true, payload: true } });
+      if (ultima && (ultima.payload as { fuoriCrm?: boolean } | null)?.fuoriCrm) await db.approvalItem.delete({ where: { id: ultima.id } });
+    }
     // Fissato il 121: la richiesta è partita, e si guarda subito la sua rete LinkedIn.
     if (d.next121At) await chiudiRichiesteSuperate(id, "Superata: il 121 è in calendario");
     // La rete LinkedIn la legge il turno BNI nei 2 giorni prima dell'incontro (max 2 al giorno).

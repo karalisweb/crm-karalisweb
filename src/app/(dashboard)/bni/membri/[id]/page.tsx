@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CalendarClock, FileText, Linkedin, Loader2, Mail, MessageCircle, MessageSquarePlus, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, CalendarClock, Check, FileText, Globe, Handshake, Linkedin, Loader2, Mail, MessageCircle, MessageSquarePlus, Pencil, Phone, Send } from "lucide-react";
 import { toast } from "sonner";
 import { localeAIso } from "@/components/vendita/call-fissata-dialog";
 import { FORMATI, data, dataOra } from "@/components/ricerca/etichette";
@@ -27,6 +27,8 @@ interface Scheda {
     reteInCorso: boolean; personeInRete: number; note: string | null; stato: "DA_INCONTRARE" | "FISSATO" | "CONOSCIUTO";
     azienda_collegata: { id: string; name: string; website: string | null } | null;
     linkedinStato: string | null; newsletterAt: string | null; studiatoAt: string | null;
+    conosciutoAt: string | null; scrittoAt: string | null; scrittoFuoriCrm: boolean; followupAt: string | null;
+    oneToOneCount: number; ultimo121At: string | null; cliente: boolean;
   };
   capitolo: { id: string; name: string; mode: string | null; meetingDay: string | null; meetingTime: string | null; sede: string | null } | null;
   capitoli: string[];
@@ -102,7 +104,7 @@ function TelefonoModificabile({ valore, id, onSalvato }: { valore: string | null
   );
 }
 
-function Registra121({ id, formatoCapitolo, onFatto }: { id: string; formatoCapitolo: string | null; onFatto: () => void }) {
+function Registra121({ id, formatoCapitolo, onFatto, trigger }: { id: string; formatoCapitolo: string | null; onFatto: () => void; trigger?: React.ReactNode }) {
   const [aperto, setAperto] = useState(false);
   const [quando, setQuando] = useState("");
   const [formato, setFormato] = useState(formatoCapitolo === "ONLINE" ? "ONLINE" : "PRESENZA");
@@ -127,7 +129,7 @@ function Registra121({ id, formatoCapitolo, onFatto }: { id: string; formatoCapi
   }
   return (
     <Dialog open={aperto} onOpenChange={setAperto}>
-      <DialogTrigger asChild><Button size="sm"><MessageSquarePlus className="h-4 w-4 mr-1" /> Registra il 121</Button></DialogTrigger>
+      <DialogTrigger asChild>{trigger ?? <Button size="sm"><MessageSquarePlus className="h-4 w-4 mr-1" /> Registra il 121</Button>}</DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Registra il 121</DialogTitle>
@@ -206,6 +208,12 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
 
   if (!d) return <div className="space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}</div>;
   const m = d.membro;
+  const conosciuto = m.stato === "CONOSCIUTO";
+  const richiestaPronta = d.inCassetta.some((v) => v.kind === "MESSAGGIO_BNI");
+  // v3.130 (Alessio): se gli hai già scritto (o c'è un incontro fissato, o vi conoscete) l'invito non serve;
+  // se l'hai già incontrato "Registra il 121" sparisce, salvo un nuovo incontro fissato da registrare.
+  const mostraInvita = !richiestaPronta && !m.scrittoAt && !m.next121At && !conosciuto;
+  const mostraRegistra = !conosciuto || !!m.next121At;
 
   return (
     <div className="space-y-4 min-w-0">
@@ -220,7 +228,7 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!d.inCassetta.some((v) => v.kind === "MESSAGGIO_BNI") && (
+          {mostraInvita && (
             <Button size="sm" variant="outline" onClick={invita} disabled={invitando}>
               {invitando ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-1" />} Invitalo a un 121
             </Button>
@@ -228,9 +236,45 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
           {m.stato === "FISSATO" && (
             <Link href={`/bni/121/${m.id}`}><Button size="sm" variant="outline"><FileText className="h-4 w-4 mr-1" /> Pagina del 121</Button></Link>
           )}
-          <Registra121 id={m.id} formatoCapitolo={d.capitolo?.mode ?? null} onFatto={carica} />
+          {mostraRegistra && <Registra121 id={m.id} formatoCapitolo={d.capitolo?.mode ?? null} onFatto={carica} />}
         </div>
       </div>
+
+      <Card><CardContent className="p-3 space-y-2 text-sm">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">A che punto siete</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Send className="h-4 w-4 text-muted-foreground shrink-0" />
+          {m.scrittoAt ? (
+            <>
+              <span><Check className="inline h-3.5 w-3.5 text-green-600 mr-1" />Gli hai scritto il {data(m.scrittoAt)}{m.scrittoFuoriCrm ? " (fuori dal CRM)" : ""}{m.followupAt ? ` · follow-up il ${data(m.followupAt)}` : ""}</span>
+              {m.scrittoFuoriCrm && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => patch({ scritto: false }, "Tolto")}>Annulla</Button>}
+            </>
+          ) : richiestaPronta ? (
+            <span className="text-muted-foreground">Messaggio pronto qui sotto, non ancora mandato</span>
+          ) : (
+            <>
+              <span className="text-muted-foreground">Non gli hai ancora scritto</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => patch({ scritto: true }, "Segnato: gli hai scritto")}>Gli ho già scritto</Button>
+            </>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Handshake className="h-4 w-4 text-muted-foreground shrink-0" />
+          {m.oneToOneCount > 0 ? (
+            <span><Check className="inline h-3.5 w-3.5 text-green-600 mr-1" />{m.oneToOneCount === 1 ? "Un 121 fatto" : `${m.oneToOneCount} 121 fatti`}{m.ultimo121At ? `, l'ultimo il ${data(m.ultimo121At)}` : ""}</span>
+          ) : conosciuto ? (
+            <>
+              <span><Check className="inline h-3.5 w-3.5 text-green-600 mr-1" />{m.cliente && !m.conosciutoAt ? "È tuo cliente" : `Già incontrato${m.conosciutoAt ? ` (segnato il ${data(m.conosciutoAt)})` : ""}`}</span>
+              {m.conosciutoAt && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => patch({ conosciuto: false }, "Tolto")}>Annulla</Button>}
+            </>
+          ) : (
+            <>
+              <span className="text-muted-foreground">Non vi siete ancora incontrati</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => patch({ conosciuto: true }, "Segnato: già incontrato")}>L&apos;ho già incontrato</Button>
+            </>
+          )}
+        </div>
+      </CardContent></Card>
 
       <Card><CardContent className="p-3 flex flex-wrap items-center gap-2 text-sm">
         <CalendarClock className="h-4 w-4 text-blue-600" />
@@ -276,6 +320,7 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             <TelefonoModificabile id={m.id} valore={m.telefono} onSalvato={carica} />
             {m.email && <a href={`mailto:${m.email}`} className="flex items-center gap-1 hover:underline"><Mail className="h-3.5 w-3.5" />{m.email}</a>}
+            {m.sito && <a href={/^https?:\/\//.test(m.sito) ? m.sito : `https://${m.sito}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline"><Globe className="h-3.5 w-3.5" />Sito</a>}
             {m.linkedin && <a href={m.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline"><Linkedin className="h-3.5 w-3.5" />LinkedIn</a>}
             {m.azienda_collegata && <Link href={`/aziende-trovate/${m.azienda_collegata.id}`} className="hover:underline">Scheda azienda{m.studiatoAt ? ` (studiata il ${data(m.studiatoAt)})` : ""}</Link>}
           </div>
@@ -351,6 +396,11 @@ export default function SchedaMembroPage({ params }: { params: Promise<{ id: str
       </Sezione>
 
       <Sezione n={7} titolo="La vostra storia">
+        {!mostraRegistra && (
+          <div className="mb-2">
+            <Registra121 id={m.id} formatoCapitolo={d.capitolo?.mode ?? null} onFatto={carica} trigger={<Button size="sm" variant="ghost" className="h-7 text-xs px-2"><MessageSquarePlus className="h-3.5 w-3.5 mr-1" /> Aggiungi cosa vi siete detti</Button>} />
+          </div>
+        )}
         {d.storia.length === 0 ? (
           <p className="text-muted-foreground">Nessun 121 registrato.</p>
         ) : (
