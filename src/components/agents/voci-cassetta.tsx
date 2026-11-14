@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { numeroWhatsApp } from "@/lib/numero-whatsapp";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy, Globe, Mail, MessageCircle, Star, Video, Phone } from "lucide-react";
@@ -62,11 +63,8 @@ function copia(testo: string) {
 }
 
 export function linkWhatsApp(telefono: string | null | undefined, testo: string): string | null {
-  if (!telefono) return null;
-  let cifre = telefono.replace(/\D/g, "");
-  if (cifre.startsWith("00")) cifre = cifre.slice(2);
-  if (cifre.length === 10 && cifre.startsWith("3")) cifre = `39${cifre}`;
-  return cifre.length >= 11 ? `https://wa.me/${cifre}?text=${encodeURIComponent(testo)}` : null;
+  const cifre = numeroWhatsApp(telefono);
+  return cifre ? `https://wa.me/${cifre}?text=${encodeURIComponent(testo)}` : null;
 }
 
 const s = (v: unknown): string => (typeof v === "string" ? v : "");

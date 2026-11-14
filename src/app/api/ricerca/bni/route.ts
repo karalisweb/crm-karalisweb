@@ -8,6 +8,7 @@ import { invitiDisponibili, RICHIESTE_SETTIMANA, TETTO_121_SETTIMANA } from "@/l
 /** v3.105: dopo 72 ore senza risposta (alla richiesta o al follow-up) la richiesta passa in "Non hanno risposto". */
 const ORE_SENZA_RISPOSTA = 72;
 import { statoLinkedinOggi } from "@/lib/agents/motore";
+import { numeroWhatsApp } from "@/lib/numero-whatsapp";
 
 /**
  * GET /api/ricerca/bni — la pagina "121 BNI": la settimana (obiettivo 8), i 121 in calendario,
@@ -69,7 +70,7 @@ export async function GET() {
         membroId: m.id,
         nome: m.name,
         capitolo: m.capitolo,
-        telefono: p.telefono ?? m.phone,
+        telefono: numeroWhatsApp(m.phone) ? m.phone : (p.telefono ?? m.phone),
         perche: p.perche ?? null,
         messaggio: p.messaggio ?? "",
         followup: testoFollowup121(m.name),
@@ -81,7 +82,8 @@ export async function GET() {
       };
     })
     .filter((r) => !r.conosciuto && !r.fissato);
-  const daMandare = righe.filter((r) => !r.mandataIl);
+  // v3.131: in "Da mandare" solo chi ha un cellulare (il messaggio parte su WhatsApp).
+  const daMandare = righe.filter((r) => !r.mandataIl && numeroWhatsApp(r.telefono));
   const ultimo = (r: (typeof righe)[number]) => (r.followupAt ?? r.mandataIl)!.getTime();
   const inAttesa = righe.filter((r) => r.mandataIl && ultimo(r) > limiteRisposta);
   const senzaRisposta = righe.filter((r) => r.mandataIl && ultimo(r) <= limiteRisposta);

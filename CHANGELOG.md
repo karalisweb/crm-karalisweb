@@ -14,6 +14,11 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.131.0] - 2026-11-14
+
+### Changed
+- **"Da mandare" solo con il cellulare.** Le richieste di 121 partono su WhatsApp: chi non ha un cellulare (nessun numero, o solo il fisso) non sta più nella lista. L'agente non prepara più richieste per loro e chiude quelle automatiche già pronte. Gli inviti fatti da te restano nella scheda del membro: aggiungi il numero e tornano in lista.
+
 ## [3.130.0] - 2026-11-14
 
 ### Added
