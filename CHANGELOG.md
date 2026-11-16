@@ -14,6 +14,14 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.133.0] - 2026-11-16
+
+### Fixed
+- **Capitoli BNI doppi.** Stamattina la lettura dei capitoli dal sito BNI ha creato una seconda copia dei capitoli sardi ("BNI Atlantide" accanto ad "Atlantide", e così Karalis, Saint Remy, Maestrale, Posidonia, Golfo degli Angeli, I Visionari, KARIM Porto Cervo, Olbia Costa Smeralda), con i membri tutti doppi e "0 conosciuti". Ora ogni capitolo è uno solo: i membri uguali sono stati uniti (restano i tuoi 121 e i "conosciuto"), quelli nuovi davvero sono finiti nel capitolo giusto. Il CRM ora riconosce "BNI Atlantide" e "Atlantide" come lo stesso capitolo, quindi non succede più.
+- Gli avvisi "aziende dei tuoi settori" nati dai doppioni sono stati tolti da Oggi (non contano nei tuoi 5 al giorno).
+- Tu non compari più come membro da incontrare nella lista di Atlantide.
+- Il capitolo nuovo di Oristano si chiama "Eleonora D'Arborea", senza "BNI" davanti come gli altri sardi.
+
 ## [3.132.0] - 2026-11-14
 
 ### Changed

@@ -17,7 +17,7 @@ import { db } from "@/lib/db";
 import { chiediJSON, REGOLE_COMUNI, type Schema } from "./ai";
 import { budgetDisponibile } from "./costi";
 import { PROFILI_MEMBRI_GIORNO, richiesteDaPreparare } from "./motore-121";
-import { settimanaConPosto } from "./rete-regole";
+import { settimanaConPosto, stessaPersona } from "./rete-regole";
 import { aziendeDaCercareNellaRete, linkedinPermette, promemoriaDopo121, proponiSegnalazioni, statoLinkedinOggi } from "./motore";
 import { richiamiMsd } from "./msd";
 import { turnoRete } from "./rete";
@@ -27,14 +27,17 @@ import {
   coperturaCapitolo,
   dirigenzaDa,
   dirigenzaNota,
+  eAlessio,
   mezzanotteRoma,
   gruppiCapitolo,
   eSardo,
   formato121,
   formatoDa,
   giorniTraMappe,
+  nomeCapitoloBase,
   norm,
   prossimiDelCapitolo,
+  stessoCapitolo,
   REGIONI_ITALIA,
   GIORNI_SENZA_RISPOSTA,
   settimanaDi,
@@ -100,9 +103,14 @@ export async function importaMappaBni(findings: Record<string, unknown>, oggi = 
   const regione = testo(findings.regione, 60);
   const capitoli = Array.isArray(findings.capitoli) ? (findings.capitoli as CapitoloMappa[]) : [];
 
+  // v3.133: i capitoli si confrontano senza il "BNI" davanti (vedi nomeCapitoloBase).
+  const giaNelCrm = await db.bniChapter.findMany({ select: { id: true, name: true } });
+
   for (const c of capitoli.slice(0, 200)) {
-    const nome = testo(c.nome, 120);
-    if (!nome) continue;
+    const letto = testo(c.nome, 120);
+    if (!letto) continue;
+    const trovato = giaNelCrm.find((x) => stessoCapitolo(x.name, letto));
+    const nome = trovato?.name ?? nomeCapitoloBase(letto);
     const dati = {
       city: testo(c.citta, 80),
       provincia: testo(c.provincia, 40),
@@ -114,7 +122,7 @@ export async function importaMappaBni(findings: Record<string, unknown>, oggi = 
       bniConnectUrl: testo(c.url, 500),
       mappedAt: oggi,
     };
-    const esistente = await db.bniChapter.findUnique({ where: { name: nome } });
+    const esistente = trovato ? await db.bniChapter.findUnique({ where: { id: trovato.id } }) : null;
     if (esistente) {
       await db.bniChapter.update({
         where: { id: esistente.id },
@@ -130,14 +138,15 @@ export async function importaMappaBni(findings: Record<string, unknown>, oggi = 
       });
       esito.capitoliAggiornati++;
     } else {
-      await db.bniChapter.create({ data: { name: nome, ...dati, region: norm(regione) === "sardegna" ? null : "altro" } });
+      const nuovo = await db.bniChapter.create({ data: { name: nome, ...dati, region: norm(regione) === "sardegna" ? null : "altro" } });
+      giaNelCrm.push({ id: nuovo.id, name: nuovo.name });
       esito.capitoliNuovi++;
     }
 
     const membri = Array.isArray(c.membri) ? (c.membri as MembroMappa[]) : [];
     for (const m of membri.slice(0, 120)) {
       const nomeM = testo(m.nome, 120);
-      if (!nomeM) continue;
+      if (!nomeM || eAlessio(nomeM)) continue;
       const azienda = testo(m.azienda, 160);
       const categoria = testo(m.categoria, 160);
       const telefono = testo(m.telefono, 40);
@@ -163,6 +172,121 @@ export async function importaMappaBni(findings: Record<string, unknown>, oggi = 
         esito.membriNuovi++;
       }
     }
+  }
+  return esito;
+}
+
+// ─── Capitoli doppi (v3.133) ────────────────────────────────────────────────
+
+/** Le tabelle che puntano a un membro BNI: quando due membri sono la stessa persona si spostano sul vecchio. */
+const RIFERIMENTI_MEMBRO: [tabella: string, colonna: string][] = [
+  ["leads", "referred_by_membro_id"], ["one_to_ones", "membro_id"], ["referrals_given", "membro_id"],
+  ["agent_runs", "bni_membro_id"], ["agent_reports", "bni_membro_id"], ["approval_items", "bni_membro_id"],
+  ["trattative", "bni_membro_id"], ["chiavi_ricerca", "bni_membro_id"], ["persone", "bni_membro_id"],
+  ["bni_presentazioni", "membro_id"], ["bni_segnalazioni", "membro_id"], ["lavorazioni", "ponte_membro_id"],
+];
+
+export interface EsitoDoppi {
+  prova: boolean;
+  capitoli: { doppio: string; resta: string; membriUniti: number; membriSpostati: number; avvisiChiusi: number }[];
+  rinominati: string[];
+}
+
+/**
+ * Il 16/11/2026 il Cartografo ha letto i capitoli sardi come "BNI Atlantide", "BNI Karalis"…: il CRM li aveva
+ * senza "BNI" e li ha creati di nuovo, con i membri doppi. Qui si uniscono: resta il capitolo più vecchio
+ * (con i 121, i "conosciuto", le note di Alessio) e prende dal doppio solo i dati che gli mancano.
+ * Ogni membro del doppio: se nel vecchio c'è la stessa persona, le si passano i dati mancanti e tutto
+ * quello che punta al doppio, poi il doppio si toglie; se non c'è (membro nuovo) si sposta nel vecchio.
+ * Gli avvisi "dei tuoi settori" nati sul doppio si chiudono (decisi dal CRM, non contano nei 5 di Alessio):
+ * al giro dopo, se il membro vero non lo conosci, l'avviso torna sul membro giusto.
+ * Con prova = true non scrive niente: dice cosa farebbe.
+ */
+export async function unisciCapitoliDoppi(prova = true): Promise<EsitoDoppi> {
+  const esito: EsitoDoppi = { prova, capitoli: [], rinominati: [] };
+  const capitoli = await db.bniChapter.findMany({ orderBy: { createdAt: "asc" } });
+  const tolti = new Set<string>();
+  for (const vecchio of capitoli) {
+    if (tolti.has(vecchio.id)) continue;
+    for (const doppio of capitoli) {
+      if (doppio.id === vecchio.id || tolti.has(doppio.id) || !stessoCapitolo(vecchio.name, doppio.name)) continue;
+      tolti.add(doppio.id);
+      const riga = { doppio: doppio.name, resta: vecchio.name, membriUniti: 0, membriSpostati: 0, avvisiChiusi: 0 };
+      const [membriVecchi, membriDoppi] = await Promise.all([
+        db.bniMembro.findMany({ where: { chapter: vecchio.name } }),
+        db.bniMembro.findMany({ where: { chapter: doppio.name } }),
+      ]);
+      for (const m of membriDoppi) {
+        const stesso = membriVecchi.find((v) => norm(v.name.trim()) === norm(m.name.trim()))
+          ?? membriVecchi.find((v) => stessaPersona(v.name, m.name));
+        if (!stesso && eAlessio(m.name)) {
+          // Alessio stesso, letto nella lista del suo capitolo: non è un membro da incontrare.
+          if (!prova) await db.bniMembro.delete({ where: { id: m.id } });
+          continue;
+        }
+        if (!stesso) {
+          riga.membriSpostati++;
+          if (!prova) await db.bniMembro.update({ where: { id: m.id }, data: { chapter: vecchio.name } });
+          continue;
+        }
+        riga.membriUniti++;
+        const avvisi = await db.approvalItem.count({ where: { bniMembroId: m.id, kind: "AVVISO_SETTORE", status: "IN_ATTESA" } });
+        riga.avvisiChiusi += avvisi;
+        if (prova) continue;
+        await db.$transaction(async (tx) => {
+          await tx.approvalItem.updateMany({
+            where: { bniMembroId: m.id, kind: "AVVISO_SETTORE", status: "IN_ATTESA" },
+            data: { status: "SCARTATO", decidedAt: new Date(), decidedBy: "crm", note: "Doppione: capitolo letto due volte da BNI" },
+          });
+          for (const [tabella, colonna] of RIFERIMENTI_MEMBRO) {
+            await tx.$executeRawUnsafe(`UPDATE "${tabella}" SET "${colonna}" = $1 WHERE "${colonna}" = $2`, stesso.id, m.id);
+          }
+          await tx.bniMembro.update({
+            where: { id: stesso.id },
+            data: {
+              phone: stesso.phone ?? m.phone,
+              company: stesso.company ?? m.company,
+              profession: stesso.profession ?? m.profession,
+              email: stesso.email ?? m.email,
+              website: stesso.website ?? m.website,
+              linkedinUrl: stesso.linkedinUrl ?? m.linkedinUrl,
+              // Il ruolo in dirigenza vale quello letto adesso, come nell'importazione.
+              leadershipRole: m.leadershipRole ?? stesso.leadershipRole,
+            },
+          });
+          await tx.bniMembro.delete({ where: { id: m.id } });
+        });
+      }
+      if (!prova) {
+        await db.bniChapter.update({
+          where: { id: vecchio.id },
+          data: {
+            city: vecchio.city ?? doppio.city,
+            provincia: vecchio.provincia ?? doppio.provincia,
+            regioneItaliana: vecchio.regioneItaliana ?? doppio.regioneItaliana,
+            mode: vecchio.mode ?? doppio.mode,
+            meetingDay: vecchio.meetingDay ?? doppio.meetingDay,
+            meetingTime: vecchio.meetingTime ?? doppio.meetingTime,
+            sede: vecchio.sede ?? doppio.sede,
+            bniConnectUrl: vecchio.bniConnectUrl ?? doppio.bniConnectUrl,
+            mappedAt: vecchio.mappedAt ?? doppio.mappedAt,
+          },
+        });
+        await db.bniChapter.delete({ where: { id: doppio.id } });
+      }
+      esito.capitoli.push(riga);
+    }
+  }
+  // I capitoli sardi si scrivono senza "BNI" davanti, come quelli che Alessio aveva già (es. Eleonora D'Arborea).
+  for (const c of capitoli) {
+    const base = nomeCapitoloBase(c.name);
+    if (tolti.has(c.id) || base === c.name || !eSardo(c)) continue;
+    esito.rinominati.push(`${c.name} → ${base}`);
+    if (prova) continue;
+    await db.$transaction([
+      db.bniChapter.update({ where: { id: c.id }, data: { name: base } }),
+      db.bniMembro.updateMany({ where: { chapter: c.name }, data: { chapter: base } }),
+    ]);
   }
   return esito;
 }

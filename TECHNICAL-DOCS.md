@@ -1886,6 +1886,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 
 ## Relazione diretta (v3.117.0)
 
+> v3.133.0: capitoli BNI doppi. `nomeCapitoloBase`/`stessoCapitolo`/`eAlessio` in `bni-regole.ts` (test in `__tests__/bni-regole.test.ts`). `importaMappaBni` confronta i capitoli senza il "BNI" davanti (il sito BNI li scrive così, il CRM no: il 16/11 il Cartografo ne aveva creati 9 doppi con 255 membri), salva i nuovi col nome base e salta Alessio stesso. `unisciCapitoliDoppi(prova)` in `bni.ts` + `POST /api/internal/unisci-capitoli-doppi?prova=0` (CRON_SECRET, di default è una prova): resta il capitolo più vecchio, i membri uguali (nome identico o `stessaPersona`) passano i dati mancanti e tutti i riferimenti (`RIFERIMENTI_MEMBRO`, 12 colonne) al vecchio e si cancellano; i membri nuovi si spostano; gli `AVVISO_SETTORE` IN_ATTESA dei doppioni → SCARTATO `decidedBy: "crm"` (non contano nei 5 al giorno); i capitoli sardi restanti perdono il "BNI" davanti. Idempotente.
+
 > v3.132.0: `GET /api/ricerca/bni` → `tracker.senzaCellulare` (righe non mandate senza `numeroWhatsApp`), scheda "Senza cellulare" in `TrackerIncontri`. `scegliProssimi` mette prima chi ha il cellulare invece di scartare gli altri; tolta la chiusura automatica in `eseguiTurnoBni`.
 >
 > v3.131.0: `numeroWhatsApp()` (`src/lib/numero-whatsapp.ts`, usato anche da `linkWhatsApp`): cellulare o null, i fissi italiani (39 + non 3) esclusi. `scegliProssimi` scarta i membri senza; `eseguiTurnoBni` (fasi richieste/tutto) chiude come SCARTATO le `MESSAGGIO_BNI` IN_ATTESA non di Alessio senza cellulare; `GET /api/ricerca/bni` tiene in `daMandare` solo righe con cellulare (il telefono della scheda vince su quello del payload).

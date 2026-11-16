@@ -35,6 +35,27 @@ export function stessoRuolo(categoria: string | null | undefined, _azienda?: str
   return MIO_RUOLO.some((r) => r.test(t));
 }
 
+/**
+ * v3.133 (2026-11-16): il sito BNI scrive i capitoli con "BNI" davanti ("BNI Atlantide"), il CRM li aveva senza
+ * ("Atlantide"): il Cartografo li ha creati una seconda volta, con i membri doppi. Il nome "base" toglie il "BNI"
+ * davanti: è quello con cui si confrontano i capitoli e quello con cui si salvano i nuovi.
+ */
+export function nomeCapitoloBase(nome: string): string {
+  const pulito = nome.replace(/\s+/g, " ").trim();
+  const senza = pulito.replace(/^(bni\s+)+/i, "").trim();
+  return senza || pulito;
+}
+
+export function stessoCapitolo(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  return norm(nomeCapitoloBase(a)) === norm(nomeCapitoloBase(b));
+}
+
+/** Alessio stesso nella lista membri del suo capitolo: non è qualcuno da incontrare. */
+export function eAlessio(nome: string | null | undefined): boolean {
+  return norm(nome).replace(/\s+/g, " ").trim() === "alessio loi";
+}
+
 export function eSardo(c: { regioneItaliana?: string | null; region?: string | null }): boolean {
   return norm(c.regioneItaliana) === "sardegna" || norm(c.region).startsWith("sardegna");
 }
