@@ -1516,7 +1516,7 @@ Sul VPS (installazione idempotente: `bash /opt/sales-app/agenti-browser/server/i
   accessi di Alessio a LinkedIn/Instagram/Facebook, CDP su `127.0.0.1:9222`), `agente-vnc` (x11vnc `127.0.0.1:5901`)
   e `agente-novnc` (websockify `127.0.0.1:6080`): servizi systemd, nessuna porta aperta all'esterno;
 - cron di `agente`: `7 * * * * /home/agente/giro.sh` → `claude -p` con `prompt.md`, Playwright MCP
-  (`@playwright/mcp@0.0.86`, `--cdp-endpoint`) e strumenti limitati (`mcp__playwright`, `crm-agenti.sh`,
+  (`@playwright/mcp@0.0.86`, comando `playwright-mcp --cdp-endpoint`) e strumenti limitati (`mcp__playwright`, `crm-agenti.sh`,
   Write/Read solo in `referti/`). Un giro alla volta (`flock`), max 55 minuti, log in `/home/agente/log/`;
 - `crm-agenti.sh` parla con il CRM su `127.0.0.1:3003`; dalle 22 alle 8 (ora italiana) aggiunge `soloLettura=1`:
   `prendiLavori` salta `AZIONI_BROWSER` (`scalda`, `collega`, `contatta_persona`), regole in `browser-regole.ts`

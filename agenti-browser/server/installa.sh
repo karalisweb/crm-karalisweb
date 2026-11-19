@@ -95,7 +95,7 @@ systemctl daemon-reload
 systemctl enable --now agente-schermo agente-chrome agente-vnc agente-novnc
 
 # 7. Cron: un giro ogni ora, giorno e notte (di notte solo lavori che leggono: lo decide crm-agenti.sh)
-( crontab -u agente -l 2>/dev/null | grep -v 'giro.sh' ; echo '7 * * * * /home/agente/giro.sh' ) | crontab -u agente -
+{ crontab -u agente -l 2>/dev/null | grep -v 'giro.sh' || true; echo '7 * * * * /home/agente/giro.sh'; } | crontab -u agente -
 
 echo "agente installato. Chrome: $(curl -s -m 5 http://127.0.0.1:9222/json/version | grep -o '"Browser": *"[^"]*"' || echo 'non risponde')"
 [ -s "$H/.config/claude-token" ] && echo "token di Claude: presente" || echo "token di Claude: MANCA (scripts/agente-server-token.sh dal Mac)"

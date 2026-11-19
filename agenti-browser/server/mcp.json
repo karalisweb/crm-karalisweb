@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "mcp-server-playwright",
+      "command": "playwright-mcp",
       "args": ["--cdp-endpoint", "http://127.0.0.1:9222"]
     }
   }
