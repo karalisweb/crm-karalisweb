@@ -1923,6 +1923,8 @@ Processo deciso con Alessio il 2026-10-20: `PROGETTO-AGENTI.md` ("Il flusso, rip
 >
 > v3.122.0: percorso veloce. `verificaCollegamento` chiama `cercaChiDecideServer` (DataForSEO + sito + AI, verifiche in `chi-decide-regole.ts`; run `chi_decide_server`, referto `decision_maker`). `turnoVeloce` gira ogni 10 minuti da `src/instrumentation.ts` (off con `TURNO_VELOCE=off`). `avanzaMappata`: con WhatsApp o mail crea subito `RETE_CONTATTO`. Il Chrome resta per collegamento e commenti.
 > v3.135.0: dall'8/11/2026 i risultati organici DataForSEO hanno `url` = `google.com/goto?url=…` (dominio `google.com`). `chiamaDataForSeo` (dataforseo.ts), per i percorsi `/serp/google/organic/`, li sostituisce con l'indirizzo vero (`sistemaLinkGoogle`/`linkVero`: segue i redirect, max 4 salti, 8 s; `/url?q=` letto senza chiamate) e aggiorna `domain`. In `cercaChiDecideServer` i profili si cercano con due query separate `"<nome>" site:linkedin.com/in` e `"<nome>" site:instagram.com` (la query con `OR` dava 40101).
+
+> v3.136.0: in `cercaChiDecideServer` le ricerche dei profili non hanno più `.catch`: un errore fa fallire il run (`chi_decide_server` FALLITO). `accodaCollega` (rete.ts) rifà la ricerca se l'ultimo run `relazioneDiretta` è FALLITO e i FALLITI sono < 3; solo dopo l'azienda va avanti senza profili. `profiloDi` (chi-decide-regole.ts) sceglie prima il risultato che `parlaDi` l'azienda; col solo `nelNomeAzienda` scarta i LinkedIn con sottodominio di paese diverso da `it.`/`www.` (`LINKEDIN_ESTERO`). Recupero una tantum: `scripts/recupera-mollate-profilo.ts --fai` (lanciato 2 volte il 19/11: 14 + 9 riprese).
 >
 > v3.126.1: `aggiornaTestiContatto` riscrive anche le voci aperte `RETE_FOLLOWUP` (non `contattoManuale`) e `RETE_CASO` dei colleghi.
 >

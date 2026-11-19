@@ -43,14 +43,19 @@ function profiloDi<T extends Fonte>(persona: string, azienda: string, risultati:
   const t = norma(persona).split(" ");
   const nome = t[0];
   const cognome = t[t.length - 1];
-  const r = risultati.find((f) => {
+  const coNome = risultati.filter((f) => {
     if (!tipo.test(f.url)) return false;
     const titolo = ` ${norma(f.titolo)} `;
-    return titolo.includes(` ${nome} `) && titolo.includes(` ${cognome} `) && (parlaDi(`${f.titolo} ${f.testo}`, azienda) || nelNomeAzienda(persona, azienda));
+    return titolo.includes(` ${nome} `) && titolo.includes(` ${cognome} `);
   });
+  // Prima il profilo che parla di quest'azienda. Se c'è solo il nome (titolare col nome nell'azienda), niente profili
+  // LinkedIn di un altro paese (v3.136: un omonimo ceco era passato per il titolare di un'impresa sarda).
+  const r = coNome.find((f) => parlaDi(`${f.titolo} ${f.testo}`, azienda))
+    ?? (nelNomeAzienda(persona, azienda) ? coNome.find((f) => !LINKEDIN_ESTERO.test(f.url)) : undefined);
   return r ? r.url.split("?")[0] : null;
 }
 const LINKEDIN_PERSONA = /linkedin\.com\/in\//i;
+const LINKEDIN_ESTERO = /^https?:\/\/(?!it\.|www\.)[a-z]{2}\.linkedin\.com\//i;
 const INSTAGRAM_PROFILO = /instagram\.com\/(?!p\/|reel|explore|stories|tv\/)[A-Za-z0-9._]+\/?($|\?)/i;
 
 /** Tiene solo le persone con una citazione vera, in una fonte su questa azienda, con un ruolo che decide. */

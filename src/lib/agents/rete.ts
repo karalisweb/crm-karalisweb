@@ -644,9 +644,11 @@ async function accodaCollega(oggi: Date): Promise<number> {
     if (!p.linkedin && !p.instagram) {
       // Nessun profilo personale. Se chi decide è stato cercato con le istruzioni vecchie (senza Instagram, a volte senza
       // link) si ricerca una volta; se nemmeno così: niente da collegare né da commentare: a chi ti conosce si scrive, gli altri in pausa (v3.127).
-      const ricerca = await db.agentRun.findFirst({ where: { leadId: l.leadId, agent: AGENTE_SERVER, input: { path: ["relazioneDiretta"], equals: true } }, orderBy: { queuedAt: "desc" }, select: { status: true } });
+      const ricerche = await db.agentRun.findMany({ where: { leadId: l.leadId, agent: AGENTE_SERVER, input: { path: ["relazioneDiretta"], equals: true } }, orderBy: { queuedAt: "desc" }, select: { status: true } });
+      const ricerca = ricerche[0];
       if (ricerca?.status === "IN_CORSO") continue;
-      if (!ricerca) {
+      // v3.136: una ricerca andata in errore (Google, DataForSEO) non vuol dire "nessun profilo": si riprova fino a 3 volte.
+      if (!ricerca || (ricerca.status === "FALLITO" && ricerche.filter((r) => r.status === "FALLITO").length < 3)) {
         // v3.122: la ricerca dei profili la fa il server, non il Chrome.
         await cercaChiDecideServer(l.leadId, oggi, { forza: true, relazioneDiretta: true });
         continue;

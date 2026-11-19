@@ -108,7 +108,8 @@ export async function cercaChiDecideServer(leadId: string, oggi = new Date(), op
     for (const sito of ["linkedin.com/in", "instagram.com"]) {
       const p = persone[0];
       if (!p || (sito === "linkedin.com/in" ? p.profilo : p.profiloInstagram)) continue;
-      const c = await cerca(`"${p.nome}" site:${sito}`).catch(() => ({ fonti: [], costo: 0 }));
+      // v3.136: se Google va in errore la ricerca fallisce (e si riprova), non si fa finta che il profilo non ci sia.
+      const c = await cerca(`"${p.nome}" site:${sito}`);
       costo += c.costo;
       persone = [aggiungiProfili(p, l.name, c.fonti), ...persone.slice(1)];
     }

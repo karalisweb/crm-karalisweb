@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.136.0] - 2026-11-19
+
+### Fixed
+- **Un errore di Google non fa più mollare un'azienda.** Se la ricerca del profilo LinkedIn o Instagram di chi decide va in errore, il CRM ora la riprova (fino a 3 volte) invece di pensare che il profilo non ci sia. Con il recupero di oggi 23 delle 50 aziende mollate per errore sono tornate al passo 2 (Collegamento).
+- **Niente omonimi stranieri.** Quando il nome di chi decide è nel nome dell'azienda, il CRM non prende più un profilo LinkedIn di un altro paese: prima aveva preso un Sergio Meloni ceco per il titolare di un'impresa edile sarda. Prima si sceglie sempre il profilo che parla dell'azienda.
+
 ## [3.135.0] - 2026-11-19
 
 ### Fixed

@@ -48,3 +48,22 @@ describe("profilo di chi decide dopo il link sistemato", () => {
     expect(aggiungiProfili(p, "Stefania Dedoni - Social Media Manager", fonti).profilo).toBe("https://it.linkedin.com/in/stefania-dedoni");
   });
 });
+
+describe("omonimi (v3.136)", () => {
+  const p = { nome: "Sergio Meloni", ruolo: "Titolare", fonte: "x", citazione: "x", profilo: null, profiloInstagram: null };
+  const azienda = "Impresa Edile Ing. Sergio Meloni";
+  it("col solo nome non prende un profilo LinkedIn di un altro paese", () => {
+    const fonti = [{ url: "https://cz.linkedin.com/in/sergiusxp", titolo: "Sergio Meloni - Praha", testo: "", delSito: false }];
+    expect(aggiungiProfili(p, azienda, fonti).profilo).toBeNull();
+  });
+  it("prende quello italiano, e prima quello che parla dell'azienda", () => {
+    const fonti = [
+      { url: "https://it.linkedin.com/in/sergio-meloni-1", titolo: "Sergio Meloni - Cagliari", testo: "", delSito: false },
+      { url: "https://it.linkedin.com/in/sergio-meloni-2", titolo: "Sergio Meloni - Impresa Edile Ing. Sergio Meloni", testo: "", delSito: false },
+    ];
+    expect(aggiungiProfili(p, azienda, fonti.slice(0, 1)).profilo).toBe("https://it.linkedin.com/in/sergio-meloni-1");
+    expect(aggiungiProfili({ ...p, nome: "Stefania Dedoni" }, "Studio Dedoni Social", [
+      { url: "https://de.linkedin.com/in/stefania-dedoni", titolo: "Stefania Dedoni - Studio Dedoni Social", testo: "", delSito: false },
+    ]).profilo).toBe("https://de.linkedin.com/in/stefania-dedoni");
+  });
+});
