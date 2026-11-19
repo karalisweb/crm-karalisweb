@@ -27,7 +27,7 @@ npm install -g -s @anthropic-ai/claude-code@latest @playwright/mcp@0.0.86 >/dev/
 
 # 4. File dell'agente
 install -o agente -g agente -m 755 "$QUI/giro.sh" "$QUI/crm-agenti.sh" "$H/"
-install -o agente -g agente -m 644 "$QUI/prompt.md" "$QUI/mcp.json" "$H/"
+install -o agente -g agente -m 644 "$QUI/prompt.md" "$QUI/mcp.json" "$QUI/scrivi-campo.js" "$H/"
 install -o agente -g agente -m 644 "$QUI/../ISTRUZIONI.md" "$H/ISTRUZIONI.md"
 
 # 5. Chiave del CRM (presa dal .env del CRM, mai stampata)
