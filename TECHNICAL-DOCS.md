@@ -1507,8 +1507,25 @@ giorni → FALLITO), poi le approvate (`ceil(limit/4)`), poi la raccolta base.
 
 ### Agenti di browser
 
-Istruzioni operative in `agenti-browser/ISTRUZIONI.md`; attività programmata nell'app Claude del
-Mac di Alessio. Credenziali sul Mac in `~/.karalisweb/agenti-browser.env` (fuori dal repo).
+Istruzioni operative in `agenti-browser/ISTRUZIONI.md`. **Dalla v3.134 girano sul VPS**, non più
+sull'app Claude del Mac (che si fermava per Mac spento, estensione scollegata, permessi Chrome senza risposta).
+
+Sul VPS (installazione idempotente: `bash /opt/sales-app/agenti-browser/server/installa.sh` da root):
+- utente `agente` (home `/home/agente`), senza privilegi;
+- `agente-schermo` (Xvfb `:99`), `agente-chrome` (Google Chrome stabile, profilo `/home/agente/profilo` con gli
+  accessi di Alessio a LinkedIn/Instagram/Facebook, CDP su `127.0.0.1:9222`), `agente-vnc` (x11vnc `127.0.0.1:5901`)
+  e `agente-novnc` (websockify `127.0.0.1:6080`): servizi systemd, nessuna porta aperta all'esterno;
+- cron di `agente`: `7 * * * * /home/agente/giro.sh` → `claude -p` con `prompt.md`, Playwright MCP
+  (`@playwright/mcp@0.0.86`, `--cdp-endpoint`) e strumenti limitati (`mcp__playwright`, `crm-agenti.sh`,
+  Write/Read solo in `referti/`). Un giro alla volta (`flock`), max 55 minuti, log in `/home/agente/log/`;
+- `crm-agenti.sh` parla con il CRM su `127.0.0.1:3003`; dalle 22 alle 8 (ora italiana) aggiunge `soloLettura=1`:
+  `prendiLavori` salta `AZIONI_BROWSER` (`scalda`, `collega`, `contatta_persona`), regole in `browser-regole.ts`
+  (test `__tests__/browser-notte.test.ts`);
+- segreti: `/home/agente/.config/crm.env` (chiave presa dal `.env` del CRM) e `/home/agente/.config/claude-token`
+  (token dell'abbonamento Claude di Alessio, `claude setup-token`, messo con `scripts/agente-server-token.sh`).
+
+Dal Mac: `scripts/agente-server-vista.sh` apre lo schermo del Chrome del server (tunnel SSH su 6080) per gli
+accessi ai social o per guardare un giro.
 
 ### Orologio (crontab VPS)
 
@@ -1518,7 +1535,9 @@ Mac di Alessio. Credenziali sul Mac in `~/.karalisweb/agenti-browser.env` (fuori
 
 ### Limiti noti
 
-- Gli agenti di browser lavorano solo con il Mac acceso e l'app Claude aperta.
+- Gli agenti di browser (v3.134) lavorano dal VPS, cioè da un indirizzo di datacenter: LinkedIn può chiedere
+  verifiche o far scadere l'accesso più spesso; in quel caso i lavori LinkedIn falliscono con "accesso scaduto sul
+  server" finché Alessio non rientra con `scripts/agente-server-vista.sh`.
 - Il costo dell'AI è calcolato dai token con il listino in `costi.ts`; il cambio dollaro→euro è fisso.
 - I nomi delle aziende trovate su Google sono ricavati dal titolo o dal dominio: possono essere imprecisi.
 

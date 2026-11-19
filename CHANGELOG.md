@@ -14,6 +14,13 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.134.0] - 2026-11-19
+
+### Changed
+- **L'agente che commenta, si collega e scrive su LinkedIn e Instagram lavora sul server, non più sul Mac.** Fino a ieri girava sul Chrome del tuo Mac: se il Mac dormiva, se l'estensione era scollegata o se Chrome chiedeva il permesso per un sito, si fermava tutto (il 18/11: 0 commenti, 0 messaggi; quasi tutti i lavori falliti per "permesso Chrome senza risposta"). Ora ha un suo Chrome sul server, con i tuoi accessi, e gira **ogni ora, giorno e notte**, anche a Mac spento.
+- **Di notte (dalle 22 alle 8) legge soltanto**: cerca chi decide, guarda i profili e i post. Commenti, richieste di collegamento e messaggi li fa solo di giorno, come una persona.
+- Per entrare in LinkedIn, Instagram e Facebook sul server (la prima volta, o se un giorno chiedono di nuovo l'accesso): `./scripts/agente-server-vista.sh` dal Mac apre lo schermo del Chrome del server.
+
 ## [3.133.0] - 2026-11-16
 
 ### Fixed

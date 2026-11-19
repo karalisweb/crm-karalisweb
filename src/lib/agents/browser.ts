@@ -34,8 +34,7 @@ export const VALIDITA_BROWSER_GIORNI: Record<string, number> = {
   cerca_linkedin: 60,
 };
 
-/** I lavori BNI passano davanti: i 121 vengono prima di tutto. */
-const BROWSER_BNI = ["cartografo_bni", "rete_membro", "linkedin_membri"];
+import { agentiPrendibili } from "./browser-regole";
 
 export interface LavoroBrowser {
   runId: string;
@@ -104,15 +103,16 @@ async function socialNoto(leadId: string): Promise<Record<string, unknown> | nul
 }
 
 /** Prende in carico fino a `limit` lavori, i più vecchi per primi. */
-export async function prendiLavori(limit: number): Promise<LavoroBrowser[]> {
+export async function prendiLavori(limit: number, soloLettura = false): Promise<LavoroBrowser[]> {
+  const { bni, altri } = agentiPrendibili(CHIAVI_BROWSER, soloLettura);
   const prima = await db.agentRun.findMany({
-    where: { status: "IN_CODA", agent: { in: BROWSER_BNI } },
+    where: { status: "IN_CODA", agent: { in: bni } },
     orderBy: { queuedAt: "asc" },
     take: limit,
     select: { id: true },
   });
   const dopo = prima.length >= limit ? [] : await db.agentRun.findMany({
-    where: { status: "IN_CODA", agent: { in: CHIAVI_BROWSER.filter((k) => !BROWSER_BNI.includes(k)) } },
+    where: { status: "IN_CODA", agent: { in: altri } },
     orderBy: { queuedAt: "asc" },
     take: limit - prima.length,
     select: { id: true },
