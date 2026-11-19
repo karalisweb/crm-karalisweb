@@ -14,6 +14,12 @@ Categorie: **Security** (sicurezza), **Added** (aggiunte), **Changed** (modifich
 ---
 
 
+## [3.135.0] - 2026-11-19
+
+### Fixed
+- **Il CRM non trovava più nessun profilo LinkedIn o Instagram di chi decide, e mollava le aziende.** Dall'8 novembre Google, nei risultati che ci arrivano, scrive i link come "google.com/goto?…" invece dell'indirizzo vero (per esempio `linkedin.com/in/…`). Il CRM non li riconosceva: in 10 giorni 48 aziende con chi decide trovato sono state mollate per "nessun profilo dove scaldarlo", e per questo i passi 1 e 2 del Percorso restavano vuoti. Ora il CRM segue il link fino all'indirizzo vero. Lo stesso guasto toccava anche la ricerca del sito di un'azienda e il controllo "cercando il nome il sito esce?": sistemati insieme.
+- **La ricerca dei profili di chi decide si fa con due ricerche separate** (LinkedIn e Instagram) sul nome della persona: quella unica "LinkedIn o Instagram" faceva rispondere Google con un errore.
+
 ## [3.134.0] - 2026-11-19
 
 ### Changed

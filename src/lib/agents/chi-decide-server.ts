@@ -102,10 +102,15 @@ export async function cercaChiDecideServer(leadId: string, oggi = new Date(), op
       persone = personeVerificate(ai.dati.persone ?? [], fonti, l.name);
     }
     // La persona si sa ma manca un profilo: una ricerca sul suo nome.
-    if (persone[0] && (!persone[0].profilo || !persone[0].profiloInstagram)) {
-      const c = await cerca(`"${persone[0].nome}" ${nome} (site:linkedin.com/in OR site:instagram.com)`);
+    // v3.135: due ricerche separate. "(site:linkedin.com/in OR site:instagram.com)" fa rispondere Google con un errore
+    // (40101), e col nome dell'azienda in più la ricerca diventa troppo stretta: si cerca solo il nome della persona.
+    // Il profilo passa lo stesso solo se parla di quest'azienda (o il nome della persona è nel nome dell'azienda).
+    for (const sito of ["linkedin.com/in", "instagram.com"]) {
+      const p = persone[0];
+      if (!p || (sito === "linkedin.com/in" ? p.profilo : p.profiloInstagram)) continue;
+      const c = await cerca(`"${p.nome}" site:${sito}`).catch(() => ({ fonti: [], costo: 0 }));
       costo += c.costo;
-      persone = [aggiungiProfili(persone[0], l.name, c.fonti), ...persone.slice(1)];
+      persone = [aggiungiProfili(p, l.name, c.fonti), ...persone.slice(1)];
     }
 
     if (opz.forza && !persone.length) {
